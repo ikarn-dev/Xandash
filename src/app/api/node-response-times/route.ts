@@ -20,20 +20,20 @@ async function fetchResponseTime(ip: string): Promise<{ responseTime: number | n
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout (reduced)
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
     
     const rpcUrl = getRpcUrl();
     const fetchUrl = `${rpcUrl}/geo/history?ip=${encodeURIComponent(ip)}`;
-    console.log(`[fetchResponseTime] Fetching from: ${fetchUrl}`);
     
     const response = await fetch(fetchUrl, {
       signal: controller.signal,
-      cache: 'no-store', // Disable caching
+      cache: 'no-store',
+      headers: {
+        'User-Agent': 'XanDash/1.0',
+      },
     });
     
     clearTimeout(timeoutId);
-    
-    console.log(`[fetchResponseTime] Response status: ${response.status}`);
 
     if (!response.ok) {
       const result = { responseTime: null, status: 'offline' };
@@ -42,7 +42,6 @@ async function fetchResponseTime(ip: string): Promise<{ responseTime: number | n
     }
 
     const data = await response.json();
-    console.log(`[fetchResponseTime] Data keys: ${Object.keys(data || {}).join(', ')}`);
     
     let responseTime: number | null = null;
     let status = 'offline';
@@ -69,7 +68,8 @@ async function fetchResponseTime(ip: string): Promise<{ responseTime: number | n
     const result = { responseTime, status };
     responseTimeCache.set(ip, { time: Date.now(), ...result });
     return result;
-  } catch (error) {
+  } catch (error: any) {
+    console.error(`[fetchResponseTime] Error for ${ip}: ${error.message || error}`);
     const result = { responseTime: null, status: 'unknown' };
     responseTimeCache.set(ip, { time: Date.now(), ...result });
     return result;
@@ -85,28 +85,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'IPs array is required' }, { status: 400 });
     }
 
-    // Limit to 50 IPs per request
-    const limitedIPs = ips.slice(0, 50);
+    // Limit to 10 IPs per request to avoid timeout
+    const limitedIPs = ips.slice(0, 10);
 
-    // Fetch all response times in parallel
-    const results = await Promise.all(
-      limitedIPs.map(async (ip) => ({
-        ip,
-        ...(await fetchResponseTime(ip)),
-      }))
-    );
-    
+    // Fetch response times sequentially to avoid overwhelming the RPC
     const responseTimes: { [ip: string]: number | null } = {};
     const statuses: { [ip: string]: string } = {};
     
-    results.forEach(({ ip, responseTime, status }) => {
-      responseTimes[ip] = responseTime;
-      statuses[ip] = status;
-    });
+    for (const ip of limitedIPs) {
+      const result = await fetchResponseTime(ip);
+      responseTimes[ip] = result.responseTime;
+      statuses[ip] = result.status;
+    }
 
     return NextResponse.json({ responseTimes, statuses }, {
       headers: {
-        'Cache-Control': 'public, max-age=30',
+        'Cache-Control': 'no-store',
       },
     });
   } catch (error) {
