@@ -913,10 +913,10 @@ export function NodesPageClient({
                   <tr 
                     key={`${validator.pubkey}-${validator.address}-${index}`} 
                     className={`hover:bg-white/10 transition-colors duration-200 border-b border-gray-800/30 last:border-b-0 cursor-pointer ${
-                      shouldAnimate(index) ? 'animate-scroll-blur-reveal' : 'opacity-0'
+                      shouldAnimate(index) ? 'animate-scroll-blur-reveal' : ''
                     }`}
                     style={{
-                      animationDelay: `${index * 50}ms`
+                      animationDelay: shouldAnimate(index) ? `${index * 50}ms` : '0ms'
                     }}
                     onClick={() => navigateToNodeProfile(validator.address || '')}
                   >

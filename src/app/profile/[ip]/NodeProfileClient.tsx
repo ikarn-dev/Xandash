@@ -569,9 +569,9 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
   const meta = data?.meta;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="relative bg-black border border-white/10 p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden">
+      <div className="relative bg-black border border-white/10 p-3 sm:p-4 md:p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden">
         {/* Corner decorations */}
         <div className="absolute top-0 left-0 w-6 h-6">
           <div className="absolute top-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
@@ -590,36 +590,36 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
           <div className="absolute bottom-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+          <div className="flex items-center gap-2 sm:gap-4">
             <button
               onClick={() => router.back()}
-              className="p-2 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors"
+              className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors"
             >
-              <ArrowLeftIcon className="w-5 h-5" />
+              <ArrowLeftIcon className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-white font-mono">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white font-mono">
                   {meta?.name || `Node ${ip}`}
                 </h1>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBgColor(node?.status || 'offline')}`}>
+                <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium border ${getStatusBgColor(node?.status || 'offline')}`}>
                   <span className={getStatusColor(node?.status || 'offline')}>
                     {node?.status?.toUpperCase() || 'OFFLINE'}
                   </span>
                 </span>
                 {node?.response_time !== undefined && node.response_time > 0 && (
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-cyan-500/20 border border-cyan-500/50 text-cyan-400">
+                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium bg-cyan-500/20 border border-cyan-500/50 text-cyan-400">
                     {node.response_time.toFixed(0)}ms
                   </span>
                 )}
                 {node?.is_public && (
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 border border-blue-500/50 text-blue-400">
+                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium bg-blue-500/20 border border-blue-500/50 text-blue-400">
                     PUBLIC
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 mt-1 text-white/60 text-sm">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1 text-white/60 text-xs sm:text-sm">
                 <span>{ip}</span>
                 <CopyButton text={ip} />
                 {node?.version && (
@@ -636,16 +636,16 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
 
 
       {/* Map and Location Info */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Map */}
         <div className="lg:col-span-2 bg-black/40 border border-white/10 rounded-lg overflow-hidden">
-          <div className="p-4 border-b border-white/10">
+          <div className="p-3 sm:p-4 border-b border-white/10">
             <div className="flex items-center gap-2">
-              <MapPinIcon className="w-5 h-5 text-emerald-400" />
-              <h2 className="text-lg font-semibold text-white">Node Location</h2>
+              <MapPinIcon className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
+              <h2 className="text-sm sm:text-base md:text-lg font-semibold text-white">Node Location</h2>
             </div>
           </div>
-          <div className="h-[300px]">
+          <div className="h-[200px] sm:h-[250px] md:h-[300px]">
             {location?.lat && location?.lon ? (
               <NodeLocationMap 
                 lat={location.lat} 
@@ -654,7 +654,7 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
                 country={location.country}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-white/40">
+              <div className="flex items-center justify-center h-full text-white/40 text-sm">
                 Location data unavailable
               </div>
             )}
@@ -662,46 +662,46 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
         </div>
 
         {/* Location Details */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <GlobeIcon className="w-5 h-5 text-blue-400" />
-            <h2 className="text-lg font-semibold text-white">Location Details</h2>
+        <div className="bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <GlobeIcon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-white">Location Details</h2>
           </div>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
+          <div className="space-y-2 sm:space-y-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {location?.country_code && (
                 <img 
                   src={getCountryFlagUrl(location.country_code)} 
                   alt={location.country}
-                  className="w-6 h-4 object-cover rounded"
+                  className="w-5 h-3.5 sm:w-6 sm:h-4 object-cover rounded"
                 />
               )}
               <div>
-                <div className="text-white font-medium">{location?.country || 'Unknown'}</div>
-                <div className="text-white/60 text-sm">{location?.city || 'Unknown'}{location?.region ? `, ${location.region}` : ''}</div>
+                <div className="text-white font-medium text-sm sm:text-base">{location?.country || 'Unknown'}</div>
+                <div className="text-white/60 text-xs sm:text-sm">{location?.city || 'Unknown'}{location?.region ? `, ${location.region}` : ''}</div>
               </div>
             </div>
-            <div className="border-t border-white/10 pt-3 space-y-2">
-              <div className="flex justify-between text-sm">
+            <div className="border-t border-white/10 pt-2 sm:pt-3 space-y-1.5 sm:space-y-2">
+              <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-white/60">Provider</span>
                 <span className="text-white">{location?.provider || 'Unknown'}</span>
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-white/60">Latitude</span>
                 <span className="text-white font-mono">{location?.lat?.toFixed(4) || 'N/A'}</span>
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-white/60">Longitude</span>
                 <span className="text-white font-mono">{location?.lon?.toFixed(4) || 'N/A'}</span>
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-white/60">Address</span>
                 <div className="flex items-center gap-1">
-                  <span className="text-white font-mono text-xs">{node?.address || ip}</span>
+                  <span className="text-white font-mono text-[10px] sm:text-xs">{node?.address || ip}</span>
                   <CopyButton text={node?.address || ip} />
                 </div>
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-white/60">RPC Port</span>
                 <span className="text-white font-mono">{node?.rpc_port || 'N/A'}</span>
               </div>
@@ -711,102 +711,102 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
       </div>
 
       {/* Quick Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 md:gap-4">
         {/* Response Time */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4 hover:border-cyan-500/30 transition-colors">
-          <div className="flex items-center gap-2 text-cyan-400/70 text-sm mb-2">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 md:p-4 hover:border-cyan-500/30 transition-colors">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-cyan-400/70 text-[10px] sm:text-xs md:text-sm mb-1 sm:mb-2">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
             </svg>
             <span>Response</span>
           </div>
-          <div className={`text-xl font-bold ${(node?.response_time || 0) > 0 ? 'text-cyan-400' : 'text-white/40'}`}>
+          <div className={`text-base sm:text-lg md:text-xl font-bold ${(node?.response_time || 0) > 0 ? 'text-cyan-400' : 'text-white/40'}`}>
             {(node?.response_time || 0) > 0 ? `${(node?.response_time || 0).toFixed(0)}ms` : 'N/A'}
           </div>
         </div>
 
         {/* Uptime */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4 hover:border-blue-500/30 transition-colors">
-          <div className="flex items-center gap-2 text-blue-400/70 text-sm mb-2">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 md:p-4 hover:border-blue-500/30 transition-colors">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-blue-400/70 text-[10px] sm:text-xs md:text-sm mb-1 sm:mb-2">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
             <span>Uptime</span>
           </div>
-          <div className="text-xl font-bold text-blue-400">{formatUptime(node?.uptime || 0)}</div>
+          <div className="text-base sm:text-lg md:text-xl font-bold text-blue-400">{formatUptime(node?.uptime || 0)}</div>
         </div>
 
         {/* Storage Committed */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4 hover:border-orange-500/30 transition-colors">
-          <div className="flex items-center gap-2 text-orange-400/70 text-sm mb-2">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 md:p-4 hover:border-orange-500/30 transition-colors">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-orange-400/70 text-[10px] sm:text-xs md:text-sm mb-1 sm:mb-2">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3z"/>
               <path d="M8 4v4M16 4v4M4 11h16"/>
             </svg>
             <span>Storage</span>
           </div>
-          <div className="text-xl font-bold text-orange-400">{formatBytes(node?.storage_committed || 0)}</div>
+          <div className="text-base sm:text-lg md:text-xl font-bold text-orange-400">{formatBytes(node?.storage_committed || 0)}</div>
         </div>
 
         {/* Storage Used */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4 hover:border-yellow-500/30 transition-colors">
-          <div className="flex items-center gap-2 text-yellow-400/70 text-sm mb-2">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 md:p-4 hover:border-yellow-500/30 transition-colors">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-yellow-400/70 text-[10px] sm:text-xs md:text-sm mb-1 sm:mb-2">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="18" height="18" rx="2"/>
               <path d="M3 9h18M9 21V9"/>
             </svg>
             <span>Used</span>
           </div>
-          <div className="text-xl font-bold text-yellow-400">{formatBytes(node?.storage_used || 0)}</div>
+          <div className="text-base sm:text-lg md:text-xl font-bold text-yellow-400">{formatBytes(node?.storage_used || 0)}</div>
         </div>
 
         {/* Usage Percent */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4 hover:border-purple-500/30 transition-colors">
-          <div className="flex items-center gap-2 text-purple-400/70 text-sm mb-2">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 md:p-4 hover:border-purple-500/30 transition-colors">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-purple-400/70 text-[10px] sm:text-xs md:text-sm mb-1 sm:mb-2">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
             </svg>
             <span>Usage</span>
           </div>
-          <div className="text-xl font-bold text-purple-400">
+          <div className="text-base sm:text-lg md:text-xl font-bold text-purple-400">
             {((node?.storage_usage_percent || 0) * 100).toFixed(2)}%
           </div>
         </div>
 
         {/* Credits */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4 hover:border-emerald-500/30 transition-colors">
-          <div className="flex items-center gap-2 text-emerald-400/70 text-sm mb-2">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 md:p-4 hover:border-emerald-500/30 transition-colors">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-emerald-400/70 text-[10px] sm:text-xs md:text-sm mb-1 sm:mb-2">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="8"/>
               <path d="M12 6v12M15 9.5c-.5-1-1.5-1.5-3-1.5-2 0-3 1-3 2.5s1 2 3 2.5c2 .5 3 1.5 3 2.5s-1 2.5-3 2.5c-1.5 0-2.5-.5-3-1.5"/>
             </svg>
             <span>Credits</span>
           </div>
-          <div className="text-xl font-bold text-emerald-400">
+          <div className="text-base sm:text-lg md:text-xl font-bold text-emerald-400">
             {(node?.credits || 0) > 0 ? `+${(node?.credits || 0).toLocaleString()}` : '0'}
           </div>
         </div>
 
         {/* Active Streams */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4 hover:border-pink-500/30 transition-colors">
-          <div className="flex items-center gap-2 text-pink-400/70 text-sm mb-2">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 md:p-4 hover:border-pink-500/30 transition-colors col-span-2 sm:col-span-1">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-pink-400/70 text-[10px] sm:text-xs md:text-sm mb-1 sm:mb-2">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0"/>
               <circle cx="12" cy="20" r="1" fill="currentColor"/>
             </svg>
             <span>Streams</span>
           </div>
-          <div className="text-xl font-bold text-pink-400">{node?.active_streams || 0}</div>
+          <div className="text-base sm:text-lg md:text-xl font-bold text-pink-400">{node?.active_streams || 0}</div>
         </div>
       </div>
 
 
       {/* Historical Charts Section */}
       <div className="bg-black/40 border border-white/10 rounded-lg overflow-hidden">
-        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+        <div className="p-3 sm:p-4 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
           <div className="flex items-center gap-2">
-            <ChartIcon className="w-5 h-5 text-purple-400" />
-            <h2 className="text-lg font-semibold text-white">Historical Performance</h2>
+            <ChartIcon className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
+            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-white">Historical Performance</h2>
           </div>
           {/* Time Range Selector */}
           <div className="flex items-center gap-1 bg-black/40 rounded-lg p-1">
@@ -814,7 +814,7 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
               <button
                 key={option.value}
                 onClick={() => setTimeRange(option.value)}
-                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded text-xs sm:text-sm font-medium transition-colors ${
                   timeRange === option.value
                     ? 'bg-white/20 text-white'
                     : 'text-white/60 hover:text-white hover:bg-white/10'
@@ -826,56 +826,56 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4">
           {/* Node Status Chart */}
-          <div className="bg-black/20 border border-white/5 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-white/80 mb-3 flex items-center gap-2">
-              <CheckCircleIcon className="w-4 h-4 text-emerald-400" />
+          <div className="bg-black/20 border border-white/5 rounded-lg p-3 sm:p-4">
+            <h3 className="text-xs sm:text-sm font-medium text-white/80 mb-2 sm:mb-3 flex items-center gap-2">
+              <CheckCircleIcon className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-400" />
               Node Status
             </h3>
-            <StatusChart data={statusData} height={80} />
+            <StatusChart data={statusData} height={60} />
           </div>
 
           {/* Response Time Chart */}
-          <div className="bg-black/20 border border-white/5 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-white/80 mb-3 flex items-center gap-2">
-              <ZapIcon className="w-4 h-4 text-amber-400" />
+          <div className="bg-black/20 border border-white/5 rounded-lg p-3 sm:p-4">
+            <h3 className="text-xs sm:text-sm font-medium text-white/80 mb-2 sm:mb-3 flex items-center gap-2">
+              <ZapIcon className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400" />
               Response Time (ms)
             </h3>
             <LineChart 
               data={responseTimeData} 
               color="#f59e0b" 
-              height={100}
+              height={80}
               label="Response"
               valueFormatter={(v) => `${v.toFixed(0)}ms`}
             />
           </div>
 
           {/* Uptime Chart */}
-          <div className="bg-black/20 border border-white/5 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-white/80 mb-3 flex items-center gap-2">
-              <ClockIcon className="w-4 h-4 text-blue-400" />
+          <div className="bg-black/20 border border-white/5 rounded-lg p-3 sm:p-4">
+            <h3 className="text-xs sm:text-sm font-medium text-white/80 mb-2 sm:mb-3 flex items-center gap-2">
+              <ClockIcon className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
               Uptime (hours)
             </h3>
             <LineChart 
               data={uptimeData} 
               color="#3b82f6" 
-              height={100}
+              height={80}
               label="Uptime"
               valueFormatter={(v) => `${v.toFixed(1)}h`}
             />
           </div>
 
           {/* Storage Usage Chart */}
-          <div className="bg-black/20 border border-white/5 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-white/80 mb-3 flex items-center gap-2">
-              <HardDriveIcon className="w-4 h-4 text-purple-400" />
+          <div className="bg-black/20 border border-white/5 rounded-lg p-3 sm:p-4">
+            <h3 className="text-xs sm:text-sm font-medium text-white/80 mb-2 sm:mb-3 flex items-center gap-2">
+              <HardDriveIcon className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400" />
               Storage Usage (%)
             </h3>
             <LineChart 
               data={storageUsageData} 
               color="#a855f7" 
-              height={100}
+              height={80}
               label="Storage"
               valueFormatter={(v) => `${v.toFixed(2)}%`}
             />
@@ -884,18 +884,18 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
       </div>
 
       {/* Detailed Info Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Node Identity */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <KeyIcon className="w-5 h-5 text-amber-400" />
-            <h2 className="text-lg font-semibold text-white">Node Identity</h2>
+        <div className="bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <KeyIcon className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-white">Node Identity</h2>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <div>
-              <div className="text-white/60 text-sm mb-1">Public Key</div>
+              <div className="text-white/60 text-xs sm:text-sm mb-1">Public Key</div>
               <div className="flex items-center gap-2">
-                <code className="text-xs text-white/80 bg-black/40 px-2 py-1 rounded font-mono break-all">
+                <code className="text-[10px] sm:text-xs text-white/80 bg-black/40 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded font-mono break-all">
                   {meta?.pubkey || node?.pubkey || 'N/A'}
                 </code>
                 {(meta?.pubkey || node?.pubkey) && (
@@ -904,44 +904,44 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
               </div>
             </div>
             <div>
-              <div className="text-white/60 text-sm mb-1">Node Name</div>
-              <div className="text-white">{meta?.name || 'Unnamed Node'}</div>
+              <div className="text-white/60 text-xs sm:text-sm mb-1">Node Name</div>
+              <div className="text-white text-sm sm:text-base">{meta?.name || 'Unnamed Node'}</div>
             </div>
             <div className="flex justify-between">
-              <span className="text-white/60 text-sm">Registered</span>
-              <span className={node?.registered ? 'text-emerald-400' : 'text-white/40'}>
+              <span className="text-white/60 text-xs sm:text-sm">Registered</span>
+              <span className={`text-xs sm:text-sm ${node?.registered ? 'text-emerald-400' : 'text-white/40'}`}>
                 {node?.registered ? 'Yes' : 'No'}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-white/60 text-sm">Joined</span>
-              <span className="text-white text-sm">{formatTimestamp(node?.joined_at || 0)}</span>
+              <span className="text-white/60 text-xs sm:text-sm">Joined</span>
+              <span className="text-white text-xs sm:text-sm">{formatTimestamp(node?.joined_at || 0)}</span>
             </div>
           </div>
         </div>
 
         {/* Network Activity */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <NetworkIcon className="w-5 h-5 text-cyan-400" />
-            <h2 className="text-lg font-semibold text-white">Network Activity</h2>
+        <div className="bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <NetworkIcon className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
+            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-white">Network Activity</h2>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <div className="flex justify-between">
-              <span className="text-white/60 text-sm">Packets Received</span>
-              <span className="text-white font-mono">{(node?.packets_rx || 0).toLocaleString()}</span>
+              <span className="text-white/60 text-xs sm:text-sm">Packets Received</span>
+              <span className="text-white font-mono text-xs sm:text-sm">{(node?.packets_rx || 0).toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-white/60 text-sm">Packets Transmitted</span>
-              <span className="text-white font-mono">{(node?.packets_tx || 0).toLocaleString()}</span>
+              <span className="text-white/60 text-xs sm:text-sm">Packets Transmitted</span>
+              <span className="text-white font-mono text-xs sm:text-sm">{(node?.packets_tx || 0).toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-white/60 text-sm">Active Streams</span>
-              <span className="text-white font-mono">{node?.active_streams || 0}</span>
+              <span className="text-white/60 text-xs sm:text-sm">Active Streams</span>
+              <span className="text-white font-mono text-xs sm:text-sm">{node?.active_streams || 0}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-white/60 text-sm">Last Seen</span>
-              <span className="text-white text-sm">{formatTimestamp(node?.last_seen_timestamp || 0)}</span>
+              <span className="text-white/60 text-xs sm:text-sm">Last Seen</span>
+              <span className="text-white text-xs sm:text-sm">{formatTimestamp(node?.last_seen_timestamp || 0)}</span>
             </div>
           </div>
         </div>
