@@ -34,33 +34,47 @@ const getRpcUrl = () => {
 };
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  
   try {
     const { searchParams } = new URL(request.url);
     const ip = searchParams.get('ip');
-    const quick = searchParams.get('quick') === 'true'; // Quick mode skips heavy operations
+    const quick = searchParams.get('quick') === 'true';
+
+    console.log(`[node-profile] Request for IP: ${ip}, quick: ${quick}`);
 
     if (!ip) {
       return NextResponse.json({ error: 'IP address is required' }, { status: 400 });
     }
 
-    // Use cache for profile data
-    const cacheKey = `node-profile:${ip}:${quick ? 'quick' : 'full'}`;
-    const cached = await cache.get(cacheKey);
-    if (cached) {
-      return NextResponse.json(cached, {
-        headers: { 'Cache-Control': 'public, max-age=30' },
-      });
-    }
+    // Skip cache for debugging - fetch fresh data
+    console.log(`[node-profile] Fetching fresh data...`);
 
-    // Fetch data in parallel - skip currentNodeData in quick mode
+    // Fetch data in parallel
     const fetchPromises: Promise<any>[] = [
-      fetchLocationData(ip),
-      fetchNodeHistory(ip),
+      fetchLocationData(ip).catch(err => {
+        console.error(`[node-profile] Location fetch error:`, err.message);
+        return null;
+      }),
+      fetchNodeHistory(ip).catch(err => {
+        console.error(`[node-profile] History fetch error:`, err.message);
+        return { history: [], meta: null };
+      }),
     ];
     
     if (!quick) {
-      fetchPromises.push(fetchCurrentNodeData(ip));
-      fetchPromises.push(fetchCreditsData()); // Fetch credits data
+      fetchPromises.push(
+        fetchCurrentNodeData(ip).catch(err => {
+          console.error(`[node-profile] CurrentNode fetch error:`, err.message);
+          return null;
+        })
+      );
+      fetchPromises.push(
+        fetchCreditsData().catch(err => {
+          console.error(`[node-profile] Credits fetch error:`, err.message);
+          return null;
+        })
+      );
     }
 
     const results = await Promise.all(fetchPromises);
@@ -69,25 +83,25 @@ export async function GET(request: NextRequest) {
     const currentNodeData = quick ? null : results[2];
     const creditsData = quick ? null : results[3];
 
-    // Derive status from history data (most reliable source)
+    console.log(`[node-profile] Fetch results - location: ${!!locationData}, history: ${historyResult?.history?.length || 0}, currentNode: ${!!currentNodeData}`);
+
+    // Derive status from history data
     let derivedStatus = 'unknown';
     let latestResponseTime = 0;
     
     if (historyResult.history.length > 0) {
-      const latestEntry = historyResult.history[0]; // Already sorted newest first
+      const latestEntry = historyResult.history[0];
       latestResponseTime = latestEntry.response_time;
-      // If response_time > 0, node is online; otherwise check if we have recent data
       if (latestEntry.response_time > 0) {
         derivedStatus = 'online';
       } else {
-        // Check if the timestamp is recent (within last 5 minutes)
         const now = Math.floor(Date.now() / 1000);
         const timeDiff = now - latestEntry.timestamp;
         derivedStatus = timeDiff < 300 ? 'syncing' : 'offline';
       }
     }
 
-    // Find credits for this node by pubkey
+    // Find credits
     let nodeCredits = 0;
     const nodePubkey = currentNodeData?.pubkey || historyResult.meta?.pubkey;
     if (nodePubkey && creditsData) {
@@ -105,12 +119,10 @@ export async function GET(request: NextRequest) {
         ...currentNodeData,
         response_time: latestResponseTime,
         credits: nodeCredits,
-        // Override status with derived status if currentNode status is unknown or if we have better data
         status: (currentNodeData.status === 'unknown' || currentNodeData.status === undefined) 
           ? derivedStatus 
           : (derivedStatus === 'online' ? 'online' : currentNodeData.status),
       } : {
-        // Create a minimal node object from history data if currentNode not found
         status: derivedStatus,
         response_time: latestResponseTime,
         credits: nodeCredits,
@@ -123,18 +135,17 @@ export async function GET(request: NextRequest) {
       meta: historyResult.meta,
     };
 
-    console.log(`✅ Node profile fetched for ${ip}, status: ${response.currentNode?.status}, response_time: ${latestResponseTime}ms`);
-
-    // Cache the response
-    await cache.set(cacheKey, response, quick ? 30 : 60);
+    const duration = Date.now() - startTime;
+    console.log(`[node-profile] ✅ Complete for ${ip} in ${duration}ms - status: ${response.currentNode?.status}, history: ${response.history?.length || 0}`);
 
     return NextResponse.json(response, {
       headers: {
-        'Cache-Control': 'public, max-age=30',
+        'Cache-Control': 'no-store',
       },
     });
   } catch (error) {
-    console.error('Node profile error:', error);
+    const duration = Date.now() - startTime;
+    console.error(`[node-profile] ❌ Error after ${duration}ms:`, error);
     return NextResponse.json(
       { error: 'Failed to fetch node profile' },
       { status: 500 }

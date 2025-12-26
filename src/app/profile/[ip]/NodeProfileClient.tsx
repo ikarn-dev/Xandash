@@ -447,23 +447,38 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
         setLoading(true);
         setError(null);
         
+        console.log(`[NodeProfile] Fetching profile for IP: ${ip}`);
+        
         // Use AbortController for cleanup
         const controller = new AbortController();
         
-        const response = await fetch(`/api/node-profile?ip=${encodeURIComponent(ip)}`, {
+        const apiUrl = `/api/node-profile?ip=${encodeURIComponent(ip)}`;
+        console.log(`[NodeProfile] API URL: ${apiUrl}`);
+        
+        const response = await fetch(apiUrl, {
           signal: controller.signal,
         });
         
+        console.log(`[NodeProfile] Response status: ${response.status}`);
+        
         if (!response.ok) {
-          throw new Error('Failed to fetch node profile');
+          throw new Error(`Failed to fetch node profile: ${response.status}`);
         }
         
         const profileData = await response.json();
+        console.log(`[NodeProfile] Data received:`, {
+          ip: profileData.ip,
+          hasLocation: !!profileData.location,
+          hasCurrentNode: !!profileData.currentNode,
+          historyLength: profileData.history?.length || 0,
+          hasMeta: !!profileData.meta
+        });
+        
         setData(profileData);
         toast.success('Node profile loaded');
       } catch (err: any) {
         if (err.name !== 'AbortError') {
-          console.error('Error fetching node profile:', err);
+          console.error('[NodeProfile] Error fetching node profile:', err);
           setError('Failed to load node profile');
           toast.error('Failed to load node profile');
         }
