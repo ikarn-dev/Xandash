@@ -63,12 +63,8 @@ export async function POST(request: NextRequest) {
   
   try {
     body = await request.json();
-    const primaryEndpoint = process.env.RPC_ENDPOINT_PRIMARY;
-    const fallbackEndpoint = process.env.RPC_ENDPOINT_FALLBACK;
-    
-    if (!primaryEndpoint || !fallbackEndpoint) {
-      throw new Error('RPC endpoints not configured. Please set RPC_ENDPOINT_PRIMARY and RPC_ENDPOINT_FALLBACK environment variables.');
-    }
+    const primaryEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'https://rpc1.pchednode.com/rpc';
+    const fallbackEndpoint = process.env.RPC_ENDPOINT_FALLBACK || 'http://161.97.97.41:6000/rpc';
     
     console.log('RPC Proxy: Received request:', JSON.stringify(body, null, 2));
     console.log('RPC Proxy: Using failover strategy');

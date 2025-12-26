@@ -102,16 +102,8 @@ async function makeRPCCall<T>(endpoint: string, method: string, params?: any): P
 
 // Direct RPC call function with failover logic
 export async function callDirectRPC<T>(method: string, params?: any): Promise<RPCResponse<T>> {
-  const primaryEndpoint = process.env.RPC_ENDPOINT_PRIMARY;
-  const fallbackEndpoint = process.env.RPC_ENDPOINT_FALLBACK;
-  
-  if (!primaryEndpoint || !fallbackEndpoint) {
-    console.error('[Direct RPC] RPC endpoints not configured');
-    return {
-      success: false,
-      error: 'RPC endpoints not configured. Please set RPC_ENDPOINT_PRIMARY and RPC_ENDPOINT_FALLBACK environment variables.'
-    };
-  }
+  const primaryEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'https://rpc1.pchednode.com/rpc';
+  const fallbackEndpoint = process.env.RPC_ENDPOINT_FALLBACK || 'http://161.97.97.41:6000/rpc';
   
   console.log(`[Direct RPC] Starting failover RPC call for method: ${method}`);
   
