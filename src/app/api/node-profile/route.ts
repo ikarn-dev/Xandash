@@ -28,7 +28,7 @@ interface NodeMeta {
 
 // Get the RPC URL from environment
 const getRpcUrl = () => {
-  const rpcEndpoint = process.env.RPC_ENDPOINT_PRIMARY || process.env.NEXT_PUBLIC_RPC_URL || '';
+  const rpcEndpoint = process.env.RPC_ENDPOINT_PRIMARY || process.env.NEXT_PUBLIC_RPC_URL || process.env.RPC_BASE_URL || '';
   // Remove /rpc suffix if present to get base URL for geo endpoints
   return rpcEndpoint.replace(/\/rpc$/, '');
 };
