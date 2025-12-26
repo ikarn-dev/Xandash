@@ -205,22 +205,20 @@ async function fetchLocationData(ip: string): Promise<LocationData | null> {
 
 async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry[], meta: NodeMeta | null }> {
   try {
-    // Check cache first
-    const cacheKey = `history:${ip}`;
-    const cached = await cache.get(cacheKey);
-    if (cached) return cached as { history: NodeHistoryEntry[], meta: NodeMeta | null };
-
     const rpcUrl = getRpcUrl();
     const historyUrl = `${rpcUrl}/geo/history?ip=${encodeURIComponent(ip)}`;
     
     console.log(`[fetchNodeHistory] Fetching from: ${historyUrl}`);
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
     
     const response = await fetch(historyUrl, {
       signal: controller.signal,
-      cache: 'no-store', // Disable caching for fresh data
+      cache: 'no-store',
+      headers: {
+        'User-Agent': 'XanDash/1.0',
+      },
     });
     
     clearTimeout(timeoutId);
@@ -228,7 +226,7 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
     console.log(`[fetchNodeHistory] Response status: ${response.status}`);
 
     if (!response.ok) {
-      console.log(`[fetchNodeHistory] Response not OK: ${response.status}`);
+      console.log(`[fetchNodeHistory] Response not OK: ${response.status} ${response.statusText}`);
       return { history: [], meta: null };
     }
 
@@ -287,10 +285,10 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
       meta 
     };
     
-    // Cache for 1 minute
-    await cache.set(cacheKey, result, 60);
+    console.log(`[fetchNodeHistory] Parsed ${result.history.length} history entries`);
     return result;
-  } catch (error) {
+  } catch (error: any) {
+    console.error(`[fetchNodeHistory] Error: ${error.message || error}`);
     return { history: [], meta: null };
   }
 }
