@@ -5,7 +5,7 @@ const responseTimeCache = new Map<string, { time: number; responseTime: number |
 const CACHE_TTL = 60 * 1000; // 1 minute cache
 
 const getRpcUrl = () => {
-  const rpcEndpoint = process.env.RPC_ENDPOINT_PRIMARY || process.env.NEXT_PUBLIC_RPC_URL || process.env.RPC_BASE_URL || '';
+  const rpcEndpoint = process.env.RPC_ENDPOINT_PRIMARY || process.env.NEXT_PUBLIC_RPC_URL || process.env.RPC_BASE_URL || 'https://rpc1.pchednode.com/rpc';
   // Remove /rpc suffix if present to get base URL for geo endpoints
   return rpcEndpoint.replace(/\/rpc$/, '');
 };
