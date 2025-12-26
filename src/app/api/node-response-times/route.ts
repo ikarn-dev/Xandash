@@ -23,11 +23,17 @@ async function fetchResponseTime(ip: string): Promise<{ responseTime: number | n
     const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout (reduced)
     
     const rpcUrl = getRpcUrl();
-    const response = await fetch(`${rpcUrl}/geo/history?ip=${encodeURIComponent(ip)}`, {
+    const fetchUrl = `${rpcUrl}/geo/history?ip=${encodeURIComponent(ip)}`;
+    console.log(`[fetchResponseTime] Fetching from: ${fetchUrl}`);
+    
+    const response = await fetch(fetchUrl, {
       signal: controller.signal,
+      cache: 'no-store', // Disable caching
     });
     
     clearTimeout(timeoutId);
+    
+    console.log(`[fetchResponseTime] Response status: ${response.status}`);
 
     if (!response.ok) {
       const result = { responseTime: null, status: 'offline' };
@@ -36,6 +42,8 @@ async function fetchResponseTime(ip: string): Promise<{ responseTime: number | n
     }
 
     const data = await response.json();
+    console.log(`[fetchResponseTime] Data keys: ${Object.keys(data || {}).join(', ')}`);
+    
     let responseTime: number | null = null;
     let status = 'offline';
 

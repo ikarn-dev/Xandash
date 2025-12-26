@@ -202,21 +202,28 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
     const rpcUrl = getRpcUrl();
     const historyUrl = `${rpcUrl}/geo/history?ip=${encodeURIComponent(ip)}`;
     
+    console.log(`[fetchNodeHistory] Fetching from: ${historyUrl}`);
+    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
     
     const response = await fetch(historyUrl, {
       signal: controller.signal,
-      next: { revalidate: 60 },
+      cache: 'no-store', // Disable caching for fresh data
     });
     
     clearTimeout(timeoutId);
 
+    console.log(`[fetchNodeHistory] Response status: ${response.status}`);
+
     if (!response.ok) {
+      console.log(`[fetchNodeHistory] Response not OK: ${response.status}`);
       return { history: [], meta: null };
     }
 
     const data = await response.json();
+    console.log(`[fetchNodeHistory] Data keys: ${Object.keys(data || {}).join(', ')}`);
+    
     const history: NodeHistoryEntry[] = [];
     let meta: NodeMeta | null = null;
     
