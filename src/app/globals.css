@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "leaflet/dist/leaflet.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -112,14 +113,14 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-/* Custom gradient background matching the provided image */
+/* Custom gradient background - neutral dark theme */
 .gradient-bg {
   background: radial-gradient(ellipse at center top, 
-    #ff4444 0%, 
-    #cc3333 15%, 
-    #991111 35%, 
-    #440000 60%, 
-    #220000 80%, 
+    #2a2a2a 0%, 
+    #222222 15%, 
+    #1a1a1a 35%, 
+    #111111 60%, 
+    #0a0a0a 80%, 
     #000000 100%);
   background-attachment: fixed;
   min-height: 100vh;
@@ -139,6 +140,168 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
+/* Navigation performance optimizations */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Blur reveal animation for dashboard cards */
+@keyframes blur-reveal {
+  0% {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0px);
+  }
+}
+
+@keyframes blur-reveal-fast {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(15px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0px);
+  }
+}
+
+@keyframes blur-reveal-subtle {
+  0% {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0px);
+  }
+}
+
+.animate-blur-reveal {
+  animation: blur-reveal 0.8s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-blur-reveal-fast {
+  animation: blur-reveal-fast 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-blur-reveal-subtle {
+  animation: blur-reveal-subtle 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+/* Staggered animation delays for multiple cards */
+.animate-blur-reveal-1 {
+  animation: blur-reveal 0.8s ease-out forwards;
+  animation-delay: 100ms;
+  opacity: 0;
+}
+
+.animate-blur-reveal-2 {
+  animation: blur-reveal 0.8s ease-out forwards;
+  animation-delay: 200ms;
+  opacity: 0;
+}
+
+.animate-blur-reveal-3 {
+  animation: blur-reveal 0.8s ease-out forwards;
+  animation-delay: 300ms;
+  opacity: 0;
+}
+
+.animate-blur-reveal-4 {
+  animation: blur-reveal 0.8s ease-out forwards;
+  animation-delay: 400ms;
+  opacity: 0;
+}
+
+/* Individual element staggered animations within cards */
+.animate-blur-reveal-item-1 {
+  animation: blur-reveal-subtle 0.5s ease-out forwards;
+  animation-delay: 150ms;
+  opacity: 0;
+}
+
+.animate-blur-reveal-item-2 {
+  animation: blur-reveal-subtle 0.5s ease-out forwards;
+  animation-delay: 250ms;
+  opacity: 0;
+}
+
+.animate-blur-reveal-item-3 {
+  animation: blur-reveal-subtle 0.5s ease-out forwards;
+  animation-delay: 350ms;
+  opacity: 0;
+}
+
+.animate-blur-reveal-item-4 {
+  animation: blur-reveal-subtle 0.5s ease-out forwards;
+  animation-delay: 450ms;
+  opacity: 0;
+}
+
+/* Scroll-triggered animations for table rows */
+.animate-blur-reveal-row {
+  animation: blur-reveal-subtle 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+/* Staggered row animations */
+.animate-blur-reveal-row-1 { animation-delay: 50ms; }
+.animate-blur-reveal-row-2 { animation-delay: 100ms; }
+.animate-blur-reveal-row-3 { animation-delay: 150ms; }
+.animate-blur-reveal-row-4 { animation-delay: 200ms; }
+.animate-blur-reveal-row-5 { animation-delay: 250ms; }
+.animate-blur-reveal-row-6 { animation-delay: 300ms; }
+.animate-blur-reveal-row-7 { animation-delay: 350ms; }
+.animate-blur-reveal-row-8 { animation-delay: 400ms; }
+.animate-blur-reveal-row-9 { animation-delay: 450ms; }
+.animate-blur-reveal-row-10 { animation-delay: 500ms; }
+
+/* Cards animation */
+.animate-blur-reveal-card {
+  animation: blur-reveal 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-blur-reveal-card-1 { animation-delay: 100ms; }
+.animate-blur-reveal-card-2 { animation-delay: 200ms; }
+.animate-blur-reveal-card-3 { animation-delay: 300ms; }
+
+/* Scroll-in animation for when elements come into view */
+@keyframes scroll-blur-reveal {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0px);
+  }
+}
+
+.animate-scroll-blur-reveal {
+  animation: scroll-blur-reveal 0.6s ease-out forwards;
+  opacity: 0;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -146,4 +309,54 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+/* Beam Animation Keyframes */
+@keyframes beam {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.4);
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes beam-vertical {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.4);
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+.animate-beam {
+  animation: beam 2s ease-in-out infinite;
+}
+
+.animate-beam-vertical {
+  animation: beam-vertical 2s ease-in-out infinite;
 }

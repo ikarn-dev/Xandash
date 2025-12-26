@@ -1,4 +1,4 @@
 // Layout components exports
 
-export { AppWrapper } from './AppWrapper';
-export { Navbar } from './Navbar';
+export { DashboardLayout } from './DashboardLayout';
+export { Footer } from './Footer';

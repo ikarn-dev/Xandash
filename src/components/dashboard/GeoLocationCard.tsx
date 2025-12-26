@@ -1,0 +1,300 @@
+'use client';
+
+import React, { useEffect, useState, useMemo } from 'react';
+import { InteractiveMap } from '@/components/ui';
+import { getLocationsForIPs, extractIPFromAddress } from '@/libs/services/geolocation';
+
+interface LocationData {
+  country: string;
+  country_code: string;
+  city: string;
+  region: string;
+  provider: string;
+  ip: string;
+  lat?: number;
+  lon?: number;
+}
+
+interface ValidatorLocation {
+  id: string;
+  lat: number;
+  lng: number;
+  count: number;
+  city?: string;
+  country?: string;
+}
+
+interface CountryStats {
+  country: string;
+  country_code: string;
+  count: number;
+}
+
+interface RawNodeData {
+  pubkey?: string;
+  address?: string;
+  status?: string;
+  uptime?: number;
+  storage_committed?: number;
+  storage_used?: number;
+  storage_usage_percent?: number;
+  version?: string;
+  rpc_port?: number;
+  is_public?: boolean;
+  last_seen_timestamp?: number;
+}
+
+export const GeoLocationCard: React.FC = () => {
+  const [nodes, setNodes] = useState<RawNodeData[]>([]);
+  const [locations, setLocations] = useState<{ [ip: string]: LocationData | null }>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch nodes and location data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch nodes from API
+        const response = await fetch('/api/nodes?includeAll=true');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch nodes: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        
+        const allNodes = data.nodes || [];
+        setNodes(allNodes);
+        
+        // Extract unique IPs
+        const uniqueIPs: string[] = Array.from(new Set(
+          allNodes
+            .map((node: RawNodeData) => extractIPFromAddress(node.address || ''))
+            .filter((ip: string) => ip)
+        ));
+        
+        if (uniqueIPs.length > 0) {
+          // Fetch geolocation data
+          console.log(`🌍 Fetching geolocation for ${uniqueIPs.length} IPs:`, uniqueIPs.slice(0, 5));
+          const locationData = await getLocationsForIPs(uniqueIPs);
+          console.log(`📍 Received location data:`, Object.entries(locationData).slice(0, 3));
+          setLocations(locationData);
+        }
+        
+      } catch (err) {
+        console.error('Failed to fetch node data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+    
+    // Set up auto-refresh every 30 seconds
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Process nodes into map locations
+  const { mapValidators, countryStats, totalValidators, totalNodes } = useMemo(() => {
+    console.log(`🗺️ Processing ${nodes.length} nodes for map display`);
+    console.log(`📍 Available locations:`, Object.keys(locations).length);
+    
+    const locationGroups = new Map<string, {
+      lat: number;
+      lng: number;
+      city: string;
+      country: string;
+      count: number;
+      nodes: RawNodeData[];
+    }>();
+    
+    const countryMap = new Map<string, { country: string; country_code: string; count: number }>();
+    let validNodes = 0;
+
+    nodes.forEach((node, index) => {
+      const ip = extractIPFromAddress(node.address || '');
+      const location = locations[ip];
+      
+      if (index < 5) {
+        console.log(`🔍 Node ${index}: ${node.address} -> IP: ${ip} -> Location:`, location);
+      }
+      
+      if (location && location.lat && location.lon) {
+        validNodes++;
+        
+        // Group by city/country for map markers
+        const locationKey = `${location.city}-${location.country}`;
+        const existing = locationGroups.get(locationKey);
+        
+        if (existing) {
+          existing.count++;
+          existing.nodes.push(node);
+        } else {
+          locationGroups.set(locationKey, {
+            lat: location.lat,
+            lng: location.lon,
+            city: location.city,
+            country: location.country,
+            count: 1,
+            nodes: [node]
+          });
+        }
+      }
+      
+      // Count ALL nodes by country (including unknown locations)
+      if (location && location.country) {
+        const countryKey = location.country;
+        const existingCountry = countryMap.get(countryKey);
+        if (existingCountry) {
+          existingCountry.count++;
+        } else {
+          countryMap.set(countryKey, {
+            country: location.country,
+            country_code: location.country_code,
+            count: 1
+          });
+        }
+      } else {
+        // Count unknown locations
+        const unknownKey = 'Unknown';
+        const existingUnknown = countryMap.get(unknownKey);
+        if (existingUnknown) {
+          existingUnknown.count++;
+        } else {
+          countryMap.set(unknownKey, {
+            country: 'Unknown',
+            country_code: '',
+            count: 1
+          });
+        }
+      }
+    });
+
+    const mapValidators: ValidatorLocation[] = Array.from(locationGroups.entries()).map(([key, data], index) => ({
+      id: `location-${index}`,
+      lat: data.lat,
+      lng: data.lng,
+      count: data.count,
+      city: data.city,
+      country: data.country
+    }));
+
+    const countryStats: CountryStats[] = Array.from(countryMap.values())
+      .sort((a, b) => b.count - a.count);
+
+    console.log(`✅ Map processing complete:`, {
+      totalNodes: nodes.length,
+      validNodes,
+      mapMarkers: mapValidators.length,
+      countries: countryStats.length
+    });
+
+    return {
+      mapValidators,
+      countryStats,
+      totalValidators: validNodes,
+      totalNodes: nodes.length // Total including unknown locations
+    };
+  }, [nodes, locations]);
+
+  if (loading) {
+    return (
+      <div className="bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-lg h-full min-h-[500px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-white/60 text-sm">Loading pNode locations...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-lg h-full min-h-[500px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-400 text-sm mb-2">Failed to load pNode data</div>
+          <div className="text-white/40 text-xs">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-lg h-full min-h-[500px] flex flex-col relative overflow-hidden">
+      {/* Stats Overlay - Top Left */}
+      <div className="absolute top-6 left-6 z-50 space-y-3 bg-black/40 backdrop-blur-sm rounded-lg p-3">
+        <div className="text-left">
+          <div className="text-white text-3xl font-bold font-mono">{totalNodes}</div>
+          <div className="text-white/60 text-sm">pNodes</div>
+        </div>
+        <div className="text-left">
+          <div className="text-white text-2xl font-bold font-mono">{countryStats.length}</div>
+          <div className="text-white/60 text-sm">Countries</div>
+        </div>
+      </div>
+
+      {/* Live indicator - Top Right */}
+      <div className="absolute top-6 right-6 z-50 flex items-center space-x-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
+        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+        <span className="text-white text-sm font-medium">Live</span>
+      </div>
+
+      {/* Country Stats - Bottom Left */}
+      <div className="absolute bottom-6 left-6 z-50 bg-black/40 backdrop-blur-sm rounded-lg p-3 max-h-48">
+        <div className="text-white/80 text-xs font-medium mb-2">pNodes by Country</div>
+        <div 
+          className="space-y-1 max-w-48 max-h-40 pr-2"
+          style={{
+            overflowY: 'auto',
+            scrollbarWidth: 'none', /* Firefox */
+            msOverflowStyle: 'none', /* IE and Edge */
+          }}
+        >
+          <style jsx>{`
+            div::-webkit-scrollbar {
+              display: none; /* Chrome, Safari, Opera */
+            }
+          `}</style>
+          {countryStats.map((country, index) => (
+            <div key={country.country} className="flex items-center justify-between text-xs">
+              <div className="flex items-center space-x-2 flex-1 min-w-0">
+                {country.country_code ? (
+                  <img 
+                    src={`${process.env.NEXT_PUBLIC_FLAG_CDN_URL || 'https://flagcdn.com'}/16x12/${country.country_code.toLowerCase()}.png`}
+                    alt={country.country}
+                    className="w-4 h-3 object-cover rounded-sm flex-shrink-0"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-4 h-3 bg-gray-500 rounded-sm flex-shrink-0 flex items-center justify-center">
+                    <span className="text-white text-xs">?</span>
+                  </div>
+                )}
+                <span className="text-white truncate">{country.country}</span>
+              </div>
+              <div className="bg-white/20 text-white px-2 py-0.5 rounded-full text-xs font-mono ml-2 flex-shrink-0">
+                {country.count}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Interactive Map - Full background */}
+      <div className="absolute inset-0 z-0">
+        <InteractiveMap 
+          validators={mapValidators}
+          className="w-full h-full"
+        />
+      </div>
+    </div>
+  );
+};
