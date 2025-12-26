@@ -20,7 +20,7 @@ async function fetchResponseTime(ip: string): Promise<{ responseTime: number | n
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout (reduced)
     
     const rpcUrl = getRpcUrl();
     const fetchUrl = `${rpcUrl}/geo/history?ip=${encodeURIComponent(ip)}`;
@@ -68,8 +68,8 @@ async function fetchResponseTime(ip: string): Promise<{ responseTime: number | n
     const result = { responseTime, status };
     responseTimeCache.set(ip, { time: Date.now(), ...result });
     return result;
-  } catch (error: any) {
-    console.error(`[fetchResponseTime] Error for ${ip}: ${error.message || error}`);
+  } catch (error) {
+    // Cache failed attempts too to avoid repeated failures
     const result = { responseTime: null, status: 'unknown' };
     responseTimeCache.set(ip, { time: Date.now(), ...result });
     return result;
@@ -85,17 +85,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'IPs array is required' }, { status: 400 });
     }
 
-    // Limit to 10 IPs per request to avoid timeout
-    const limitedIPs = ips.slice(0, 10);
+    // Limit to 25 IPs per request
+    const limitedIPs = ips.slice(0, 25);
 
-    // Fetch response times sequentially to avoid overwhelming the RPC
+    // Fetch response times in parallel with concurrency limit
     const responseTimes: { [ip: string]: number | null } = {};
     const statuses: { [ip: string]: string } = {};
     
-    for (const ip of limitedIPs) {
-      const result = await fetchResponseTime(ip);
-      responseTimes[ip] = result.responseTime;
-      statuses[ip] = result.status;
+    // Process in parallel batches of 5 for better performance
+    const batchSize = 5;
+    for (let i = 0; i < limitedIPs.length; i += batchSize) {
+      const batch = limitedIPs.slice(i, i + batchSize);
+      const results = await Promise.all(
+        batch.map(async (ip) => {
+          const result = await fetchResponseTime(ip);
+          return { ip, ...result };
+        })
+      );
+      
+      results.forEach(({ ip, responseTime, status }) => {
+        responseTimes[ip] = responseTime;
+        statuses[ip] = status;
+      });
     }
 
     return NextResponse.json({ responseTimes, statuses }, {

@@ -507,7 +507,7 @@ export function NodesPageClient({
   return (
     <div className="space-y-6">
       {/* Page Title Section - Similar to Analytics Design */}
-      <div className="relative bg-black border border-white/10 p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden">
+      <div className="relative bg-black border border-white/10 p-4 sm:p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden">
         {/* All four corner edges with white glow on hover */}
         {/* Top-left corner */}
         <div className="absolute top-0 left-0 w-6 h-6">
@@ -533,24 +533,24 @@ export function NodesPageClient({
           <div className="absolute bottom-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
         </div>
 
-        <div className="space-y-4 animate-blur-reveal relative z-10">
+        <div className="space-y-3 sm:space-y-4 animate-blur-reveal relative z-10">
           {/* Main Title */}
           <div className="flex items-center space-x-4">
-            <h1 className="text-3xl font-bold text-white/90 font-mono">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white/90 font-mono">
               // <span className="text-white">PNODES</span>
             </h1>
           </div>
           
           {/* Subtitle and Description */}
           <div className="flex items-center space-x-2 text-white/60">
-            <span className="text-sm">›</span>
-            <span className="text-sm">Real-time pNode network monitoring and statistics</span>
+            <span className="text-xs sm:text-sm">›</span>
+            <span className="text-xs sm:text-sm">Real-time pNode network monitoring and statistics</span>
           </div>
         </div>
       </div>
 
       {/* pNode Stats Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-blur-reveal-1">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 animate-blur-reveal-1">
         <PNodeVersionCard />
         <PNodeOnlineCard />
         <PNodeStorageCard />
@@ -568,28 +568,39 @@ export function NodesPageClient({
         {/* Geolocation Loading Indicator - Removed text, keep only skeleton */}
 
         {/* Badges and Sort Bar */}
-        <div className="flex items-center justify-between animate-blur-reveal-1">
-          <div className="flex items-center space-x-2 overflow-visible py-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 animate-blur-reveal-1">
+          <div 
+            className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1 pb-2 sm:pb-1"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}
+          >
+            <style jsx>{`
+              div::-webkit-scrollbar {
+                display: none;
+              }
+            `}</style>
             {/* Total pNodes Badge - White */}
-            <div className="relative group overflow-visible">
+            <div className="relative group overflow-visible flex-shrink-0">
               <div 
-                className="absolute -inset-2 rounded-full opacity-60 group-hover:opacity-80 transition-opacity duration-500"
+                className="absolute -inset-1 sm:-inset-2 rounded-full opacity-60 group-hover:opacity-80 transition-opacity duration-500"
                 style={{
                   background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 70%, transparent 100%)',
-                  filter: 'blur(12px)',
+                  filter: 'blur(8px)',
                 }}
               ></div>
               <div 
-                className="relative flex items-center px-3 py-1.5 rounded-full shadow-xl"
+                className="relative flex items-center px-2 py-1 sm:px-3 sm:py-1.5 rounded-full shadow-xl"
                 style={{
                   background: 'rgba(0, 0, 0, 0.8)',
                   border: '1px solid rgba(255, 255, 255, 0.6)',
                   backdropFilter: 'blur(10px)',
-                  boxShadow: '0 0 20px rgba(255, 255, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 0 15px rgba(255, 255, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
                 }}
               >
                 <span 
-                  className="font-semibold text-xs uppercase tracking-wide"
+                  className="font-semibold text-[10px] sm:text-xs uppercase tracking-wide whitespace-nowrap"
                   style={{ 
                     color: '#ffffff',
                     textShadow: '0 0 10px rgba(255, 255, 255, 0.5)',
@@ -603,26 +614,26 @@ export function NodesPageClient({
             {/* Online Badge - Green */}
             <button
               onClick={() => handleFilterChange('onlyOnline')}
-              className="relative group overflow-visible"
+              className="relative group overflow-visible flex-shrink-0"
             >
               <div 
-                className="absolute -inset-2 rounded-full opacity-60 group-hover:opacity-80 transition-opacity duration-500"
+                className="absolute -inset-1 sm:-inset-2 rounded-full opacity-60 group-hover:opacity-80 transition-opacity duration-500"
                 style={{
                   background: 'radial-gradient(circle, rgba(16,185,129,0.4) 0%, rgba(16,185,129,0.1) 70%, transparent 100%)',
-                  filter: 'blur(12px)',
+                  filter: 'blur(8px)',
                 }}
               ></div>
               <div 
-                className="relative flex items-center px-3 py-1.5 rounded-full shadow-xl transition-all duration-200"
+                className="relative flex items-center px-2 py-1 sm:px-3 sm:py-1.5 rounded-full shadow-xl transition-all duration-200"
                 style={{
                   background: selectedFilters.onlyOnline ? 'rgba(16, 185, 129, 0.2)' : 'rgba(0, 0, 0, 0.8)',
                   border: `1px solid rgba(16, 185, 129, ${selectedFilters.onlyOnline ? '0.8' : '0.6'})`,
                   backdropFilter: 'blur(10px)',
-                  boxShadow: '0 0 20px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(16, 185, 129, 0.1)',
+                  boxShadow: '0 0 15px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(16, 185, 129, 0.1)',
                 }}
               >
                 <span 
-                  className="font-semibold text-xs uppercase tracking-wide"
+                  className="font-semibold text-[10px] sm:text-xs uppercase tracking-wide whitespace-nowrap"
                   style={{ 
                     color: '#10b981',
                     textShadow: '0 0 10px rgba(16, 185, 129, 0.5)',
@@ -636,26 +647,26 @@ export function NodesPageClient({
             {/* Inactive Badge - Red */}
             <button
               onClick={() => handleFilterChange('onlyInactive')}
-              className="relative group overflow-visible"
+              className="relative group overflow-visible flex-shrink-0"
             >
               <div 
-                className="absolute -inset-2 rounded-full opacity-60 group-hover:opacity-80 transition-opacity duration-500"
+                className="absolute -inset-1 sm:-inset-2 rounded-full opacity-60 group-hover:opacity-80 transition-opacity duration-500"
                 style={{
                   background: 'radial-gradient(circle, rgba(239,68,68,0.4) 0%, rgba(239,68,68,0.1) 70%, transparent 100%)',
-                  filter: 'blur(12px)',
+                  filter: 'blur(8px)',
                 }}
               ></div>
               <div 
-                className="relative flex items-center px-3 py-1.5 rounded-full shadow-xl transition-all duration-200"
+                className="relative flex items-center px-2 py-1 sm:px-3 sm:py-1.5 rounded-full shadow-xl transition-all duration-200"
                 style={{
                   background: selectedFilters.onlyInactive ? 'rgba(239, 68, 68, 0.2)' : 'rgba(0, 0, 0, 0.8)',
                   border: `1px solid rgba(239, 68, 68, ${selectedFilters.onlyInactive ? '0.8' : '0.6'})`,
                   backdropFilter: 'blur(10px)',
-                  boxShadow: '0 0 20px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(239, 68, 68, 0.1)',
+                  boxShadow: '0 0 15px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(239, 68, 68, 0.1)',
                 }}
               >
                 <span 
-                  className="font-semibold text-xs uppercase tracking-wide"
+                  className="font-semibold text-[10px] sm:text-xs uppercase tracking-wide whitespace-nowrap"
                   style={{ 
                     color: '#ef4444',
                     textShadow: '0 0 10px rgba(239, 68, 68, 0.5)',
@@ -669,26 +680,26 @@ export function NodesPageClient({
             {/* Public Badge - Blue */}
             <button
               onClick={() => handleFilterChange('onlyPublic')}
-              className="relative group overflow-visible"
+              className="relative group overflow-visible flex-shrink-0"
             >
               <div 
-                className="absolute -inset-2 rounded-full opacity-60 group-hover:opacity-80 transition-opacity duration-500"
+                className="absolute -inset-1 sm:-inset-2 rounded-full opacity-60 group-hover:opacity-80 transition-opacity duration-500"
                 style={{
                   background: 'radial-gradient(circle, rgba(59,130,246,0.4) 0%, rgba(59,130,246,0.1) 70%, transparent 100%)',
-                  filter: 'blur(12px)',
+                  filter: 'blur(8px)',
                 }}
               ></div>
               <div 
-                className="relative flex items-center px-3 py-1.5 rounded-full shadow-xl transition-all duration-200"
+                className="relative flex items-center px-2 py-1 sm:px-3 sm:py-1.5 rounded-full shadow-xl transition-all duration-200"
                 style={{
                   background: selectedFilters.onlyPublic ? 'rgba(59, 130, 246, 0.2)' : 'rgba(0, 0, 0, 0.8)',
                   border: `1px solid rgba(59, 130, 246, ${selectedFilters.onlyPublic ? '0.8' : '0.6'})`,
                   backdropFilter: 'blur(10px)',
-                  boxShadow: '0 0 20px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(59, 130, 246, 0.1)',
+                  boxShadow: '0 0 15px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(59, 130, 246, 0.1)',
                 }}
               >
                 <span 
-                  className="font-semibold text-xs uppercase tracking-wide"
+                  className="font-semibold text-[10px] sm:text-xs uppercase tracking-wide whitespace-nowrap"
                   style={{ 
                     color: '#3b82f6',
                     textShadow: '0 0 10px rgba(59, 130, 246, 0.5)',
@@ -702,26 +713,26 @@ export function NodesPageClient({
             {/* Show Duplicates Toggle - Yellow */}
             <button
               onClick={() => handleFilterChange('showDuplicates')}
-              className="relative group overflow-visible"
+              className="relative group overflow-visible flex-shrink-0"
             >
               <div 
-                className="absolute -inset-2 rounded-full opacity-60 group-hover:opacity-80 transition-opacity duration-500"
+                className="absolute -inset-1 sm:-inset-2 rounded-full opacity-60 group-hover:opacity-80 transition-opacity duration-500"
                 style={{
                   background: 'radial-gradient(circle, rgba(234,179,8,0.4) 0%, rgba(234,179,8,0.1) 70%, transparent 100%)',
-                  filter: 'blur(12px)',
+                  filter: 'blur(8px)',
                 }}
               ></div>
               <div 
-                className="relative flex items-center px-3 py-1.5 rounded-full shadow-xl transition-all duration-200"
+                className="relative flex items-center px-2 py-1 sm:px-3 sm:py-1.5 rounded-full shadow-xl transition-all duration-200"
                 style={{
                   background: selectedFilters.showDuplicates ? 'rgba(234, 179, 8, 0.2)' : 'rgba(0, 0, 0, 0.8)',
                   border: `1px solid rgba(234, 179, 8, ${selectedFilters.showDuplicates ? '0.8' : '0.6'})`,
                   backdropFilter: 'blur(10px)',
-                  boxShadow: '0 0 20px rgba(234, 179, 8, 0.3), inset 0 1px 0 rgba(234, 179, 8, 0.1)',
+                  boxShadow: '0 0 15px rgba(234, 179, 8, 0.3), inset 0 1px 0 rgba(234, 179, 8, 0.1)',
                 }}
               >
                 <span 
-                  className="font-semibold text-xs uppercase tracking-wide"
+                  className="font-semibold text-[10px] sm:text-xs uppercase tracking-wide whitespace-nowrap"
                   style={{ 
                     color: '#eab308',
                     textShadow: '0 0 10px rgba(234, 179, 8, 0.5)',
@@ -734,7 +745,7 @@ export function NodesPageClient({
           </div>
 
           {/* Advanced Filters */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 flex-shrink-0">
             {/* Advanced Filters Toggle */}
             <div className="flex items-center space-x-2">
               <input
@@ -782,8 +793,19 @@ export function NodesPageClient({
       {isPending ? (
         <ValidatorTableSkeleton count={pageSize} />
       ) : (
-        <div className="bg-black/20 rounded-lg overflow-hidden animate-blur-reveal-2">
-          <table className="w-full" ref={tableRef}>
+        <div 
+          className="bg-black/20 rounded-lg overflow-x-auto animate-blur-reveal-2"
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}
+        >
+          <style jsx>{`
+            div::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
+          <table className="w-full min-w-[900px]" ref={tableRef}>
             {/* Table Header */}
             <thead>
               <tr className="bg-black/40 border-b border-gray-800/50">
@@ -1094,7 +1116,7 @@ export function NodesPageClient({
       )}
 
       {/* Results info */}
-      <div className="text-center text-white/60 text-sm mt-4 animate-blur-reveal-4">
+      <div className="text-center text-white/60 text-xs sm:text-sm mt-4 animate-blur-reveal-4">
         Showing {Math.min((pagination.currentPage - 1) * pageSize + 1, pagination.totalCount)} - {Math.min(pagination.currentPage * pageSize, pagination.totalCount)} of {pagination.totalCount} pNodes
       </div>
 

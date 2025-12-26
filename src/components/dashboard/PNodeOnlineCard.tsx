@@ -134,19 +134,19 @@ export const PNodeOnlineCard: React.FC<PNodeOnlineCardProps> = ({ className = ""
 
       {/* Content */}
       <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
-        <div className="text-white/50 text-xs font-medium tracking-wider mb-3">// ONLINE RATE</div>
-        <div className="text-green-400 text-4xl lg:text-5xl font-bold font-mono mb-1">
+        <div className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider mb-2 sm:mb-3">// ONLINE RATE</div>
+        <div className="text-green-400 text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1">
           {stats?.onlinePercentage.toFixed(1) || '0.0'}%
         </div>
-        <div className="text-white/40 text-[10px] mb-3">
+        <div className="text-white/40 text-[9px] sm:text-[10px] mb-2 sm:mb-3">
           {stats?.onlineNodes || 0} of {stats?.totalNodes || 0} nodes
         </div>
         
         {/* Online Status Bar Graph */}
-        <div className="w-full px-2 mt-1">
+        <div className="w-full px-1 sm:px-2 mt-1">
           <svg 
             className="w-full" 
-            height="24" 
+            height="20" 
             viewBox="0 0 200 24" 
             preserveAspectRatio="none"
           >
@@ -162,10 +162,10 @@ export const PNodeOnlineCard: React.FC<PNodeOnlineCardProps> = ({ className = ""
               />
             ))}
           </svg>
-          <div className="flex justify-between items-center mt-1.5">
-            <span className="text-white/40 text-[9px]">{stats?.offlineNodes} offline</span>
-            <span className="text-green-400 text-[9px] font-medium">{stats?.onlineNodes} online</span>
-            <span className="text-white/40 text-[9px]">{stats?.publicNodes} public</span>
+          <div className="flex justify-between items-center mt-1 sm:mt-1.5">
+            <span className="text-white/40 text-[8px] sm:text-[9px]">{stats?.offlineNodes} offline</span>
+            <span className="text-green-400 text-[8px] sm:text-[9px] font-medium">{stats?.onlineNodes} online</span>
+            <span className="text-white/40 text-[8px] sm:text-[9px]">{stats?.publicNodes} public</span>
           </div>
         </div>
       </div>

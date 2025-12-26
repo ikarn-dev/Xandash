@@ -160,11 +160,11 @@ export const PNodeStorageCard: React.FC<PNodeStorageCardProps> = ({ className = 
 
       {/* Content */}
       <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
-        <div className="text-white/50 text-xs font-medium tracking-wider mb-4">// STORAGE USED</div>
-        <div className="text-orange-400 text-4xl lg:text-5xl font-bold font-mono mb-2">
+        <div className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider mb-2 sm:mb-4">// STORAGE USED</div>
+        <div className="text-orange-400 text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1 sm:mb-2">
           {stats ? formatBytes(stats.usedStorage) : '0 B'}
         </div>
-        <div className="text-white/40 text-xs">
+        <div className="text-white/40 text-[10px] sm:text-xs">
           of {stats ? formatBytes(stats.totalStorage) : '0 B'}
         </div>
       </div>

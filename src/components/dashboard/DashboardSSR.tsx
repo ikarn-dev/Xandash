@@ -33,7 +33,7 @@ export const DashboardSSR: React.FC = () => {
       </div>
 
       {/* Main Row - Full width map */}
-      <div className="w-full min-h-[500px] animate-blur-reveal-4">
+      <div className="w-full min-h-[300px] sm:min-h-[400px] md:min-h-[500px] animate-blur-reveal-4">
         <GeoLocationCard />
       </div>
 
@@ -66,7 +66,7 @@ export const DashboardSkeleton: React.FC = () => {
       <div className="w-full h-48 bg-gray-700/50 rounded-xl animate-pulse"></div>
 
       {/* Map Skeleton */}
-      <div className="w-full min-h-[500px] bg-gray-700/50 rounded-xl animate-pulse"></div>
+      <div className="w-full min-h-[300px] sm:min-h-[400px] md:min-h-[500px] bg-gray-700/50 rounded-xl animate-pulse"></div>
 
       {/* pNodes Card Skeleton */}
       <div className="w-full h-96 bg-gray-700/50 rounded-xl animate-pulse"></div>

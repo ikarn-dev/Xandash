@@ -205,7 +205,7 @@ export const GeoLocationCard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-lg h-full min-h-[500px] flex items-center justify-center">
+      <div className="bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-lg h-full min-h-[300px] sm:min-h-[400px] md:min-h-[500px] flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <div className="text-white/60 text-sm">Loading pNode locations...</div>
@@ -216,7 +216,7 @@ export const GeoLocationCard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-lg h-full min-h-[500px] flex items-center justify-center">
+      <div className="bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-lg h-full min-h-[300px] sm:min-h-[400px] md:min-h-[500px] flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-400 text-sm mb-2">Failed to load pNode data</div>
           <div className="text-white/40 text-xs">{error}</div>
@@ -226,30 +226,30 @@ export const GeoLocationCard: React.FC = () => {
   }
 
   return (
-    <div className="bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-lg h-full min-h-[500px] flex flex-col relative overflow-hidden">
+    <div className="bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-lg h-full min-h-[300px] sm:min-h-[400px] md:min-h-[500px] flex flex-col relative overflow-hidden">
       {/* Stats Overlay - Top Left */}
-      <div className="absolute top-6 left-6 z-50 space-y-3 bg-black/40 backdrop-blur-sm rounded-lg p-3">
+      <div className="absolute top-3 left-3 sm:top-6 sm:left-6 z-50 space-y-2 sm:space-y-3 bg-black/40 backdrop-blur-sm rounded-lg p-2 sm:p-3">
         <div className="text-left">
-          <div className="text-white text-3xl font-bold font-mono">{totalNodes}</div>
-          <div className="text-white/60 text-sm">pNodes</div>
+          <div className="text-white text-xl sm:text-2xl md:text-3xl font-bold font-mono">{totalNodes}</div>
+          <div className="text-white/60 text-xs sm:text-sm">pNodes</div>
         </div>
         <div className="text-left">
-          <div className="text-white text-2xl font-bold font-mono">{countryStats.length}</div>
-          <div className="text-white/60 text-sm">Countries</div>
+          <div className="text-white text-lg sm:text-xl md:text-2xl font-bold font-mono">{countryStats.length}</div>
+          <div className="text-white/60 text-xs sm:text-sm">Countries</div>
         </div>
       </div>
 
       {/* Live indicator - Top Right */}
-      <div className="absolute top-6 right-6 z-50 flex items-center space-x-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
-        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-        <span className="text-white text-sm font-medium">Live</span>
+      <div className="absolute top-3 right-3 sm:top-6 sm:right-6 z-50 flex items-center space-x-1 sm:space-x-2 bg-black/40 backdrop-blur-sm rounded-lg px-2 py-1 sm:px-3 sm:py-2">
+        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
+        <span className="text-white text-xs sm:text-sm font-medium">Live</span>
       </div>
 
       {/* Country Stats - Bottom Left */}
-      <div className="absolute bottom-6 left-6 z-50 bg-black/40 backdrop-blur-sm rounded-lg p-3 max-h-48">
-        <div className="text-white/80 text-xs font-medium mb-2">pNodes by Country</div>
+      <div className="absolute bottom-3 left-3 sm:bottom-6 sm:left-6 z-50 bg-black/40 backdrop-blur-sm rounded-lg p-2 sm:p-3 max-h-32 sm:max-h-48">
+        <div className="text-white/80 text-xs font-medium mb-1 sm:mb-2">pNodes by Country</div>
         <div 
-          className="space-y-1 max-w-48 max-h-40 pr-2"
+          className="space-y-1 max-w-36 sm:max-w-48 max-h-24 sm:max-h-40 pr-2"
           style={{
             overflowY: 'auto',
             scrollbarWidth: 'none', /* Firefox */
@@ -263,24 +263,24 @@ export const GeoLocationCard: React.FC = () => {
           `}</style>
           {countryStats.map((country, index) => (
             <div key={country.country} className="flex items-center justify-between text-xs">
-              <div className="flex items-center space-x-2 flex-1 min-w-0">
+              <div className="flex items-center space-x-1 sm:space-x-2 flex-1 min-w-0">
                 {country.country_code ? (
                   <img 
                     src={`${process.env.NEXT_PUBLIC_FLAG_CDN_URL || 'https://flagcdn.com'}/16x12/${country.country_code.toLowerCase()}.png`}
                     alt={country.country}
-                    className="w-4 h-3 object-cover rounded-sm flex-shrink-0"
+                    className="w-3 h-2 sm:w-4 sm:h-3 object-cover rounded-sm flex-shrink-0"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
                     }}
                   />
                 ) : (
-                  <div className="w-4 h-3 bg-gray-500 rounded-sm flex-shrink-0 flex items-center justify-center">
+                  <div className="w-3 h-2 sm:w-4 sm:h-3 bg-gray-500 rounded-sm flex-shrink-0 flex items-center justify-center">
                     <span className="text-white text-xs">?</span>
                   </div>
                 )}
-                <span className="text-white truncate">{country.country}</span>
+                <span className="text-white truncate text-xs">{country.country}</span>
               </div>
-              <div className="bg-white/20 text-white px-2 py-0.5 rounded-full text-xs font-mono ml-2 flex-shrink-0">
+              <div className="bg-white/20 text-white px-1.5 sm:px-2 py-0.5 rounded-full text-xs font-mono ml-1 sm:ml-2 flex-shrink-0">
                 {country.count}
               </div>
             </div>

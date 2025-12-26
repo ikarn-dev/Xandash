@@ -113,8 +113,8 @@ async function NetworkStatsCardContent() {
 
 
 
-      {/* Titles Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-4">
+      {/* Titles Row - Hidden on small screens, shown on lg+ */}
+      <div className="hidden lg:grid lg:grid-cols-4 gap-6 mb-4">
         <div className="text-white/80 text-sm font-medium animate-blur-reveal-item-1 text-center">
           Block Index
         </div>
@@ -129,18 +129,18 @@ async function NetworkStatsCardContent() {
         </div>
       </div>
 
-      {/* Animated Separator Lines */}
-      <div className="relative mb-6 overflow-hidden">
+      {/* Animated Separator Lines - Hidden on small screens */}
+      <div className="relative mb-6 overflow-hidden hidden lg:block">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-beam shadow-[0_0_10px_rgba(255,255,255,0.5)]"></div>
         </div>
       </div>
 
       {/* Stats Content */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 relative">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 relative">
         
-        {/* Vertical Separators - Only Animated Beams */}
-        <div className="absolute inset-0 grid grid-cols-2 lg:grid-cols-4 gap-6 pointer-events-none">
+        {/* Vertical Separators - Only Animated Beams (hidden on small screens) */}
+        <div className="absolute inset-0 hidden lg:grid lg:grid-cols-4 gap-6 pointer-events-none">
           <div></div>
           <div className="relative">
             <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-white/60 to-transparent animate-beam-vertical shadow-[0_0_10px_rgba(255,255,255,0.5)]"></div>
@@ -155,7 +155,11 @@ async function NetworkStatsCardContent() {
 
         {/* Block Index */}
         <div className="flex flex-col justify-center items-center animate-blur-reveal-item-1 relative z-10 text-center">
-          <div className="text-white text-2xl lg:text-3xl font-bold font-mono mb-1">
+          {/* Mobile heading */}
+          <div className="text-white/80 text-xs sm:text-sm font-medium mb-2 lg:hidden">
+            Block Index
+          </div>
+          <div className="text-white text-xl sm:text-2xl lg:text-3xl font-bold font-mono mb-1">
             {formatNumber(stats.current_index)}
           </div>
           <div className="text-white/60 text-xs">
@@ -165,34 +169,42 @@ async function NetworkStatsCardContent() {
 
         {/* Network Traffic */}
         <div className="flex flex-col justify-center items-center animate-blur-reveal-item-2 relative z-10">
-          <div className="space-y-2 w-full">
+          {/* Mobile heading */}
+          <div className="text-white/80 text-xs sm:text-sm font-medium mb-2 lg:hidden">
+            Network Traffic
+          </div>
+          <div className="space-y-1 sm:space-y-2 w-full">
             <div className="flex items-center justify-center">
-              <ArrowUp className="w-4 h-4 text-white mr-2 flex-shrink-0" />
-              <span className="text-white text-lg font-bold font-mono">
+              <ArrowUp className="w-3 h-3 sm:w-4 sm:h-4 text-white mr-1 sm:mr-2 flex-shrink-0" />
+              <span className="text-white text-sm sm:text-lg font-bold font-mono">
                 {formatNumber(stats.packets_sent)}
               </span>
-              <span className="text-white/70 text-sm font-normal ml-2">sent</span>
+              <span className="text-white/70 text-xs sm:text-sm font-normal ml-1 sm:ml-2">sent</span>
             </div>
             <div className="flex items-center justify-center">
-              <ArrowDown className="w-4 h-4 text-white mr-2 flex-shrink-0" />
-              <span className="text-white text-lg font-bold font-mono">
+              <ArrowDown className="w-3 h-3 sm:w-4 sm:h-4 text-white mr-1 sm:mr-2 flex-shrink-0" />
+              <span className="text-white text-sm sm:text-lg font-bold font-mono">
                 {formatNumber(stats.packets_received)}
               </span>
-              <span className="text-white/70 text-sm font-normal ml-2">received</span>
+              <span className="text-white/70 text-xs sm:text-sm font-normal ml-1 sm:ml-2">received</span>
             </div>
           </div>
-          <div className="text-white/60 text-xs mt-3 text-center">
+          <div className="text-white/60 text-xs mt-2 sm:mt-3 text-center">
             packets • {formatBytes(stats.total_bytes)} data
           </div>
         </div>
 
         {/* Memory Usage */}
         <div className="flex flex-col justify-center items-center animate-blur-reveal-item-3 relative z-10">
+          {/* Mobile heading */}
+          <div className="text-white/80 text-xs sm:text-sm font-medium mb-2 lg:hidden">
+            Memory Usage
+          </div>
           <div className="flex items-center justify-center space-x-2 mb-2 w-full">
-            <div className="text-white text-2xl lg:text-3xl font-bold font-mono">
+            <div className="text-white text-xl sm:text-2xl lg:text-3xl font-bold font-mono">
               {ramUsagePercent}%
             </div>
-            <div className="w-16 bg-black/30 border border-white/20 rounded-full h-2">
+            <div className="w-12 sm:w-16 bg-black/30 border border-white/20 rounded-full h-2">
               <div 
                 className="bg-white h-2 rounded-full transition-all duration-300" 
                 style={{ width: `${ramUsagePercent}%` }}
@@ -206,11 +218,15 @@ async function NetworkStatsCardContent() {
 
         {/* System Status */}
         <div className="flex flex-col justify-center items-center animate-blur-reveal-item-4 relative z-10 text-center">
+          {/* Mobile heading */}
+          <div className="text-white/80 text-xs sm:text-sm font-medium mb-2 lg:hidden">
+            System Status
+          </div>
           <div className="space-y-1">
-            <div className="text-white text-lg font-bold font-mono">
+            <div className="text-white text-sm sm:text-lg font-bold font-mono">
               CPU: {cpuPercent}%
             </div>
-            <div className="text-white/80 text-sm">
+            <div className="text-white/80 text-xs sm:text-sm">
               Uptime: {formatUptime(stats.uptime)}
             </div>
             <div className="text-white/70 text-xs">

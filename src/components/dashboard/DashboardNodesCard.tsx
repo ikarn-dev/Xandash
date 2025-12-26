@@ -116,6 +116,17 @@ export const DashboardNodesCard: React.FC = () => {
       
       if (ipsToFetch.length === 0) return;
       
+      // Mark all IPs as loading (null means loading started)
+      setResponseTimes(prev => {
+        const newTimes = { ...prev };
+        ipsToFetch.forEach(ip => { 
+          if (newTimes[ip] === undefined) {
+            newTimes[ip] = null; // Mark as loading
+          }
+        });
+        return newTimes;
+      });
+      
       try {
         // Use batch API for better performance
         const response = await fetch('/api/node-response-times', {
@@ -127,6 +138,13 @@ export const DashboardNodesCard: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           setResponseTimes(prev => ({ ...prev, ...data.responseTimes }));
+        } else {
+          // Mark failed IPs
+          setResponseTimes(prev => {
+            const newTimes = { ...prev };
+            ipsToFetch.forEach(ip => { newTimes[ip] = null; });
+            return newTimes;
+          });
         }
       } catch (error) {
         console.error('Failed to fetch response times:', error);
@@ -213,8 +231,19 @@ export const DashboardNodesCard: React.FC = () => {
       </div>
 
       {/* Table Container with dark background */}
-      <div className="bg-black/20 rounded-lg overflow-hidden">
-        <table className="w-full">
+      <div 
+        className="bg-black/20 rounded-lg overflow-x-auto"
+        style={{
+          scrollbarWidth: 'none', /* Firefox */
+          msOverflowStyle: 'none', /* IE and Edge */
+        }}
+      >
+        <style jsx>{`
+          div::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+          }
+        `}</style>
+        <table className="w-full min-w-[900px]">
           {/* Table Header */}
           <thead>
             <tr className="bg-black/40 border-b border-gray-800/50">
@@ -449,10 +478,14 @@ export const DashboardNodesCard: React.FC = () => {
                   <td className="px-4 py-4 text-center">
                     {(() => {
                       const nodeIP = extractIPFromAddress(node.address || '');
-                      const responseTime = nodeIP ? responseTimes[nodeIP] : null;
+                      const responseTime = nodeIP ? responseTimes[nodeIP] : undefined;
                       
                       if (responseTime === undefined) {
-                        return <span className="text-gray-600 text-xs">...</span>;
+                        return (
+                          <span className="text-gray-600 text-xs animate-pulse">
+                            <span className="inline-block w-8 h-4 bg-gray-700 rounded"></span>
+                          </span>
+                        );
                       }
                       if (responseTime === null || responseTime === 0) {
                         return <span className="text-gray-500 font-mono text-sm">-</span>;

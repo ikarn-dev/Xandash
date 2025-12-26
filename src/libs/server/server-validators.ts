@@ -50,9 +50,6 @@ export async function getValidatorsData(): Promise<{
     const responseData = response.data as any;
     const allValidators = Array.isArray(responseData?.pods) ? responseData.pods : [];
     
-    console.log(`[Server Validators] Raw API response: ${allValidators.length} pods`);
-    console.log(`[Server Validators] Total count from API: ${responseData?.total_count || 'not provided'}`);
-    
     // Process and enrich validator data
     const now = Math.floor(Date.now() / 1000);
     const processedValidators: ValidatorData[] = allValidators.map((validator: any, index: number) => {
@@ -175,14 +172,6 @@ export async function getValidatorsData(): Promise<{
     uniqueValidators.forEach((validator, index) => {
       validator.rank = index + 1;
     });
-
-    console.log(`[Server Validators] After deduplication: ${uniqueValidators.length} unique validators`);
-    console.log(`[Server Validators] Removed ${allValidators.length - uniqueValidators.length} duplicates`);
-    
-    // Debug: Log validators with duplicates
-    const validatorsWithDuplicates = uniqueValidators.filter(v => v.duplicateCount && v.duplicateCount > 0);
-    console.log(`[Server Validators] Validators with duplicates: ${validatorsWithDuplicates.length}`);
-    console.log(`[Server Validators] Total duplicate entries: ${validatorsWithDuplicates.reduce((sum, v) => sum + (v.duplicateCount || 0), 0)}`);
 
     // Calculate stats
     const onlineValidators = uniqueValidators.filter(v => v.status === 'online').length;

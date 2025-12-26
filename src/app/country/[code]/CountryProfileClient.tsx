@@ -485,15 +485,15 @@ export function CountryProfileClient({ countryCode }: CountryProfileClientProps)
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-16 bg-white/5 rounded-lg"></div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-64 bg-white/5 rounded-lg"></div>
-          <div className="h-64 bg-white/5 rounded-lg"></div>
+      <div className="space-y-4 sm:space-y-6 animate-pulse">
+        <div className="h-12 sm:h-16 bg-white/5 rounded-lg"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="lg:col-span-2 h-48 sm:h-64 bg-white/5 rounded-lg"></div>
+          <div className="h-48 sm:h-64 bg-white/5 rounded-lg"></div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-28 bg-white/5 rounded-lg"></div>
+            <div key={i} className="h-20 sm:h-28 bg-white/5 rounded-lg"></div>
           ))}
         </div>
       </div>
@@ -501,9 +501,9 @@ export function CountryProfileClient({ countryCode }: CountryProfileClientProps)
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="relative bg-black border border-white/10 p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden">
+      <div className="relative bg-black border border-white/10 p-3 sm:p-4 md:p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden">
         {/* Corner decorations */}
         <div className="absolute top-0 left-0 w-6 h-6">
           <div className="absolute top-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
@@ -522,25 +522,25 @@ export function CountryProfileClient({ countryCode }: CountryProfileClientProps)
           <div className="absolute bottom-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+          <div className="flex items-center gap-2 sm:gap-4">
             <button
               onClick={() => router.push('/network')}
-              className="p-2 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors"
+              className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors"
             >
-              <ArrowLeftIcon className="w-5 h-5" />
+              <ArrowLeftIcon className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               {countryCode && (
                 <img 
                   src={getCountryFlagUrl(countryCode)} 
                   alt={countryName}
-                  className="w-12 h-8 object-cover rounded shadow-lg"
+                  className="w-8 h-5 sm:w-12 sm:h-8 object-cover rounded shadow-lg"
                 />
               )}
               <div>
-                <h1 className="text-2xl font-bold text-white font-mono">{countryName || countryCode.toUpperCase()}</h1>
-                <div className="flex items-center gap-2 mt-1 text-white/60 text-sm">
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white font-mono">{countryName || countryCode.toUpperCase()}</h1>
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1 text-white/60 text-[10px] sm:text-xs md:text-sm">
                   <span>{stats.totalNodes} nodes</span>
                   <span className="text-white/30">•</span>
                   <span className="text-emerald-400">{stats.onlineNodes} online</span>
@@ -555,20 +555,20 @@ export function CountryProfileClient({ countryCode }: CountryProfileClientProps)
 
 
       {/* Map and Stats Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Map */}
         <div className="lg:col-span-2 bg-black/40 border border-white/10 rounded-lg overflow-hidden">
-          <div className="p-4 border-b border-white/10">
+          <div className="p-3 sm:p-4 border-b border-white/10">
             <div className="flex items-center gap-2">
-              <MapPinIcon className="w-5 h-5 text-emerald-400" />
-              <h2 className="text-lg font-semibold text-white">Node Locations</h2>
+              <MapPinIcon className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
+              <h2 className="text-sm sm:text-base md:text-lg font-semibold text-white">Node Locations</h2>
             </div>
           </div>
-          <div className="h-[300px]">
+          <div className="h-[200px] sm:h-[250px] md:h-[300px]">
             {mapNodes.length > 0 ? (
               <CountryMap nodes={mapNodes} countryName={countryName} />
             ) : (
-              <div className="flex items-center justify-center h-full text-white/40">
+              <div className="flex items-center justify-center h-full text-white/40 text-sm">
                 No location data available
               </div>
             )}
@@ -576,36 +576,36 @@ export function CountryProfileClient({ countryCode }: CountryProfileClientProps)
         </div>
 
         {/* Country Overview */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <GlobeIcon className="w-5 h-5 text-blue-400" />
-            <h2 className="text-lg font-semibold text-white">Overview</h2>
+        <div className="bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <GlobeIcon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-white">Overview</h2>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-white/60">Total Nodes</span>
-              <span className="text-white font-mono text-xl font-bold">{stats.totalNodes}</span>
+              <span className="text-white/60 text-xs sm:text-sm">Total Nodes</span>
+              <span className="text-white font-mono text-lg sm:text-xl font-bold">{stats.totalNodes}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-white/60">Online</span>
-              <span className="text-emerald-400 font-mono text-lg">{stats.onlineNodes}</span>
+              <span className="text-white/60 text-xs sm:text-sm">Online</span>
+              <span className="text-emerald-400 font-mono text-base sm:text-lg">{stats.onlineNodes}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-white/60">Offline</span>
-              <span className="text-red-400 font-mono text-lg">{stats.offlineNodes}</span>
+              <span className="text-white/60 text-xs sm:text-sm">Offline</span>
+              <span className="text-red-400 font-mono text-base sm:text-lg">{stats.offlineNodes}</span>
             </div>
-            <div className="border-t border-white/10 pt-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-white/60">Total Storage</span>
-                <span className="text-white font-mono">{formatBytes(stats.totalStorage)}</span>
+            <div className="border-t border-white/10 pt-3 sm:pt-4">
+              <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                <span className="text-white/60 text-xs sm:text-sm">Total Storage</span>
+                <span className="text-white font-mono text-xs sm:text-sm">{formatBytes(stats.totalStorage)}</span>
               </div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-white/60">Storage Used</span>
-                <span className="text-white font-mono">{formatBytes(stats.totalStorageUsed)}</span>
+              <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                <span className="text-white/60 text-xs sm:text-sm">Storage Used</span>
+                <span className="text-white font-mono text-xs sm:text-sm">{formatBytes(stats.totalStorageUsed)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-white/60">Avg Uptime</span>
-                <span className="text-white font-mono">{formatUptime(stats.avgUptime)}</span>
+                <span className="text-white/60 text-xs sm:text-sm">Avg Uptime</span>
+                <span className="text-white font-mono text-xs sm:text-sm">{formatUptime(stats.avgUptime)}</span>
               </div>
             </div>
           </div>
@@ -613,70 +613,70 @@ export function CountryProfileClient({ countryCode }: CountryProfileClientProps)
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
         {/* Total Credits */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4 hover:border-emerald-500/30 transition-colors">
-          <div className="flex items-center gap-2 text-emerald-400/70 text-sm mb-2">
-            <CreditsIcon className="w-4 h-4" />
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 md:p-4 hover:border-emerald-500/30 transition-colors">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-emerald-400/70 text-[10px] sm:text-xs md:text-sm mb-1 sm:mb-2">
+            <CreditsIcon className="w-3 h-3 sm:w-4 sm:h-4" />
             <span>Total Credits</span>
           </div>
-          <div className="text-xl font-bold text-emerald-400">{formatCredits(stats.totalCredits)}</div>
+          <div className="text-base sm:text-lg md:text-xl font-bold text-emerald-400">{formatCredits(stats.totalCredits)}</div>
         </div>
 
         {/* Online Percent */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4 hover:border-green-500/30 transition-colors">
-          <div className="flex items-center gap-2 text-green-400/70 text-sm mb-2">
-            <NodesIcon className="w-4 h-4" />
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 md:p-4 hover:border-green-500/30 transition-colors">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-green-400/70 text-[10px] sm:text-xs md:text-sm mb-1 sm:mb-2">
+            <NodesIcon className="w-3 h-3 sm:w-4 sm:h-4" />
             <span>Online Rate</span>
           </div>
-          <div className="text-xl font-bold text-green-400">{stats.onlinePercent.toFixed(1)}%</div>
+          <div className="text-base sm:text-lg md:text-xl font-bold text-green-400">{stats.onlinePercent.toFixed(1)}%</div>
         </div>
 
         {/* Total Storage */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4 hover:border-orange-500/30 transition-colors">
-          <div className="flex items-center gap-2 text-orange-400/70 text-sm mb-2">
-            <StorageIcon className="w-4 h-4" />
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 md:p-4 hover:border-orange-500/30 transition-colors">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-orange-400/70 text-[10px] sm:text-xs md:text-sm mb-1 sm:mb-2">
+            <StorageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
             <span>Total Storage</span>
           </div>
-          <div className="text-xl font-bold text-orange-400">{formatBytes(stats.totalStorage)}</div>
+          <div className="text-base sm:text-lg md:text-xl font-bold text-orange-400">{formatBytes(stats.totalStorage)}</div>
         </div>
 
         {/* Storage Usage */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4 hover:border-blue-500/30 transition-colors">
-          <div className="flex items-center gap-2 text-blue-400/70 text-sm mb-2">
-            <StorageIcon className="w-4 h-4" />
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 md:p-4 hover:border-blue-500/30 transition-colors">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-blue-400/70 text-[10px] sm:text-xs md:text-sm mb-1 sm:mb-2">
+            <StorageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
             <span>Storage Used</span>
           </div>
-          <div className="text-xl font-bold text-blue-400">{formatBytes(stats.totalStorageUsed)}</div>
+          <div className="text-base sm:text-lg md:text-xl font-bold text-blue-400">{formatBytes(stats.totalStorageUsed)}</div>
         </div>
 
         {/* Avg Uptime */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4 hover:border-purple-500/30 transition-colors">
-          <div className="flex items-center gap-2 text-purple-400/70 text-sm mb-2">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 md:p-4 hover:border-purple-500/30 transition-colors col-span-2 sm:col-span-1">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-purple-400/70 text-[10px] sm:text-xs md:text-sm mb-1 sm:mb-2">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
             <span>Avg Uptime</span>
           </div>
-          <div className="text-xl font-bold text-purple-400">{formatUptime(stats.avgUptime)}</div>
+          <div className="text-base sm:text-lg md:text-xl font-bold text-purple-400">{formatUptime(stats.avgUptime)}</div>
         </div>
       </div>
 
       {/* Analytics Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         {/* Online Nodes */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 mb-3 sm:mb-4">
             <div className="flex items-center gap-2">
-              <NodesIcon className="w-5 h-5 text-green-400" />
-              <h3 className="text-white font-medium">Online Nodes</h3>
+              <NodesIcon className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
+              <h3 className="text-white font-medium text-sm sm:text-base">Online Nodes</h3>
             </div>
             <div className="flex gap-1">
               {timeRangeOptions.map(opt => (
                 <button
                   key={opt.value}
                   onClick={() => setTimeRange(opt.value)}
-                  className={`px-2 py-1 text-xs rounded ${
+                  className={`px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs rounded ${
                     timeRange === opt.value 
                       ? 'bg-white/20 text-white' 
                       : 'text-white/40 hover:text-white/60'
@@ -690,51 +690,51 @@ export function CountryProfileClient({ countryCode }: CountryProfileClientProps)
           <LineChart 
             data={chartData.nodes} 
             color="#22c55e" 
-            height={120}
+            height={100}
             valueFormatter={(v) => Math.round(v).toString()}
           />
         </div>
 
         {/* Credits Earned */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <CreditsIcon className="w-5 h-5 text-emerald-400" />
-            <h3 className="text-white font-medium">Credits Earned</h3>
+        <div className="bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <CreditsIcon className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
+            <h3 className="text-white font-medium text-sm sm:text-base">Credits Earned</h3>
           </div>
           <LineChart 
             data={chartData.credits} 
             color="#10b981" 
-            height={120}
+            height={100}
             valueFormatter={(v) => formatCredits(v)}
           />
         </div>
 
         {/* Uptime Rate */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <svg className="w-5 h-5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <div className="bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
-            <h3 className="text-white font-medium">Uptime Rate</h3>
+            <h3 className="text-white font-medium text-sm sm:text-base">Uptime Rate</h3>
           </div>
           <LineChart 
             data={chartData.uptime} 
             color="#22d3ee" 
-            height={120}
+            height={100}
             valueFormatter={(v) => v.toFixed(1) + '%'}
           />
         </div>
 
         {/* Storage Usage */}
-        <div className="bg-black/40 border border-white/10 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <StorageIcon className="w-5 h-5 text-orange-400" />
-            <h3 className="text-white font-medium">Storage Usage</h3>
+        <div className="bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <StorageIcon className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
+            <h3 className="text-white font-medium text-sm sm:text-base">Storage Usage</h3>
           </div>
           <LineChart 
             data={chartData.storage} 
             color="#f97316" 
-            height={120}
+            height={100}
             valueFormatter={(v) => v.toFixed(1) + '%'}
           />
         </div>
@@ -743,44 +743,49 @@ export function CountryProfileClient({ countryCode }: CountryProfileClientProps)
 
       {/* Nodes Table */}
       <div className="bg-black/40 border border-white/10 rounded-lg overflow-hidden">
-        <div className="p-4 border-b border-white/10">
-          <div className="flex items-center justify-between">
+        <div className="p-3 sm:p-4 border-b border-white/10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
             <div className="flex items-center gap-2">
-              <NodesIcon className="w-5 h-5 text-white/60" />
-              <h2 className="text-lg font-semibold text-white">Nodes in {countryName}</h2>
-              <span className="text-white/40 text-sm">({filteredNodes.length})</span>
+              <NodesIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white/60" />
+              <h2 className="text-sm sm:text-base md:text-lg font-semibold text-white">Nodes in {countryName}</h2>
+              <span className="text-white/40 text-xs sm:text-sm">({filteredNodes.length})</span>
             </div>
             <div className="relative">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+              <SearchIcon className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-white/40" />
               <input
                 type="text"
                 placeholder="Search nodes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-white/30 w-64"
+                className="pl-8 sm:pl-9 pr-3 sm:pr-4 py-1.5 sm:py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs sm:text-sm placeholder:text-white/40 focus:outline-none focus:border-white/30 w-full sm:w-64"
               />
             </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <style jsx>{`
+          .table-scroll::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+        <div className="overflow-x-auto table-scroll" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <table className="w-full min-w-[800px]">
             <thead>
               <tr className="border-b border-white/10 text-left">
-                <th className="px-4 py-3 text-white/60 text-xs font-medium uppercase tracking-wider">IP Address</th>
-                <th className="px-4 py-3 text-white/60 text-xs font-medium uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-white/60 text-xs font-medium uppercase tracking-wider">Public Key</th>
-                <th className="px-4 py-3 text-white/60 text-xs font-medium uppercase tracking-wider">City</th>
-                <th className="px-4 py-3 text-white/60 text-xs font-medium uppercase tracking-wider">Uptime</th>
-                <th className="px-4 py-3 text-white/60 text-xs font-medium uppercase tracking-wider">Storage</th>
-                <th className="px-4 py-3 text-white/60 text-xs font-medium uppercase tracking-wider">Credits</th>
-                <th className="px-4 py-3 text-white/60 text-xs font-medium uppercase tracking-wider">Access</th>
+                <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">IP Address</th>
+                <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Public Key</th>
+                <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">City</th>
+                <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Uptime</th>
+                <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Storage</th>
+                <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Credits</th>
+                <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Access</th>
               </tr>
             </thead>
             <tbody>
               {filteredNodes.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-white/40">
+                  <td colSpan={8} className="px-3 sm:px-4 py-6 sm:py-8 text-center text-white/40 text-xs sm:text-sm">
                     {searchQuery ? 'No nodes match your search' : 'No nodes found in this country'}
                   </td>
                 </tr>
@@ -797,14 +802,14 @@ export function CountryProfileClient({ countryCode }: CountryProfileClientProps)
                       onClick={() => handleNodeClick(node)}
                       className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
                     >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-white font-mono text-sm">{ip}</span>
+                      <td className="px-3 sm:px-4 py-2 sm:py-3">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <span className="text-white font-mono text-[10px] sm:text-xs md:text-sm">{ip}</span>
                           <CopyButton text={ip} />
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      <td className="px-3 sm:px-4 py-2 sm:py-3">
+                        <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium whitespace-nowrap ${
                           isOnline 
                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
                             : 'bg-red-500/20 text-red-400 border border-red-500/30'
@@ -812,22 +817,22 @@ export function CountryProfileClient({ countryCode }: CountryProfileClientProps)
                           {isOnline ? 'ONLINE' : 'OFFLINE'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-white/60 font-mono text-xs truncate max-w-[120px]">
+                      <td className="px-3 sm:px-4 py-2 sm:py-3">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <span className="text-white/60 font-mono text-[10px] sm:text-xs truncate max-w-[80px] sm:max-w-[120px]">
                             {node.pubkey?.slice(0, 8)}...{node.pubkey?.slice(-6)}
                           </span>
                           <CopyButton text={node.pubkey} />
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-white/60 text-sm">{loc?.city || 'Unknown'}</td>
-                      <td className="px-4 py-3 text-white font-mono text-sm">{formatUptime(node.uptime)}</td>
-                      <td className="px-4 py-3 text-white font-mono text-sm">{formatBytes(node.storage_committed)}</td>
-                      <td className="px-4 py-3">
-                        <span className="text-emerald-400 font-mono text-sm">{formatCredits(node.credits || 0)}</span>
+                      <td className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">{loc?.city || 'Unknown'}</td>
+                      <td className="px-3 sm:px-4 py-2 sm:py-3 text-white font-mono text-[10px] sm:text-xs md:text-sm whitespace-nowrap">{formatUptime(node.uptime)}</td>
+                      <td className="px-3 sm:px-4 py-2 sm:py-3 text-white font-mono text-[10px] sm:text-xs md:text-sm whitespace-nowrap">{formatBytes(node.storage_committed)}</td>
+                      <td className="px-3 sm:px-4 py-2 sm:py-3">
+                        <span className="text-emerald-400 font-mono text-[10px] sm:text-xs md:text-sm whitespace-nowrap">{formatCredits(node.credits || 0)}</span>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
+                      <td className="px-3 sm:px-4 py-2 sm:py-3">
+                        <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs whitespace-nowrap ${
                           node.is_public 
                             ? 'bg-blue-500/20 text-blue-400' 
                             : 'bg-white/10 text-white/40'

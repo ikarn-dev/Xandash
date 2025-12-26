@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { XanDashLogo } from './DashboardLayout';
 
 // Custom SVG Icons
 const TwitterIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -73,9 +74,10 @@ export const Footer: React.FC = () => {
         <div className="py-12 grid grid-cols-2 md:grid-cols-4 gap-8">
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-r from-white/80 to-white/40 rounded-sm"></div>
-              <span className="text-white font-bold text-lg">XanDash</span>
+            <div className="flex items-center mb-4">
+              <Link href="/" className="hover:opacity-80 transition-opacity">
+                <XanDashLogo className="h-6" textClassName="text-lg" />
+              </Link>
             </div>
             <p className="text-white/50 text-sm leading-relaxed mb-4">
               Real-time monitoring dashboard for the Xandeum network. Track nodes, analytics, and network health.

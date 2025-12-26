@@ -39,8 +39,6 @@ export async function GET(request: NextRequest) {
     const responseData = rpcResponse.data as any;
     const allNodes = Array.isArray(responseData?.pods) ? responseData.pods : [];
     
-    console.log(`[Nodes API] Received ${allNodes.length} pods from RPC (real-time)`);
-    
     let result;
     
     if (includeAll) {

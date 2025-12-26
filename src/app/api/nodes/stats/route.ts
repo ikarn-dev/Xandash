@@ -34,8 +34,6 @@ export async function GET() {
     const responseData = response.data as any;
     const allNodes = Array.isArray(responseData?.pods) ? responseData.pods : [];
     
-    console.log(`[Node Stats] Received ${allNodes.length} pods from RPC`);
-    
     // Calculate stats based on actual node data structure
     const now = Math.floor(Date.now() / 1000);
     const onlineNodes = allNodes.filter((n: any) => {

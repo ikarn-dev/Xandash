@@ -24,6 +24,38 @@ const navigationItems: NavbarItem[] = [
   { title: 'Docs', href: '/about' },
 ];
 
+// XanDash Logo Component with X and triangle A
+export const XanDashLogo: React.FC<{ className?: string; textClassName?: string; showText?: boolean }> = ({ 
+  className = "h-6", 
+  textClassName = "text-base",
+  showText = true 
+}) => (
+  <span className={cn("text-white font-bold inline-flex items-center", textClassName)}>
+    X
+    <svg 
+      viewBox="0 0 24 28" 
+      fill="none"
+      className="inline-block"
+      style={{ 
+        height: '0.85em', 
+        width: 'auto',
+        verticalAlign: 'baseline',
+        marginBottom: '0.05em'
+      }}
+    >
+      {/* Triangle A */}
+      <path 
+        d="M12 2 L23 26 L1 26 Z" 
+        stroke="currentColor" 
+        strokeWidth="2.5" 
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+    NDASH
+  </span>
+);
+
 const BinaryAnimation: React.FC<{ text: string; isHovered: boolean }> = ({ text, isHovered }) => {
   const [displayText, setDisplayText] = useState(text);
 
@@ -121,9 +153,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         <div className="px-4 sm:px-6">
           <div className="flex items-center h-14">
             {/* Left side - Logo */}
-            <div className="flex items-center space-x-3 flex-shrink-0">
-              <div className="w-6 h-6 bg-gradient-to-r from-white/80 to-white/40 rounded-sm"></div>
-              <h2 className="text-white font-bold text-base">XanDash</h2>
+            <div className="flex items-center flex-shrink-0">
+              <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
+                <XanDashLogo className="h-5 sm:h-6" textClassName="text-sm sm:text-base" />
+              </Link>
             </div>
 
             {/* Center - Navigation Links (properly centered using absolute positioning) */}
@@ -180,39 +213,52 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
           </div>
 
           {/* Mobile Navigation Menu */}
-          {mobileMenuOpen && (
-            <div className="lg:hidden border-t border-white/10 bg-black/95 backdrop-blur-sm">
-              <div className="py-4 space-y-1">
-                {navigationItems.map((item) => {
-                  const isActive = pathname === item.href;
-                  
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        'block px-4 py-3 text-sm font-medium transition-all duration-200 rounded-lg mx-2',
-                        isActive 
-                          ? 'text-white bg-white/10 border-l-4 border-white' 
-                          : 'text-white/60 hover:text-white hover:bg-white/5'
-                      )}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      {item.title}
-                    </Link>
-                  );
-                })}
+          <div 
+            className={cn(
+              "lg:hidden border-t border-white/10 bg-black/95 backdrop-blur-sm overflow-hidden transition-all duration-300 ease-in-out",
+              mobileMenuOpen 
+                ? "max-h-[500px] opacity-100" 
+                : "max-h-0 opacity-0 border-t-transparent"
+            )}
+          >
+            <div className={cn(
+              "py-4 space-y-1 transition-all duration-300 ease-in-out",
+              mobileMenuOpen 
+                ? "translate-y-0 opacity-100" 
+                : "-translate-y-4 opacity-0"
+            )}>
+              {navigationItems.map((item, index) => {
+                const isActive = pathname === item.href;
                 
-                {/* Mobile Controls */}
-                <div className="pt-4 border-t border-white/10 mx-2 mt-2">
-                  <div className="flex flex-col space-y-3 px-2">
-                    <NetworkSelector />
-                    <LiveRefresh onRefresh={handleRefresh} interval={30} />
-                  </div>
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      'block px-4 py-3 text-sm font-medium transition-all duration-200 rounded-lg mx-2',
+                      isActive 
+                        ? 'text-white bg-white/10 border-l-4 border-white' 
+                        : 'text-white/60 hover:text-white hover:bg-white/5'
+                    )}
+                    style={{
+                      transitionDelay: mobileMenuOpen ? `${index * 50}ms` : '0ms'
+                    }}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.title}
+                  </Link>
+                );
+              })}
+              
+              {/* Mobile Controls */}
+              <div className="pt-4 border-t border-white/10 mx-2 mt-2">
+                <div className="flex flex-col space-y-3 px-2">
+                  <NetworkSelector />
+                  <LiveRefresh onRefresh={handleRefresh} interval={30} />
                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
       

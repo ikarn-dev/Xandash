@@ -194,7 +194,7 @@ export const CombinedTokenCard: React.FC = () => {
     }, [data, hasAnimated, shouldAnimateChart]);
     if (data.length === 0) {
       return (
-        <div className="w-full h-96 flex items-center justify-center bg-black/20 rounded border border-white/10">
+        <div className="w-full h-64 lg:h-96 flex items-center justify-center bg-black/20 rounded border border-white/10">
           <div className="text-white/40 text-xs text-center">
             <div>No chart data available</div>
             <div className="text-white/30 text-xs mt-1">Click refresh to load chart</div>
@@ -234,7 +234,7 @@ export const CombinedTokenCard: React.FC = () => {
     };
 
     return (
-      <div className="w-full h-96 bg-black/10 rounded border border-white/5">
+      <div className="w-full h-64 lg:h-96 bg-black/10 rounded border border-white/5">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart 
             key={animationKey}
@@ -310,8 +310,8 @@ export const CombinedTokenCard: React.FC = () => {
 
         <div className="animate-pulse">
           <div className="h-4 bg-white/10 rounded mb-3"></div>
-          <div className="grid grid-cols-5 gap-6">
-            <div className="col-span-2 space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
+            <div className="lg:col-span-2 space-y-4">
               <div className="space-y-2">
                 <div className="h-8 bg-white/10 rounded"></div>
                 <div className="h-4 bg-white/10 rounded w-3/4"></div>
@@ -330,8 +330,8 @@ export const CombinedTokenCard: React.FC = () => {
                 ))}
               </div>
             </div>
-            <div className="col-span-3">
-              <div className="w-full h-96 bg-white/10 rounded"></div>
+            <div className="lg:col-span-3">
+              <div className="w-full h-64 lg:h-96 bg-white/10 rounded"></div>
             </div>
           </div>
         </div>
@@ -394,9 +394,9 @@ export const CombinedTokenCard: React.FC = () => {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
         {/* Left Side - Detailed Token Information */}
-        <div className="col-span-2 space-y-3">
+        <div className="lg:col-span-2 space-y-3">
           {/* Current Price Display */}
           <div className="mb-3 animate-blur-reveal-item-1">
             <div className="text-white text-xl font-bold font-mono mb-1">
@@ -462,7 +462,7 @@ export const CombinedTokenCard: React.FC = () => {
         </div>
 
         {/* Right Side - Price Chart */}
-        <div className="col-span-3 flex items-end animate-blur-reveal-item-4">
+        <div className="lg:col-span-3 flex items-end animate-blur-reveal-item-4">
           <PriceChart data={priceHistory} />
         </div>
       </div>

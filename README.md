@@ -68,9 +68,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 Create a `.env.local` file in the root directory:
 
 ```env
-# RPC Endpoints
-RPC_ENDPOINT_PRIMARY=https://rpc1.pchednode.com/rpc
-RPC_ENDPOINT_FALLBACK=http://161.97.97.41:6000/rpc
+# RPC Endpoints (contact Xandeum team for access)
+RPC_ENDPOINT_PRIMARY=your_primary_rpc_endpoint
+RPC_ENDPOINT_FALLBACK=your_fallback_rpc_endpoint
 
 # CoinGecko API
 NEXT_PUBLIC_COINGECKO_API_URL=https://api.coingecko.com/api/v3/coins/xandeum
@@ -80,7 +80,7 @@ NEXT_PUBLIC_COINGECKO_API_KEY=your_api_key
 NEXT_PUBLIC_IP_API_COM_URL=http://ip-api.com
 
 # Pod Credits
-NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL=https://podcredits.xandeum.network/api/pods-credits
+NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL=your_pod_credits_api_url
 ```
 
 ## Project Structure

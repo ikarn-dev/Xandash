@@ -250,7 +250,7 @@ function NetworkPageContent() {
       <NetworkTitleCard />
 
       {/* Stats Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
         <NetworkNodesCard 
           totalNodes={totalNodes}
           locatedNodes={locatedNodes}
@@ -270,7 +270,7 @@ function NetworkPageContent() {
       </div>
 
       {/* World Map */}
-      <div className="relative bg-black border border-white/10 rounded-lg overflow-hidden group hover:border-white/20 transition-all duration-300" style={{ minHeight: '500px' }}>
+      <div className="relative bg-black border border-white/10 rounded-lg overflow-hidden group hover:border-white/20 transition-all duration-300 min-h-[280px] sm:min-h-[350px] md:min-h-[450px] lg:min-h-[500px]">
         {/* Corner Accents */}
         <div className="absolute top-0 left-0 w-6 h-6 z-20">
           <div className="absolute top-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
@@ -290,44 +290,44 @@ function NetworkPageContent() {
         </div>
 
         {/* Stats Overlay - Top Left */}
-        <div className="absolute top-6 left-6 z-50 space-y-3 bg-black/60 backdrop-blur-sm rounded-lg p-3 border border-white/10">
+        <div className="absolute top-3 left-3 sm:top-4 sm:left-4 md:top-6 md:left-6 z-50 space-y-2 sm:space-y-3 bg-black/60 backdrop-blur-sm rounded-lg p-2 sm:p-3 border border-white/10">
           <div className="text-left">
-            <div className="text-white text-3xl font-bold font-mono">{totalNodes}</div>
-            <div className="text-white/60 text-sm">pNodes</div>
+            <div className="text-white text-xl sm:text-2xl md:text-3xl font-bold font-mono">{totalNodes}</div>
+            <div className="text-white/60 text-[10px] sm:text-xs md:text-sm">pNodes</div>
           </div>
           <div className="text-left">
-            <div className="text-white text-2xl font-bold font-mono">{countryStats.length}</div>
-            <div className="text-white/60 text-sm">Countries</div>
+            <div className="text-white text-lg sm:text-xl md:text-2xl font-bold font-mono">{countryStats.length}</div>
+            <div className="text-white/60 text-[10px] sm:text-xs md:text-sm">Countries</div>
           </div>
         </div>
 
         {/* Live indicator - Top Right */}
-        <div className="absolute top-6 right-6 z-50 flex items-center space-x-2 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/10">
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-          <span className="text-white text-sm font-medium">Live</span>
+        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 md:top-6 md:right-6 z-50 flex items-center space-x-1.5 sm:space-x-2 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-white/10">
+          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse"></div>
+          <span className="text-white text-xs sm:text-sm font-medium">Live</span>
         </div>
 
         {/* Country Stats - Bottom Left */}
         {countryStats.length > 0 && (
-          <div className="absolute bottom-6 left-6 z-50 bg-black/60 backdrop-blur-sm rounded-lg p-3 border border-white/10 max-h-48">
-            <div className="text-white/80 text-xs font-medium mb-2 font-mono">// TOP COUNTRIES</div>
-            <div className="space-y-1 max-w-48 max-h-32 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
-              {countryStats.slice(0, 8).map((country) => (
-                <div key={country.country} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-2 flex-1 min-w-0">
+          <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 md:bottom-6 md:left-6 z-50 bg-black/60 backdrop-blur-sm rounded-lg p-2 sm:p-3 border border-white/10 max-h-28 sm:max-h-40 md:max-h-48">
+            <div className="text-white/80 text-[10px] sm:text-xs font-medium mb-1.5 sm:mb-2 font-mono">// TOP COUNTRIES</div>
+            <div className="space-y-1 max-w-32 sm:max-w-40 md:max-w-48 max-h-16 sm:max-h-28 md:max-h-32 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+              {countryStats.slice(0, 5).map((country) => (
+                <div key={country.country} className="flex items-center justify-between text-[10px] sm:text-xs">
+                  <div className="flex items-center space-x-1.5 sm:space-x-2 flex-1 min-w-0">
                     {country.country_code ? (
                       <img 
                         src={`${process.env.NEXT_PUBLIC_FLAG_CDN_URL || 'https://flagcdn.com'}/16x12/${country.country_code.toLowerCase()}.png`}
                         alt={country.country}
-                        className="w-4 h-3 object-cover rounded-sm flex-shrink-0"
+                        className="w-3 h-2 sm:w-4 sm:h-3 object-cover rounded-sm flex-shrink-0"
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       />
                     ) : (
-                      <div className="w-4 h-3 bg-gray-500 rounded-sm flex-shrink-0" />
+                      <div className="w-3 h-2 sm:w-4 sm:h-3 bg-gray-500 rounded-sm flex-shrink-0" />
                     )}
                     <span className="text-white truncate">{country.country}</span>
                   </div>
-                  <div className="bg-white/20 text-white px-2 py-0.5 rounded-full text-xs font-mono ml-2 flex-shrink-0">
+                  <div className="bg-white/20 text-white px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-mono ml-1.5 sm:ml-2 flex-shrink-0">
                     {country.count}
                   </div>
                 </div>
@@ -367,13 +367,13 @@ function NetworkPageContent() {
 
       {/* Country Stats Section */}
       {!loading && countryDetailedStats.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white font-mono">// COUNTRIES</h2>
-            <span className="text-white/40 text-sm">{countryDetailedStats.length} countries</span>
+            <h2 className="text-sm sm:text-base md:text-lg font-bold text-white font-mono">// COUNTRIES</h2>
+            <span className="text-white/40 text-xs sm:text-sm">{countryDetailedStats.length} countries</span>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
             {countryDetailedStats.map((country) => {
               const onlinePercent = country.totalNodes > 0 ? (country.onlineNodes / country.totalNodes) * 100 : 0;
               const totalBars = 45;
@@ -383,7 +383,7 @@ function NetworkPageContent() {
                 <div 
                   key={country.country}
                   onClick={() => router.push(`/country/${encodeURIComponent(country.country_code.toLowerCase())}`)}
-                  className="relative bg-black border border-white/10 p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden cursor-pointer"
+                  className="relative bg-black border border-white/10 p-3 sm:p-4 md:p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden cursor-pointer"
                 >
                   {/* Corner Accents */}
                   <div className="absolute top-0 left-0 w-6 h-6">
@@ -404,47 +404,47 @@ function NetworkPageContent() {
                   </div>
 
                   {/* Header with Flag and Node Count */}
-                  <div className="flex items-center justify-between mb-4 relative z-10">
-                    <div className="flex items-center space-x-3">
+                  <div className="flex items-center justify-between mb-3 sm:mb-4 relative z-10">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
                       {country.country_code ? (
                         <img 
                           src={`${process.env.NEXT_PUBLIC_FLAG_CDN_URL || 'https://flagcdn.com'}/24x18/${country.country_code.toLowerCase()}.png`}
                           alt={country.country}
-                          className="w-6 h-4 object-cover rounded-sm"
+                          className="w-5 h-3.5 sm:w-6 sm:h-4 object-cover rounded-sm"
                           onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
                       ) : (
-                        <div className="w-6 h-4 bg-gray-600 rounded-sm" />
+                        <div className="w-5 h-3.5 sm:w-6 sm:h-4 bg-gray-600 rounded-sm" />
                       )}
-                      <span className="text-white font-medium">{country.country}</span>
+                      <span className="text-white font-medium text-sm sm:text-base truncate max-w-[120px] sm:max-w-none">{country.country}</span>
                     </div>
                     <div className="text-right">
-                      <div className="text-white text-2xl font-bold font-mono">{country.totalNodes}</div>
-                      <div className="text-white/40 text-[10px]">nodes</div>
+                      <div className="text-white text-xl sm:text-2xl font-bold font-mono">{country.totalNodes}</div>
+                      <div className="text-white/40 text-[9px] sm:text-[10px]">nodes</div>
                     </div>
                   </div>
 
                   {/* Status Stats Row */}
-                  <div className="grid grid-cols-3 gap-2 mb-4 relative z-10">
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mb-3 sm:mb-4 relative z-10">
                     <div className="text-center">
-                      <div className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Online</div>
-                      <div className="text-green-400 text-lg font-bold font-mono">{country.onlineNodes}</div>
+                      <div className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-wider mb-0.5 sm:mb-1">Online</div>
+                      <div className="text-green-400 text-base sm:text-lg font-bold font-mono">{country.onlineNodes}</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Offline</div>
-                      <div className="text-red-400 text-lg font-bold font-mono">{country.offlineNodes}</div>
+                      <div className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-wider mb-0.5 sm:mb-1">Offline</div>
+                      <div className="text-red-400 text-base sm:text-lg font-bold font-mono">{country.offlineNodes}</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Uptime</div>
-                      <div className="text-blue-400 text-lg font-bold font-mono">{onlinePercent.toFixed(0)}%</div>
+                      <div className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-wider mb-0.5 sm:mb-1">Uptime</div>
+                      <div className="text-blue-400 text-base sm:text-lg font-bold font-mono">{onlinePercent.toFixed(0)}%</div>
                     </div>
                   </div>
 
                   {/* Uptime Bar Graph */}
-                  <div className="w-full mb-4 relative z-10">
+                  <div className="w-full mb-3 sm:mb-4 relative z-10">
                     <svg 
                       className="w-full" 
-                      height="20" 
+                      height="16" 
                       viewBox="0 0 200 20" 
                       preserveAspectRatio="none"
                     >
@@ -463,18 +463,18 @@ function NetworkPageContent() {
                   </div>
 
                   {/* Storage Stats */}
-                  <div className="space-y-2 relative z-10 border-t border-white/5 pt-4">
+                  <div className="space-y-1.5 sm:space-y-2 relative z-10 border-t border-white/5 pt-3 sm:pt-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-white/50 text-xs">Total Storage</span>
-                      <span className="text-white font-mono text-sm">{formatStorage(country.totalStorage)}</span>
+                      <span className="text-white/50 text-[10px] sm:text-xs">Total Storage</span>
+                      <span className="text-white font-mono text-xs sm:text-sm">{formatStorage(country.totalStorage)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-white/50 text-xs">Storage Used</span>
-                      <span className="text-white font-mono text-sm">{formatStorage(country.totalStorageUsed)}</span>
+                      <span className="text-white/50 text-[10px] sm:text-xs">Storage Used</span>
+                      <span className="text-white font-mono text-xs sm:text-sm">{formatStorage(country.totalStorageUsed)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-white/50 text-xs">Avg Uptime</span>
-                      <span className="text-white font-mono text-sm">{formatUptime(country.avgUptime)}</span>
+                      <span className="text-white/50 text-[10px] sm:text-xs">Avg Uptime</span>
+                      <span className="text-white font-mono text-xs sm:text-sm">{formatUptime(country.avgUptime)}</span>
                     </div>
                   </div>
                 </div>
@@ -486,14 +486,14 @@ function NetworkPageContent() {
 
       {/* Loading Skeleton for Country Stats */}
       {loading && (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between">
-            <div className="h-6 bg-gray-700/50 rounded w-32 animate-pulse"></div>
-            <div className="h-4 bg-gray-700/50 rounded w-24 animate-pulse"></div>
+            <div className="h-5 sm:h-6 bg-gray-700/50 rounded w-24 sm:w-32 animate-pulse"></div>
+            <div className="h-3 sm:h-4 bg-gray-700/50 rounded w-20 sm:w-24 animate-pulse"></div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
             {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="relative bg-black border border-white/10 p-6 animate-pulse">
+              <div key={i} className="relative bg-black border border-white/10 p-3 sm:p-4 md:p-6 animate-pulse">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">

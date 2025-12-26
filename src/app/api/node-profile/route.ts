@@ -41,40 +41,19 @@ export async function GET(request: NextRequest) {
     const ip = searchParams.get('ip');
     const quick = searchParams.get('quick') === 'true';
 
-    console.log(`[node-profile] Request for IP: ${ip}, quick: ${quick}`);
-
     if (!ip) {
       return NextResponse.json({ error: 'IP address is required' }, { status: 400 });
     }
 
-    // Skip cache for debugging - fetch fresh data
-    console.log(`[node-profile] Fetching fresh data...`);
-
     // Fetch data in parallel
     const fetchPromises: Promise<any>[] = [
-      fetchLocationData(ip).catch(err => {
-        console.error(`[node-profile] Location fetch error:`, err.message);
-        return null;
-      }),
-      fetchNodeHistory(ip).catch(err => {
-        console.error(`[node-profile] History fetch error:`, err.message);
-        return { history: [], meta: null };
-      }),
+      fetchLocationData(ip).catch(() => null),
+      fetchNodeHistory(ip).catch(() => ({ history: [], meta: null })),
     ];
     
     if (!quick) {
-      fetchPromises.push(
-        fetchCurrentNodeData(ip).catch(err => {
-          console.error(`[node-profile] CurrentNode fetch error:`, err.message);
-          return null;
-        })
-      );
-      fetchPromises.push(
-        fetchCreditsData().catch(err => {
-          console.error(`[node-profile] Credits fetch error:`, err.message);
-          return null;
-        })
-      );
+      fetchPromises.push(fetchCurrentNodeData(ip).catch(() => null));
+      fetchPromises.push(fetchCreditsData().catch(() => null));
     }
 
     const results = await Promise.all(fetchPromises);
@@ -82,8 +61,6 @@ export async function GET(request: NextRequest) {
     const historyResult = results[1];
     const currentNodeData = quick ? null : results[2];
     const creditsData = quick ? null : results[3];
-
-    console.log(`[node-profile] Fetch results - location: ${!!locationData}, history: ${historyResult?.history?.length || 0}, currentNode: ${!!currentNodeData}`);
 
     // Derive status from history data
     let derivedStatus = 'unknown';
@@ -136,7 +113,6 @@ export async function GET(request: NextRequest) {
     };
 
     const duration = Date.now() - startTime;
-    console.log(`[node-profile] ✅ Complete for ${ip} in ${duration}ms - status: ${response.currentNode?.status}, history: ${response.history?.length || 0}`);
 
     return NextResponse.json(response, {
       headers: {
@@ -144,8 +120,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    const duration = Date.now() - startTime;
-    console.error(`[node-profile] ❌ Error after ${duration}ms:`, error);
+    console.error('Node profile error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch node profile' },
       { status: 500 }
@@ -208,10 +183,8 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
     const rpcUrl = getRpcUrl();
     const historyUrl = `${rpcUrl}/geo/history?ip=${encodeURIComponent(ip)}`;
     
-    console.log(`[fetchNodeHistory] Fetching from: ${historyUrl}`);
-    
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     
     const response = await fetch(historyUrl, {
       signal: controller.signal,
@@ -223,15 +196,11 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
     
     clearTimeout(timeoutId);
 
-    console.log(`[fetchNodeHistory] Response status: ${response.status}`);
-
     if (!response.ok) {
-      console.log(`[fetchNodeHistory] Response not OK: ${response.status} ${response.statusText}`);
       return { history: [], meta: null };
     }
 
     const data = await response.json();
-    console.log(`[fetchNodeHistory] Data keys: ${Object.keys(data || {}).join(', ')}`);
     
     const history: NodeHistoryEntry[] = [];
     let meta: NodeMeta | null = null;
@@ -285,10 +254,8 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
       meta 
     };
     
-    console.log(`[fetchNodeHistory] Parsed ${result.history.length} history entries`);
     return result;
-  } catch (error: any) {
-    console.error(`[fetchNodeHistory] Error: ${error.message || error}`);
+  } catch (error) {
     return { history: [], meta: null };
   }
 }

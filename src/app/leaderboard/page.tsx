@@ -96,12 +96,12 @@ function LeaderboardPageContent() {
   };
 
   // Get tier based on credits
-  const getTier = (credits: number): { name: string; color: string; bgColor: string } => {
-    if (credits >= 50000) return { name: 'Diamond', color: '#60a5fa', bgColor: 'rgba(96, 165, 250, 0.15)' };
-    if (credits >= 25000) return { name: 'Platinum', color: '#a78bfa', bgColor: 'rgba(167, 139, 250, 0.15)' };
-    if (credits >= 10000) return { name: 'Gold', color: '#fbbf24', bgColor: 'rgba(251, 191, 36, 0.15)' };
-    if (credits >= 5000) return { name: 'Silver', color: '#9ca3af', bgColor: 'rgba(156, 163, 175, 0.15)' };
-    return { name: 'Bronze', color: '#f97316', bgColor: 'rgba(249, 115, 22, 0.15)' };
+  const getTier = (credits: number): { name: string; short: string; color: string; bgColor: string } => {
+    if (credits >= 50000) return { name: 'Diamond', short: 'DIA', color: '#60a5fa', bgColor: 'rgba(96, 165, 250, 0.15)' };
+    if (credits >= 25000) return { name: 'Platinum', short: 'PLA', color: '#a78bfa', bgColor: 'rgba(167, 139, 250, 0.15)' };
+    if (credits >= 10000) return { name: 'Gold', short: 'GLD', color: '#fbbf24', bgColor: 'rgba(251, 191, 36, 0.15)' };
+    if (credits >= 5000) return { name: 'Silver', short: 'SLV', color: '#9ca3af', bgColor: 'rgba(156, 163, 175, 0.15)' };
+    return { name: 'Bronze', short: 'BRZ', color: '#f97316', bgColor: 'rgba(249, 115, 22, 0.15)' };
   };
 
   // Create leaderboard from credits data
@@ -192,21 +192,21 @@ function LeaderboardPageContent() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Title Card Skeleton */}
-        <div className="relative bg-black border border-white/10 p-6 h-24 animate-pulse">
-          <div className="h-8 bg-gray-700/50 rounded w-48 mb-3"></div>
-          <div className="h-4 bg-gray-700/50 rounded w-64"></div>
+        <div className="relative bg-black border border-white/10 p-4 sm:p-6 h-20 sm:h-24 animate-pulse">
+          <div className="h-6 sm:h-8 bg-gray-700/50 rounded w-36 sm:w-48 mb-2 sm:mb-3"></div>
+          <div className="h-3 sm:h-4 bg-gray-700/50 rounded w-48 sm:w-64"></div>
         </div>
 
         {/* Stats Cards Skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {[1, 2, 3].map(i => (
-            <div key={i} className="relative bg-black border border-white/10 p-6 h-40 animate-pulse">
+            <div key={i} className="relative bg-black border border-white/10 p-4 sm:p-6 h-32 sm:h-40 animate-pulse">
               <div className="flex flex-col items-center justify-center h-full">
-                <div className="h-4 bg-gray-700/50 rounded w-24 mb-3"></div>
-                <div className="h-10 bg-gray-700/50 rounded w-32 mb-2"></div>
-                <div className="h-3 bg-gray-700/50 rounded w-20"></div>
+                <div className="h-3 sm:h-4 bg-gray-700/50 rounded w-20 sm:w-24 mb-2 sm:mb-3"></div>
+                <div className="h-8 sm:h-10 bg-gray-700/50 rounded w-24 sm:w-32 mb-1 sm:mb-2"></div>
+                <div className="h-2 sm:h-3 bg-gray-700/50 rounded w-16 sm:w-20"></div>
               </div>
             </div>
           ))}
@@ -214,17 +214,23 @@ function LeaderboardPageContent() {
 
         {/* Table Skeleton */}
         <div className="bg-black/90 border border-gray-800 rounded-lg overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b border-gray-800">
-            <div className="h-6 bg-gray-700/50 rounded w-32 animate-pulse"></div>
-            <div className="w-8 h-8 bg-gray-700/50 rounded animate-pulse"></div>
+          <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-800">
+            <div className="h-5 sm:h-6 bg-gray-700/50 rounded w-24 sm:w-32 animate-pulse"></div>
+            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-700/50 rounded animate-pulse"></div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed">
+          <div 
+            className="overflow-x-auto"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}
+          >
+            <table className="w-full min-w-[500px]">
               <thead>
                 <tr className="border-b border-gray-800 bg-black/50">
                   {['#', 'Pod ID', 'Tier', 'Credits', 'Uptime'].map((_, i) => (
-                    <th key={i} className="py-3 px-3">
-                      <div className="h-3 bg-gray-700/50 rounded w-16 animate-pulse"></div>
+                    <th key={i} className="py-2 sm:py-3 px-2 sm:px-3">
+                      <div className="h-2 sm:h-3 bg-gray-700/50 rounded w-12 sm:w-16 animate-pulse"></div>
                     </th>
                   ))}
                 </tr>
@@ -233,8 +239,8 @@ function LeaderboardPageContent() {
                 {Array.from({ length: 10 }).map((_, i) => (
                   <tr key={i} className="border-b border-gray-800/50">
                     {[1, 2, 3, 4, 5].map(j => (
-                      <td key={j} className="py-3 px-3">
-                        <div className="h-4 bg-gray-700/50 rounded animate-pulse"></div>
+                      <td key={j} className="py-2 sm:py-3 px-2 sm:px-3">
+                        <div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div>
                       </td>
                     ))}
                   </tr>
@@ -264,7 +270,7 @@ function LeaderboardPageContent() {
       <LeaderboardTitleCard />
 
       {/* Stats Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <LeaderboardTotalCreditsCard />
         <LeaderboardDistributionCard />
         <LeaderboardTopPodCard />
@@ -275,41 +281,52 @@ function LeaderboardPageContent() {
         <div className="bg-black/90 border border-yellow-500/30 rounded-lg overflow-hidden">
           {/* Header */}
           <div 
-            className="flex items-center justify-between p-4 border-b border-yellow-500/20 cursor-pointer hover:bg-yellow-500/5 transition-colors"
+            className="flex items-center justify-between p-3 sm:p-4 border-b border-yellow-500/20 cursor-pointer hover:bg-yellow-500/5 transition-colors"
             onClick={() => setShowBookmarks(!showBookmarks)}
           >
-            <div className="flex items-center space-x-3">
-              <Bookmark className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-              <h2 className="text-lg font-bold text-white font-mono">// BOOKMARKS</h2>
-              <span className="text-yellow-400 text-sm font-mono">({bookmarkedPods.size})</span>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Bookmark className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 fill-yellow-400" />
+              <h2 className="text-sm sm:text-lg font-bold text-white font-mono">// BOOKMARKS</h2>
+              <span className="text-yellow-400 text-xs sm:text-sm font-mono">({bookmarkedPods.size})</span>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setBookmarkedPods(new Set());
                   toast.success('All bookmarks cleared');
                 }}
-                className="text-red-400/70 hover:text-red-400 text-xs font-medium px-2 py-1 rounded hover:bg-red-400/10 transition-colors"
+                className="text-red-400/70 hover:text-red-400 text-[10px] sm:text-xs font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded hover:bg-red-400/10 transition-colors"
               >
                 Clear All
               </button>
-              <span className="text-white/40 text-xs">{showBookmarks ? 'Collapse' : 'Expand'}</span>
-              <ChevronRight className={`w-4 h-4 text-white/40 transition-transform duration-200 ${showBookmarks ? 'rotate-90' : ''}`} />
+              <span className="text-white/40 text-[10px] sm:text-xs hidden sm:inline">{showBookmarks ? 'Collapse' : 'Expand'}</span>
+              <ChevronRight className={`w-3 h-3 sm:w-4 sm:h-4 text-white/40 transition-transform duration-200 ${showBookmarks ? 'rotate-90' : ''}`} />
             </div>
           </div>
 
           {/* Bookmarked Pods Table */}
           {showBookmarks && (
-            <div className="overflow-x-auto">
-              <table className="w-full table-fixed">
+            <div 
+              className="overflow-x-auto"
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+              }}
+            >
+              <style jsx>{`
+                div::-webkit-scrollbar {
+                  display: none;
+                }
+              `}</style>
+              <table className="w-full min-w-[500px]">
                 <thead>
                   <tr className="border-b border-yellow-500/20 bg-black/50">
-                    <th className="text-left py-3 px-3 text-yellow-400/70 text-xs font-medium uppercase tracking-wider w-[12%]">#</th>
-                    <th className="text-left py-3 px-3 text-yellow-400/70 text-xs font-medium uppercase tracking-wider w-[32%]">Pod ID</th>
-                    <th className="text-center py-3 px-3 text-yellow-400/70 text-xs font-medium uppercase tracking-wider w-[14%]">Tier</th>
-                    <th className="text-right py-3 px-3 text-yellow-400/70 text-xs font-medium uppercase tracking-wider w-[18%]">Credits</th>
-                    <th className="text-center py-3 px-3 text-yellow-400/70 text-xs font-medium uppercase tracking-wider w-[14%]">Uptime</th>
+                    <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[15%]">#</th>
+                    <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[35%]">Pod ID</th>
+                    <th className="text-center py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[15%]">Tier</th>
+                    <th className="text-right py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[20%]">Credits</th>
+                    <th className="text-center py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[15%]">Uptime</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -321,23 +338,23 @@ function LeaderboardPageContent() {
                         className="group hover:bg-yellow-500/5 transition-all duration-200 border-b border-yellow-500/10"
                       >
                         {/* Rank with Remove */}
-                        <td className="py-3 px-3 w-[12%]">
+                        <td className="py-2 sm:py-3 px-2 sm:px-3">
                           <div className="flex items-center space-x-1">
-                            <span className="text-white text-sm font-medium">#{pod.rank}</span>
+                            <span className="text-white text-xs sm:text-sm font-medium">#{pod.rank}</span>
                             <button
                               onClick={() => toggleBookmark(pod.pod_id)}
                               className="text-yellow-400 hover:text-red-400 transition-colors duration-200 cursor-pointer"
                               title="Remove bookmark"
                             >
-                              <X className="w-3 h-3" />
+                              <X className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                             </button>
                           </div>
                         </td>
                         
                         {/* Pod ID */}
-                        <td className="py-3 px-3 w-[32%]">
-                          <div className="flex items-center space-x-2">
-                            <div className="font-mono text-yellow-100 text-sm group-hover:text-yellow-300 transition-colors duration-300 truncate">
+                        <td className="py-2 sm:py-3 px-2 sm:px-3">
+                          <div className="flex items-center space-x-1 sm:space-x-2">
+                            <div className="font-mono text-yellow-100 text-[10px] sm:text-sm group-hover:text-yellow-300 transition-colors duration-300 truncate max-w-[80px] sm:max-w-none">
                               {pod.pod_id}
                             </div>
                             <CopyBtn 
@@ -349,9 +366,9 @@ function LeaderboardPageContent() {
                         </td>
                         
                         {/* Tier Badge */}
-                        <td className="py-3 px-3 text-center w-[14%]">
+                        <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
                           <span 
-                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                            className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium"
                             style={{ 
                               color: tier.color, 
                               backgroundColor: tier.bgColor,
@@ -359,23 +376,23 @@ function LeaderboardPageContent() {
                             }}
                           >
                             <span 
-                              className="w-2 h-2 rounded-full mr-1.5" 
+                              className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 sm:mr-1.5" 
                               style={{ backgroundColor: tier.color }}
                             />
-                            {tier.name}
+                            <span>{tier.name}</span>
                           </span>
                         </td>
                         
                         {/* Credits */}
-                        <td className="py-3 px-3 text-right w-[18%]">
-                          <div className="text-green-400 font-mono text-sm font-bold">
+                        <td className="py-2 sm:py-3 px-2 sm:px-3 text-right">
+                          <div className="text-green-400 font-mono text-[10px] sm:text-sm font-bold">
                             +{pod.credits.toLocaleString()}
                           </div>
                         </td>
                         
                         {/* Uptime */}
-                        <td className="py-3 px-3 text-center w-[14%]">
-                          <span className={`text-xs font-mono ${
+                        <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
+                          <span className={`text-[10px] sm:text-xs font-mono ${
                             pod.uptime > 0 ? 'text-blue-400' : 'text-gray-500'
                           }`}>
                             {formatUptime(pod.uptime)}
@@ -394,16 +411,16 @@ function LeaderboardPageContent() {
       {/* Leaderboard Table */}
       <div className="bg-black/90 border border-gray-800 rounded-lg overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-800">
-          <h2 className="text-lg font-bold text-white font-mono">// RANKINGS</h2>
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-800">
+          <h2 className="text-sm sm:text-lg font-bold text-white font-mono">// RANKINGS</h2>
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="p-2 hover:bg-white/10 rounded-lg text-white/60 transition-all duration-300 disabled:opacity-50"
+            className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg text-white/60 transition-all duration-300 disabled:opacity-50"
             title="Refresh Leaderboard"
           >
             <RefreshCw 
-              className={`w-4 h-4 transition-all duration-500 ${
+              className={`w-3 h-3 sm:w-4 sm:h-4 transition-all duration-500 ${
                 isRefreshing 
                   ? 'animate-spin text-white/60' 
                   : 'hover:rotate-180'
@@ -413,15 +430,26 @@ function LeaderboardPageContent() {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full table-fixed">
+        <div 
+          className="overflow-x-auto"
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}
+        >
+          <style jsx>{`
+            div::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
+          <table className="w-full min-w-[500px]">
             <thead>
               <tr className="border-b border-gray-800 bg-black/50">
-                <th className="text-left py-3 px-3 text-gray-400 text-xs font-medium uppercase tracking-wider w-[12%]">#</th>
-                <th className="text-left py-3 px-3 text-gray-400 text-xs font-medium uppercase tracking-wider w-[32%]">Pod ID</th>
-                <th className="text-center py-3 px-3 text-gray-400 text-xs font-medium uppercase tracking-wider w-[14%]">Tier</th>
-                <th className="text-right py-3 px-3 text-gray-400 text-xs font-medium uppercase tracking-wider w-[18%]">Credits</th>
-                <th className="text-center py-3 px-3 text-gray-400 text-xs font-medium uppercase tracking-wider w-[14%]">Uptime</th>
+                <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[15%]">#</th>
+                <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[35%]">Pod ID</th>
+                <th className="text-center py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[15%]">Tier</th>
+                <th className="text-right py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[20%]">Credits</th>
+                <th className="text-center py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[15%]">Uptime</th>
               </tr>
             </thead>
             <tbody>
@@ -435,25 +463,25 @@ function LeaderboardPageContent() {
                     className="group hover:bg-gray-900/50 transition-all duration-200 border-b border-gray-800/50"
                   >
                     {/* Rank with Star */}
-                    <td className="py-3 px-3 w-[12%]">
+                    <td className="py-2 sm:py-3 px-2 sm:px-3">
                       <div className="flex items-center space-x-1">
-                        <span className="text-white text-sm font-medium">#{pod.rank}</span>
+                        <span className="text-white text-xs sm:text-sm font-medium">#{pod.rank}</span>
                         <button
                           onClick={() => toggleBookmark(pod.pod_id)}
                           className="text-gray-500 hover:text-yellow-400 transition-colors duration-200 cursor-pointer"
                           title={isBookmarked ? 'Remove bookmark' : 'Bookmark pod'}
                         >
                           <Star 
-                            className={`w-3 h-3 ${isBookmarked ? 'fill-yellow-400 text-yellow-400' : 'text-gray-500'}`} 
+                            className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${isBookmarked ? 'fill-yellow-400 text-yellow-400' : 'text-gray-500'}`} 
                           />
                         </button>
                       </div>
                     </td>
                     
                     {/* Pod ID */}
-                    <td className="py-3 px-3 w-[32%]">
-                      <div className="flex items-center space-x-2">
-                        <div className="font-mono text-white text-sm group-hover:text-blue-300 transition-colors duration-300 truncate">
+                    <td className="py-2 sm:py-3 px-2 sm:px-3">
+                      <div className="flex items-center space-x-1 sm:space-x-2">
+                        <div className="font-mono text-white text-[10px] sm:text-sm group-hover:text-blue-300 transition-colors duration-300 truncate max-w-[80px] sm:max-w-none">
                           {pod.pod_id}
                         </div>
                         <CopyBtn 
@@ -465,9 +493,9 @@ function LeaderboardPageContent() {
                     </td>
                     
                     {/* Tier Badge */}
-                    <td className="py-3 px-3 text-center w-[14%]">
+                    <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
                       <span 
-                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                        className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium"
                         style={{ 
                           color: tier.color, 
                           backgroundColor: tier.bgColor,
@@ -475,26 +503,26 @@ function LeaderboardPageContent() {
                         }}
                       >
                         <span 
-                          className="w-2 h-2 rounded-full mr-1.5" 
+                          className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 sm:mr-1.5" 
                           style={{ backgroundColor: tier.color }}
                         />
-                        {tier.name}
+                        <span>{tier.name}</span>
                       </span>
                     </td>
                     
                     {/* Credits */}
-                    <td className="py-3 px-3 text-right w-[18%]">
-                      <div className="text-green-400 font-mono text-sm font-bold">
+                    <td className="py-2 sm:py-3 px-2 sm:px-3 text-right">
+                      <div className="text-green-400 font-mono text-[10px] sm:text-sm font-bold">
                         +{pod.credits.toLocaleString()}
                       </div>
                     </td>
                     
                     {/* Uptime */}
-                    <td className="py-3 px-3 text-center w-[14%]">
+                    <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
                       {nodesLoading ? (
-                        <div className="h-4 bg-gray-700/50 rounded w-12 mx-auto animate-pulse"></div>
+                        <div className="h-3 sm:h-4 bg-gray-700/50 rounded w-10 sm:w-12 mx-auto animate-pulse"></div>
                       ) : (
-                        <span className={`text-xs font-mono ${
+                        <span className={`text-[10px] sm:text-xs font-mono ${
                           pod.uptime > 0 ? 'text-blue-400' : 'text-gray-500'
                         }`}>
                           {formatUptime(pod.uptime)}
@@ -510,21 +538,21 @@ function LeaderboardPageContent() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between p-4 border-t border-gray-800 bg-black/30">
-            <div className="text-sm text-gray-400">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, leaderboard.length)} of {leaderboard.length} entries
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 sm:p-4 border-t border-gray-800 bg-black/30">
+            <div className="text-xs sm:text-sm text-gray-400 order-2 sm:order-1">
+              Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, leaderboard.length)} of {leaderboard.length}
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1 sm:space-x-2 order-1 sm:order-2">
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-gray-400/20 to-gray-600/10 rounded blur-sm opacity-50 group-hover:opacity-70 transition duration-300"></div>
                 <button
                   onClick={goToPreviousPage}
                   disabled={currentPage === 1}
-                  className="relative p-2 bg-gradient-to-br from-black/60 to-black/80 border border-white/20 rounded text-gray-400 hover:text-white hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
+                  className="relative p-1.5 sm:p-2 bg-gradient-to-br from-black/60 to-black/80 border border-white/20 rounded text-gray-400 hover:text-white hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
                   title="Previous page"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
               </div>
               
@@ -550,7 +578,7 @@ function LeaderboardPageContent() {
                       }`}></div>
                       <button
                         onClick={() => goToPage(pageNum)}
-                        className={`relative px-3 py-1 bg-gradient-to-br from-black/60 to-black/80 border rounded text-sm transition-all duration-200 cursor-pointer ${
+                        className={`relative px-2 sm:px-3 py-0.5 sm:py-1 bg-gradient-to-br from-black/60 to-black/80 border rounded text-xs sm:text-sm transition-all duration-200 cursor-pointer ${
                           currentPage === pageNum
                             ? 'border-white/40 text-white'
                             : 'border-white/20 text-gray-400 hover:text-white hover:border-white/40'
@@ -568,10 +596,10 @@ function LeaderboardPageContent() {
                 <button
                   onClick={goToNextPage}
                   disabled={currentPage === totalPages}
-                  className="relative p-2 bg-gradient-to-br from-black/60 to-black/80 border border-white/20 rounded text-gray-400 hover:text-white hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
+                  className="relative p-1.5 sm:p-2 bg-gradient-to-br from-black/60 to-black/80 border border-white/20 rounded text-gray-400 hover:text-white hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
                   title="Next page"
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
               </div>
             </div>
