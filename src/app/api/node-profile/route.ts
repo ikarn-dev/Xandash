@@ -28,9 +28,18 @@ interface NodeMeta {
 
 // Get the RPC URL from environment
 const getRpcUrl = () => {
-  const rpcEndpoint = process.env.RPC_ENDPOINT_PRIMARY || process.env.NEXT_PUBLIC_RPC_URL || process.env.RPC_BASE_URL || 'https://rpc1.pchednode.com/rpc';
+  // Prioritize RPC_BASE_URL for geo endpoints (without /rpc suffix)
+  if (process.env.RPC_BASE_URL) {
+    return process.env.RPC_BASE_URL;
+  }
+  const rpcEndpoint = process.env.RPC_ENDPOINT_PRIMARY || process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc1.pchednode.com/rpc';
   // Remove /rpc suffix if present to get base URL for geo endpoints
   return rpcEndpoint.replace(/\/rpc$/, '');
+};
+
+// Fallback RPC URL - disabled as it's unreliable
+const getFallbackRpcUrl = () => {
+  return null; // Fallback disabled
 };
 
 export async function GET(request: NextRequest) {
@@ -49,32 +58,32 @@ export async function GET(request: NextRequest) {
     const fetchPromises: Promise<any>[] = [
       fetchLocationData(ip).catch(() => null),
       fetchNodeHistory(ip).catch(() => ({ history: [], meta: null })),
+      fetchCurrentNodeData(ip).catch(() => null),
     ];
     
     if (!quick) {
-      fetchPromises.push(fetchCurrentNodeData(ip).catch(() => null));
       fetchPromises.push(fetchCreditsData().catch(() => null));
     }
 
     const results = await Promise.all(fetchPromises);
     const locationData = results[0];
     const historyResult = results[1];
-    const currentNodeData = quick ? null : results[2];
+    const currentNodeData = results[2];
     const creditsData = quick ? null : results[3];
 
-    // Derive status from history data
+    // Derive status and response time from current node data or history
     let derivedStatus = 'unknown';
     let latestResponseTime = 0;
+    
+    if (currentNodeData) {
+      derivedStatus = currentNodeData.status || 'unknown';
+    }
     
     if (historyResult.history.length > 0) {
       const latestEntry = historyResult.history[0];
       latestResponseTime = latestEntry.response_time;
       if (latestEntry.response_time > 0) {
         derivedStatus = 'online';
-      } else {
-        const now = Math.floor(Date.now() / 1000);
-        const timeDiff = now - latestEntry.timestamp;
-        derivedStatus = timeDiff < 300 ? 'syncing' : 'offline';
       }
     }
 
@@ -179,85 +188,128 @@ async function fetchLocationData(ip: string): Promise<LocationData | null> {
 }
 
 async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry[], meta: NodeMeta | null }> {
-  try {
-    const rpcUrl = getRpcUrl();
-    const historyUrl = `${rpcUrl}/geo/history?ip=${encodeURIComponent(ip)}`;
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
-    const response = await fetch(historyUrl, {
-      signal: controller.signal,
-      cache: 'no-store',
-      headers: {
-        'User-Agent': 'XanDash/1.0',
-      },
-    });
-    
-    clearTimeout(timeoutId);
+  const fallbackUrl = getFallbackRpcUrl();
+  const urls = [
+    `${getRpcUrl()}/geo/history?ip=${encodeURIComponent(ip)}`,
+    ...(fallbackUrl ? [`${fallbackUrl}/geo/history?ip=${encodeURIComponent(ip)}`] : [])
+  ];
 
-    if (!response.ok) {
-      return { history: [], meta: null };
-    }
-
-    const data = await response.json();
-    
-    const history: NodeHistoryEntry[] = [];
-    let meta: NodeMeta | null = null;
-    
-    // Extract meta if present
-    if (data && typeof data === 'object' && data.meta) {
-      meta = {
-        name: data.meta.name || '',
-        pubkey: data.meta.pubkey || '',
-      };
-    }
-    
-    // Find the CSV data
-    let csvData = '';
-    
-    if (typeof data === 'string') {
-      csvData = data;
-    } else if (data && typeof data === 'object') {
-      for (const key of Object.keys(data)) {
-        if (key !== 'meta' && typeof data[key] === 'string' && data[key].includes(',')) {
-          csvData = data[key];
-          break;
-        }
-      }
-    }
-    
-    // Parse CSV data
-    if (csvData) {
-      const lines = csvData.split('\n').filter((line: string) => line.trim());
+  for (const historyUrl of urls) {
+    try {
+      console.log(`Fetching node history from: ${historyUrl}`);
       
-      for (const line of lines) {
-        const parts = line.split(',');
-        if (parts.length >= 7) {
-          const timestamp = parseInt(parts[0], 10);
-          if (!isNaN(timestamp) && timestamp > 0) {
-            history.push({
-              timestamp,
-              response_time: parseFloat(parts[1]) || 0,
-              uptime: parseInt(parts[2], 10) || 0,
-              storage_committed: parseInt(parts[4], 10) || 0,
-              storage_used: parseInt(parts[5], 10) || 0,
-              storage_usage_percent: parseFloat(parts[6]) || 0,
-            });
+      const response = await fetch(historyUrl, {
+        cache: 'no-store',
+        headers: {
+          'User-Agent': 'XanDash/1.0',
+        },
+      });
+
+      if (!response.ok) {
+        console.log(`Node history fetch failed with status: ${response.status} from ${historyUrl}`);
+        continue; // Try next URL
+      }
+
+      const data = await response.json();
+      console.log(`Node history response keys:`, Object.keys(data || {}));
+      
+      const history: NodeHistoryEntry[] = [];
+      let meta: NodeMeta | null = null;
+      
+      // Extract meta if present
+      if (data && typeof data === 'object' && data.meta) {
+        meta = {
+          name: data.meta.name || '',
+          pubkey: data.meta.pubkey || '',
+        };
+      }
+      
+      // Find the CSV data - check multiple possible keys
+      let csvData = '';
+      
+      if (typeof data === 'string') {
+        csvData = data;
+      } else if (data && typeof data === 'object') {
+        // Try common keys first - including csv_data which is the actual key used by the API
+        const possibleKeys = ['csv_data', 'data', 'history', 'csv', 'result'];
+        for (const key of possibleKeys) {
+          if (data[key] && typeof data[key] === 'string' && data[key].includes(',')) {
+            csvData = data[key];
+            console.log(`Found CSV data in key: ${key}`);
+            break;
+          }
+        }
+        
+        // If not found, search all keys
+        if (!csvData) {
+          for (const key of Object.keys(data)) {
+            if (key !== 'meta' && typeof data[key] === 'string' && data[key].includes(',')) {
+              csvData = data[key];
+              console.log(`Found CSV data in key: ${key}`);
+              break;
+            }
+          }
+        }
+        
+        // Also check if data itself is an array of history entries
+        if (!csvData && Array.isArray(data)) {
+          console.log(`Data is an array with ${data.length} entries`);
+          for (const entry of data) {
+            if (entry && typeof entry === 'object' && entry.timestamp) {
+              history.push({
+                timestamp: entry.timestamp || 0,
+                response_time: entry.response_time || entry.responseTime || 0,
+                uptime: entry.uptime || 0,
+                storage_committed: entry.storage_committed || entry.storageCommitted || 0,
+                storage_used: entry.storage_used || entry.storageUsed || 0,
+                storage_usage_percent: entry.storage_usage_percent || entry.storageUsagePercent || 0,
+              });
+            }
           }
         }
       }
+      
+      // Parse CSV data if found
+      if (csvData) {
+        console.log(`Parsing CSV data, length: ${csvData.length}`);
+        const lines = csvData.split('\n').filter((line: string) => line.trim());
+        console.log(`CSV has ${lines.length} lines`);
+        
+        for (const line of lines) {
+          const parts = line.split(',');
+          if (parts.length >= 2) {
+            const timestamp = parseInt(parts[0], 10);
+            if (!isNaN(timestamp) && timestamp > 0) {
+              history.push({
+                timestamp,
+                response_time: parseFloat(parts[1]) || 0,
+                uptime: parts.length > 2 ? parseInt(parts[2], 10) || 0 : 0,
+                storage_committed: parts.length > 4 ? parseInt(parts[4], 10) || 0 : 0,
+                storage_used: parts.length > 5 ? parseInt(parts[5], 10) || 0 : 0,
+                storage_usage_percent: parts.length > 6 ? parseFloat(parts[6]) || 0 : 0,
+              });
+            }
+          }
+        }
+      }
+      
+      console.log(`Parsed ${history.length} history entries`);
+      
+      if (history.length > 0) {
+        return { 
+          history: history.slice(-100).reverse(), 
+          meta 
+        };
+      }
+    } catch (error) {
+      console.error(`Failed to fetch node history for ${ip} from ${historyUrl}:`, error);
+      // Continue to next URL
     }
-    
-    const result = { 
-      history: history.slice(-100).reverse(), 
-      meta 
-    };
-    
-    return result;
-  } catch (error) {
-    return { history: [], meta: null };
   }
+
+  // All URLs failed
+  console.log(`All URLs failed for node history ${ip}`);
+  return { history: [], meta: null };
 }
 
 async function fetchCurrentNodeData(ip: string): Promise<any | null> {

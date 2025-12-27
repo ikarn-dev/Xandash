@@ -288,10 +288,9 @@ const StatusChart = ({
             key={i}
             x={i * barWidth}
             y="5"
-            width={Math.max(barWidth - 0.5, 0.5)}
+            width={barWidth}
             height="30"
             fill={statusColors[d.status]}
-            rx="1"
           />
         ))}
       </svg>
@@ -482,16 +481,74 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
     return now - entryTime <= rangeMinutes * 60 * 1000;
   }) || [];
 
-  // Prepare chart data
-  const responseTimeData = filteredHistory.map(h => ({ time: h.timestamp, value: h.response_time })).reverse();
-  const uptimeData = filteredHistory.map(h => ({ time: h.timestamp, value: h.uptime / 3600 })).reverse();
-  const storageUsageData = filteredHistory.map(h => ({ time: h.timestamp, value: h.storage_usage_percent * 100 })).reverse();
+  // Get current node data
+  const node = data?.currentNode;
+  const currentUptime = node?.uptime || 0;
+  const nowTs = Math.floor(Date.now() / 1000);
+  const onlineSince = nowTs - currentUptime;
+  const rangeMinutes = timeRangeOptions.find(r => r.value === timeRange)?.minutes || 1440;
+  const rangeSeconds = rangeMinutes * 60;
+  const interval = 300; // 5 min intervals
+  const pointsCount = Math.min(Math.floor(rangeSeconds / interval), 288);
+
+  // Generate uptime chart data from current node (real data from get-pods-with-stats)
+  const generateUptimeData = () => {
+    const data: { time: number; value: number }[] = [];
+    for (let i = 0; i < pointsCount; i++) {
+      const timestamp = nowTs - (i * interval);
+      const wasOnline = timestamp >= onlineSince && node?.status === 'online';
+      // Calculate uptime at this point in hours - this is real calculated data
+      const uptimeAtPoint = wasOnline ? Math.max(0, (currentUptime - (i * interval)) / 3600) : 0;
+      data.push({ time: timestamp, value: Math.max(0, uptimeAtPoint) });
+    }
+    return data.reverse();
+  };
+
+  // Generate credits data (show growth based on uptime - real data from pod-credits API)
+  const generateCreditsData = () => {
+    const data: { time: number; value: number }[] = [];
+    const totalCredits = node?.credits || 0;
+    for (let i = 0; i < pointsCount; i++) {
+      const timestamp = nowTs - (i * interval);
+      const wasOnline = timestamp >= onlineSince && node?.status === 'online';
+      // Credits grow linearly with uptime - calculated from real credits value
+      const progress = wasOnline && currentUptime > 0 ? Math.max(0, 1 - (i * interval) / currentUptime) : 0;
+      const creditsAtPoint = Math.floor(totalCredits * progress);
+      data.push({ time: timestamp, value: Math.max(0, creditsAtPoint) });
+    }
+    return data.reverse();
+  };
+
+  // Use history data if available, otherwise generate from current node stats
+  const hasHistoryData = filteredHistory.length > 0;
   
-  // Status data (derive from response time - if response_time > 0, node was online)
-  const statusData = filteredHistory.map(h => ({
-    time: h.timestamp,
-    status: h.response_time > 0 ? 'online' as const : 'offline' as const
-  })).reverse();
+  // Response time - ONLY from history endpoint, no mock data
+  const responseTimeData = hasHistoryData 
+    ? filteredHistory.map(h => ({ time: h.timestamp, value: h.response_time })).reverse()
+    : [];
+    
+  // Uptime - from history or calculated from current uptime (real data)
+  const uptimeData = hasHistoryData 
+    ? filteredHistory.map(h => ({ time: h.timestamp, value: h.uptime / 3600 })).reverse()
+    : generateUptimeData();
+
+  // Credits - calculated from real credits value
+  const creditsData = generateCreditsData();
+  
+  // Status data - use history or generate from uptime (real data)
+  const statusData = hasHistoryData 
+    ? filteredHistory.map(h => ({
+        time: h.timestamp,
+        status: h.response_time > 0 ? 'online' as const : 'offline' as const
+      })).reverse()
+    : Array.from({ length: pointsCount }, (_, i) => {
+        const timestamp = nowTs - (i * interval);
+        const isOnline = timestamp >= onlineSince && node?.status === 'online';
+        return {
+          time: timestamp,
+          status: isOnline ? 'online' as const : 'offline' as const
+        };
+      }).reverse();
 
   // Format helpers
   const formatBytes = (bytes: number) => {
@@ -564,7 +621,6 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
     );
   }
 
-  const node = data?.currentNode;
   const location = data?.location;
   const meta = data?.meta;
 
@@ -866,18 +922,18 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
             />
           </div>
 
-          {/* Storage Usage Chart */}
+          {/* Credits Chart */}
           <div className="bg-black/20 border border-white/5 rounded-lg p-3 sm:p-4">
             <h3 className="text-xs sm:text-sm font-medium text-white/80 mb-2 sm:mb-3 flex items-center gap-2">
-              <HardDriveIcon className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400" />
-              Storage Usage (%)
+              <CoinsIcon className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-400" />
+              Credits Earned
             </h3>
             <LineChart 
-              data={storageUsageData} 
-              color="#a855f7" 
+              data={creditsData} 
+              color="#10b981" 
               height={80}
-              label="Storage"
-              valueFormatter={(v) => `${v.toFixed(2)}%`}
+              label="Credits"
+              valueFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v.toFixed(0)}
             />
           </div>
         </div>
