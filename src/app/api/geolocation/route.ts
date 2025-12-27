@@ -48,6 +48,10 @@ export async function POST(request: NextRequest) {
         try {
           // ip-api.com batch endpoint
           const batchUrl = process.env.NEXT_PUBLIC_IP_API_BATCH_URL || 'http://ip-api.com/batch';
+          
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+          
           const response = await fetch(batchUrl, {
             method: 'POST',
             headers: {
@@ -57,7 +61,10 @@ export async function POST(request: NextRequest) {
               query: ip,
               fields: 'status,message,country,countryCode,region,regionName,city,lat,lon,isp,org,query'
             }))),
+            signal: controller.signal,
           });
+          
+          clearTimeout(timeoutId);
           
           if (response.ok) {
             const batchResults = await response.json();

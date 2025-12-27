@@ -77,7 +77,7 @@ async function makeRPCCall<T>(endpoint: string, method: string, params?: any): P
         });
       });
 
-      req.setTimeout(8000);
+      req.setTimeout(15000);
       req.write(postData);
       req.end();
 

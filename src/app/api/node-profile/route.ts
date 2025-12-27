@@ -137,7 +137,7 @@ async function fetchLocationData(ip: string): Promise<LocationData | null> {
 
     const apiUrl = process.env.NEXT_PUBLIC_IP_API_COM_URL || 'http://ip-api.com';
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     const response = await fetch(
       `${apiUrl}/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,lat,lon,isp,org`,
@@ -184,7 +184,7 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
     const historyUrl = `${rpcUrl}/geo/history?ip=${encodeURIComponent(ip)}`;
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
     const response = await fetch(historyUrl, {
       signal: controller.signal,
@@ -262,19 +262,42 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
 
 async function fetchCurrentNodeData(ip: string): Promise<any | null> {
   try {
-    // Fetch from our nodes API and find the matching node
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/nodes?includeAll=true`, {
-      next: { revalidate: 30 },
+    // Fetch directly from RPC instead of internal API to avoid Vercel issues
+    const rpcEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'https://rpc1.pchednode.com/rpc';
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    const response = await fetch(rpcEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'XanDash/1.0',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'get-pods-with-stats',
+        params: {},
+        id: Date.now(),
+      }),
+      signal: controller.signal,
+      cache: 'no-store',
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.warn(`Nodes API failed: ${response.status}`);
+      console.warn(`RPC call failed: ${response.status}`);
       return null;
     }
 
-    const data = await response.json();
-    const nodes = data.nodes || [];
+    const rpcResult = await response.json();
+    
+    if (rpcResult.error || !rpcResult.result) {
+      return null;
+    }
+    
+    const nodes = rpcResult.result?.pods || [];
 
     // Find node matching the IP
     const matchingNode = nodes.find((node: any) => {
@@ -335,7 +358,7 @@ async function fetchCreditsData(): Promise<any[] | null> {
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
     const response = await fetch(`${baseUrl}/api/pod-credits`, {
       signal: controller.signal,

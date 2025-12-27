@@ -20,7 +20,7 @@ async function fetchResponseTime(ip: string): Promise<{ responseTime: number | n
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout (reduced)
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     const rpcUrl = getRpcUrl();
     const fetchUrl = `${rpcUrl}/geo/history?ip=${encodeURIComponent(ip)}`;
