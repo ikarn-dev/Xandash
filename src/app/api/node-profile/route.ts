@@ -408,28 +408,40 @@ async function fetchCreditsData(): Promise<any[] | null> {
     const cached = await cache.get(cacheKey);
     if (cached) return cached as any[];
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    // Fetch directly from external API instead of internal route (fixes Vercel serverless issues)
+    const externalUrl = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
+    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
-    const response = await fetch(`${baseUrl}/api/pod-credits`, {
+    console.log('Fetching credits from:', externalUrl);
+    
+    const response = await fetch(externalUrl, {
       signal: controller.signal,
-      next: { revalidate: 60 },
+      headers: {
+        'User-Agent': 'XanDash/1.0',
+        'Accept': 'application/json',
+      },
+      cache: 'no-store',
     });
     
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      console.warn(`Credits fetch failed: ${response.status}`);
       return null;
     }
 
     const data = await response.json();
     const credits = data.pods_credits || [];
     
+    console.log(`Fetched ${credits.length} pod credits`);
+    
     // Cache for 2 minutes
     await cache.set(cacheKey, credits, 120);
     return credits;
   } catch (error) {
+    console.error('Failed to fetch credits:', error);
     return null;
   }
 }
