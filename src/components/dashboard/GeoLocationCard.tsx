@@ -78,10 +78,7 @@ export const GeoLocationCard: React.FC = () => {
         ));
         
         if (uniqueIPs.length > 0) {
-          // Fetch geolocation data
-          console.log(`🌍 Fetching geolocation for ${uniqueIPs.length} IPs:`, uniqueIPs.slice(0, 5));
           const locationData = await getLocationsForIPs(uniqueIPs);
-          console.log(`📍 Received location data:`, Object.entries(locationData).slice(0, 3));
           setLocations(locationData);
         }
         
@@ -102,9 +99,6 @@ export const GeoLocationCard: React.FC = () => {
 
   // Process nodes into map locations
   const { mapValidators, countryStats, totalValidators, totalNodes } = useMemo(() => {
-    console.log(`🗺️ Processing ${nodes.length} nodes for map display`);
-    console.log(`📍 Available locations:`, Object.keys(locations).length);
-    
     const locationGroups = new Map<string, {
       lat: number;
       lng: number;
@@ -120,10 +114,6 @@ export const GeoLocationCard: React.FC = () => {
     nodes.forEach((node, index) => {
       const ip = extractIPFromAddress(node.address || '');
       const location = locations[ip];
-      
-      if (index < 5) {
-        console.log(`🔍 Node ${index}: ${node.address} -> IP: ${ip} -> Location:`, location);
-      }
       
       if (location && location.lat && location.lon) {
         validNodes++;
@@ -187,13 +177,6 @@ export const GeoLocationCard: React.FC = () => {
 
     const countryStats: CountryStats[] = Array.from(countryMap.values())
       .sort((a, b) => b.count - a.count);
-
-    console.log(`✅ Map processing complete:`, {
-      totalNodes: nodes.length,
-      validNodes,
-      mapMarkers: mapValidators.length,
-      countries: countryStats.length
-    });
 
     return {
       mapValidators,

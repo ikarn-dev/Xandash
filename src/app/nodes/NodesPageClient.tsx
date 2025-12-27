@@ -123,7 +123,6 @@ export function NodesPageClient({
 
     // Get unique versions for dropdown (latest first)
     const allVersions = allValidators.map(v => v.version).filter(Boolean);
-    console.log('All versions found:', allVersions);
     
     const uniqueVersions = Array.from(new Set(allVersions))
       .sort((a, b) => {
@@ -147,8 +146,6 @@ export function NodesPageClient({
         
         return 0;
       });
-    
-    console.log('Unique versions sorted:', uniqueVersions);
 
     return {
       validators: paginated.validators,
@@ -186,10 +183,8 @@ export function NodesPageClient({
         ));
         
         if (allIPs.length > 0) {
-          console.log(`🚀 Fetching geolocation for ${allIPs.length} unique IPs`);
           const newLocations = await getLocationsForIPs(allIPs);
           setLocations(prev => ({ ...prev, ...newLocations }));
-          console.log(`✅ Geolocation data loaded for ${Object.keys(newLocations).length} IPs`);
         }
       } catch (error) {
         console.error('Failed to load geolocation data:', error);

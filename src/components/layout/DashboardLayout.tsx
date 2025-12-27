@@ -142,7 +142,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const handleRefresh = () => {
-    console.log('Dashboard refreshed - calling RPC refresh');
     refreshAll();
   };
 

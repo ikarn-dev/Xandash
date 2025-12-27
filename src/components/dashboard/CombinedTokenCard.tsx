@@ -86,25 +86,17 @@ export const CombinedTokenCard: React.FC = () => {
       // Extract sparkline data for chart (last 24 hours)
       if (data.market_data?.sparkline_7d?.price) {
         const sparklineData = data.market_data.sparkline_7d.price;
-        console.log('Full sparkline data length:', sparklineData.length);
-        console.log('Full sparkline data:', sparklineData);
         
         const now = Date.now();
         // Use last 24 data points for 24-hour hourly data
         const twentyFourHourData = sparklineData.slice(-24);
-        console.log('24-hour price data:', twentyFourHourData);
         
         const historyPoints: PriceHistoryPoint[] = twentyFourHourData.map((price: number, index: number) => ({
           timestamp: now - (twentyFourHourData.length - index) * 60 * 60 * 1000, // Hourly intervals
           price: price
         }));
         
-        console.log('Processed 24-hour history points:', historyPoints);
-        console.log('Price range - Min:', Math.min(...twentyFourHourData), 'Max:', Math.max(...twentyFourHourData));
-        
         setPriceHistory(historyPoints);
-      } else {
-        console.log('No sparkline data available from API');
       }
     } catch (err) {
       console.error('Error fetching token info:', err);

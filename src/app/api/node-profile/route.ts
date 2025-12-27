@@ -196,8 +196,6 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
 
   for (const historyUrl of urls) {
     try {
-      console.log(`Fetching node history from: ${historyUrl}`);
-      
       const response = await fetch(historyUrl, {
         cache: 'no-store',
         headers: {
@@ -206,12 +204,10 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
       });
 
       if (!response.ok) {
-        console.log(`Node history fetch failed with status: ${response.status} from ${historyUrl}`);
         continue; // Try next URL
       }
 
       const data = await response.json();
-      console.log(`Node history response keys:`, Object.keys(data || {}));
       
       const history: NodeHistoryEntry[] = [];
       let meta: NodeMeta | null = null;
@@ -235,7 +231,6 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
         for (const key of possibleKeys) {
           if (data[key] && typeof data[key] === 'string' && data[key].includes(',')) {
             csvData = data[key];
-            console.log(`Found CSV data in key: ${key}`);
             break;
           }
         }
@@ -245,7 +240,6 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
           for (const key of Object.keys(data)) {
             if (key !== 'meta' && typeof data[key] === 'string' && data[key].includes(',')) {
               csvData = data[key];
-              console.log(`Found CSV data in key: ${key}`);
               break;
             }
           }
@@ -253,7 +247,6 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
         
         // Also check if data itself is an array of history entries
         if (!csvData && Array.isArray(data)) {
-          console.log(`Data is an array with ${data.length} entries`);
           for (const entry of data) {
             if (entry && typeof entry === 'object' && entry.timestamp) {
               history.push({
@@ -271,9 +264,7 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
       
       // Parse CSV data if found
       if (csvData) {
-        console.log(`Parsing CSV data, length: ${csvData.length}`);
         const lines = csvData.split('\n').filter((line: string) => line.trim());
-        console.log(`CSV has ${lines.length} lines`);
         
         for (const line of lines) {
           const parts = line.split(',');
@@ -293,8 +284,6 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
         }
       }
       
-      console.log(`Parsed ${history.length} history entries`);
-      
       if (history.length > 0) {
         return { 
           history: history.slice(-100).reverse(), 
@@ -308,7 +297,6 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
   }
 
   // All URLs failed
-  console.log(`All URLs failed for node history ${ip}`);
   return { history: [], meta: null };
 }
 
@@ -414,8 +402,6 @@ async function fetchCreditsData(): Promise<any[] | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
-    console.log('Fetching credits from:', externalUrl);
-    
     const response = await fetch(externalUrl, {
       signal: controller.signal,
       headers: {
@@ -434,8 +420,6 @@ async function fetchCreditsData(): Promise<any[] | null> {
 
     const data = await response.json();
     const credits = data.pods_credits || [];
-    
-    console.log(`Fetched ${credits.length} pod credits`);
     
     // Cache for 2 minutes
     await cache.set(cacheKey, credits, 120);

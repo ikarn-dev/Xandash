@@ -86,9 +86,6 @@ export const DashboardInteractive: React.FC = () => {
         
         setNodesData(nodes);
         nodeSearchService.updateIndex(nodes);
-        
-        const stats = nodeSearchService.getStats();
-        console.log(`Search index built: ${stats.totalNodes} nodes, ${stats.indexSize} tokens`);
       }
     } catch (error) {
       console.error('Failed to initialize search index:', error);

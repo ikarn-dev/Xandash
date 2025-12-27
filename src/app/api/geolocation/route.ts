@@ -22,8 +22,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid IPs array' }, { status: 400 });
     }
 
-    console.log(`🌍 Batch geolocation request for ${ips.length} IPs`);
-    
     const results: { [ip: string]: LocationData | null } = {};
     const uncachedIPs: string[] = [];
     
@@ -35,8 +33,6 @@ export async function POST(request: NextRequest) {
         uncachedIPs.push(ip);
       }
     }
-    
-    console.log(`📦 Found ${Object.keys(results).length} cached, fetching ${uncachedIPs.length} new`);
     
     if (uncachedIPs.length > 0) {
       // Use ip-api.com batch endpoint (supports up to 100 IPs per request)
@@ -115,8 +111,6 @@ export async function POST(request: NextRequest) {
         }
       }
     }
-    
-    console.log(`✅ Geolocation batch complete: ${Object.keys(results).length} results`);
     
     return NextResponse.json(results, {
       headers: {

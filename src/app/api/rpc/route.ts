@@ -23,8 +23,6 @@ async function makeRPCProxyCall(endpoint: string, body: any): Promise<any> {
     const requestModule = url.protocol === 'https:' ? https : http;
 
     const req = requestModule.request(options, (res: any) => {
-      console.log(`RPC Proxy: Response status: ${res.statusCode} from ${endpoint}`);
-
       let data = '';
       res.on('data', (chunk: any) => {
         data += chunk;
@@ -66,36 +64,21 @@ export async function POST(request: NextRequest) {
     const primaryEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'https://rpc1.pchednode.com/rpc';
     const fallbackEndpoint = process.env.RPC_ENDPOINT_FALLBACK || 'http://161.97.97.41:6000/rpc';
     
-    console.log('RPC Proxy: Received request:', JSON.stringify(body, null, 2));
-    console.log('RPC Proxy: Using failover strategy');
-    
     let result: any;
-    let usedEndpoint = '';
     
     try {
       // Try primary endpoint first
-      console.log('RPC Proxy: Trying primary endpoint:', primaryEndpoint);
       result = await makeRPCProxyCall(primaryEndpoint, body);
-      usedEndpoint = primaryEndpoint;
-      console.log('RPC Proxy: Primary endpoint succeeded');
     } catch (primaryError) {
-      console.log('RPC Proxy: Primary endpoint failed, trying fallback...');
-      console.log('RPC Proxy: Primary error:', primaryError);
-      
       try {
         // Try fallback endpoint
-        console.log('RPC Proxy: Trying fallback endpoint:', fallbackEndpoint);
         result = await makeRPCProxyCall(fallbackEndpoint, body);
-        usedEndpoint = fallbackEndpoint;
-        console.log('RPC Proxy: Fallback endpoint succeeded');
       } catch (fallbackError) {
         console.error('RPC Proxy: Both endpoints failed');
-        console.error('RPC Proxy: Fallback error:', fallbackError);
         throw new Error(`Primary: ${primaryError}; Fallback: ${fallbackError}`);
       }
     }
     
-    console.log('RPC Proxy: Success response from:', usedEndpoint);
     return NextResponse.json(result);
     
   } catch (error) {

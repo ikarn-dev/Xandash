@@ -30,14 +30,11 @@ export const RPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateRefreshTime = useCallback(() => {
     const now = Date.now();
     setLastRefreshTime(now);
-    console.log(`[${new Date().toISOString()}] Updated refresh time`);
   }, []);
 
   const refreshAll = useCallback(() => {
-    console.log(`[${new Date().toISOString()}] Refreshing all RPC data`);
     updateRefreshTime();
-    refreshFunctionsRef.current.forEach((refreshFn, id) => {
-      console.log(`[${new Date().toISOString()}] Refreshing ${id}`);
+    refreshFunctionsRef.current.forEach((refreshFn) => {
       refreshFn();
     });
   }, [updateRefreshTime]);

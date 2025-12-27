@@ -3,8 +3,6 @@ import https from 'https';
 
 export async function GET() {
   try {
-    console.log('Pod Credits API: Fetching data from external API');
-    
     // Get URL from environment variable
     const externalUrl = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
     const url = new URL(externalUrl);
@@ -22,11 +20,7 @@ export async function GET() {
         },
       };
 
-      console.log('Pod Credits API: Making HTTPS request to:', externalUrl);
-
       const req = https.request(options, (res) => {
-        console.log('Pod Credits API: Response status:', res.statusCode);
-
         let data = '';
         res.on('data', (chunk) => {
           data += chunk;
@@ -35,22 +29,18 @@ export async function GET() {
         res.on('end', () => {
           try {
             const result = JSON.parse(data);
-            console.log('Pod Credits API: Success response received');
             resolve(result);
           } catch (parseError) {
-            console.error('Pod Credits API: JSON parse error:', parseError);
             reject(new Error('Failed to parse JSON response'));
           }
         });
       });
 
       req.on('error', (error) => {
-        console.error('Pod Credits API: HTTPS request error:', error);
         reject(error);
       });
 
       req.on('timeout', () => {
-        console.error('Pod Credits API: HTTPS request timeout');
         req.destroy();
         reject(new Error('Request timeout'));
       });
