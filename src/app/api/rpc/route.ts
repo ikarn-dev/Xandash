@@ -56,27 +56,44 @@ async function makeRPCProxyCall(endpoint: string, body: any): Promise<any> {
   });
 }
 
+// Public node RPC endpoints as backups
+const PUBLIC_RPC_ENDPOINTS = [
+  'http://161.97.97.41:6000/rpc',
+  'http://173.212.207.32:6000/rpc',
+  'http://62.171.135.107:6000/rpc',
+  'http://173.249.3.118:6000/rpc',
+  'http://84.21.171.111:6000/rpc',
+];
+
 export async function POST(request: NextRequest) {
   let body: any;
   
   try {
     body = await request.json();
-    const primaryEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'https://rpc1.pchednode.com/rpc';
-    const fallbackEndpoint = process.env.RPC_ENDPOINT_FALLBACK || 'http://161.97.97.41:6000/rpc';
+    const primaryEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'http://161.97.97.41:6000/rpc';
+    
+    // Build list of endpoints to try
+    const endpoints = [
+      primaryEndpoint,
+      ...PUBLIC_RPC_ENDPOINTS.filter(e => e !== primaryEndpoint).slice(0, 2)
+    ];
     
     let result: any;
+    let lastError: any;
     
-    try {
-      // Try primary endpoint first
-      result = await makeRPCProxyCall(primaryEndpoint, body);
-    } catch (primaryError) {
+    for (const endpoint of endpoints) {
       try {
-        // Try fallback endpoint
-        result = await makeRPCProxyCall(fallbackEndpoint, body);
-      } catch (fallbackError) {
-        console.error('RPC Proxy: Both endpoints failed');
-        throw new Error(`Primary: ${primaryError}; Fallback: ${fallbackError}`);
+        result = await makeRPCProxyCall(endpoint, body);
+        break; // Success, exit loop
+      } catch (error) {
+        lastError = error;
+        // Continue to next endpoint
       }
+    }
+    
+    if (!result) {
+      console.error('RPC Proxy: All endpoints failed');
+      throw lastError || new Error('All RPC endpoints failed');
     }
     
     return NextResponse.json(result);

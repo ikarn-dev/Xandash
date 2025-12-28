@@ -92,8 +92,19 @@ async function makeRPCCall<T>(endpoint: string, method: string, params?: any): P
 
 // Direct RPC call function with failover logic
 export async function callDirectRPC<T>(method: string, params?: any): Promise<RPCResponse<T>> {
-  const primaryEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'https://rpc1.pchednode.com/rpc';
-  const fallbackEndpoint = process.env.RPC_ENDPOINT_FALLBACK || 'http://161.97.97.41:6000/rpc';
+  const primaryEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'http://161.97.97.41:6000/rpc';
+  
+  // Active public nodes from the network (is_public: true, status: ACTIVE)
+  const fallbackEndpoints = [
+    'http://173.212.203.145:6000/rpc',
+    'http://173.212.220.65:6000/rpc',
+    'http://62.171.138.27:6000/rpc',
+    'http://84.21.171.111:6000/rpc',
+    'http://173.212.207.32:6000/rpc',
+    'http://62.171.135.107:6000/rpc',
+    'http://173.249.3.118:6000/rpc',
+    'http://144.126.137.111:6000/rpc',
+  ];
   
   // Try primary endpoint first
   const primaryResult = await makeRPCCall<T>(primaryEndpoint, method, params);
@@ -102,11 +113,12 @@ export async function callDirectRPC<T>(method: string, params?: any): Promise<RP
     return primaryResult;
   }
   
-  // Try fallback endpoint
-  const fallbackResult = await makeRPCCall<T>(fallbackEndpoint, method, params);
-  
-  if (fallbackResult.success) {
-    return fallbackResult;
+  // Try fallback endpoints
+  for (const fallbackEndpoint of fallbackEndpoints) {
+    const fallbackResult = await makeRPCCall<T>(fallbackEndpoint, method, params);
+    if (fallbackResult.success) {
+      return fallbackResult;
+    }
   }
   
   return {

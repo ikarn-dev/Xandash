@@ -258,14 +258,14 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
       {/* Modal */}
       {showModal && typeof document !== 'undefined' && createPortal(
         <div 
-          className={`fixed inset-0 flex items-center justify-center transition-all duration-200 ease-out ${
+          className={`fixed inset-0 flex items-center justify-center p-3 transition-all duration-200 ease-out ${
             isClosing ? 'opacity-0' : 'opacity-100'
           }`}
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.92)', zIndex: 99999 }}
           onClick={(e) => e.target === e.currentTarget && handleCloseModal()}
         >
           <div 
-            className={`relative w-[260px] overflow-hidden rounded-lg transition-all duration-200 ease-out ${
+            className={`relative w-[280px] overflow-hidden rounded-lg transition-all duration-200 ease-out ${
               isClosing 
                 ? 'opacity-0 scale-95 translate-y-2' 
                 : 'opacity-100 scale-100 translate-y-0'
@@ -273,41 +273,44 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
             style={{ 
               backgroundColor: '#0a0a0a', 
               border: '1px solid rgba(255, 255, 255, 0.12)',
-              animation: isClosing ? 'none' : 'modalSlideIn 0.25s ease-out'
+              animation: isClosing ? 'none' : 'modalSlideIn 0.25s ease-out',
+              maxHeight: 'calc(100vh - 24px)'
             }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/10">
-              <h2 className="text-white text-xs font-bold font-mono">VERSIONS</h2>
+            <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
+              <h2 className="text-white text-[11px] font-bold font-mono">VERSIONS</h2>
               <button onClick={handleCloseModal} className="text-white/40 hover:text-white p-0.5">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Radial Chart */}
-            <div className="flex justify-center py-4">
+            <div className="flex justify-center py-3">
               {renderRadialChart()}
             </div>
 
             {/* Version List */}
-            <div className="px-3 pb-2 max-h-[160px] overflow-y-auto custom-scrollbar">
+            <div className="px-2 pb-2 max-h-[140px] overflow-y-auto custom-scrollbar">
               {stats?.versionDistribution.map((version, index) => (
-                <div key={version.version} className="flex items-center py-1.5 hover:bg-white/5 rounded px-1">
-                  <div className="flex items-center flex-1 min-w-0">
+                <div key={version.version} className="flex items-center py-1 hover:bg-white/5 rounded px-1">
+                  <div className="flex items-center flex-1 min-w-0 mr-2">
                     <div 
-                      className="w-2 h-2 rounded-full mr-2 flex-shrink-0"
+                      className="w-1.5 h-1.5 rounded-full mr-1.5 flex-shrink-0"
                       style={{ backgroundColor: getVersionColor(index) }}
                     />
-                    <span className="text-white font-mono text-[11px]">{version.version}</span>
+                    <span className="text-white font-mono text-[10px] truncate" title={version.version}>
+                      {version.version.length > 18 ? `${version.version.substring(0, 18)}...` : version.version}
+                    </span>
                     {version.isLatest && (
-                      <span className="text-green-400 text-[9px] ml-1.5">Latest</span>
+                      <span className="text-green-400 text-[8px] ml-1 flex-shrink-0">Latest</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="text-green-400 font-mono text-[11px] font-semibold w-8 text-right">
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-green-400 font-mono text-[10px] font-semibold w-6 text-right">
                       {version.count}
                     </span>
-                    <span className="text-white/40 font-mono text-[10px] w-12 text-right">
+                    <span className="text-white/40 font-mono text-[9px] w-9 text-right">
                       {version.percentage.toFixed(1)}%
                     </span>
                   </div>
@@ -316,15 +319,15 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
             </div>
 
             {/* Footer */}
-            <div className="px-3 py-2.5 border-t border-white/10 bg-black/40">
+            <div className="px-3 py-2 border-t border-white/10 bg-black/40">
               <div className="flex justify-between">
                 <div>
-                  <div className="text-white/40 text-[9px] uppercase">Total Nodes</div>
-                  <div className="text-green-400 text-sm font-mono font-bold">{stats?.totalNodes}</div>
+                  <div className="text-white/40 text-[8px] uppercase">Total Nodes</div>
+                  <div className="text-green-400 text-xs font-mono font-bold">{stats?.totalNodes}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-white/40 text-[9px] uppercase">Latest Version</div>
-                  <div className="text-green-400 text-sm font-mono font-bold">{stats?.latestVersion}</div>
+                  <div className="text-white/40 text-[8px] uppercase">Latest Version</div>
+                  <div className="text-green-400 text-xs font-mono font-bold">{stats?.latestVersion}</div>
                 </div>
               </div>
             </div>

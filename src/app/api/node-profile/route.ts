@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cache } from '@/libs/cache/LocalCache';
+import { callDirectRPC } from '@/libs/server';
 
 interface LocationData {
   country: string;
@@ -28,19 +29,33 @@ interface NodeMeta {
 
 // Get the RPC URL from environment
 const getRpcUrl = () => {
-  // Prioritize RPC_BASE_URL for geo endpoints (without /rpc suffix)
   if (process.env.RPC_BASE_URL) {
     return process.env.RPC_BASE_URL;
   }
-  const rpcEndpoint = process.env.RPC_ENDPOINT_PRIMARY || process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc1.pchednode.com/rpc';
-  // Remove /rpc suffix if present to get base URL for geo endpoints
+  const rpcEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'http://161.97.97.41:6000/rpc';
   return rpcEndpoint.replace(/\/rpc$/, '');
 };
 
-// Fallback RPC URL - disabled as it's unreliable
-const getFallbackRpcUrl = () => {
-  return null; // Fallback disabled
+// Get the Geo History API URL - may be different from RPC URL
+const getGeoHistoryUrl = () => {
+  if (process.env.GEO_HISTORY_API_URL) {
+    return process.env.GEO_HISTORY_API_URL;
+  }
+  return getRpcUrl();
 };
+
+// Active public node endpoints (is_public: true, status: ACTIVE) for geo/history backup
+const PUBLIC_NODE_ENDPOINTS = [
+  'http://161.97.97.41:6000',
+  'http://173.212.203.145:6000',
+  'http://173.212.220.65:6000',
+  'http://62.171.138.27:6000',
+  'http://84.21.171.111:6000',
+  'http://173.212.207.32:6000',
+  'http://62.171.135.107:6000',
+  'http://173.249.3.118:6000',
+  'http://144.126.137.111:6000',
+];
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -54,7 +69,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'IP address is required' }, { status: 400 });
     }
 
-    // Fetch data in parallel
+    // Fetch data in parallel - use the same RPC call as the nodes table
     const fetchPromises: Promise<any>[] = [
       fetchLocationData(ip).catch(() => null),
       fetchNodeHistory(ip).catch(() => ({ history: [], meta: null })),
@@ -188,10 +203,15 @@ async function fetchLocationData(ip: string): Promise<LocationData | null> {
 }
 
 async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry[], meta: NodeMeta | null }> {
-  const fallbackUrl = getFallbackRpcUrl();
+  const primaryUrl = getGeoHistoryUrl();
+  
+  // Build list of URLs to try - primary first, then public node backups
   const urls = [
-    `${getRpcUrl()}/geo/history?ip=${encodeURIComponent(ip)}`,
-    ...(fallbackUrl ? [`${fallbackUrl}/geo/history?ip=${encodeURIComponent(ip)}`] : [])
+    `${primaryUrl}/geo/history?ip=${encodeURIComponent(ip)}`,
+    ...PUBLIC_NODE_ENDPOINTS
+      .filter(url => url !== primaryUrl)
+      .slice(0, 3) // Try up to 3 backup nodes
+      .map(url => `${url}/geo/history?ip=${encodeURIComponent(ip)}`)
   ];
 
   for (const historyUrl of urls) {
@@ -200,10 +220,12 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
         cache: 'no-store',
         headers: {
           'User-Agent': 'XanDash/1.0',
+          'Accept': 'application/json',
         },
       });
 
       if (!response.ok) {
+        console.warn(`History API returned ${response.status} for ${ip} from ${historyUrl}`);
         continue; // Try next URL
       }
 
@@ -302,47 +324,23 @@ async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry
 
 async function fetchCurrentNodeData(ip: string): Promise<any | null> {
   try {
-    // Fetch directly from RPC instead of internal API to avoid Vercel issues
-    const rpcEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'https://rpc1.pchednode.com/rpc';
+    // Use the same RPC call as the nodes table (/api/nodes)
+    const rpcResponse = await callDirectRPC('get-pods-with-stats');
     
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
-    const response = await fetch(rpcEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'XanDash/1.0',
-      },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'get-pods-with-stats',
-        params: {},
-        id: Date.now(),
-      }),
-      signal: controller.signal,
-      cache: 'no-store',
-    });
-    
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      console.warn(`RPC call failed: ${response.status}`);
+    if (!rpcResponse.success || !rpcResponse.data) {
+      console.warn('RPC call failed:', rpcResponse.error);
       return null;
     }
 
-    const rpcResult = await response.json();
-    
-    if (rpcResult.error || !rpcResult.result) {
-      return null;
-    }
-    
-    const nodes = rpcResult.result?.pods || [];
+    const responseData = rpcResponse.data as any;
+    const nodes = Array.isArray(responseData?.pods) ? responseData.pods : [];
 
-    // Find node matching the IP
+    // Find node matching the IP - try multiple matching strategies
     const matchingNode = nodes.find((node: any) => {
-      const nodeIP = node.address?.split(':')[0];
-      return nodeIP === ip;
+      const nodeAddress = node.address || '';
+      const nodeIP = nodeAddress.split(':')[0];
+      // Match by IP directly or by full address
+      return nodeIP === ip || nodeAddress === ip || nodeAddress === `${ip}:9001`;
     });
 
     if (matchingNode) {
@@ -382,6 +380,7 @@ async function fetchCurrentNodeData(ip: string): Promise<any | null> {
       };
     }
 
+    // Node not found
     return null;
   } catch (error) {
     console.error(`Failed to fetch current node data for ${ip}:`, error);

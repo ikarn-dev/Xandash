@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useTransition, useCallback } from 'react';
-import { Globe } from 'lucide-react';
+import { Globe, Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Pagination, ValidatorTableSkeleton, Badge, SearchBox } from '@/components/ui';
 import { CopyBtn as CopyButton } from '@/components/ui/CopyBtn';
@@ -18,6 +18,11 @@ interface LocationData {
   region: string;
   provider: string;
   ip: string;
+}
+
+interface PodCredit {
+  pod_id: string;
+  credits: number;
 }
 
 interface NodesPageClientProps {
@@ -57,7 +62,7 @@ export function NodesPageClient({
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [locations, setLocations] = useState<{ [ip: string]: LocationData | null }>({});
   const [loadingLocations, setLoadingLocations] = useState(false);
-  const [responseTimes, setResponseTimes] = useState<{ [ip: string]: number | null }>({});
+  const [credits, setCredits] = useState<{ [pubkey: string]: number | null }>({});
   const [mounted, setMounted] = useState(false);
   const [stats, setStats] = useState(initialStats);
 
@@ -197,43 +202,30 @@ export function NodesPageClient({
     loadGeolocationData();
   }, [allValidators]); // Remove locations dependency to avoid infinite loops
 
-  // Fetch response times for visible validators using batch API
+  // Fetch credits for validators
   useEffect(() => {
-    const fetchResponseTimes = async () => {
-      if (validators.length === 0) return;
-      
-      // Get IPs for current page validators that we don't have response times for
-      const ipsToFetch = validators
-        .map(v => extractIPFromAddress(v.address || ''))
-        .filter(ip => ip && responseTimes[ip] === undefined);
-      
-      if (ipsToFetch.length === 0) return;
+    const fetchCredits = async () => {
+      if (allValidators.length === 0) return;
       
       try {
-        // Use batch API for better performance
-        const response = await fetch('/api/node-response-times', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ips: ipsToFetch }),
-        });
-        
+        const response = await fetch('/api/pod-credits');
         if (response.ok) {
           const data = await response.json();
-          setResponseTimes(prev => ({ ...prev, ...data.responseTimes }));
+          if (data.pods_credits && Array.isArray(data.pods_credits)) {
+            const creditsMap: { [pubkey: string]: number } = {};
+            data.pods_credits.forEach((pod: PodCredit) => {
+              creditsMap[pod.pod_id] = pod.credits;
+            });
+            setCredits(creditsMap);
+          }
         }
       } catch (error) {
-        console.error('Failed to fetch response times:', error);
-        // Mark all as null to prevent retrying
-        setResponseTimes(prev => {
-          const newTimes = { ...prev };
-          ipsToFetch.forEach(ip => { newTimes[ip] = null; });
-          return newTimes;
-        });
+        console.error('Failed to fetch credits:', error);
       }
     };
     
-    fetchResponseTimes();
-  }, [validators]); // Fetch when visible validators change
+    fetchCredits();
+  }, [allValidators]);
 
   const handlePageChange = (page: number) => {
     startTransition(() => {
@@ -493,6 +485,76 @@ export function NodesPageClient({
     return `${hours}h`;
   };
 
+  // Export filtered data to CSV
+  const exportToCSV = () => {
+    // Use the filtered validators (respects all active filters)
+    const filteredData = filterAndSortValidators(
+      allValidators,
+      {
+        search: searchQuery,
+        onlyPublic: selectedFilters.onlyPublic,
+        hideHighStake: selectedFilters.hideHighStake,
+        showDuplicates: selectedFilters.showDuplicates,
+        onlyOnline: selectedFilters.onlyOnline,
+        onlyInactive: selectedFilters.onlyInactive,
+        versionFilter: versionFilter,
+      },
+      { field: sortBy, direction: 'desc' }
+    );
+
+    const headers = ['Location', 'IP', 'Country', 'City', 'Pubkey', 'Public', 'Storage (GB)', 'Usage %', 'Version', 'Uptime', 'Last Seen', 'Credits', 'Status'];
+    
+    const rows = filteredData.map(validator => {
+      const ip = extractIPFromAddress(validator.address || '');
+      const location = locations[ip];
+      const nodeCredits = validator.pubkey ? credits[validator.pubkey] : null;
+      
+      const isOnline = validator.status === 'online';
+      const storageGB = validator.storage_committed ? (validator.storage_committed / (1024**3)).toFixed(1) : '0';
+      const usagePercent = validator.storage_usage_percent ? (validator.storage_usage_percent * 100).toFixed(4) : '0.0000';
+      const uptimeHours = Math.floor(validator.uptime / 3600);
+      const uptimeDays = Math.floor(uptimeHours / 24);
+      const uptimeDisplay = uptimeDays > 0 ? `${uptimeDays}d` : `${uptimeHours}h`;
+      
+      const now = Math.floor(Date.now() / 1000);
+      const timeDiff = now - validator.last_seen_timestamp;
+      let lastSeenDisplay = '';
+      if (timeDiff < 60) lastSeenDisplay = `${timeDiff}s`;
+      else if (timeDiff < 3600) lastSeenDisplay = `${Math.floor(timeDiff / 60)}m`;
+      else if (timeDiff < 86400) lastSeenDisplay = `${Math.floor(timeDiff / 3600)}h`;
+      else lastSeenDisplay = `${Math.floor(timeDiff / 86400)}d`;
+      
+      return [
+        location ? `${location.city}, ${location.country}` : 'Unknown',
+        ip || 'Unknown',
+        location?.country || 'Unknown',
+        location?.city || 'Unknown',
+        validator.pubkey || 'Unknown',
+        validator.is_public ? 'YES' : 'NO',
+        storageGB,
+        usagePercent,
+        validator.version || 'Unknown',
+        uptimeDisplay,
+        lastSeenDisplay,
+        nodeCredits !== null && nodeCredits !== undefined ? nodeCredits.toString() : '0',
+        isOnline ? 'ACTIVE' : 'OFFLINE'
+      ];
+    });
+    
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `pnodes-${hasActiveFilters ? 'filtered-' : ''}${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    
+    toast.success(`Exported ${filteredData.length} pNodes to CSV`);
+  };
+
   // Scroll animations for table rows
   const { elementRef: tableRef, shouldAnimate } = useStaggeredScrollAnimation<HTMLTableElement>(validators.length, {
     threshold: 0.1,
@@ -741,6 +803,16 @@ export function NodesPageClient({
 
           {/* Advanced Filters */}
           <div className="flex items-center space-x-3 flex-shrink-0">
+            {/* Export CSV Button */}
+            <button
+              onClick={exportToCSV}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-black/80 border border-white/20 rounded-lg text-white text-sm hover:border-cyan-400/50 hover:bg-cyan-400/10 transition-all duration-200"
+              title={`Export ${hasActiveFilters ? 'filtered' : 'all'} pNodes to CSV`}
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export CSV</span>
+            </button>
+
             {/* Advanced Filters Toggle */}
             <div className="flex items-center space-x-2">
               <input
@@ -855,7 +927,7 @@ export function NodesPageClient({
                 <th 
                   className="text-center px-4 py-4 text-gray-400 text-xs font-medium uppercase tracking-wider select-none w-20"
                 >
-                  RESPONSE
+                  CREDITS
                 </th>
                 <th 
                   className="text-center px-4 py-4 text-gray-400 text-xs font-medium uppercase tracking-wider cursor-pointer hover:text-white transition-colors select-none w-20"
@@ -1055,27 +1127,21 @@ export function NodesPageClient({
                       </span>
                     </td>
 
-                    {/* Response Time */}
+                    {/* Credits */}
                     <td className="px-4 py-4 text-center">
                       {(() => {
-                        const nodeIP = extractIPFromAddress(validator.address || '');
-                        const responseTime = nodeIP ? responseTimes[nodeIP] : null;
+                        const nodeCredits = validator.pubkey ? credits[validator.pubkey] : undefined;
                         
-                        if (responseTime === undefined) {
+                        if (nodeCredits === undefined) {
                           return <span className="text-gray-600 text-xs">...</span>;
                         }
-                        if (responseTime === null || responseTime === 0) {
-                          return <span className="text-gray-500 font-mono text-sm">-</span>;
+                        if (nodeCredits === null || nodeCredits === 0) {
+                          return <span className="text-gray-500 font-mono text-sm">0</span>;
                         }
                         
-                        // Color based on response time
-                        const color = responseTime < 100 ? 'text-green-400' : 
-                                     responseTime < 300 ? 'text-yellow-400' : 
-                                     responseTime < 500 ? 'text-orange-400' : 'text-red-400';
-                        
                         return (
-                          <span className={`${color} font-mono text-sm font-bold`}>
-                            {responseTime.toFixed(0)}ms
+                          <span className="text-cyan-400 font-mono text-sm font-bold">
+                            {nodeCredits.toLocaleString()}
                           </span>
                         );
                       })()}

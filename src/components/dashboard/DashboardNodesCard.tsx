@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Globe, ArrowRight } from 'lucide-react';
+import { Globe, ArrowRight, Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CopyBtn as CopyButton } from '@/components/ui/CopyBtn';
 import { getLocationsForIPs, extractIPFromAddress, getCountryFlagUrl } from '@/libs/services/geolocation';
@@ -31,10 +31,15 @@ interface ValidatorData {
   duplicateCount?: number;
 }
 
+interface PodCredit {
+  pod_id: string;
+  credits: number;
+}
+
 export const DashboardNodesCard: React.FC = () => {
   const [nodes, setNodes] = useState<ValidatorData[]>([]);
   const [locations, setLocations] = useState<{ [ip: string]: LocationData | null }>({});
-  const [responseTimes, setResponseTimes] = useState<{ [ip: string]: number | null }>({});
+  const [credits, setCredits] = useState<{ [pubkey: string]: number | null }>({});
   const [loading, setLoading] = useState(true);
   const [loadingLocations, setLoadingLocations] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -105,58 +110,29 @@ export const DashboardNodesCard: React.FC = () => {
     loadGeolocationData();
   }, [nodes]);
 
-  // Fetch response times for visible nodes using batch API
+  // Fetch credits for nodes
   useEffect(() => {
-    const fetchResponseTimes = async () => {
+    const fetchCredits = async () => {
       if (nodes.length === 0) return;
       
-      const ipsToFetch = nodes
-        .map(n => extractIPFromAddress(n.address || ''))
-        .filter(ip => ip && responseTimes[ip] === undefined);
-      
-      if (ipsToFetch.length === 0) return;
-      
-      // Mark all IPs as loading (null means loading started)
-      setResponseTimes(prev => {
-        const newTimes = { ...prev };
-        ipsToFetch.forEach(ip => { 
-          if (newTimes[ip] === undefined) {
-            newTimes[ip] = null; // Mark as loading
-          }
-        });
-        return newTimes;
-      });
-      
       try {
-        // Use batch API for better performance
-        const response = await fetch('/api/node-response-times', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ips: ipsToFetch }),
-        });
-        
+        const response = await fetch('/api/pod-credits');
         if (response.ok) {
           const data = await response.json();
-          setResponseTimes(prev => ({ ...prev, ...data.responseTimes }));
-        } else {
-          // Mark failed IPs
-          setResponseTimes(prev => {
-            const newTimes = { ...prev };
-            ipsToFetch.forEach(ip => { newTimes[ip] = null; });
-            return newTimes;
-          });
+          if (data.pods_credits && Array.isArray(data.pods_credits)) {
+            const creditsMap: { [pubkey: string]: number } = {};
+            data.pods_credits.forEach((pod: PodCredit) => {
+              creditsMap[pod.pod_id] = pod.credits;
+            });
+            setCredits(creditsMap);
+          }
         }
       } catch (error) {
-        console.error('Failed to fetch response times:', error);
-        setResponseTimes(prev => {
-          const newTimes = { ...prev };
-          ipsToFetch.forEach(ip => { newTimes[ip] = null; });
-          return newTimes;
-        });
+        console.error('Failed to fetch credits:', error);
       }
     };
     
-    fetchResponseTimes();
+    fetchCredits();
   }, [nodes]);
 
   const copyToClipboard = (text: string, type: string) => {
@@ -166,6 +142,61 @@ export const DashboardNodesCard: React.FC = () => {
 
   const handleSeeMore = () => {
     router.push('/nodes');
+  };
+
+  const exportToCSV = () => {
+    const headers = ['Location', 'IP', 'Country', 'City', 'Pubkey', 'Public', 'Storage (GB)', 'Usage %', 'Version', 'Uptime', 'Last Seen', 'Credits', 'Status'];
+    
+    const rows = nodes.map(node => {
+      const ip = extractIPFromAddress(node.address || '');
+      const location = locations[ip];
+      const nodeCredits = node.pubkey ? credits[node.pubkey] : null;
+      
+      const now = Math.floor(Date.now() / 1000);
+      const timeDiff = now - node.last_seen_timestamp;
+      const isOnline = timeDiff < 300;
+      
+      const storageGB = node.storage_committed ? (node.storage_committed / (1024**3)).toFixed(1) : '0';
+      const usagePercent = node.storage_usage_percent ? (node.storage_usage_percent * 100).toFixed(4) : '0.0000';
+      const uptimeHours = Math.floor(node.uptime / 3600);
+      const uptimeDays = Math.floor(uptimeHours / 24);
+      const uptimeDisplay = uptimeDays > 0 ? `${uptimeDays}d` : `${uptimeHours}h`;
+      
+      let lastSeenDisplay = '';
+      if (timeDiff < 60) lastSeenDisplay = `${timeDiff}s`;
+      else if (timeDiff < 3600) lastSeenDisplay = `${Math.floor(timeDiff / 60)}m`;
+      else if (timeDiff < 86400) lastSeenDisplay = `${Math.floor(timeDiff / 3600)}h`;
+      else lastSeenDisplay = `${Math.floor(timeDiff / 86400)}d`;
+      
+      return [
+        location ? `${location.city}, ${location.country}` : 'Unknown',
+        ip || 'Unknown',
+        location?.country || 'Unknown',
+        location?.city || 'Unknown',
+        node.pubkey || 'Unknown',
+        node.is_public ? 'YES' : 'NO',
+        storageGB,
+        usagePercent,
+        node.version || 'Unknown',
+        uptimeDisplay,
+        lastSeenDisplay,
+        nodeCredits !== null && nodeCredits !== undefined ? nodeCredits.toString() : '0',
+        isOnline ? 'ACTIVE' : 'OFFLINE'
+      ];
+    });
+    
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `pnodes-recent-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    
+    toast.success(`Exported ${nodes.length} pNodes to CSV`);
   };
 
   if (loading) {
@@ -222,12 +253,22 @@ export const DashboardNodesCard: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-4 animate-blur-reveal-item-1">
         <h3 className="text-white text-lg font-semibold">Recent pNodes</h3>
-        <button
-          onClick={handleSeeMore}
-          className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 transition-colors text-sm font-medium cursor-pointer"
-        >
-          See More
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={exportToCSV}
+            className="bg-white/10 hover:bg-white/20 text-white px-3 py-2 transition-colors text-sm font-medium cursor-pointer flex items-center space-x-1"
+            title="Export to CSV"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">CSV</span>
+          </button>
+          <button
+            onClick={handleSeeMore}
+            className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 transition-colors text-sm font-medium cursor-pointer"
+          >
+            See More
+          </button>
+        </div>
       </div>
 
       {/* Table Container with dark background */}
@@ -272,7 +313,7 @@ export const DashboardNodesCard: React.FC = () => {
                 Last Seen
               </th>
               <th className="text-center px-4 py-4 text-gray-400 text-xs font-medium uppercase tracking-wider">
-                Response
+                Credits
               </th>
               <th className="text-center px-4 py-4 text-gray-400 text-xs font-medium uppercase tracking-wider">
                 Status
@@ -474,30 +515,25 @@ export const DashboardNodesCard: React.FC = () => {
                     </span>
                   </td>
 
-                  {/* Response Time */}
+                  {/* Credits */}
                   <td className="px-4 py-4 text-center">
                     {(() => {
-                      const nodeIP = extractIPFromAddress(node.address || '');
-                      const responseTime = nodeIP ? responseTimes[nodeIP] : undefined;
+                      const nodeCredits = node.pubkey ? credits[node.pubkey] : undefined;
                       
-                      if (responseTime === undefined) {
+                      if (nodeCredits === undefined) {
                         return (
                           <span className="text-gray-600 text-xs animate-pulse">
                             <span className="inline-block w-8 h-4 bg-gray-700 rounded"></span>
                           </span>
                         );
                       }
-                      if (responseTime === null || responseTime === 0) {
-                        return <span className="text-gray-500 font-mono text-sm">-</span>;
+                      if (nodeCredits === null || nodeCredits === 0) {
+                        return <span className="text-gray-500 font-mono text-sm">0</span>;
                       }
                       
-                      const color = responseTime < 100 ? 'text-green-400' : 
-                                   responseTime < 300 ? 'text-yellow-400' : 
-                                   responseTime < 500 ? 'text-orange-400' : 'text-red-400';
-                      
                       return (
-                        <span className={`${color} font-mono text-sm font-bold`}>
-                          {responseTime.toFixed(0)}ms
+                        <span className="text-cyan-400 font-mono text-sm font-bold">
+                          {nodeCredits.toLocaleString()}
                         </span>
                       );
                     })()}
