@@ -45,7 +45,7 @@ XanDash is a comprehensive monitoring dashboard for the Xandeum decentralized st
 - **Maps**: Leaflet
 - **State Management**: React Hooks
 - **API**: REST with JSON-RPC proxy
-- **Deployment**: Vercel with Cron Jobs
+- **Deployment**: Vercel
 
 ## Getting Started
 
@@ -218,20 +218,27 @@ The floating AI assistant (bottom-right corner) provides intelligent analysis:
 
 ## Auto-Sync System
 
-XanDash automatically syncs node data to MongoDB every 30 seconds:
+XanDash automatically syncs node data to MongoDB when users visit the dashboard:
 
-1. **Vercel Cron** triggers `/api/sync-nodes` every minute
-2. **Sync endpoint** runs twice with 30s delay (effective 30s intervals)
-3. **Data saved**: All node metrics + credits
-4. **Events logged**: Status changes, version updates, storage changes (>5%), credit changes (>100)
+1. **On-demand sync** - Data syncs in background when `/api/nodes` is called
+2. **Non-blocking** - Sync happens asynchronously, doesn't slow down page load
+3. **Events logged** - Status changes, version updates, storage changes (>5%), credit changes (>100)
 
-### Manual Sync
+### Manual Sync (Optional)
 ```bash
-# Initialize indexes (run once)
+# Initialize MongoDB indexes (run once after deployment)
 curl "https://your-domain.vercel.app/api/sync-nodes?action=init"
 
 # Manual sync
 curl "https://your-domain.vercel.app/api/sync-nodes?action=sync"
+```
+
+### External Cron (Optional)
+For more frequent syncing, use an external cron service like [cron-job.org](https://cron-job.org) or [EasyCron](https://www.easycron.com):
+```bash
+# POST to sync endpoint every minute
+curl -X POST "https://your-domain.vercel.app/api/sync-nodes" \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
 ## High-Level Design (HLD)
@@ -290,15 +297,14 @@ curl "https://your-domain.vercel.app/api/sync-nodes?action=sync"
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                            VERCEL CRON JOBS                                  │
+│                            ON-DEMAND SYNC                                    │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │   ┌─────────────────────────────────────────────────────────────────┐      │
-│   │  Every minute: POST /api/sync-nodes                              │      │
+│   │  When user visits dashboard → /api/nodes called                  │      │
 │   │  - Fetches all nodes from RPC                                    │      │
-│   │  - Fetches credits data                                          │      │
-│   │  - Saves snapshots to MongoDB                                    │      │
-│   │  - Logs events (status changes, version updates, etc.)           │      │
-│   │  - Runs twice with 30s delay for effective 30s intervals         │      │
+│   │  - Returns data to user immediately                              │      │
+│   │  - Background: saves snapshots to MongoDB                        │      │
+│   │  - Background: logs events (status changes, etc.)                │      │
 │   └─────────────────────────────────────────────────────────────────┘      │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

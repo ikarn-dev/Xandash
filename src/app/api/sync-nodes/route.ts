@@ -2,98 +2,50 @@ import { NextRequest, NextResponse } from 'next/server';
 import { callDirectRPC } from '@/libs/server';
 import { saveAllNodeSnapshots, createIndexes } from '@/libs/db/node-service';
 
-// This endpoint syncs all nodes data to MongoDB
-// Called by Vercel cron every minute - runs twice with 30s delay for effective 30s intervals
-
-async function syncNodes(): Promise<{
-  total: number;
-  newNodes: number;
-  statusChanges: number;
-  versionChanges: number;
-  storageChanges: number;
-  creditsChanges: number;
-}> {
-  // Fetch all nodes from RPC
-  const rpcResponse = await callDirectRPC('get-pods-with-stats');
-  
-  if (!rpcResponse.success || !rpcResponse.data) {
-    throw new Error('Failed to fetch nodes from RPC');
-  }
-
-  const responseData = rpcResponse.data as any;
-  const nodes = Array.isArray(responseData?.pods) ? responseData.pods : [];
-
-  if (nodes.length === 0) {
-    return { total: 0, newNodes: 0, statusChanges: 0, versionChanges: 0, storageChanges: 0, creditsChanges: 0 };
-  }
-
-  // Fetch credits data
-  const creditsMap = new Map<string, number>();
-  try {
-    const creditsUrl = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
-    const creditsResponse = await fetch(creditsUrl, {
-      headers: { 'User-Agent': 'XanDash/1.0' },
-    });
-    
-    if (creditsResponse.ok) {
-      const creditsData = await creditsResponse.json();
-      if (creditsData.pods_credits) {
-        creditsData.pods_credits.forEach((c: any) => {
-          creditsMap.set(c.pod_id, c.credits);
-        });
-      }
-    }
-  } catch (error) {
-    console.warn('Failed to fetch credits:', error);
-  }
-
-  // Save all nodes to MongoDB
-  return await saveAllNodeSnapshots(nodes, creditsMap);
-}
-
+// Manual sync endpoint - can be called externally via cron service or manually
 export async function POST(request: NextRequest) {
   try {
-    // Verify cron secret for Vercel cron jobs (optional security)
+    // Optional auth check
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
-    
-    // Allow if no secret configured, or if secret matches
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      // Also check for Vercel cron header
-      const vercelCron = request.headers.get('x-vercel-cron');
-      if (!vercelCron) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // First sync immediately
-    const result1 = await syncNodes();
-    console.log(`Sync 1 complete: ${result1.total} nodes, ${result1.newNodes} new, ${result1.statusChanges} status changes`);
+    const rpcResponse = await callDirectRPC('get-pods-with-stats');
+    if (!rpcResponse.success || !rpcResponse.data) {
+      return NextResponse.json({ error: 'Failed to fetch nodes' }, { status: 500 });
+    }
 
-    // Wait 30 seconds then sync again (for effective 30s intervals with 1-minute cron)
-    await new Promise(resolve => setTimeout(resolve, 30000));
-    
-    // Second sync
-    const result2 = await syncNodes();
-    console.log(`Sync 2 complete: ${result2.total} nodes, ${result2.newNodes} new, ${result2.statusChanges} status changes`);
+    const nodes = (rpcResponse.data as any)?.pods || [];
+    if (nodes.length === 0) {
+      return NextResponse.json({ message: 'No nodes to sync', total: 0 });
+    }
+
+    // Fetch credits
+    const creditsMap = new Map<string, number>();
+    try {
+      const creditsUrl = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
+      const res = await fetch(creditsUrl, { headers: { 'User-Agent': 'XanDash/1.0' } });
+      if (res.ok) {
+        const data = await res.json();
+        data.pods_credits?.forEach((c: any) => creditsMap.set(c.pod_id, c.credits));
+      }
+    } catch {}
+
+    const result = await saveAllNodeSnapshots(nodes, creditsMap);
 
     return NextResponse.json({
       success: true,
-      message: 'Nodes synced to database (2x with 30s interval)',
-      sync1: result1,
-      sync2: result2,
+      ...result,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Sync nodes error:', error);
-    return NextResponse.json(
-      { error: 'Failed to sync nodes' },
-      { status: 500 }
-    );
+    console.error('Sync error:', error);
+    return NextResponse.json({ error: 'Sync failed' }, { status: 500 });
   }
 }
 
-// GET endpoint to check sync status and create indexes
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -104,30 +56,40 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Indexes created' });
     }
     
-    // Manual single sync
     if (action === 'sync') {
-      const result = await syncNodes();
-      return NextResponse.json({
-        success: true,
-        message: 'Manual sync complete',
-        ...result,
-        timestamp: new Date().toISOString(),
-      });
+      // Trigger sync via GET for easy testing
+      const rpcResponse = await callDirectRPC('get-pods-with-stats');
+      if (!rpcResponse.success) {
+        return NextResponse.json({ error: 'RPC failed' }, { status: 500 });
+      }
+      
+      const nodes = (rpcResponse.data as any)?.pods || [];
+      const creditsMap = new Map<string, number>();
+      
+      try {
+        const creditsUrl = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
+        const res = await fetch(creditsUrl, { headers: { 'User-Agent': 'XanDash/1.0' } });
+        if (res.ok) {
+          const data = await res.json();
+          data.pods_credits?.forEach((c: any) => creditsMap.set(c.pod_id, c.credits));
+        }
+      } catch {}
+      
+      const result = await saveAllNodeSnapshots(nodes, creditsMap);
+      return NextResponse.json({ success: true, ...result, timestamp: new Date().toISOString() });
     }
 
     return NextResponse.json({
-      message: 'Sync API ready',
+      message: 'Sync API',
+      note: 'Data syncs automatically when users visit the dashboard',
       endpoints: {
-        'POST /api/sync-nodes': 'Sync all nodes to database (runs twice with 30s delay)',
-        'GET /api/sync-nodes?action=init': 'Initialize database indexes',
-        'GET /api/sync-nodes?action=sync': 'Manual single sync',
+        'GET ?action=init': 'Create MongoDB indexes',
+        'GET ?action=sync': 'Manual sync',
+        'POST': 'Sync with auth (for external cron)',
       },
     });
   } catch (error) {
-    console.error('Sync nodes GET error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process request' },
-      { status: 500 }
-    );
+    console.error('Sync GET error:', error);
+    return NextResponse.json({ error: 'Failed' }, { status: 500 });
   }
 }
