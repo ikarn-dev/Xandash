@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cache } from '@/libs/cache/LocalCache';
 import { callDirectRPC } from '@/libs/server';
+import { getNodeHistory as getDbNodeHistory, getNodeEvents, getLatestNodeSnapshot } from '@/libs/db/node-service';
 
 interface LocationData {
   country: string;
@@ -64,6 +65,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const ip = searchParams.get('ip');
     const quick = searchParams.get('quick') === 'true';
+    const source = searchParams.get('source') || 'both'; // 'db', 'api', 'both'
 
     if (!ip) {
       return NextResponse.json({ error: 'IP address is required' }, { status: 400 });
@@ -78,6 +80,26 @@ export async function GET(request: NextRequest) {
     
     if (!quick) {
       fetchPromises.push(fetchCreditsData().catch(() => null));
+    }
+    
+    // Also fetch from MongoDB if enabled
+    let dbHistory: any[] = [];
+    let dbEvents: any[] = [];
+    let dbSnapshot: any = null;
+    
+    if (source === 'db' || source === 'both') {
+      try {
+        const [history, events, snapshot] = await Promise.all([
+          getDbNodeHistory(ip, 100).catch(() => []),
+          getNodeEvents(ip, 50).catch(() => []),
+          getLatestNodeSnapshot(ip).catch(() => null),
+        ]);
+        dbHistory = history;
+        dbEvents = events;
+        dbSnapshot = snapshot;
+      } catch (dbError) {
+        console.warn('MongoDB fetch failed:', dbError);
+      }
     }
 
     const results = await Promise.all(fetchPromises);
@@ -112,7 +134,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Build the response - always use derived status from history as it's more accurate
+    // Build the response - include MongoDB data
     const response = {
       ip,
       location: locationData,
@@ -123,6 +145,10 @@ export async function GET(request: NextRequest) {
         status: (currentNodeData.status === 'unknown' || currentNodeData.status === undefined) 
           ? derivedStatus 
           : (derivedStatus === 'online' ? 'online' : currentNodeData.status),
+      } : (dbSnapshot ? {
+        ...dbSnapshot,
+        response_time: latestResponseTime,
+        credits: nodeCredits,
       } : {
         status: derivedStatus,
         response_time: latestResponseTime,
@@ -131,12 +157,16 @@ export async function GET(request: NextRequest) {
         storage_committed: historyResult.history[0]?.storage_committed || 0,
         storage_used: historyResult.history[0]?.storage_used || 0,
         storage_usage_percent: historyResult.history[0]?.storage_usage_percent || 0,
-      },
+      }),
       history: historyResult.history,
       meta: historyResult.meta,
+      // MongoDB data
+      dbHistory: dbHistory.length > 0 ? dbHistory : undefined,
+      dbEvents: dbEvents.length > 0 ? dbEvents : undefined,
     };
 
     const duration = Date.now() - startTime;
+    console.log(`Node profile for ${ip} fetched in ${duration}ms`);
 
     return NextResponse.json(response, {
       headers: {
