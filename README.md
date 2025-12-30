@@ -94,7 +94,8 @@ NEXT_PUBLIC_IPAPI_CO_URL=https://ipapi.co
 NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL=https://podcredits.xandeum.network/api/pods-credits
 
 # MongoDB (Required for historical data)
-MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/?appName=xandash
+MONGODB_URI=mongodb+srv:mongodb url
+appName=xandash
 MONGODB_DB_NAME=xandash
 
 # OpenRouter AI (Required for AI Assistant)
