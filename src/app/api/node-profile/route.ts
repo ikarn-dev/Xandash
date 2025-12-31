@@ -14,6 +14,50 @@ interface LocationData {
   lon?: number;
 }
 
+interface NodeHistoryEntry {
+  timestamp: number;
+  response_time: number;
+  uptime: number;
+  storage_committed: number;
+  storage_used: number;
+  storage_usage_percent: number;
+}
+
+interface NodeMeta {
+  name: string;
+  pubkey: string;
+}
+
+// Get the RPC URL from environment
+const getRpcUrl = () => {
+  if (process.env.RPC_BASE_URL) {
+    return process.env.RPC_BASE_URL;
+  }
+  const rpcEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'http://161.97.97.41:6000/rpc';
+  return rpcEndpoint.replace(/\/rpc$/, '');
+};
+
+// Get the Geo History API URL - may be different from RPC URL
+const getGeoHistoryUrl = () => {
+  if (process.env.GEO_HISTORY_API_URL) {
+    return process.env.GEO_HISTORY_API_URL;
+  }
+  return getRpcUrl();
+};
+
+// Active public node endpoints (is_public: true, status: ACTIVE) for geo/history backup
+const PUBLIC_NODE_ENDPOINTS = [
+  'http://161.97.97.41:6000',
+  'http://173.212.203.145:6000',
+  'http://173.212.220.65:6000',
+  'http://62.171.138.27:6000',
+  'http://84.21.171.111:6000',
+  'http://173.212.207.32:6000',
+  'http://62.171.135.107:6000',
+  'http://173.249.3.118:6000',
+  'http://144.126.137.111:6000',
+];
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   
@@ -21,159 +65,396 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const ip = searchParams.get('ip');
     const quick = searchParams.get('quick') === 'true';
+    const source = searchParams.get('source') || 'both'; // 'db', 'api', 'both'
 
     if (!ip) {
       return NextResponse.json({ error: 'IP address is required' }, { status: 400 });
     }
 
-    // Fetch ALL data in parallel for maximum speed
-    const [locationData, currentNodeData, creditsData, dbHistory, dbEvents, dbSnapshot] = await Promise.all([
+    // Fetch data in parallel - use the same RPC call as the nodes table
+    const fetchPromises: Promise<any>[] = [
       fetchLocationData(ip).catch(() => null),
+      fetchNodeHistory(ip).catch(() => ({ history: [], meta: null })),
       fetchCurrentNodeData(ip).catch(() => null),
-      quick ? Promise.resolve(null) : fetchCreditsData().catch(() => null),
-      getDbNodeHistory(ip, 50).catch(() => []),
-      getNodeEvents(ip, 20).catch(() => []),
-      getLatestNodeSnapshot(ip).catch(() => null),
-    ]);
+    ];
+    
+    if (!quick) {
+      fetchPromises.push(fetchCreditsData().catch(() => null));
+    }
+    
+    // Also fetch from MongoDB if enabled
+    let dbHistory: any[] = [];
+    let dbEvents: any[] = [];
+    let dbSnapshot: any = null;
+    
+    if (source === 'db' || source === 'both') {
+      try {
+        const [history, events, snapshot] = await Promise.all([
+          getDbNodeHistory(ip, 100).catch(() => []),
+          getNodeEvents(ip, 50).catch(() => []),
+          getLatestNodeSnapshot(ip).catch(() => null),
+        ]);
+        dbHistory = history;
+        dbEvents = events;
+        dbSnapshot = snapshot;
+      } catch (dbError) {
+        console.warn('MongoDB fetch failed:', dbError);
+      }
+    }
 
-    // Derive status
-    let status = 'unknown';
+    const results = await Promise.all(fetchPromises);
+    const locationData = results[0];
+    const historyResult = results[1];
+    const currentNodeData = results[2];
+    const creditsData = quick ? null : results[3];
+
+    // Derive status and response time from current node data or history
+    let derivedStatus = 'unknown';
+    let latestResponseTime = 0;
+    
     if (currentNodeData) {
-      const timeDiff = Math.floor(Date.now() / 1000) - (currentNodeData.last_seen_timestamp || 0);
-      status = timeDiff < 300 ? 'online' : timeDiff < 3600 ? 'syncing' : 'offline';
-    } else if (dbSnapshot) {
-      status = dbSnapshot.status;
+      derivedStatus = currentNodeData.status || 'unknown';
+    }
+    
+    if (historyResult.history.length > 0) {
+      const latestEntry = historyResult.history[0];
+      latestResponseTime = latestEntry.response_time;
+      if (latestEntry.response_time > 0) {
+        derivedStatus = 'online';
+      }
     }
 
     // Find credits
-    let credits = 0;
-    const pubkey = currentNodeData?.pubkey || dbSnapshot?.pubkey;
-    if (pubkey && creditsData) {
-      const entry = creditsData.find((c: any) => c.pod_id === pubkey);
-      if (entry) credits = entry.credits;
+    let nodeCredits = 0;
+    const nodePubkey = currentNodeData?.pubkey || historyResult.meta?.pubkey;
+    if (nodePubkey && creditsData) {
+      const creditEntry = creditsData.find((c: any) => c.pod_id === nodePubkey);
+      if (creditEntry) {
+        nodeCredits = creditEntry.credits;
+      }
     }
 
-    // Build response - prefer live data, fallback to DB
-    const nodeData = currentNodeData || dbSnapshot;
-    
+    // Build the response - include MongoDB data
     const response = {
       ip,
       location: locationData,
-      currentNode: nodeData ? {
-        pubkey: nodeData.pubkey || '',
-        address: nodeData.address || `${ip}:9001`,
-        status,
-        uptime: nodeData.uptime || 0,
-        storage_committed: nodeData.storage_committed || 0,
-        storage_used: nodeData.storage_used || 0,
-        storage_usage_percent: nodeData.storage_usage_percent || 0,
-        version: nodeData.version || '',
-        rpc_port: nodeData.rpc_port || 0,
-        is_public: nodeData.is_public || false,
-        last_seen_timestamp: nodeData.last_seen_timestamp || 0,
-        active_streams: nodeData.active_streams || 0,
-        credits,
-      } : null,
+      currentNode: currentNodeData ? {
+        ...currentNodeData,
+        response_time: latestResponseTime,
+        credits: nodeCredits,
+        status: (currentNodeData.status === 'unknown' || currentNodeData.status === undefined) 
+          ? derivedStatus 
+          : (derivedStatus === 'online' ? 'online' : currentNodeData.status),
+      } : (dbSnapshot ? {
+        ...dbSnapshot,
+        response_time: latestResponseTime,
+        credits: nodeCredits,
+      } : {
+        status: derivedStatus,
+        response_time: latestResponseTime,
+        credits: nodeCredits,
+        uptime: historyResult.history[0]?.uptime || 0,
+        storage_committed: historyResult.history[0]?.storage_committed || 0,
+        storage_used: historyResult.history[0]?.storage_used || 0,
+        storage_usage_percent: historyResult.history[0]?.storage_usage_percent || 0,
+      }),
+      history: historyResult.history,
+      meta: historyResult.meta,
+      // MongoDB data
       dbHistory: dbHistory.length > 0 ? dbHistory : undefined,
       dbEvents: dbEvents.length > 0 ? dbEvents : undefined,
     };
 
-    console.log(`Node profile ${ip}: ${Date.now() - startTime}ms`);
+    const duration = Date.now() - startTime;
+    console.log(`Node profile for ${ip} fetched in ${duration}ms`);
 
     return NextResponse.json(response, {
-      headers: { 'Cache-Control': 'no-store' },
+      headers: {
+        'Cache-Control': 'no-store',
+      },
     });
   } catch (error) {
     console.error('Node profile error:', error);
-    return NextResponse.json({ error: 'Failed to fetch node profile' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch node profile' },
+      { status: 500 }
+    );
   }
 }
 
 async function fetchLocationData(ip: string): Promise<LocationData | null> {
-  const cacheKey = `loc:${ip}`;
-  const cached = await cache.get(cacheKey);
-  if (cached) return cached as LocationData;
-
   try {
+    // Check cache first
+    const cacheKey = `location:${ip}`;
+    const cached = await cache.get(cacheKey);
+    if (cached) return cached as LocationData;
+
+    const apiUrl = process.env.NEXT_PUBLIC_IP_API_COM_URL || 'http://ip-api.com';
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000); // 3s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
-    const res = await fetch(
-      `http://ip-api.com/json/${ip}?fields=country,countryCode,regionName,city,lat,lon,isp`,
-      { signal: controller.signal }
+    const response = await fetch(
+      `${apiUrl}/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,lat,lon,isp,org`,
+      { 
+        signal: controller.signal,
+        next: { revalidate: 3600 } 
+      }
     );
-    clearTimeout(timeout);
     
-    if (!res.ok) return null;
-    const data = await res.json();
-    
-    const location: LocationData = {
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (data.status === 'fail') {
+      return null;
+    }
+
+    const locationData: LocationData = {
       country: data.country || 'Unknown',
       country_code: data.countryCode?.toLowerCase() || '',
       city: data.city || 'Unknown',
-      region: data.regionName || '',
-      provider: data.isp || 'Unknown',
-      ip,
+      region: data.regionName || data.region || '',
+      provider: data.isp || data.org || 'Unknown Provider',
+      ip: ip,
       lat: data.lat,
       lon: data.lon,
     };
-    
-    await cache.set(cacheKey, location, 86400); // Cache 24h
-    return location;
-  } catch {
+
+    // Cache for 1 hour
+    await cache.set(cacheKey, locationData, 3600);
+    return locationData;
+  } catch (error) {
     return null;
   }
 }
 
+async function fetchNodeHistory(ip: string): Promise<{ history: NodeHistoryEntry[], meta: NodeMeta | null }> {
+  const primaryUrl = getGeoHistoryUrl();
+  
+  // Build list of URLs to try - primary first, then public node backups
+  const urls = [
+    `${primaryUrl}/geo/history?ip=${encodeURIComponent(ip)}`,
+    ...PUBLIC_NODE_ENDPOINTS
+      .filter(url => url !== primaryUrl)
+      .slice(0, 3) // Try up to 3 backup nodes
+      .map(url => `${url}/geo/history?ip=${encodeURIComponent(ip)}`)
+  ];
+
+  for (const historyUrl of urls) {
+    try {
+      const response = await fetch(historyUrl, {
+        cache: 'no-store',
+        headers: {
+          'User-Agent': 'XanDash/1.0',
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.warn(`History API returned ${response.status} for ${ip} from ${historyUrl}`);
+        continue; // Try next URL
+      }
+
+      const data = await response.json();
+      
+      const history: NodeHistoryEntry[] = [];
+      let meta: NodeMeta | null = null;
+      
+      // Extract meta if present
+      if (data && typeof data === 'object' && data.meta) {
+        meta = {
+          name: data.meta.name || '',
+          pubkey: data.meta.pubkey || '',
+        };
+      }
+      
+      // Find the CSV data - check multiple possible keys
+      let csvData = '';
+      
+      if (typeof data === 'string') {
+        csvData = data;
+      } else if (data && typeof data === 'object') {
+        // Try common keys first - including csv_data which is the actual key used by the API
+        const possibleKeys = ['csv_data', 'data', 'history', 'csv', 'result'];
+        for (const key of possibleKeys) {
+          if (data[key] && typeof data[key] === 'string' && data[key].includes(',')) {
+            csvData = data[key];
+            break;
+          }
+        }
+        
+        // If not found, search all keys
+        if (!csvData) {
+          for (const key of Object.keys(data)) {
+            if (key !== 'meta' && typeof data[key] === 'string' && data[key].includes(',')) {
+              csvData = data[key];
+              break;
+            }
+          }
+        }
+        
+        // Also check if data itself is an array of history entries
+        if (!csvData && Array.isArray(data)) {
+          for (const entry of data) {
+            if (entry && typeof entry === 'object' && entry.timestamp) {
+              history.push({
+                timestamp: entry.timestamp || 0,
+                response_time: entry.response_time || entry.responseTime || 0,
+                uptime: entry.uptime || 0,
+                storage_committed: entry.storage_committed || entry.storageCommitted || 0,
+                storage_used: entry.storage_used || entry.storageUsed || 0,
+                storage_usage_percent: entry.storage_usage_percent || entry.storageUsagePercent || 0,
+              });
+            }
+          }
+        }
+      }
+      
+      // Parse CSV data if found
+      if (csvData) {
+        const lines = csvData.split('\n').filter((line: string) => line.trim());
+        
+        for (const line of lines) {
+          const parts = line.split(',');
+          if (parts.length >= 2) {
+            const timestamp = parseInt(parts[0], 10);
+            if (!isNaN(timestamp) && timestamp > 0) {
+              history.push({
+                timestamp,
+                response_time: parseFloat(parts[1]) || 0,
+                uptime: parts.length > 2 ? parseInt(parts[2], 10) || 0 : 0,
+                storage_committed: parts.length > 4 ? parseInt(parts[4], 10) || 0 : 0,
+                storage_used: parts.length > 5 ? parseInt(parts[5], 10) || 0 : 0,
+                storage_usage_percent: parts.length > 6 ? parseFloat(parts[6]) || 0 : 0,
+              });
+            }
+          }
+        }
+      }
+      
+      if (history.length > 0) {
+        return { 
+          history: history.slice(-100).reverse(), 
+          meta 
+        };
+      }
+    } catch (error) {
+      console.error(`Failed to fetch node history for ${ip} from ${historyUrl}:`, error);
+      // Continue to next URL
+    }
+  }
+
+  // All URLs failed
+  return { history: [], meta: null };
+}
+
 async function fetchCurrentNodeData(ip: string): Promise<any | null> {
-  // Check cache first
-  const cacheKey = `node:${ip}`;
-  const cached = await cache.get(cacheKey);
-  if (cached) return cached;
-
   try {
+    // Use the same RPC call as the nodes table (/api/nodes)
     const rpcResponse = await callDirectRPC('get-pods-with-stats');
-    if (!rpcResponse.success || !rpcResponse.data) return null;
+    
+    if (!rpcResponse.success || !rpcResponse.data) {
+      console.warn('RPC call failed:', rpcResponse.error);
+      return null;
+    }
 
-    const nodes = (rpcResponse.data as any)?.pods || [];
-    const node = nodes.find((n: any) => {
-      const nodeIp = n.address?.split(':')[0];
-      return nodeIp === ip;
+    const responseData = rpcResponse.data as any;
+    const nodes = Array.isArray(responseData?.pods) ? responseData.pods : [];
+
+    // Find node matching the IP - try multiple matching strategies
+    const matchingNode = nodes.find((node: any) => {
+      const nodeAddress = node.address || '';
+      const nodeIP = nodeAddress.split(':')[0];
+      // Match by IP directly or by full address
+      return nodeIP === ip || nodeAddress === ip || nodeAddress === `${ip}:9001`;
     });
 
-    if (node) {
-      await cache.set(cacheKey, node, 30); // Cache 30s
-      return node;
+    if (matchingNode) {
+      // Derive status from last_seen_timestamp if not provided
+      const now = Math.floor(Date.now() / 1000);
+      const timeDiff = now - (matchingNode.last_seen_timestamp || 0);
+      let nodeStatus = matchingNode.status;
+      
+      // If status is not set or is 'unknown', derive from last_seen_timestamp
+      if (!nodeStatus || nodeStatus === 'unknown') {
+        if (timeDiff < 300) nodeStatus = 'online'; // Less than 5 minutes
+        else if (timeDiff < 3600) nodeStatus = 'syncing'; // Less than 1 hour
+        else nodeStatus = 'offline';
+      }
+      
+      return {
+        pubkey: matchingNode.pubkey || '',
+        address: matchingNode.address || '',
+        status: nodeStatus,
+        uptime: matchingNode.uptime || 0,
+        storage_committed: matchingNode.storage_committed || 0,
+        storage_used: matchingNode.storage_used || 0,
+        storage_usage_percent: matchingNode.storage_usage_percent || 0,
+        version: matchingNode.version || '',
+        rpc_port: matchingNode.rpc_port || 0,
+        is_public: matchingNode.is_public || false,
+        last_seen_timestamp: matchingNode.last_seen_timestamp || 0,
+        // Additional fields that might be available
+        cpu_usage: matchingNode.cpu_usage || 0,
+        ram_usage: matchingNode.ram_usage || 0,
+        packets_rx: matchingNode.packets_rx || 0,
+        packets_tx: matchingNode.packets_tx || 0,
+        active_streams: matchingNode.active_streams || 0,
+        credits: matchingNode.credits || 0,
+        registered: matchingNode.registered || false,
+        joined_at: matchingNode.joined_at || matchingNode.created_at || 0,
+      };
     }
+
+    // Node not found
     return null;
-  } catch {
+  } catch (error) {
+    console.error(`Failed to fetch current node data for ${ip}:`, error);
     return null;
   }
 }
 
 async function fetchCreditsData(): Promise<any[] | null> {
-  const cacheKey = 'credits:all';
-  const cached = await cache.get(cacheKey);
-  if (cached) return cached as any[];
-
   try {
+    // Check cache first
+    const cacheKey = 'pod-credits:all';
+    const cached = await cache.get(cacheKey);
+    if (cached) return cached as any[];
+
+    // Fetch directly from external API instead of internal route (fixes Vercel serverless issues)
+    const externalUrl = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
+    
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
-    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
-    const res = await fetch(url, {
+    const response = await fetch(externalUrl, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'XanDash/1.0' },
+      headers: {
+        'User-Agent': 'XanDash/1.0',
+        'Accept': 'application/json',
+      },
+      cache: 'no-store',
     });
-    clearTimeout(timeout);
     
-    if (!res.ok) return null;
-    const data = await res.json();
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.warn(`Credits fetch failed: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
     const credits = data.pods_credits || [];
     
-    await cache.set(cacheKey, credits, 60); // Cache 1min
+    // Cache for 2 minutes
+    await cache.set(cacheKey, credits, 120);
     return credits;
-  } catch {
+  } catch (error) {
+    console.error('Failed to fetch credits:', error);
     return null;
   }
 }

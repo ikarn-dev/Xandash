@@ -218,44 +218,28 @@ The floating AI assistant (bottom-right corner) provides intelligent analysis:
 
 ## Auto-Sync System
 
-XanDash stores node snapshots and events in MongoDB for historical analysis. Since Vercel Hobby plan doesn't support frequent cron jobs, use a free external cron service:
+XanDash automatically syncs node data to MongoDB when users visit the dashboard:
 
-### Setup External Cron (Required for 30-second sync)
+1. **On-demand sync** - Data syncs in background when `/api/nodes` is called
+2. **Non-blocking** - Sync happens asynchronously, doesn't slow down page load
+3. **Events logged** - Status changes, version updates, storage changes (>5%), credit changes (>100)
 
-1. **Initialize MongoDB indexes** (run once after deployment):
+### Manual Sync (Optional)
 ```bash
-curl "https://xandash.vercel.app/api/sync-nodes?action=init"
+# Initialize MongoDB indexes (run once after deployment)
+curl "https://your-domain.vercel.app/api/sync-nodes?action=init"
+
+# Manual sync
+curl "https://your-domain.vercel.app/api/sync-nodes?action=sync"
 ```
 
-2. **Sign up for a free cron service**:
-   - [cron-job.org](https://cron-job.org) - Free, supports 1-minute intervals
-   - [EasyCron](https://www.easycron.com) - Free tier available
-   - [Cronhooks](https://cronhooks.io) - Free tier
-
-3. **Create a cron job**:
-   - URL: `https://xandash.vercel.app/api/sync-nodes`
-   - Method: `POST`
-   - Interval: Every 1 minute (or 30 seconds if supported)
-   - Headers (optional): `Authorization: Bearer YOUR_CRON_SECRET`
-
-4. **Add CRON_SECRET to Vercel** (optional security):
-```env
-CRON_SECRET=your-random-secret-string
-```
-
-### Manual Sync
+### External Cron (Optional)
+For more frequent syncing, use an external cron service like [cron-job.org](https://cron-job.org) or [EasyCron](https://www.easycron.com):
 ```bash
-# Test sync manually
-curl "https://appurl"
-
-# Or via POST
-curl -X POST "https:appurl"
+# POST to sync endpoint every minute
+curl -X POST "https://your-domain.vercel.app/api/sync-nodes" \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
-
-### What Gets Synced
-- All node metrics (status, uptime, storage, version)
-- Pod credits from external API
-- Events logged: status changes, version updates, storage changes (>5%), credit changes (>100)
 
 ## High-Level Design (HLD)
 
