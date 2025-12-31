@@ -136,7 +136,7 @@ export function AIAssistant() {
       {/* Floating Button - Black/White theme */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg shadow-black/50 cursor-pointer ${
+        className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9999] w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg shadow-black/50 cursor-pointer ${
           isOpen
             ? 'bg-white/10 border border-white/30'
             : 'bg-white hover:bg-white/90 border border-white/20'
@@ -152,7 +152,7 @@ export function AIAssistant() {
 
       {/* Chat Panel - Black/White theme */}
       {isOpen && (
-        <div className="fixed inset-4 sm:inset-auto sm:bottom-24 sm:right-6 z-50 sm:w-[380px] sm:h-[500px] sm:max-h-[calc(100vh-140px)] bg-black/95 border border-white/15 rounded-xl shadow-2xl shadow-black/50 flex flex-col overflow-hidden backdrop-blur-xl">
+        <div className="fixed inset-4 sm:inset-auto sm:bottom-24 sm:right-6 z-[9999] sm:w-[380px] sm:h-[500px] sm:max-h-[calc(100vh-140px)] bg-black/95 border border-white/15 rounded-xl shadow-2xl shadow-black/50 flex flex-col overflow-hidden backdrop-blur-xl">
           {/* Header */}
           <div className="px-3 sm:px-4 py-3 border-b border-white/10 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-2 sm:gap-3">

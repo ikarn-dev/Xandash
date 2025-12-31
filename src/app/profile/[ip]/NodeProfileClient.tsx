@@ -56,7 +56,7 @@ const MiniChart = memo(({ data, color }: { data: number[]; color: string }) => {
 MiniChart.displayName = 'MiniChart';
 
 // Event item
-const EventItem = memo(({ event }: { event: NodeProfileData['dbEvents'][0] }) => {
+const EventItem = memo(({ event }: { event: NonNullable<NodeProfileData['dbEvents']>[0] }) => {
   const colors: Record<string, string> = { node_online: 'bg-emerald-400', node_offline: 'bg-red-400', node_new: 'bg-amber-400', version_change: 'bg-purple-400', storage_change: 'bg-orange-400', credits_change: 'bg-cyan-400' };
   const labels: Record<string, string> = { node_online: 'Online', node_offline: 'Offline', node_new: 'New Node', version_change: 'Version', storage_change: 'Storage', credits_change: 'Credits' };
   return (
