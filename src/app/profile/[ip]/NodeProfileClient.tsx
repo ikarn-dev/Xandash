@@ -114,8 +114,6 @@ interface NodeProfileData {
   ip: string;
   location: LocationData | null;
   currentNode: CurrentNodeData | null;
-  history: any[];
-  meta: { name: string; pubkey: string } | null;
   dbHistory?: DbNodeSnapshot[];
   dbEvents?: NodeEventLog[];
 }
