@@ -225,11 +225,17 @@ export default async function ProfilePage({ params }: PageProps) {
   
   // If no cached data or data is stale, fetch fresh data
   if (!initialData || Date.now() - initialData.cachedAt > 300000) { // 5 minutes
-    initialData = await getProfileData(decodedIP);
+    const freshData = await getProfileData(decodedIP);
     
-    // Cache the fresh data
-    if (initialData) {
-      await ProfileCacheService.cacheProfile(decodedIP, initialData);
+    // Cache the fresh data and create cached data object
+    if (freshData) {
+      await ProfileCacheService.cacheProfile(decodedIP, freshData);
+      initialData = {
+        ...freshData,
+        cachedAt: Date.now()
+      };
+    } else {
+      initialData = null;
     }
   }
 

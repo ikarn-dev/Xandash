@@ -28,7 +28,6 @@ async function getProfileDataForCache(ip: string) {
       dbHistory: dbHistory.length > 0 ? dbHistory : undefined,
     };
   } catch (error) {
-    console.error(`[CACHE] Error fetching profile data for ${ip}:`, error);
     return null;
   }
 }
