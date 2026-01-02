@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { callDirectRPC } from '@/libs/server';
 import { ProfileCacheService } from '@/libs/services/profile-cache';
 
+// Server-side function to get profile data for caching
+async function getProfileDataForCache(ip: string) {
+  try {
+    const { getProfileData } = await import('@/app/profile/[ip]/page');
+    return await getProfileData(ip);
+  } catch (error) {
+    throw new Error(`Failed to get profile data for ${ip}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   
@@ -45,7 +55,7 @@ export async function POST(request: NextRequest) {
       .slice(0, 50); // Limit to first 50 nodes to avoid timeout
 
     // Pre-load profiles in the background
-    await ProfileCacheService.preloadProfiles(ips);
+    await ProfileCacheService.preloadProfilesServerSide(ips, getProfileDataForCache);
 
     const duration = Date.now() - startTime;
 
@@ -58,7 +68,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('[PRELOAD] Error:', error);
     return NextResponse.json({
       success: false,
       error: error.message || 'Profile pre-loading failed',

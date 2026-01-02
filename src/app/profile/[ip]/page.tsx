@@ -12,7 +12,7 @@ interface PageProps {
 export const revalidate = 30;
 
 // Server-side data fetching function
-async function getProfileData(ip: string) {
+export async function getProfileData(ip: string) {
   try {
     // Fetch location data
     const locationData = await fetchLocationData(ip);
@@ -84,7 +84,6 @@ async function getProfileData(ip: string) {
       dbEvents: dbEvents.length > 0 ? dbEvents.map(serializeMongoObject) : undefined,
     };
   } catch (error) {
-    console.error(`[SSR] Error fetching profile data for ${ip}:`, error);
     return null;
   }
 }
