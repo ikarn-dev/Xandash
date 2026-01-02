@@ -42,80 +42,117 @@ async function syncAllNodes() {
   return result;
 }
 
-// GET handler for Vercel Cron
-// Vercel cron jobs call GET by default
+// GET handler for external cron services (like cron-job.org)
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   
   try {
-    // Verify this is a legitimate Vercel cron request
-    const authHeader = request.headers.get('authorization');
+    // Get authentication from query params or headers for external cron services
     const cronSecret = process.env.CRON_SECRET;
+    const authFromQuery = request.nextUrl.searchParams.get('auth');
+    const authFromHeader = request.headers.get('authorization');
     
-    // Check for Vercel's cron signature or our custom secret
-    const isVercelCron = request.headers.get('x-vercel-cron') === '1';
-    const hasValidSecret = cronSecret && authHeader === `Bearer ${cronSecret}`;
-    
-    // In production, require either Vercel cron header or valid secret
-    if (process.env.NODE_ENV === 'production' && !isVercelCron && !hasValidSecret) {
-      // Allow without auth if no CRON_SECRET is set (for easier setup)
-      if (cronSecret) {
+    // Check authentication if CRON_SECRET is set
+    if (cronSecret) {
+      const isValidAuth = 
+        authFromQuery === cronSecret || 
+        authFromHeader === `Bearer ${cronSecret}` ||
+        authFromHeader === cronSecret;
+        
+      if (!isValidAuth) {
+        console.log('[CRON] Unauthorized access attempt');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }
 
+    console.log('[CRON] External cron job triggered');
+    
     // Ensure indexes exist (idempotent operation)
     await createIndexes();
     
     const result = await syncAllNodes();
     const duration = Date.now() - startTime;
 
-    return NextResponse.json({
+    const response = {
       success: true,
-      message: 'Cron sync completed',
+      message: 'External cron sync completed',
       ...result,
       duration: `${duration}ms`,
       timestamp: new Date().toISOString(),
-      nextRun: 'In 1 minute (automatic)',
-    });
+      source: 'external-cron',
+    };
+
+    console.log(`[CRON] External sync completed: ${result.total} nodes processed in ${duration}ms`);
+
+    return NextResponse.json(response);
   } catch (error: any) {
-    console.error('[CRON] Sync error:', error);
+    console.error('[CRON] External sync error:', error);
     return NextResponse.json({ 
       success: false,
-      error: error.message || 'Cron sync failed',
+      error: error.message || 'External cron sync failed',
       timestamp: new Date().toISOString(),
+      source: 'external-cron',
     }, { status: 500 });
   }
 }
 
-// POST handler for manual triggers or external cron services
+// POST handler for manual triggers or external cron services with POST method
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   
   try {
-    const authHeader = request.headers.get('authorization');
+    // Get authentication from body, query params, or headers
     const cronSecret = process.env.CRON_SECRET;
+    const authFromHeader = request.headers.get('authorization');
+    const authFromQuery = request.nextUrl.searchParams.get('auth');
     
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    let authFromBody = null;
+    try {
+      const body = await request.json();
+      authFromBody = body.auth || body.secret;
+    } catch {
+      // Body is not JSON or empty, that's fine
     }
+    
+    // Check authentication if CRON_SECRET is set
+    if (cronSecret) {
+      const isValidAuth = 
+        authFromQuery === cronSecret || 
+        authFromHeader === `Bearer ${cronSecret}` ||
+        authFromHeader === cronSecret ||
+        authFromBody === cronSecret;
+        
+      if (!isValidAuth) {
+        console.log('[CRON] Unauthorized POST access attempt');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
+
+    console.log('[CRON] Manual/External POST sync triggered');
 
     await createIndexes();
     const result = await syncAllNodes();
     const duration = Date.now() - startTime;
 
-    return NextResponse.json({
+    const response = {
       success: true,
-      message: 'Manual sync completed',
+      message: 'Manual/External sync completed',
       ...result,
       duration: `${duration}ms`,
       timestamp: new Date().toISOString(),
-    });
+      source: 'manual-or-external',
+    };
+
+    console.log(`[CRON] Manual/External sync completed: ${result.total} nodes processed in ${duration}ms`);
+
+    return NextResponse.json(response);
   } catch (error: any) {
-    console.error('[CRON] Manual sync error:', error);
+    console.error('[CRON] Manual/External sync error:', error);
     return NextResponse.json({ 
       success: false,
       error: error.message || 'Sync failed',
+      timestamp: new Date().toISOString(),
+      source: 'manual-or-external',
     }, { status: 500 });
   }
 }

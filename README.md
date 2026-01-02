@@ -218,19 +218,117 @@ The floating AI assistant (bottom-right corner) provides intelligent analysis:
 
 ## Auto-Sync System
 
-XanDash automatically saves all node data to MongoDB every 1 minute using Vercel Cron Jobs. This runs independently of user visits, ensuring continuous data collection.
+XanDash automatically saves all node data to MongoDB using external cron services for reliable data collection that runs independently of user visits.
 
-### Automatic Sync (Built-in)
+### External Cron Setup (Recommended)
 
-The cron job is configured in `vercel.json` and runs automatically:
-- **Endpoint**: `/api/cron/sync-nodes`
-- **Schedule**: Every 1 minute (`* * * * *`)
-- **Data saved**: All node metrics, pod credits, status changes, version updates
+Since Vercel's free tier only allows 2 cron jobs per day, we recommend using external cron services for frequent data collection:
+
+#### Option 1: cron-job.org (Free)
+1. Visit [cron-job.org](https://cron-job.org) and create a free account
+2. Create a new cron job with these settings:
+   - **URL**: `https://your-domain.vercel.app/api/cron/sync-nodes`
+   - **Schedule**: Every 1 minute (`* * * * *`)
+   - **Method**: GET
+   - **Timeout**: 60 seconds
+
+#### Option 2: EasyCron (Free tier available)
+1. Visit [EasyCron](https://www.easycron.com) and create an account
+2. Create a new cron job:
+   - **URL**: `https://your-domain.vercel.app/api/cron/sync-nodes`
+   - **Schedule**: Every 1 minute
+   - **Method**: GET
+
+#### Option 3: GitHub Actions (Free for public repos)
+Create `.github/workflows/sync-nodes.yml`:
+```yaml
+name: Sync Nodes Data
+on:
+  schedule:
+    - cron: '* * * * *'  # Every minute
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync nodes data
+        run: |
+          curl -X GET "https://your-domain.vercel.app/api/cron/sync-nodes?auth=${{ secrets.CRON_SECRET }}"
+```
+
+### Authentication (Optional but Recommended)
+
+To secure your cron endpoint, add a `CRON_SECRET` environment variable:
+
+1. **In Vercel Dashboard**:
+   - Go to your project settings
+   - Add environment variable: `CRON_SECRET=your-random-secret-string`
+
+2. **In your cron service**:
+   - Add query parameter: `?auth=your-random-secret-string`
+   - Or add header: `Authorization: Bearer your-random-secret-string`
+
+### Cron Endpoint Options
+
+The `/api/cron/sync-nodes` endpoint supports multiple authentication methods:
+
+```bash
+# Query parameter
+GET https://your-domain.vercel.app/api/cron/sync-nodes?auth=your-secret
+
+# Authorization header (Bearer)
+GET https://your-domain.vercel.app/api/cron/sync-nodes
+Authorization: Bearer your-secret
+
+# Authorization header (Direct)
+GET https://your-domain.vercel.app/api/cron/sync-nodes
+Authorization: your-secret
+
+# POST with body
+POST https://your-domain.vercel.app/api/cron/sync-nodes
+Content-Type: application/json
+{
+  "auth": "your-secret"
+}
+```
 
 ### What Gets Synced Automatically
 - All node snapshots (status, uptime, storage, version, credits)
 - Event logs for: new nodes, status changes, version updates, storage changes (>5%), credit changes (>100)
 - Pod credits from external API
+
+### Monitoring Your Cron Jobs
+
+Check if your cron jobs are working:
+
+```bash
+# Check database status
+curl "https://your-domain.vercel.app/api/db-status"
+
+# Manual sync test
+curl "https://your-domain.vercel.app/api/cron/sync-nodes?auth=your-secret"
+
+# Test without authentication (if CRON_SECRET not set)
+curl "https://your-domain.vercel.app/api/cron/sync-nodes"
+```
+
+The response will show:
+```json
+{
+  "success": true,
+  "message": "External cron sync completed",
+  "total": 265,
+  "newNodes": 2,
+  "statusChanges": 15,
+  "versionChanges": 3,
+  "storageChanges": 0,
+  "creditsChanges": 45,
+  "duration": "2847ms",
+  "timestamp": "2026-01-02T10:30:00.000Z",
+  "source": "external-cron"
+}
+```
 
 ### Post-Deployment Setup
 

@@ -109,13 +109,15 @@ export const Breadcrumb: React.FC = () => {
           <ChevronRightIcon className="w-3 h-3 text-white/30" />
           {item.isLast ? (
             <span className="text-white font-medium">{item.name}</span>
-          ) : (
+          ) : item.isClickable ? (
             <Link 
               href={item.path}
               className="text-white/50 hover:text-white transition-colors"
             >
               {item.name}
             </Link>
+          ) : (
+            <span className="text-white/50">{item.name}</span>
           )}
         </React.Fragment>
       ))}
