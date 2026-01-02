@@ -218,27 +218,28 @@ The floating AI assistant (bottom-right corner) provides intelligent analysis:
 
 ## Auto-Sync System
 
-XanDash stores node snapshots and events in MongoDB for historical analysis. Since Vercel Hobby plan doesn't support frequent cron jobs, use a free external cron service:
+XanDash automatically saves all node data to MongoDB every 1 minute using Vercel Cron Jobs. This runs independently of user visits, ensuring continuous data collection.
 
-### Setup External Cron (Required for 30-second sync)
+### Automatic Sync (Built-in)
+
+The cron job is configured in `vercel.json` and runs automatically:
+- **Endpoint**: `/api/cron/sync-nodes`
+- **Schedule**: Every 1 minute (`* * * * *`)
+- **Data saved**: All node metrics, pod credits, status changes, version updates
+
+### What Gets Synced Automatically
+- All node snapshots (status, uptime, storage, version, credits)
+- Event logs for: new nodes, status changes, version updates, storage changes (>5%), credit changes (>100)
+- Pod credits from external API
+
+### Post-Deployment Setup
 
 1. **Initialize MongoDB indexes** (run once after deployment):
 ```bash
-curl "https://xandash.vercel.app/api/sync-nodes?action=init"
+curl "https://your-domain.vercel.app/api/sync-nodes?action=init"
 ```
 
-2. **Sign up for a free cron service**:
-   - [cron-job.org](https://cron-job.org) - Free, supports 1-minute intervals
-   - [EasyCron](https://www.easycron.com) - Free tier available
-   - [Cronhooks](https://cronhooks.io) - Free tier
-
-3. **Create a cron job**:
-   - URL: `https://xandash.vercel.app/api/sync-nodes`
-   - Method: `POST`
-   - Interval: Every 1 minute (or 30 seconds if supported)
-   - Headers (optional): `Authorization: Bearer YOUR_CRON_SECRET`
-
-4. **Add CRON_SECRET to Vercel** (optional security):
+2. **Add CRON_SECRET to Vercel** (optional security):
 ```env
 CRON_SECRET=your-random-secret-string
 ```
@@ -246,11 +247,19 @@ CRON_SECRET=your-random-secret-string
 ### Manual Sync
 ```bash
 # Test sync manually
-curl "https://appurl"
+curl "https://your-domain.vercel.app/api/cron/sync-nodes"
 
-# Or via POST
-curl -X POST "https:appurl"
+# Or via the original endpoint
+curl "https://your-domain.vercel.app/api/sync-nodes?action=sync"
 ```
+
+### Alternative: External Cron Services
+
+If you need more frequent syncs (e.g., every 30 seconds), use an external cron service:
+- [cron-job.org](https://cron-job.org) - Free, supports 1-minute intervals
+- [EasyCron](https://www.easycron.com) - Free tier available
+
+Configure to call: `POST https://your-domain.vercel.app/api/sync-nodes`
 
 ### What Gets Synced
 - All node metrics (status, uptime, storage, version)

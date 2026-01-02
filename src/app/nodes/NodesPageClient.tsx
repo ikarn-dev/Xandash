@@ -1108,8 +1108,11 @@ export function NodesPageClient({
 
                     {/* Version */}
                     <td className="px-4 py-4 text-center">
-                      <span className="text-gray-400 font-mono text-sm">
-                        {validator.version || 'Unknown'}
+                      <span 
+                        className="text-gray-400 font-mono text-sm block max-w-[80px] truncate" 
+                        title={validator.version || 'Unknown'}
+                      >
+                        {validator.version ? (validator.version.length > 10 ? validator.version.substring(0, 10) + '...' : validator.version) : 'Unknown'}
                       </span>
                     </td>
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // In-memory cache
-const responseTimeCache = new Map<string, { time: number; responseTime: number | null; status: string }>();
+const responseTimeCache = new Map<string, { time: number; responseTime: number | null; status: string; error?: string }>();
 const CACHE_TTL = 60 * 1000; // 1 minute
 
 const getRpcUrl = () => {
@@ -33,16 +33,10 @@ const PUBLIC_NODE_ENDPOINTS = [
   'http://144.126.137.111:6000',
 ];
 
-// Fetch response time from geo/history endpoint only - no mock data
-async function fetchResponseTime(ip: string): Promise<{ responseTime: number | null; status: string }> {
-  const cached = responseTimeCache.get(ip);
-  if (cached && Date.now() - cached.time < CACHE_TTL) {
-    return { responseTime: cached.responseTime, status: cached.status };
-  }
-
+// Fetch response time from geo/history endpoint
+async function fetchResponseTimeFromHistory(ip: string): Promise<{ responseTime: number | null; status: string; error?: string }> {
   const primaryUrl = getGeoHistoryUrl();
   
-  // Build list of URLs to try
   const urls = [
     `${primaryUrl}/geo/history?ip=${encodeURIComponent(ip)}`,
     ...PUBLIC_NODE_ENDPOINTS
@@ -53,6 +47,9 @@ async function fetchResponseTime(ip: string): Promise<{ responseTime: number | n
 
   for (const fetchUrl of urls) {
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      
       const response = await fetch(fetchUrl, {
         method: 'GET',
         cache: 'no-store',
@@ -60,11 +57,14 @@ async function fetchResponseTime(ip: string): Promise<{ responseTime: number | n
           'User-Agent': 'XanDash/1.0',
           'Accept': 'application/json',
         },
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeout);
 
       if (!response.ok) {
-        console.warn(`History API returned ${response.status} for ${ip} from ${fetchUrl}`);
-        continue; // Try next URL
+        console.log(`[PING] Geo/history API returned ${response.status} for ${ip}`);
+        continue;
       }
 
       const data = await response.json();
@@ -72,49 +72,71 @@ async function fetchResponseTime(ip: string): Promise<{ responseTime: number | n
       let status = 'offline';
 
       if (data && typeof data === 'object') {
-        const possibleKeys = ['csv_data', 'data', 'history', 'csv', 'result'];
-        let csvData = '';
-        
-        for (const key of possibleKeys) {
-          if (data[key] && typeof data[key] === 'string' && data[key].includes(',')) {
-            csvData = data[key];
-            break;
-          }
-        }
-        
-        if (!csvData) {
-          for (const key of Object.keys(data)) {
-            if (key !== 'meta' && typeof data[key] === 'string' && data[key].includes(',')) {
+        // Check for direct response time value
+        if (typeof data.response_time === 'number') {
+          responseTime = data.response_time;
+          status = 'online';
+        } else if (typeof data.ping === 'number') {
+          responseTime = data.ping;
+          status = 'online';
+        } else if (typeof data.latency === 'number') {
+          responseTime = data.latency;
+          status = 'online';
+        } else {
+          // Try CSV parsing
+          const possibleKeys = ['csv_data', 'data', 'history', 'csv', 'result'];
+          let csvData = '';
+          
+          for (const key of possibleKeys) {
+            if (data[key] && typeof data[key] === 'string' && data[key].includes(',')) {
               csvData = data[key];
               break;
             }
           }
-        }
-        
-        if (csvData) {
-          const lines = csvData.split('\n').filter((line: string) => line.trim());
-          if (lines.length > 0) {
-            const lastLine = lines[lines.length - 1];
-            const parts = lastLine.split(',');
-            if (parts.length >= 2) {
-              responseTime = parseFloat(parts[1]) || null;
-              status = responseTime && responseTime > 0 ? 'online' : 'offline';
+          
+          if (!csvData) {
+            for (const key of Object.keys(data)) {
+              if (key !== 'meta' && typeof data[key] === 'string' && data[key].includes(',')) {
+                csvData = data[key];
+                break;
+              }
+            }
+          }
+          
+          if (csvData) {
+            const lines = csvData.split('\n').filter((line: string) => line.trim());
+            if (lines.length > 0) {
+              const lastLine = lines[lines.length - 1];
+              const parts = lastLine.split(',');
+              if (parts.length >= 2) {
+                responseTime = parseFloat(parts[1]) || null;
+                status = responseTime && responseTime > 0 ? 'online' : 'offline';
+              }
             }
           }
         }
       }
 
-      // Found valid data, cache and return
-      const result = { responseTime, status };
-      responseTimeCache.set(ip, { time: Date.now(), ...result });
-      return result;
-    } catch (error) {
-      // Continue to next URL
+      if (responseTime !== null) {
+        console.log(`[PING] Got response time ${responseTime}ms for ${ip} from geo/history`);
+        return { responseTime, status };
+      }
+    } catch (error: any) {
+      console.log(`[PING] Geo/history fetch failed for ${ip}: ${error.message}`);
     }
   }
 
-  // All URLs failed
-  const result = { responseTime: null, status: 'unknown' };
+  return { responseTime: null, status: 'unknown', error: 'No ping data available' };
+}
+
+// Fetch response time with caching
+async function fetchResponseTime(ip: string): Promise<{ responseTime: number | null; status: string; error?: string }> {
+  const cached = responseTimeCache.get(ip);
+  if (cached && Date.now() - cached.time < CACHE_TTL) {
+    return { responseTime: cached.responseTime, status: cached.status, error: cached.error };
+  }
+
+  const result = await fetchResponseTimeFromHistory(ip);
   responseTimeCache.set(ip, { time: Date.now(), ...result });
   return result;
 }

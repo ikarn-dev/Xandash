@@ -30,6 +30,9 @@ const routeNames: Record<string, string> = {
   'country': 'Country',
 };
 
+// Routes that should not be clickable (no intermediate pages)
+const nonClickableRoutes = ['profile', 'country'];
+
 // Get display name for a route segment
 const getDisplayName = (segment: string, fullPath: string): string => {
   // Check if it's a dynamic segment (IP address or country code)
@@ -52,6 +55,17 @@ const getDisplayName = (segment: string, fullPath: string): string => {
   return routeNames[segment] || segment.charAt(0).toUpperCase() + segment.slice(1);
 };
 
+// Check if a route should be clickable
+const isClickableRoute = (segment: string, index: number, segments: string[]): boolean => {
+  // Last item is never clickable (current page)
+  if (index === segments.length - 1) return false;
+  
+  // Check if this segment is in the non-clickable list
+  if (nonClickableRoutes.includes(segment)) return false;
+  
+  return true;
+};
+
 export const Breadcrumb: React.FC = () => {
   const pathname = usePathname();
   
@@ -67,12 +81,14 @@ export const Breadcrumb: React.FC = () => {
   const breadcrumbItems = segments.map((segment, index) => {
     const path = '/' + segments.slice(0, index + 1).join('/');
     const isLast = index === segments.length - 1;
+    const isClickable = isClickableRoute(segment, index, segments);
     const displayName = getDisplayName(segment, pathname);
 
     return {
       name: displayName,
       path,
       isLast,
+      isClickable,
     };
   });
 
