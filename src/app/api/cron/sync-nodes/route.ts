@@ -7,8 +7,6 @@ import { saveAllNodeSnapshots, createIndexes } from '@/libs/db/node-service';
 // It saves all node data to MongoDB regardless of user visits
 
 async function syncAllNodes() {
-  console.log('[CRON] Starting automatic node sync...');
-  
   const rpcResponse = await callDirectRPC('get-pods-with-stats');
   if (!rpcResponse.success || !rpcResponse.data) {
     throw new Error('RPC failed to fetch nodes');
@@ -16,14 +14,13 @@ async function syncAllNodes() {
 
   const nodes = (rpcResponse.data as any)?.pods || [];
   if (nodes.length === 0) {
-    console.log('[CRON] No nodes returned from RPC');
     return { total: 0, newNodes: 0, statusChanges: 0, versionChanges: 0, storageChanges: 0, creditsChanges: 0 };
   }
 
   // Fetch pod credits in parallel
   const creditsMap = new Map<string, number>();
   try {
-    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
+    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/devnet-pod-credits';
     const res = await fetch(url, { 
       headers: { 'User-Agent': 'XanDash/1.0' },
       signal: AbortSignal.timeout(10000),
@@ -33,11 +30,10 @@ async function syncAllNodes() {
       data.pods_credits?.forEach((c: any) => creditsMap.set(c.pod_id, c.credits));
     }
   } catch (e) {
-    console.log('[CRON] Failed to fetch pod credits, continuing without them');
+    // Silently handle pod credits fetch failure
   }
 
   const result = await saveAllNodeSnapshots(nodes, creditsMap);
-  console.log(`[CRON] Sync complete: ${result.total} nodes, ${result.newNodes} new, ${result.statusChanges} status changes`);
   
   return result;
 }
@@ -60,13 +56,10 @@ export async function GET(request: NextRequest) {
         authFromHeader === cronSecret;
         
       if (!isValidAuth) {
-        console.log('[CRON] Unauthorized access attempt');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }
 
-    console.log('[CRON] External cron job triggered');
-    
     // Ensure indexes exist (idempotent operation)
     await createIndexes();
     
@@ -81,8 +74,6 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
       source: 'external-cron',
     };
-
-    console.log(`[CRON] External sync completed: ${result.total} nodes processed in ${duration}ms`);
 
     return NextResponse.json(response);
   } catch (error: any) {
@@ -123,12 +114,9 @@ export async function POST(request: NextRequest) {
         authFromBody === cronSecret;
         
       if (!isValidAuth) {
-        console.log('[CRON] Unauthorized POST access attempt');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }
-
-    console.log('[CRON] Manual/External POST sync triggered');
 
     await createIndexes();
     const result = await syncAllNodes();
@@ -142,8 +130,6 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
       source: 'manual-or-external',
     };
-
-    console.log(`[CRON] Manual/External sync completed: ${result.total} nodes processed in ${duration}ms`);
 
     return NextResponse.json(response);
   } catch (error: any) {

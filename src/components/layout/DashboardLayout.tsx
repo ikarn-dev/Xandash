@@ -20,6 +20,7 @@ const navigationItems: NavbarItem[] = [
   { title: 'Leaderboard', href: '/leaderboard' },
   { title: 'Network', href: '/network' },
   { title: 'XAND', href: '/xand' },
+  { title: 'STOINC', href: '/stoinc' },
   { title: 'Endpoints', href: '/endpoints' },
   { title: 'Docs', href: '/about' },
 ];

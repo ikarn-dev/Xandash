@@ -3,7 +3,7 @@ import { callDirectRPC } from './server-rpc';
 export interface ValidatorData {
   pubkey: string;
   address: string;
-  status: 'online' | 'offline' | 'maintenance';
+  status: 'online' | 'offline' | 'syncing';
   score: number;
   rank: number;
   uptime: number;
@@ -54,7 +54,14 @@ export async function getValidatorsData(): Promise<{
     const now = Math.floor(Date.now() / 1000);
     const processedValidators: ValidatorData[] = allValidators.map((validator: any, index: number) => {
       const timeDiff = now - (validator.last_seen_timestamp || now);
-      const isOnline = timeDiff < 300; // Less than 5 minutes = online
+      
+      // Use the same status logic as profile API and database service
+      let status: 'online' | 'syncing' | 'offline' = 'offline';
+      if (timeDiff < 300) status = 'online';        // Less than 5 minutes = online
+      else if (timeDiff < 3600) status = 'syncing'; // Less than 1 hour = syncing
+      else status = 'offline';                      // 1 hour or more = offline
+      
+      const isOnline = status === 'online'; // For score calculation
       
       // Calculate score based on uptime, storage, and other factors
       const uptimeScore = Math.min((validator.uptime || 0) / (30 * 24 * 3600), 1) * 40; // Max 40 points for 30 days uptime
@@ -65,7 +72,7 @@ export async function getValidatorsData(): Promise<{
       return {
         pubkey: validator.pubkey || `validator-${index}-${Date.now()}-${Math.random()}`,
         address: validator.address || `unknown-${index}`,
-        status: isOnline ? 'online' : (validator.status || 'offline'),
+        status: status,
         score: totalScore,
         rank: 0, // Will be calculated after sorting
         uptime: validator.uptime || 0,
@@ -216,6 +223,7 @@ export function filterAndSortValidators(
     showDuplicates?: boolean;
     onlyOnline?: boolean;
     onlyInactive?: boolean;
+    onlySyncing?: boolean;
     versionFilter?: string;
   },
   sort: {
@@ -257,9 +265,14 @@ export function filterAndSortValidators(
     filtered = filtered.filter(v => v.status === 'online');
   }
 
+  // Apply syncing filter
+  if (filters.onlySyncing) {
+    filtered = filtered.filter(v => v.status === 'syncing');
+  }
+
   // Apply inactive filter
   if (filters.onlyInactive) {
-    filtered = filtered.filter(v => v.status !== 'online');
+    filtered = filtered.filter(v => v.status === 'offline');
   }
 
   // Apply version filter

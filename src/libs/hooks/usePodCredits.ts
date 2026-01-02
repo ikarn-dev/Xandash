@@ -14,11 +14,11 @@ export interface PodCreditsResponse {
 }
 
 // Hook to fetch pod credits data
-export const usePodCredits = () => {
+export const usePodCredits = (network: 'devnet' | 'mainnet' = 'devnet') => {
   return useQuery({
-    queryKey: ['pod-credits'],
+    queryKey: ['pod-credits', network],
     queryFn: async (): Promise<PodCreditsResponse> => {
-      const response = await fetch('/api/pod-credits');
+      const response = await fetch(`/api/pod-credits?network=${network}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch pod credits');
@@ -47,8 +47,8 @@ export const usePodCredits = () => {
 };
 
 // Hook to get leaderboard data sorted by credits
-export const usePodCreditsLeaderboard = () => {
-  const { data: creditsData, isLoading, error } = usePodCredits();
+export const usePodCreditsLeaderboard = (network: 'devnet' | 'mainnet' = 'devnet') => {
+  const { data: creditsData, isLoading, error } = usePodCredits(network);
   
   const leaderboard = creditsData?.data
     ?.sort((a, b) => b.credits - a.credits)
@@ -79,8 +79,8 @@ const getBadgeFromCredits = (credits: number): string => {
 };
 
 // Hook to get statistics from credits data
-export const usePodCreditsStats = () => {
-  const { data: creditsData, isLoading } = usePodCredits();
+export const usePodCreditsStats = (network: 'devnet' | 'mainnet' = 'devnet') => {
+  const { data: creditsData, isLoading } = usePodCredits(network);
   
   if (!creditsData?.data || isLoading) {
     return {

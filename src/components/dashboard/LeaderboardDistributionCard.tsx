@@ -7,6 +7,7 @@ import { usePodCredits } from '@/libs/hooks/usePodCredits';
 
 interface LeaderboardDistributionCardProps {
   className?: string;
+  network?: 'devnet' | 'mainnet';
 }
 
 interface TierStats {
@@ -17,8 +18,11 @@ interface TierStats {
   minCredits: number;
 }
 
-export const LeaderboardDistributionCard: React.FC<LeaderboardDistributionCardProps> = ({ className = "" }) => {
-  const { data: creditsData, isLoading, error } = usePodCredits();
+export const LeaderboardDistributionCard: React.FC<LeaderboardDistributionCardProps> = ({ 
+  className = "", 
+  network = 'devnet' 
+}) => {
+  const { data: creditsData, isLoading, error } = usePodCredits(network);
   const [showModal, setShowModal] = React.useState(false);
   const [isClosing, setIsClosing] = React.useState(false);
 
@@ -107,7 +111,7 @@ export const LeaderboardDistributionCard: React.FC<LeaderboardDistributionCardPr
         <CornerAccents />
         
         <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
-          <div className="text-white/50 text-xs font-medium tracking-wider mb-3">// DISTRIBUTION</div>
+          <div className="text-white/50 text-xs font-medium tracking-wider mb-3">// DISTRIBUTION ({network.toUpperCase()})</div>
           <div className="text-purple-400 text-4xl lg:text-5xl font-bold font-mono mb-1">
             {stats?.tiers.filter(t => t.count > 0).length || 0}
           </div>
@@ -159,7 +163,7 @@ export const LeaderboardDistributionCard: React.FC<LeaderboardDistributionCardPr
             style={{ backgroundColor: '#0a0a0a', border: '1px solid rgba(255, 255, 255, 0.12)' }}
           >
             <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/10">
-              <h2 className="text-white text-xs font-bold font-mono">TIER DISTRIBUTION</h2>
+              <h2 className="text-white text-xs font-bold font-mono">TIER DISTRIBUTION ({network.toUpperCase()})</h2>
               <button onClick={handleCloseModal} className="text-white/40 hover:text-white p-0.5">
                 <X className="w-4 h-4" />
               </button>

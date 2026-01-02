@@ -1,10 +1,27 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import https from 'https';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Get URL from environment variable
-    const externalUrl = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
+    // Get network parameter from query string
+    const { searchParams } = new URL(request.url);
+    const network = searchParams.get('network') || 'devnet';
+    
+    // Get URL from environment variable based on network
+    let externalUrl: string;
+    if (network === 'mainnet') {
+      externalUrl = process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL || '';
+      if (!externalUrl) {
+        throw new Error('Mainnet pod credits URL not configured');
+      }
+    } else {
+      // Default to devnet
+      externalUrl = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || '';
+      if (!externalUrl) {
+        throw new Error('Devnet pod credits URL not configured');
+      }
+    }
+    
     const url = new URL(externalUrl);
     
     // Use HTTPS module for external API call
@@ -52,7 +69,6 @@ export async function GET() {
     return NextResponse.json(result);
     
   } catch (error) {
-    console.error('Pod Credits API Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     
     return NextResponse.json(

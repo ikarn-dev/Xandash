@@ -11,20 +11,60 @@ export async function connectToDatabase(): Promise<Db> {
   if (db) return db;
 
   try {
+    if (!MONGODB_URI) {
+      throw new Error('MONGODB_URI environment variable is not set');
+    }
+
     client = new MongoClient(MONGODB_URI);
     await client.connect();
     db = client.db(DB_NAME);
-    console.log('Connected to MongoDB');
+    
+    // Test the connection
+    await db.admin().ping();
+    
     return db;
   } catch (error) {
-    console.error('Failed to connect to MongoDB:', error);
-    throw error;
+    // Clean up on connection failure
+    if (client) {
+      try {
+        await client.close();
+      } catch (closeError) {
+        // Ignore close errors
+      }
+      client = null;
+    }
+    db = null;
+    
+    throw new Error(`Failed to connect to MongoDB: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
 export async function getCollection<T extends Document>(name: string): Promise<Collection<T>> {
-  const database = await connectToDatabase();
-  return database.collection<T>(name);
+  try {
+    if (!name || typeof name !== 'string') {
+      throw new Error('Collection name must be a non-empty string');
+    }
+    
+    const database = await connectToDatabase();
+    return database.collection<T>(name);
+  } catch (error) {
+    throw new Error(`Failed to get collection '${name}': ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Gracefully close the MongoDB connection
+ */
+export async function closeConnection(): Promise<void> {
+  try {
+    if (client) {
+      await client.close();
+      client = null;
+      db = null;
+    }
+  } catch (error) {
+    throw new Error(`Failed to close MongoDB connection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 // Node snapshot - stores ALL pod data from API

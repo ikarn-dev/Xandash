@@ -63,7 +63,6 @@ async function fetchResponseTimeFromHistory(ip: string): Promise<{ responseTime:
       clearTimeout(timeout);
 
       if (!response.ok) {
-        console.log(`[PING] Geo/history API returned ${response.status} for ${ip}`);
         continue;
       }
 
@@ -118,11 +117,10 @@ async function fetchResponseTimeFromHistory(ip: string): Promise<{ responseTime:
       }
 
       if (responseTime !== null) {
-        console.log(`[PING] Got response time ${responseTime}ms for ${ip} from geo/history`);
         return { responseTime, status };
       }
     } catch (error: any) {
-      console.log(`[PING] Geo/history fetch failed for ${ip}: ${error.message}`);
+      // Silently handle geo/history fetch errors
     }
   }
 

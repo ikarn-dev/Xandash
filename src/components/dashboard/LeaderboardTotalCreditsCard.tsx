@@ -6,10 +6,14 @@ import { usePodCredits } from '@/libs/hooks/usePodCredits';
 
 interface LeaderboardTotalCreditsCardProps {
   className?: string;
+  network?: 'devnet' | 'mainnet';
 }
 
-export const LeaderboardTotalCreditsCard: React.FC<LeaderboardTotalCreditsCardProps> = ({ className = "" }) => {
-  const { data: creditsData, isLoading, error } = usePodCredits();
+export const LeaderboardTotalCreditsCard: React.FC<LeaderboardTotalCreditsCardProps> = ({ 
+  className = "", 
+  network = 'devnet' 
+}) => {
+  const { data: creditsData, isLoading, error } = usePodCredits(network);
 
   const stats = React.useMemo(() => {
     if (!creditsData?.data) return null;
@@ -78,7 +82,7 @@ export const LeaderboardTotalCreditsCard: React.FC<LeaderboardTotalCreditsCardPr
       <CornerAccents />
       
       <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
-        <div className="text-white/50 text-xs font-medium tracking-wider mb-3">// TOTAL CREDITS</div>
+        <div className="text-white/50 text-xs font-medium tracking-wider mb-3">// TOTAL CREDITS ({network.toUpperCase()})</div>
         <div className="text-yellow-400 text-4xl lg:text-5xl font-bold font-mono mb-1">
           {stats ? formatNumber(stats.totalCredits) : '0'}
         </div>

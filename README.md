@@ -90,8 +90,8 @@ NEXT_PUBLIC_COINGECKO_API_KEY=your_api_key
 NEXT_PUBLIC_IP_API_COM_URL=http://ip-api.com
 NEXT_PUBLIC_IPAPI_CO_URL=https://ipapi.co
 
-# Pod Credits
-NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL=https://podcredits.xandeum.network/api/pods-credits
+# Pod Credits (Devnet)
+NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL=https://podcredits.xandeum.network/api/devnet-pod-credits
 
 # MongoDB (Required for historical data)
 MONGODB_URI=mongodb+srv:mongodb url
@@ -478,8 +478,11 @@ Configure to call: `POST https://your-domain.vercel.app/api/sync-nodes`
 - CORS configured for API routes
 - Cron endpoint protected with secret header
 
-### Performance Optimizations
+## Performance Optimizations
 
+- **Server-Side Rendering (SSR)**: Profile pages pre-load data server-side for instant loading
+- **Profile Caching**: Intelligent caching system pre-loads popular node profiles
+- **Background Pre-loading**: Top nodes are cached when visiting the nodes page
 - **Caching**: LRU cache with TTL for API responses
 - **MongoDB Indexes**: Optimized queries for IP and timestamp
 - **Lazy Loading**: Maps and charts loaded on demand

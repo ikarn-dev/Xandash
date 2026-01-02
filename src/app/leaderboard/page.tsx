@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useEffect, useState } from 'react';
-import { Star, RefreshCw, ChevronLeft, ChevronRight, X, Bookmark } from 'lucide-react';
+import { Star, RefreshCw, ChevronLeft, ChevronRight, X, Bookmark, Network } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout';
 import { 
   LeaderboardTitleCard, 
@@ -21,8 +21,11 @@ interface NodeData {
   status: string;
 }
 
+type NetworkType = 'devnet' | 'mainnet';
+
 function LeaderboardPageContent() {
-  const { data: creditsData, isLoading, error, refetch } = usePodCredits();
+  const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('devnet');
+  const { data: creditsData, isLoading, error, refetch } = usePodCredits(selectedNetwork);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [bookmarkedPods, setBookmarkedPods] = React.useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -31,29 +34,36 @@ function LeaderboardPageContent() {
   const [showBookmarks, setShowBookmarks] = useState(false);
   const itemsPerPage = 25;
 
-  // Load bookmarks from localStorage on mount
+  // Reset pagination when network changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedNetwork]);
+
+  // Load bookmarks from localStorage on mount (network-specific)
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(BOOKMARKS_STORAGE_KEY);
+      const stored = localStorage.getItem(`${BOOKMARKS_STORAGE_KEY}_${selectedNetwork}`);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
           setBookmarkedPods(new Set(parsed));
         }
+      } else {
+        setBookmarkedPods(new Set());
       }
     } catch (err) {
-      console.error('Failed to load bookmarks:', err);
+      setBookmarkedPods(new Set());
     }
-  }, []);
+  }, [selectedNetwork]);
 
-  // Save bookmarks to localStorage whenever they change
+  // Save bookmarks to localStorage whenever they change (network-specific)
   useEffect(() => {
     try {
-      localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(Array.from(bookmarkedPods)));
+      localStorage.setItem(`${BOOKMARKS_STORAGE_KEY}_${selectedNetwork}`, JSON.stringify(Array.from(bookmarkedPods)));
     } catch (err) {
-      console.error('Failed to save bookmarks:', err);
+      // Silently handle localStorage errors
     }
-  }, [bookmarkedPods]);
+  }, [bookmarkedPods, selectedNetwork]);
 
   // Fetch nodes data for uptime
   useEffect(() => {
@@ -142,14 +152,13 @@ function LeaderboardPageContent() {
         const data = await response.json();
         setNodesData(data.nodes || []);
       }
-      toast.success('Leaderboard updated successfully!');
+      toast.success(`${selectedNetwork.charAt(0).toUpperCase() + selectedNetwork.slice(1)} leaderboard updated successfully!`);
     } catch (err) {
-      console.error('Failed to refresh leaderboard:', err);
       toast.error('Failed to refresh leaderboard');
     } finally {
       setIsRefreshing(false);
     }
-  }, [refetch]);
+  }, [refetch, selectedNetwork]);
 
   const handleCopy = useCallback(() => {
     toast.success('Pod ID copied to clipboard!');
@@ -269,11 +278,68 @@ function LeaderboardPageContent() {
       {/* Title Card */}
       <LeaderboardTitleCard />
 
+      {/* Network Toggle */}
+      <div className="relative bg-black border border-white/10 p-4 sm:p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden">
+        {/* Corner Accents */}
+        <div className="absolute top-0 left-0 w-6 h-6">
+          <div className="absolute top-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
+          <div className="absolute top-0 left-0 w-0.5 h-3 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
+        </div>
+        <div className="absolute top-0 right-0 w-6 h-6">
+          <div className="absolute top-0 right-0 w-3 h-0.5 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
+          <div className="absolute top-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
+        </div>
+        <div className="absolute bottom-0 left-0 w-6 h-6">
+          <div className="absolute bottom-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
+          <div className="absolute bottom-0 left-0 w-0.5 h-3 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
+        </div>
+        <div className="absolute bottom-0 right-0 w-6 h-6">
+          <div className="absolute bottom-0 right-0 w-3 h-0.5 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
+          <div className="absolute bottom-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-500/20 border border-emerald-500/30 rounded-full flex items-center justify-center">
+              <Network className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white">Network Selection</h2>
+              <p className="text-white/60 text-sm">Choose between Devnet and Mainnet leaderboards</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 bg-white/5 rounded-lg p-1">
+            <button
+              onClick={() => setSelectedNetwork('devnet')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                selectedNetwork === 'devnet'
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'text-white/60 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              Devnet
+            </button>
+            <button
+              onClick={() => setSelectedNetwork('mainnet')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 relative ${
+                selectedNetwork === 'mainnet'
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                  : 'text-white/60 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              Mainnet
+              <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        <LeaderboardTotalCreditsCard />
-        <LeaderboardDistributionCard />
-        <LeaderboardTopPodCard />
+        <LeaderboardTotalCreditsCard network={selectedNetwork} />
+        <LeaderboardDistributionCard network={selectedNetwork} />
+        <LeaderboardTopPodCard network={selectedNetwork} />
       </div>
 
       {/* Bookmarks Section */}
@@ -286,7 +352,7 @@ function LeaderboardPageContent() {
           >
             <div className="flex items-center space-x-2 sm:space-x-3">
               <Bookmark className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 fill-yellow-400" />
-              <h2 className="text-sm sm:text-lg font-bold text-white font-mono">// BOOKMARKS</h2>
+              <h2 className="text-sm sm:text-lg font-bold text-white font-mono">// BOOKMARKS ({selectedNetwork.toUpperCase()})</h2>
               <span className="text-yellow-400 text-xs sm:text-sm font-mono">({bookmarkedPods.size})</span>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-3">
@@ -412,7 +478,7 @@ function LeaderboardPageContent() {
       <div className="bg-black/90 border border-gray-800 rounded-lg overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-800">
-          <h2 className="text-sm sm:text-lg font-bold text-white font-mono">// RANKINGS</h2>
+          <h2 className="text-sm sm:text-lg font-bold text-white font-mono">// RANKINGS ({selectedNetwork.toUpperCase()})</h2>
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}

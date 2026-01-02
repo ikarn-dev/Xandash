@@ -105,7 +105,6 @@ interface CurrentNodeData {
   rpc_port?: number;
   is_public?: boolean;
   last_seen_timestamp?: number;
-  active_streams?: number;
   credits?: number;
   previousCredits?: number;
   totalCredits?: number;
@@ -123,6 +122,7 @@ interface NodeProfileData {
 
 interface NodeProfileClientProps {
   ip: string;
+  initialData?: NodeProfileData | null;
 }
 
 type TimeRange = '7h' | '24h' | '7d' | 'all';
@@ -164,13 +164,6 @@ const LineChart = ({
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; value: number; time: number } | null>(null);
   const [isAnimating, setIsAnimating] = useState(true);
   const svgRef = useRef<SVGSVGElement>(null);
-
-  console.log(`[LINECHART] ${label} received data:`, {
-    length: data?.length || 0,
-    sample: data?.slice(-3) || [],
-    hasData: !!(data && data.length > 0),
-    highlightCurrent
-  });
 
   useEffect(() => {
     // Trigger animation on data change
@@ -356,12 +349,6 @@ const LineChart = ({
 const StatusChart = ({ data, height = 50 }: { data: { time: number; status: string }[]; height?: number }) => {
   const [isAnimating, setIsAnimating] = useState(true);
 
-  console.log(`[STATUSCHART] received data:`, {
-    length: data?.length || 0,
-    sample: data?.slice(0, 3) || [],
-    hasData: !!(data && data.length > 0)
-  });
-
   useEffect(() => {
     setIsAnimating(true);
     const timer = setTimeout(() => setIsAnimating(false), 800);
@@ -488,13 +475,25 @@ const getTimeAgo = (timestamp: number) => {
 
 
 // Main Component
-export function NodeProfileClient({ ip }: NodeProfileClientProps) {
+export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialData); // Don't show loading if we have initial data
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<NodeProfileData | null>(null);
-  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [data, setData] = useState<NodeProfileData | null>(initialData || null);
+  const [timeRange, setTimeRange] = useState<TimeRange>('7d'); // Default to 7 days
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(initialData ? new Date() : null);
+
+  // Get node data first to avoid initialization errors
+  const node = data?.currentNode;
+
+  // Log SSR data usage
+  useEffect(() => {
+    if (initialData) {
+      setData(initialData);
+      setLoading(false);
+      return;
+    }
+  }, [initialData, ip]);
 
   const fetchData = useCallback(async (showToast = false, rangeHours?: number) => {
     try {
@@ -503,36 +502,25 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
         hours = rangeHours;
       } else {
         const selectedRange = timeRangeOptions.find(r => r.value === timeRange);
-        hours = selectedRange?.hours || 168; // Default to 7 days
+        hours = selectedRange?.hours || 168; // Default to 7 days (168 hours)
         // For "All time", fetch all available data (use a very large number)
         if (timeRange === 'all') {
           hours = 8760; // 1 year worth of hours - should cover all data
         }
       }
       
-      console.log(`[PROFILE] Fetching data for IP: ${ip}, hours: ${hours}, timeRange: ${timeRange}`);
-      
       const response = await fetch(`/api/node-profile?ip=${encodeURIComponent(ip)}&source=both&hours=${hours}`);
       if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
       
       const profileData = await response.json();
-      console.log(`[PROFILE] Received data:`, {
-        ip: profileData.ip,
-        hasCurrentNode: !!profileData.currentNode,
-        dbHistoryCount: profileData.dbHistory?.length || 0,
-        dbEventsCount: profileData.dbEvents?.length || 0,
-        currentCredits: profileData.currentNode?.credits,
-        previousCredits: profileData.currentNode?.previousCredits,
-        totalCredits: profileData.currentNode?.totalCredits,
-      });
       
       setData(profileData);
       setLastUpdate(new Date());
       if (showToast) toast.success('Data refreshed');
     } catch (err: any) {
-      console.error('[PROFILE] Error fetching node profile:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       if (!data) {
-        setError('Failed to load node profile');
+        setError(`Failed to load node profile: ${errorMessage}`);
         toast.error('Failed to load node profile');
       }
     } finally {
@@ -540,11 +528,13 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
     }
   }, [ip, data, timeRange]);
 
-  // Initial fetch
+  // Initial fetch - only if we don't have SSR data
   useEffect(() => {
-    setLoading(true);
-    fetchData(true, 168); // Fetch 7 days of data initially (default)
-  }, [ip]);
+    if (!initialData) {
+      setLoading(true);
+      fetchData(true, 168); // Fetch 7 days of data initially (default)
+    }
+  }, [ip, initialData]);
 
   // Refetch when time range changes
   useEffect(() => {
@@ -552,7 +542,7 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
     if (timeRange === 'all') {
       hours = 8760; // 1 year worth of hours for "All time"
     } else {
-      hours = timeRangeOptions.find(r => r.value === timeRange)?.hours || 168; // Default to 7 days
+      hours = timeRangeOptions.find(r => r.value === timeRange)?.hours || 168; // Default to 7 days (168 hours)
     }
     fetchData(false, hours);
   }, [timeRange]);
@@ -587,26 +577,14 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
     displayHistory = data?.dbHistory?.slice(-recentDataCount) || [];
   }
   
+  // FALLBACK: If we still have no display data but have DB data, show at least the last few points
+  if (displayHistory.length === 0 && (data?.dbHistory?.length || 0) > 0) {
+    displayHistory = data?.dbHistory?.slice(-10) || [];
+  }
+  
   // Always show at least some data if we have any in the database
   const hasAnyData = (data?.dbHistory?.length || 0) > 0;
   const isShowingFallbackData = timeRange !== 'all' && displayHistory.length > filteredDbHistory.length;
-
-  console.log(`[PROFILE-CLIENT] Filtered data for ${timeRange}:`, {
-    totalDbHistory: data?.dbHistory?.length || 0,
-    filteredCount: filteredDbHistory.length,
-    displayCount: displayHistory.length,
-    hasAnyData,
-    isShowingFallbackData,
-    timeRange,
-    rangeHours: timeRange === 'all' ? 'all' : (timeRangeOptions.find(r => r.value === timeRange)?.hours || 168),
-    firstEntry: displayHistory[0] ? new Date(displayHistory[0].timestamp * 1000).toISOString() : 'none',
-    lastEntry: displayHistory[displayHistory.length - 1] ? new Date(displayHistory[displayHistory.length - 1].timestamp * 1000).toISOString() : 'none',
-    oldestInDb: data?.dbHistory?.[0] ? new Date(data.dbHistory[0].timestamp * 1000).toISOString() : 'none',
-    newestInDb: data?.dbHistory?.[data.dbHistory.length - 1] ? new Date(data.dbHistory[data.dbHistory.length - 1].timestamp * 1000).toISOString() : 'none'
-  });
-
-  // Get node data first
-  const node = data?.currentNode;
 
   // Generate chart data from MongoDB snapshots (data is already in chronological order)
   const statusData = displayHistory.map(h => ({ time: h.timestamp, status: h.status }));
@@ -635,17 +613,6 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
     }
   }
 
-  console.log(`[PROFILE-CLIENT] Chart data generated:`, {
-    statusData: statusData.length,
-    uptimeData: uptimeData.length,
-    creditsData: creditsData.length,
-    storageData: storageData.length,
-    currentCredits,
-    sampleCredits: creditsData.slice(-3),
-    sampleUptime: uptimeData.slice(-3),
-    creditsRange: creditsData.length > 0 ? `${Math.min(...creditsData.map(d => d.value))} - ${Math.max(...creditsData.map(d => d.value))}` : 'none'
-  });
-
   const location = data?.location;
 
   if (loading) {
@@ -671,41 +638,62 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
 
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
       {/* Header */}
-      <div className="relative bg-black border border-white/10 p-4 group hover:border-white/20 transition-all">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <button onClick={() => router.back()} className="p-2 hover:bg-white/10 rounded-lg text-white/60 hover:text-white">
+      <div className="relative bg-black border border-white/10 p-3 sm:p-4 group hover:border-white/20 transition-all">
+        <div className="flex flex-col gap-3">
+          {/* Top row with back button and refresh */}
+          <div className="flex items-center justify-between">
+            <button onClick={() => router.back()} className="p-2 hover:bg-white/10 rounded-lg text-white/60 hover:text-white flex-shrink-0">
               <ArrowLeftIcon className="w-5 h-5" />
             </button>
-            <div>
+            <button onClick={() => fetchData(true)} className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded text-white text-sm flex-shrink-0">Refresh</button>
+          </div>
+          
+          {/* Main content */}
+          <div className="space-y-2">
+            {/* Title and badges */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-bold text-white font-mono break-all">Node {ip}</h1>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold text-white font-mono">Node {ip}</h1>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusBgColor(node?.status || 'offline')}`}>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusBgColor(node?.status || 'offline')} flex-shrink-0`}>
                   <span className={getStatusColor(node?.status || 'offline')}>{node?.status?.toUpperCase() || 'UNKNOWN'}</span>
                 </span>
-                {node?.is_public && <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/20 border border-blue-500/50 text-blue-400">PUBLIC</span>}
-              </div>
-              <div className="flex items-center gap-2 mt-1 text-white/60 text-sm">
-                <span>{ip}</span><CopyButton text={ip} />
-                {node?.version && <><span className="text-white/30">•</span><span>v{node.version}</span></>}
-                {lastUpdate && <><span className="text-white/30">•</span><span className="text-white/40 text-xs">Updated {lastUpdate.toLocaleTimeString()}</span></>}
+                {node?.is_public && <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/20 border border-blue-500/50 text-blue-400 flex-shrink-0">PUBLIC</span>}
               </div>
             </div>
+            
+            {/* Details row */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-white/60 text-xs sm:text-sm">
+              <div className="flex items-center gap-2">
+                <span className="font-mono break-all">{ip}</span>
+                <CopyButton text={ip} />
+              </div>
+              {node?.version && (
+                <div className="flex items-center gap-1">
+                  <span className="text-white/30 hidden sm:inline">•</span>
+                  <span className="font-mono break-all">v{node.version}</span>
+                </div>
+              )}
+              {lastUpdate && (
+                <div className="flex items-center gap-1">
+                  <span className="text-white/30 hidden sm:inline">•</span>
+                  <span className="text-white/40 text-xs">Updated {lastUpdate.toLocaleTimeString()}</span>
+                </div>
+              )}
+            </div>
           </div>
-          <button onClick={() => fetchData(true)} className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded text-white text-sm">Refresh</button>
         </div>
       </div>
 
       {/* Map and Location */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
         <div className="lg:col-span-2 bg-black/40 border border-white/10 rounded-lg overflow-hidden">
           <div className="p-3 border-b border-white/10 flex items-center gap-2">
             <MapPinIcon className="w-4 h-4 text-emerald-400" />
             <h2 className="text-sm font-semibold text-white">Node Location</h2>
           </div>
-          <div className="h-[180px]">
+          <div className="h-[160px] sm:h-[180px]">
             {location?.lat && location?.lon ? <NodeLocationMap lat={location.lat} lon={location.lon} city={location.city} country={location.country} /> : <div className="flex items-center justify-center h-full text-white/40 text-sm">Location unavailable</div>}
           </div>
         </div>
@@ -716,55 +704,70 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
           </div>
           <div className="space-y-2 text-sm">
             {location?.country_code && <img src={getCountryFlagUrl(location.country_code)} alt={location.country} className="w-6 h-4 object-cover rounded mb-2" />}
-            <div className="flex justify-between"><span className="text-white/60">Country</span><span className="text-white">{location?.country || 'Unknown'}</span></div>
-            <div className="flex justify-between"><span className="text-white/60">City</span><span className="text-white">{location?.city || 'Unknown'}</span></div>
-            <div className="flex justify-between"><span className="text-white/60">Provider</span><span className="text-white text-xs">{location?.provider || 'Unknown'}</span></div>
-            <div className="flex justify-between"><span className="text-white/60">RPC Port</span><span className="text-white font-mono">{node?.rpc_port || 'N/A'}</span></div>
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+              <span className="text-white/60 flex-shrink-0">Country</span>
+              <span className="text-white break-words text-right sm:text-left">{location?.country || 'Unknown'}</span>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+              <span className="text-white/60 flex-shrink-0">City</span>
+              <span className="text-white break-words text-right sm:text-left">{location?.city || 'Unknown'}</span>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+              <span className="text-white/60 flex-shrink-0">Provider</span>
+              <span className="text-white text-xs break-words text-right sm:text-left">{location?.provider || 'Unknown'}</span>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+              <span className="text-white/60 flex-shrink-0">RPC Port</span>
+              <span className="text-white font-mono text-right sm:text-left">{node?.rpc_port || 'N/A'}</span>
+            </div>
           </div>
         </div>
       </div>
 
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-        <div className="bg-black/40 border border-white/10 rounded-lg p-3 hover:border-blue-500/30">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 hover:border-blue-500/30">
           <div className="flex items-center gap-1.5 text-blue-400/70 text-xs mb-1"><ClockIcon className="w-3 h-3" /><span>Uptime</span></div>
-          <div className="text-lg font-bold text-blue-400">{formatUptime(node?.uptime || 0)}</div>
+          <div className="text-sm sm:text-lg font-bold text-blue-400 break-words">{formatUptime(node?.uptime || 0)}</div>
         </div>
-        <div className="bg-black/40 border border-white/10 rounded-lg p-3 hover:border-orange-500/30">
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 hover:border-orange-500/30">
           <div className="flex items-center gap-1.5 text-orange-400/70 text-xs mb-1"><ServerIcon className="w-3 h-3" /><span>Storage</span></div>
-          <div className="text-lg font-bold text-orange-400">{formatBytes(node?.storage_committed || 0)}</div>
+          <div className="text-sm sm:text-lg font-bold text-orange-400 break-words">{formatBytes(node?.storage_committed || 0)}</div>
         </div>
-        <div className="bg-black/40 border border-white/10 rounded-lg p-3 hover:border-yellow-500/30">
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 hover:border-yellow-500/30">
           <div className="flex items-center gap-1.5 text-yellow-400/70 text-xs mb-1"><ServerIcon className="w-3 h-3" /><span>Used</span></div>
-          <div className="text-lg font-bold text-yellow-400">{formatBytes(node?.storage_used || 0)}</div>
+          <div className="text-sm sm:text-lg font-bold text-yellow-400 break-words">{formatBytes(node?.storage_used || 0)}</div>
         </div>
-        <div className="bg-black/40 border border-white/10 rounded-lg p-3 hover:border-emerald-500/30">
+        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 hover:border-emerald-500/30 col-span-2 md:col-span-1">
           <div className="flex items-center gap-1.5 text-emerald-400/70 text-xs mb-1"><ActivityIcon className="w-3 h-3" /><span>Credits</span></div>
           <div className="space-y-1">
-            <div className="text-lg font-bold text-emerald-400">{(node?.totalCredits || node?.credits || 0).toLocaleString()}</div>
+            <div className="text-sm sm:text-lg font-bold text-emerald-400 break-words">{(node?.totalCredits || node?.credits || 0).toLocaleString()}</div>
             <div className="text-xs text-white/50 space-y-0.5">
-              <div>
-                <span className="text-emerald-400/70">Current:</span> {(node?.credits || 0).toLocaleString()}
+              <div className="flex flex-col sm:flex-row sm:justify-between">
+                <span className="text-emerald-400/70">Current:</span> 
+                <span className="break-words">{(node?.credits || 0).toLocaleString()}</span>
               </div>
               {node?.previousCredits && node.previousCredits > 0 && (
-                <div>
-                  <span className="text-amber-400/70">Previous:</span> {node.previousCredits.toLocaleString()}
+                <div className="flex flex-col sm:flex-row sm:justify-between">
+                  <span className="text-amber-400/70">Previous:</span> 
+                  <span className="break-words">{node.previousCredits.toLocaleString()}</span>
+                </div>
+              )}
+              {(node?.credits || 0) === 0 && (node?.totalCredits || 0) > 0 && (
+                <div className="text-yellow-400/70 text-[10px]">
+                  Using DB fallback
                 </div>
               )}
             </div>
           </div>
-        </div>
-        <div className="bg-black/40 border border-white/10 rounded-lg p-3 hover:border-purple-500/30">
-          <div className="flex items-center gap-1.5 text-purple-400/70 text-xs mb-1"><ActivityIcon className="w-3 h-3" /><span>Streams</span></div>
-          <div className="text-lg font-bold text-purple-400">{node?.active_streams || 0}</div>
         </div>
       </div>
 
       {/* Charts from MongoDB Data */}
       {(hasAnyData || node) && (
         <div className="bg-black/40 border border-white/10 rounded-lg overflow-hidden">
-          <div className="p-3 border-b border-white/10 flex items-center justify-between">
+          <div className="p-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <ChartIcon className="w-4 h-4 text-purple-400" />
               <h2 className="text-sm font-semibold text-white">Historical Performance</h2>
@@ -773,14 +776,25 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
                 <span className="text-amber-400/70 text-xs">(showing extended data)</span>
               )}
             </div>
-            <div className="flex items-center gap-1 bg-black/40 rounded p-0.5">
-              {timeRangeOptions.map(opt => (
-                <button key={opt.value} onClick={() => setTimeRange(opt.value)}
-                  className={`px-3 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap ${timeRange === opt.value ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'}`}>
-                  {opt.label}
-                </button>
-              ))}
-              <div className="ml-2 text-xs text-white/40">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+              <div className="flex items-center gap-1 bg-black/40 rounded p-0.5 overflow-x-auto scrollbar-hide">
+                <style jsx>{`
+                  .scrollbar-hide {
+                    scrollbar-width: none;
+                    -ms-overflow-style: none;
+                  }
+                  .scrollbar-hide::-webkit-scrollbar {
+                    display: none;
+                  }
+                `}</style>
+                {timeRangeOptions.map(opt => (
+                  <button key={opt.value} onClick={() => setTimeRange(opt.value)}
+                    className={`px-2 sm:px-3 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${timeRange === opt.value ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'}`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div className="text-xs text-white/40 whitespace-nowrap">
                 {timeRange === 'all' ? `All ${displayHistory.length} records` : 
                  filteredDbHistory.length > 0 ? `${filteredDbHistory.length} in range` : 'Extended view'}
               </div>
@@ -826,14 +840,14 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
             <h2 className="text-sm font-semibold text-white">Recent Events</h2>
             <span className="text-white/30 text-xs">({data.dbEvents.length})</span>
           </div>
-          <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-            <table className="w-full">
+          <div className="overflow-x-auto max-h-[300px] sm:max-h-[400px] overflow-y-auto">
+            <table className="w-full min-w-[600px]">
               <thead className="sticky top-0 bg-black/80">
                 <tr className="border-b border-white/10">
-                  <th className="text-left px-4 py-2 text-white/60 text-xs font-medium uppercase">Timestamp</th>
-                  <th className="text-left px-4 py-2 text-white/60 text-xs font-medium uppercase">Event Type</th>
-                  <th className="text-left px-4 py-2 text-white/60 text-xs font-medium uppercase">Details</th>
-                  <th className="text-right px-4 py-2 text-white/60 text-xs font-medium uppercase">Time Ago</th>
+                  <th className="text-left px-2 sm:px-4 py-2 text-white/60 text-xs font-medium uppercase">Timestamp</th>
+                  <th className="text-left px-2 sm:px-4 py-2 text-white/60 text-xs font-medium uppercase">Event Type</th>
+                  <th className="text-left px-2 sm:px-4 py-2 text-white/60 text-xs font-medium uppercase">Details</th>
+                  <th className="text-right px-2 sm:px-4 py-2 text-white/60 text-xs font-medium uppercase">Time Ago</th>
                 </tr>
               </thead>
               <tbody>
@@ -844,8 +858,11 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
                   
                   return (
                     <tr key={event._id || idx} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                      <td className="px-4 py-3 text-white/70 text-xs font-mono">{eventDate.toLocaleString()}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-white/70 text-xs font-mono">
+                        <div className="hidden sm:block">{eventDate.toLocaleString()}</div>
+                        <div className="sm:hidden">{eventDate.toLocaleDateString()}<br/>{eventDate.toLocaleTimeString()}</div>
+                      </td>
+                      <td className="px-2 sm:px-4 py-2 sm:py-3">
                         <div className="flex items-center gap-2">
                           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                             event.event_type === 'node_online' ? 'bg-emerald-400' :
@@ -859,8 +876,8 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
                           <span className={`text-sm font-medium ${config.color}`}>{config.label}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="text-white/70 text-sm">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3">
+                        <div className="text-white/70 text-xs sm:text-sm break-words">
                           {event.event_type === 'status_change' && (
                             <span><span className="text-white/50">{event.previous_status}</span> → <span className="text-emerald-400">{event.new_status}</span></span>
                           )}
@@ -868,7 +885,11 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
                             <span><span className="text-white/50">{event.previous_version || String(event.previous_value)}</span> → <span className="text-emerald-400">{event.new_version || String(event.new_value)}</span></span>
                           )}
                           {event.event_type === 'node_new' && (
-                            <span>v{event.details?.version || '?'} • {formatBytes(event.details?.storage_committed || 0)} • {(event.details?.credits || 0).toLocaleString()} credits</span>
+                            <div className="space-y-1">
+                              <div>v{event.details?.version || '?'}</div>
+                              <div className="text-xs">{formatBytes(event.details?.storage_committed || 0)}</div>
+                              <div className="text-xs">{(event.details?.credits || 0).toLocaleString()} credits</div>
+                            </div>
                           )}
                           {event.event_type === 'node_online' && (
                             <span>Node came online{event.previous_status ? ` from ${event.previous_status}` : ''}</span>
@@ -884,8 +905,8 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-white/60 text-xs">{timeAgo}</span>
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-right">
+                        <span className="text-white/60 text-xs whitespace-nowrap">{timeAgo}</span>
                       </td>
                     </tr>
                   );
@@ -907,29 +928,35 @@ export function NodeProfileClient({ ip }: NodeProfileClientProps) {
               <span className="text-amber-400/70 text-xs">(showing extended data)</span>
             )}
           </div>
-          <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
-            <table className="w-full">
+          <div className="overflow-x-auto max-h-[250px] sm:max-h-[300px] overflow-y-auto">
+            <table className="w-full min-w-[600px]">
               <thead className="sticky top-0 bg-black/80">
                 <tr className="border-b border-white/10">
-                  <th className="text-left px-4 py-2 text-white/60 text-xs font-medium uppercase">Timestamp</th>
-                  <th className="text-center px-4 py-2 text-white/60 text-xs font-medium uppercase">Status</th>
-                  <th className="text-right px-4 py-2 text-white/60 text-xs font-medium uppercase">Uptime</th>
-                  <th className="text-right px-4 py-2 text-white/60 text-xs font-medium uppercase">Storage</th>
-                  <th className="text-right px-4 py-2 text-white/60 text-xs font-medium uppercase">Credits</th>
+                  <th className="text-left px-2 sm:px-4 py-2 text-white/60 text-xs font-medium uppercase">Timestamp</th>
+                  <th className="text-center px-2 sm:px-4 py-2 text-white/60 text-xs font-medium uppercase">Status</th>
+                  <th className="text-right px-2 sm:px-4 py-2 text-white/60 text-xs font-medium uppercase">Uptime</th>
+                  <th className="text-right px-2 sm:px-4 py-2 text-white/60 text-xs font-medium uppercase">Storage</th>
+                  <th className="text-right px-2 sm:px-4 py-2 text-white/60 text-xs font-medium uppercase">Credits</th>
                 </tr>
               </thead>
               <tbody>
                 {[...displayHistory].reverse().slice(0, 50).map((snapshot, idx) => (
                   <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
-                    <td className="px-4 py-2 text-white/70 text-xs font-mono">{new Date(snapshot.timestamp * 1000).toLocaleString()}</td>
-                    <td className="px-4 py-2 text-center">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusBgColor(snapshot.status)} ${getStatusColor(snapshot.status)}`}>
+                    <td className="px-2 sm:px-4 py-2 text-white/70 text-xs font-mono">
+                      <div className="hidden sm:block">{new Date(snapshot.timestamp * 1000).toLocaleString()}</div>
+                      <div className="sm:hidden">
+                        <div>{new Date(snapshot.timestamp * 1000).toLocaleDateString()}</div>
+                        <div className="text-[10px] text-white/50">{new Date(snapshot.timestamp * 1000).toLocaleTimeString()}</div>
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-4 py-2 text-center">
+                      <span className={`px-1 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium ${getStatusBgColor(snapshot.status)} ${getStatusColor(snapshot.status)}`}>
                         {snapshot.status?.toUpperCase()}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-right text-white/70 text-xs font-mono">{formatUptime(snapshot.uptime)}</td>
-                    <td className="px-4 py-2 text-right text-white/70 text-xs font-mono">{formatBytes(snapshot.storage_committed)}</td>
-                    <td className="px-4 py-2 text-right text-cyan-400 text-xs font-mono font-bold">{snapshot.credits?.toLocaleString() || 0}</td>
+                    <td className="px-2 sm:px-4 py-2 text-right text-white/70 text-xs font-mono">{formatUptime(snapshot.uptime)}</td>
+                    <td className="px-2 sm:px-4 py-2 text-right text-white/70 text-xs font-mono">{formatBytes(snapshot.storage_committed)}</td>
+                    <td className="px-2 sm:px-4 py-2 text-right text-cyan-400 text-xs font-mono font-bold">{(snapshot.credits || 0).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

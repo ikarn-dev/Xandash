@@ -307,6 +307,4 @@ export async function createIndexes(): Promise<void> {
   await eventsCol.createIndex({ ip: 1, timestamp: -1 });
   await eventsCol.createIndex({ event_type: 1, timestamp: -1 });
   await eventsCol.createIndex({ timestamp: -1 });
-  
-  console.log('MongoDB indexes created');
 }

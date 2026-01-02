@@ -1,21 +1,242 @@
 import { DashboardLayout } from '@/components/layout';
 import { NodeProfileClient } from './NodeProfileClient';
+import { callDirectRPC } from '@/libs/server';
+import { getNodeStatsHistory, getNodeEvents, getLatestNodeSnapshot } from '@/libs/db/node-service';
+import { ProfileCacheService } from '@/libs/services/profile-cache';
 
 interface PageProps {
   params: Promise<{ ip: string }>;
 }
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Enable SSR with revalidation every 30 seconds
+export const revalidate = 30;
+
+// Server-side data fetching function
+async function getProfileData(ip: string) {
+  try {
+    // Fetch location data
+    const locationData = await fetchLocationData(ip);
+    
+    // Fetch current node data from RPC
+    const currentNodeData = await fetchCurrentNodeData(ip);
+    
+    // Fetch credits data
+    const creditsData = await fetchCreditsData();
+    
+    // Fetch MongoDB data (7 days by default for SSR)
+    const [dbHistory, dbEvents, dbSnapshot] = await Promise.all([
+      getNodeStatsHistory(ip, 168).catch(() => []), // 7 days = 168 hours
+      getNodeEvents(ip, 100).catch(() => []),
+      getLatestNodeSnapshot(ip).catch(() => null),
+    ]);
+
+    // Calculate credits
+    let currentCredits = 0;
+    let previousCredits = 0;
+    const pubkey = currentNodeData?.pubkey || dbSnapshot?.pubkey;
+    
+    if (pubkey && creditsData) {
+      const entry = creditsData.find((c: any) => c.pod_id === pubkey);
+      if (entry) currentCredits = entry.credits;
+    }
+
+    // Calculate previous month's credits from MongoDB
+    if (dbHistory.length > 0) {
+      const maxHistoricalCredits = Math.max(...dbHistory.map(h => h.credits || 0));
+      if (maxHistoricalCredits > currentCredits) {
+        previousCredits = maxHistoricalCredits;
+      }
+    }
+
+    // Derive status
+    let status = 'unknown';
+    if (currentNodeData) {
+      const timeDiff = Math.floor(Date.now() / 1000) - (currentNodeData.last_seen_timestamp || 0);
+      status = timeDiff < 300 ? 'online' : timeDiff < 3600 ? 'syncing' : 'offline';
+    } else if (dbSnapshot) {
+      status = dbSnapshot.status;
+    }
+
+    // Build response - serialize MongoDB objects to plain objects
+    const nodeData = currentNodeData || dbSnapshot;
+    
+    return {
+      ip,
+      location: locationData,
+      currentNode: nodeData ? {
+        pubkey: nodeData.pubkey || '',
+        address: nodeData.address || `${ip}:9001`,
+        status,
+        uptime: nodeData.uptime || 0,
+        storage_committed: nodeData.storage_committed || 0,
+        storage_used: nodeData.storage_used || 0,
+        storage_usage_percent: nodeData.storage_usage_percent || 0,
+        version: nodeData.version || '',
+        rpc_port: nodeData.rpc_port || 0,
+        is_public: nodeData.is_public || false,
+        last_seen_timestamp: nodeData.last_seen_timestamp || 0,
+        credits: currentCredits,
+        previousCredits: previousCredits,
+        totalCredits: currentCredits + previousCredits,
+      } : null,
+      // Serialize MongoDB arrays to plain objects
+      dbHistory: dbHistory.length > 0 ? dbHistory.map(serializeMongoObject) : undefined,
+      dbEvents: dbEvents.length > 0 ? dbEvents.map(serializeMongoObject) : undefined,
+    };
+  } catch (error) {
+    console.error(`[SSR] Error fetching profile data for ${ip}:`, error);
+    return null;
+  }
+}
+
+// Helper function to serialize MongoDB objects to plain objects
+function serializeMongoObject(obj: any): any {
+  if (!obj) return obj;
+  
+  // Handle primitive types
+  if (typeof obj !== 'object') return obj;
+  
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    return obj.map(serializeMongoObject);
+  }
+  
+  // Handle Date objects
+  if (obj instanceof Date) {
+    return obj.toISOString();
+  }
+  
+  // Handle MongoDB ObjectId and other objects with toString method
+  if (obj.toString && typeof obj.toString === 'function' && obj.constructor.name === 'ObjectId') {
+    return obj.toString();
+  }
+  
+  // Handle objects with toJSON method
+  if (obj.toJSON && typeof obj.toJSON === 'function') {
+    return serializeMongoObject(obj.toJSON());
+  }
+  
+  // Handle plain objects
+  const serialized: any = {};
+  
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      const value = obj[key];
+      
+      if (key === '_id') {
+        // Convert ObjectId to string
+        serialized[key] = value?.toString() || value;
+      } else if (value instanceof Date) {
+        // Convert Date objects to ISO strings
+        serialized[key] = value.toISOString();
+      } else if (value && typeof value === 'object' && value.constructor && value.constructor.name === 'ObjectId') {
+        // Handle ObjectId specifically
+        serialized[key] = value.toString();
+      } else if (value && typeof value === 'object' && value.toJSON) {
+        // Handle objects with toJSON methods (like Mongoose documents)
+        serialized[key] = serializeMongoObject(value.toJSON());
+      } else if (Array.isArray(value)) {
+        // Recursively serialize arrays
+        serialized[key] = value.map(serializeMongoObject);
+      } else if (value && typeof value === 'object' && value.constructor === Object) {
+        // Recursively serialize plain objects only
+        serialized[key] = serializeMongoObject(value);
+      } else {
+        // Primitive values and other types
+        serialized[key] = value;
+      }
+    }
+  }
+  
+  return serialized;
+}
+
+async function fetchLocationData(ip: string) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    
+    const res = await fetch(
+      `http://ip-api.com/json/${ip}?fields=country,countryCode,regionName,city,lat,lon,isp`,
+      { signal: controller.signal }
+    );
+    clearTimeout(timeout);
+    
+    if (!res.ok) return null;
+    const data = await res.json();
+    
+    return {
+      country: data.country || 'Unknown',
+      country_code: data.countryCode?.toLowerCase() || '',
+      city: data.city || 'Unknown',
+      region: data.regionName || '',
+      provider: data.isp || 'Unknown',
+      ip,
+      lat: data.lat,
+      lon: data.lon,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchCurrentNodeData(ip: string) {
+  try {
+    const rpcResponse = await callDirectRPC('get-pods-with-stats');
+    if (!rpcResponse.success || !rpcResponse.data) return null;
+
+    const nodes = (rpcResponse.data as any)?.pods || [];
+    const node = nodes.find((n: any) => {
+      const nodeIp = n.address?.split(':')[0];
+      return nodeIp === ip;
+    });
+
+    return node || null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchCreditsData() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    
+    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/devnet-pod-credits';
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'XanDash/1.0' },
+    });
+    clearTimeout(timeout);
+    
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.pods_credits || [];
+  } catch {
+    return null;
+  }
+}
 
 export default async function ProfilePage({ params }: PageProps) {
   const { ip } = await params;
   const decodedIP = decodeURIComponent(ip);
 
+  // Try to get cached data first
+  let initialData = await ProfileCacheService.getCachedProfile(decodedIP);
+  
+  // If no cached data or data is stale, fetch fresh data
+  if (!initialData || Date.now() - initialData.cachedAt > 300000) { // 5 minutes
+    initialData = await getProfileData(decodedIP);
+    
+    // Cache the fresh data
+    if (initialData) {
+      await ProfileCacheService.cacheProfile(decodedIP, initialData);
+    }
+  }
+
   return (
     <DashboardLayout>
-      <NodeProfileClient ip={decodedIP} />
+      <NodeProfileClient ip={decodedIP} initialData={initialData} />
     </DashboardLayout>
   );
 }

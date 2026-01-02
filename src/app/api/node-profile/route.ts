@@ -27,8 +27,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'IP address is required' }, { status: 400 });
     }
 
-    console.log(`[NODE-PROFILE] Fetching data for IP: ${ip}, hours: ${hours}`);
-
     // Fetch ALL data in parallel for maximum speed
     // Use getNodeStatsHistory for time-based queries (better for charts)
     const [locationData, currentNodeData, creditsData, dbHistory, dbEvents, dbSnapshot] = await Promise.all([
@@ -39,8 +37,6 @@ export async function GET(request: NextRequest) {
       getNodeEvents(ip, 100).catch((err) => { console.error('[NODE-PROFILE] DB events fetch failed:', err); return []; }), // More events
       getLatestNodeSnapshot(ip).catch((err) => { console.error('[NODE-PROFILE] Latest snapshot fetch failed:', err); return null; }),
     ]);
-
-    console.log(`[NODE-PROFILE] Data fetched - dbHistory: ${dbHistory.length}, dbEvents: ${dbEvents.length}, currentNode: ${!!currentNodeData}, dbSnapshot: ${!!dbSnapshot}`);
 
     // Derive status
     let status = 'unknown';
@@ -54,6 +50,7 @@ export async function GET(request: NextRequest) {
     // Find current credits
     let currentCredits = 0;
     const pubkey = currentNodeData?.pubkey || dbSnapshot?.pubkey;
+    
     if (pubkey && creditsData) {
       const entry = creditsData.find((c: any) => c.pod_id === pubkey);
       if (entry) currentCredits = entry.credits;
@@ -66,6 +63,20 @@ export async function GET(request: NextRequest) {
       const maxHistoricalCredits = Math.max(...dbHistory.map(h => h.credits || 0));
       if (maxHistoricalCredits > currentCredits) {
         previousCredits = maxHistoricalCredits;
+      }
+    }
+
+    // FALLBACK: If no current credits from API but we have recent DB data, use the latest DB credits
+    if (currentCredits === 0 && dbSnapshot?.credits) {
+      currentCredits = dbSnapshot.credits;
+      // Recalculate previous credits to avoid double counting
+      if (dbHistory.length > 0) {
+        const maxHistoricalCredits = Math.max(...dbHistory.map(h => h.credits || 0));
+        if (maxHistoricalCredits > currentCredits) {
+          previousCredits = maxHistoricalCredits - currentCredits;
+        } else {
+          previousCredits = 0;
+        }
       }
     }
 
@@ -95,8 +106,6 @@ export async function GET(request: NextRequest) {
       dbHistory: dbHistory.length > 0 ? dbHistory : undefined,
       dbEvents: dbEvents.length > 0 ? dbEvents : undefined,
     };
-
-    console.log(`[NODE-PROFILE] Response built for ${ip}: ${Date.now() - startTime}ms, dbHistory: ${dbHistory.length} records, dbEvents: ${dbEvents.length} events`);
 
     return NextResponse.json(response, {
       headers: { 
@@ -181,7 +190,7 @@ async function fetchCreditsData(): Promise<any[] | null> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
     
-    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
+    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/devnet-pod-credits';
     const res = await fetch(url, {
       signal: controller.signal,
       headers: { 'User-Agent': 'XanDash/1.0' },

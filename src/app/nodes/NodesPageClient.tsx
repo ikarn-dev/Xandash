@@ -57,6 +57,7 @@ export function NodesPageClient({
     showDuplicates: false,
     onlyOnline: false,
     onlyInactive: false,
+    onlySyncing: false,
   });
   const [versionFilter, setVersionFilter] = useState<string>('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -87,7 +88,7 @@ export function NodesPageClient({
   const [isPending, startTransition] = useTransition();
 
   // Check if any filters are active
-  const hasActiveFilters = searchQuery !== '' || selectedFilters.onlyPublic || selectedFilters.hideHighStake || selectedFilters.showDuplicates || selectedFilters.onlyOnline || selectedFilters.onlyInactive || versionFilter !== '';
+  const hasActiveFilters = searchQuery !== '' || selectedFilters.onlyPublic || selectedFilters.hideHighStake || selectedFilters.showDuplicates || selectedFilters.onlyOnline || selectedFilters.onlyInactive || selectedFilters.onlySyncing || versionFilter !== '';
 
   // Memoized filtered and paginated data
   const { validators, pagination, quickStats, availableVersions } = useMemo(() => {
@@ -100,6 +101,7 @@ export function NodesPageClient({
         showDuplicates: selectedFilters.showDuplicates,
         onlyOnline: selectedFilters.onlyOnline,
         onlyInactive: selectedFilters.onlyInactive,
+        onlySyncing: selectedFilters.onlySyncing,
         versionFilter: versionFilter,
       },
       { field: sortBy, direction: 'desc' }
@@ -118,12 +120,12 @@ export function NodesPageClient({
       total: totalWithDuplicates, // Keep total unchanged
       online: filtered.filter(v => v.status === 'online').length,
       public: filtered.filter(v => v.is_public).length,
-      inactive: filtered.filter(v => v.status !== 'online').length,
+      inactive: filtered.filter(v => v.status === 'offline').length,
     } : {
       total: totalWithDuplicates,
       online: stats.online,
       public: stats.public,
-      inactive: totalWithDuplicates - stats.online, // Calculate inactive from total - online
+      inactive: allValidators.filter(v => v.status === 'offline').length, // Count only offline nodes
     };
 
     // Get unique versions for dropdown (latest first)
@@ -252,7 +254,14 @@ export function NodesPageClient({
         const allNodes: ValidatorData[] = data.nodes.map((node: any, index: number) => {
           const lastSeenTimestamp = node.last_seen_timestamp || 0;
           const timeDiff = now - lastSeenTimestamp;
-          const isOnline = timeDiff < 300; // Less than 5 minutes = online
+          
+          // Use the same status logic as profile API and database service
+          let status: 'online' | 'syncing' | 'offline' = 'offline';
+          if (timeDiff < 300) status = 'online';        // Less than 5 minutes = online
+          else if (timeDiff < 3600) status = 'syncing'; // Less than 1 hour = syncing
+          else status = 'offline';                      // 1 hour or more = offline
+          
+          const isOnline = status === 'online'; // For score calculation
           
           // Calculate score (same as server-side)
           const uptimeScore = Math.min((node.uptime || 0) / (30 * 24 * 3600), 1) * 40;
@@ -272,7 +281,7 @@ export function NodesPageClient({
             version: node.version || '',
             uptime: node.uptime || 0,
             last_seen_timestamp: lastSeenTimestamp,
-            status: isOnline ? 'online' : 'offline',
+            status: status,
             score: totalScore,
             rank: 0,
             duplicateCount: 0,
@@ -399,14 +408,21 @@ export function NodesPageClient({
       setSelectedFilters(prev => {
         const newFilters = { ...prev };
         
-        // Handle mutually exclusive filters
+        // Handle mutually exclusive filters for status
         if (filterKey === 'onlyOnline' && !prev.onlyOnline) {
-          // If turning on onlyOnline, turn off onlyInactive
+          // If turning on onlyOnline, turn off other status filters
           newFilters.onlyInactive = false;
+          newFilters.onlySyncing = false;
           newFilters.onlyOnline = true;
-        } else if (filterKey === 'onlyInactive' && !prev.onlyInactive) {
-          // If turning on onlyInactive, turn off onlyOnline
+        } else if (filterKey === 'onlySyncing' && !prev.onlySyncing) {
+          // If turning on onlySyncing, turn off other status filters
           newFilters.onlyOnline = false;
+          newFilters.onlyInactive = false;
+          newFilters.onlySyncing = true;
+        } else if (filterKey === 'onlyInactive' && !prev.onlyInactive) {
+          // If turning on onlyInactive, turn off other status filters
+          newFilters.onlyOnline = false;
+          newFilters.onlySyncing = false;
           newFilters.onlyInactive = true;
         } else {
           // Toggle the selected filter
@@ -497,6 +513,7 @@ export function NodesPageClient({
         showDuplicates: selectedFilters.showDuplicates,
         onlyOnline: selectedFilters.onlyOnline,
         onlyInactive: selectedFilters.onlyInactive,
+        onlySyncing: selectedFilters.onlySyncing,
         versionFilter: versionFilter,
       },
       { field: sortBy, direction: 'desc' }
@@ -537,7 +554,7 @@ export function NodesPageClient({
         uptimeDisplay,
         lastSeenDisplay,
         nodeCredits !== null && nodeCredits !== undefined ? nodeCredits.toString() : '0',
-        isOnline ? 'ACTIVE' : 'OFFLINE'
+        isOnline ? 'ACTIVE' : validator.status === 'syncing' ? 'SYNCING' : 'OFFLINE'
       ];
     });
     
@@ -697,6 +714,39 @@ export function NodesPageClient({
                   }}
                 >
                   {quickStats.online} online
+                </span>
+              </div>
+            </button>
+            
+            {/* Syncing Badge - Amber */}
+            <button
+              onClick={() => handleFilterChange('onlySyncing')}
+              className="relative group overflow-visible flex-shrink-0"
+            >
+              <div 
+                className="absolute -inset-1 sm:-inset-2 rounded-full opacity-60 group-hover:opacity-80 transition-opacity duration-500"
+                style={{
+                  background: 'radial-gradient(circle, rgba(245,158,11,0.4) 0%, rgba(245,158,11,0.1) 70%, transparent 100%)',
+                  filter: 'blur(8px)',
+                }}
+              ></div>
+              <div 
+                className="relative flex items-center px-2 py-1 sm:px-3 sm:py-1.5 rounded-full shadow-xl transition-all duration-200"
+                style={{
+                  background: selectedFilters.onlySyncing ? 'rgba(245, 158, 11, 0.2)' : 'rgba(0, 0, 0, 0.8)',
+                  border: `1px solid rgba(245, 158, 11, ${selectedFilters.onlySyncing ? '0.8' : '0.6'})`,
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: '0 0 15px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(245, 158, 11, 0.1)',
+                }}
+              >
+                <span 
+                  className="font-semibold text-[10px] sm:text-xs uppercase tracking-wide whitespace-nowrap"
+                  style={{ 
+                    color: '#f59e0b',
+                    textShadow: '0 0 10px rgba(245, 158, 11, 0.5)',
+                  }}
+                >
+                  {allValidators.filter(v => v.status === 'syncing').length} syncing
                 </span>
               </div>
             </button>
@@ -942,6 +992,8 @@ export function NodesPageClient({
             <tbody>
               {validators.map((validator, index) => {
                 const isOnline = validator.status === 'online';
+                const isSyncing = validator.status === 'syncing';
+                const isOffline = validator.status === 'offline';
                 
                 // Format storage committed
                 const storageCommittedGB = validator.storage_committed ? 
@@ -990,7 +1042,11 @@ export function NodesPageClient({
                     {/* Location */}
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
-                        <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                        <div className={`w-2 h-2 rounded-full ${
+                          isOnline ? 'bg-green-400' : 
+                          isSyncing ? 'bg-amber-400' : 
+                          'bg-red-400'
+                        }`}></div>
                         {(() => {
                           const ip = extractIPFromAddress(validator.address || '');
                           const location = locations[ip];
@@ -1152,11 +1208,20 @@ export function NodesPageClient({
 
                     {/* Status */}
                     <td className="px-4 py-4 text-center">
-                      <span className={`font-mono text-sm font-bold uppercase ${
-                        isOnline ? 'text-green-400' : 'text-red-400'
-                      }`}>
-                        {isOnline ? 'ACTIVE' : 'OFFLINE'}
-                      </span>
+                      <div className="flex items-center justify-center gap-2">
+                        <span className={`font-mono text-sm font-bold uppercase ${
+                          isOnline ? 'text-green-400' : 
+                          isSyncing ? 'text-amber-400' : 
+                          'text-red-400'
+                        }`}>
+                          {isOnline ? 'ACTIVE' : isSyncing ? 'SYNCING' : 'OFFLINE'}
+                        </span>
+                        {isSyncing && (
+                          <div className="flex items-center">
+                            <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
