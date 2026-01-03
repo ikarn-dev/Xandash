@@ -66,6 +66,7 @@ export function NodesPageClient({
   const [credits, setCredits] = useState<{ [pubkey: string]: number | null }>({});
   const [mounted, setMounted] = useState(false);
   const [stats, setStats] = useState(initialStats);
+  const [dataFetchTime, setDataFetchTime] = useState<number>(Math.floor(Date.now() / 1000));
 
   // Set mounted state after hydration
   useEffect(() => {
@@ -115,17 +116,52 @@ export function NodesPageClient({
     // Always show the total including duplicates, regardless of filters
     const totalWithDuplicates = initialStats.total + duplicateCount;
     
+    // Use dataFetchTime for consistent time calculation
+    const referenceTime = dataFetchTime;
+    
     // Use consistent total count, but calculate filtered stats when filters are active
     const calculatedStats = hasActiveFilters ? {
       total: totalWithDuplicates, // Keep total unchanged
-      online: filtered.filter(v => v.status === 'online').length,
+      online: (() => {
+        return filtered.filter(v => {
+          const timeDiff = referenceTime - v.last_seen_timestamp;
+          return timeDiff < 1800; // Less than 30 minutes = online
+        }).length;
+      })(),
+      syncing: (() => {
+        return filtered.filter(v => {
+          const timeDiff = referenceTime - v.last_seen_timestamp;
+          return timeDiff >= 1800 && timeDiff < 3600; // 30-60 minutes = syncing
+        }).length;
+      })(),
       public: filtered.filter(v => v.is_public).length,
-      inactive: filtered.filter(v => v.status === 'offline').length,
+      inactive: (() => {
+        return filtered.filter(v => {
+          const timeDiff = referenceTime - v.last_seen_timestamp;
+          return timeDiff >= 3600; // More than 60 minutes = offline
+        }).length;
+      })(),
     } : {
       total: totalWithDuplicates,
-      online: stats.online,
-      public: stats.public,
-      inactive: allValidators.filter(v => v.status === 'offline').length, // Count only offline nodes
+      online: (() => {
+        return allValidators.filter(v => {
+          const timeDiff = referenceTime - v.last_seen_timestamp;
+          return timeDiff < 1800; // Less than 30 minutes = online
+        }).length;
+      })(),
+      syncing: (() => {
+        return allValidators.filter(v => {
+          const timeDiff = referenceTime - v.last_seen_timestamp;
+          return timeDiff >= 1800 && timeDiff < 3600; // 30-60 minutes = syncing
+        }).length;
+      })(),
+      public: allValidators.filter(v => v.is_public).length,
+      inactive: (() => {
+        return allValidators.filter(v => {
+          const timeDiff = referenceTime - v.last_seen_timestamp;
+          return timeDiff >= 3600; // More than 60 minutes = offline
+        }).length;
+      })(),
     };
 
     // Get unique versions for dropdown (latest first)
@@ -163,10 +199,10 @@ export function NodesPageClient({
         hasPrev: paginated.hasPrev,
         totalCount: filtered.length,
       },
-      quickStats: { ...calculatedStats, duplicates: duplicateCount, inactive: calculatedStats.inactive || (totalWithDuplicates - calculatedStats.online) },
+      quickStats: { ...calculatedStats, duplicates: duplicateCount, syncing: calculatedStats.syncing || 0 },
       availableVersions: uniqueVersions
     };
-  }, [allValidators, searchQuery, selectedFilters, sortBy, currentPage, pageSize, hasActiveFilters, stats]);
+  }, [allValidators, searchQuery, selectedFilters, sortBy, currentPage, pageSize, hasActiveFilters, stats, dataFetchTime]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -238,8 +274,14 @@ export function NodesPageClient({
   // Auto-refresh data every 30 seconds
   const fetchData = useCallback(async (showToast = false) => {
     try {
-      // Fetch real-time data - no caching
-      const response = await fetch('/api/nodes?includeAll=true');
+      // Fetch real-time data - no caching, add cache buster
+      const response = await fetch(`/api/nodes?includeAll=true&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       
       if (!response.ok) {
         throw new Error('Failed to fetch nodes');
@@ -248,18 +290,23 @@ export function NodesPageClient({
       const data = await response.json();
       
       if (data.nodes && Array.isArray(data.nodes)) {
-        const now = Math.floor(Date.now() / 1000);
+        // Use server timestamp if available for consistent time calculation
+        const serverTime = data.serverTimestamp || Math.floor(Date.now() / 1000);
         
         // First pass: transform all nodes with status calculation
         const allNodes: ValidatorData[] = data.nodes.map((node: any, index: number) => {
           const lastSeenTimestamp = node.last_seen_timestamp || 0;
-          const timeDiff = now - lastSeenTimestamp;
+          // Calculate time diff using server timestamp for consistency
+          const timeDiff = serverTime - lastSeenTimestamp;
           
-          // Use the same status logic as profile API and database service
+          // Simplified status logic similar to endpoint tester
+          // Online: last seen < 30 minutes
+          // Syncing: last seen 30-60 minutes
+          // Offline: last seen > 60 minutes
           let status: 'online' | 'syncing' | 'offline' = 'offline';
-          if (timeDiff < 300) status = 'online';        // Less than 5 minutes = online
-          else if (timeDiff < 3600) status = 'syncing'; // Less than 1 hour = syncing
-          else status = 'offline';                      // 1 hour or more = offline
+          if (timeDiff < 1800) status = 'online';        // Less than 30 minutes = online
+          else if (timeDiff < 3600) status = 'syncing';  // 30-60 minutes = syncing
+          else status = 'offline';                       // More than 60 minutes = offline
           
           const isOnline = status === 'online'; // For score calculation
           
@@ -377,6 +424,8 @@ export function NodesPageClient({
         const duplicateCount = uniqueValidators.reduce((total, v) => total + (v.duplicateCount || 0), 0);
         
         setAllValidators(uniqueValidators);
+        // Store the server time when data was fetched for consistent time diff calculation
+        setDataFetchTime(serverTime);
         
         const newStats = {
           total: uniqueValidators.length,
@@ -718,7 +767,7 @@ export function NodesPageClient({
               </div>
             </button>
             
-            {/* Syncing Badge - Amber */}
+                  {/* Syncing Badge - Amber */}
             <button
               onClick={() => handleFilterChange('onlySyncing')}
               className="relative group overflow-visible flex-shrink-0"
@@ -746,7 +795,7 @@ export function NodesPageClient({
                     textShadow: '0 0 10px rgba(245, 158, 11, 0.5)',
                   }}
                 >
-                  {allValidators.filter(v => v.status === 'syncing').length} syncing
+                  {quickStats.syncing || 0} syncing
                 </span>
               </div>
             </button>
@@ -991,9 +1040,12 @@ export function NodesPageClient({
             {/* Table Body */}
             <tbody>
               {validators.map((validator, index) => {
-                const isOnline = validator.status === 'online';
-                const isSyncing = validator.status === 'syncing';
-                const isOffline = validator.status === 'offline';
+                // Use dataFetchTime for consistent status calculation
+                const timeDiff = dataFetchTime - validator.last_seen_timestamp;
+                // Simplified status logic - only last seen matters
+                const isOnline = timeDiff < 1800; // Less than 30 minutes = online
+                const isSyncing = timeDiff >= 1800 && timeDiff < 3600; // 30-60 minutes = syncing
+                const isOffline = timeDiff >= 3600; // More than 60 minutes = offline
                 
                 // Format storage committed
                 const storageCommittedGB = validator.storage_committed ? 
@@ -1012,16 +1064,28 @@ export function NodesPageClient({
                 const uptimeDays = Math.floor(uptimeHours / 24);
                 const uptimeDisplay = uptimeDays > 0 ? `${uptimeDays}d` : `${uptimeHours}h`;
                 
-                // Format last seen timestamp (client-side only to avoid hydration mismatch)
+                // Format last seen timestamp with color classes
+                // Use dataFetchTime for consistent calculation (time when data was fetched from server)
                 let lastSeenDisplay = '';
+                let lastSeenClass = 'text-gray-400';
                 if (mounted) {
-                  const lastSeenDate = new Date(validator.last_seen_timestamp * 1000);
-                  const now = new Date();
-                  const timeDiff = Math.floor((now.getTime() - lastSeenDate.getTime()) / 1000);
-                  if (timeDiff < 60) lastSeenDisplay = `${timeDiff}s`;
-                  else if (timeDiff < 3600) lastSeenDisplay = `${Math.floor(timeDiff / 60)}m`;
-                  else if (timeDiff < 86400) lastSeenDisplay = `${Math.floor(timeDiff / 3600)}h`;
-                  else lastSeenDisplay = `${Math.floor(timeDiff / 86400)}d`;
+                  const timeDiff = dataFetchTime - validator.last_seen_timestamp;
+                  if (timeDiff < 60) {
+                    lastSeenDisplay = `${Math.max(0, timeDiff)}s`;
+                    lastSeenClass = 'text-emerald-400'; // fresh
+                  } else if (timeDiff < 3600) {
+                    lastSeenDisplay = `${Math.floor(timeDiff / 60)}m`;
+                    lastSeenClass = 'text-green-400'; // recent
+                  } else if (timeDiff < 86400) {
+                    lastSeenDisplay = `${Math.floor(timeDiff / 3600)}h`;
+                    lastSeenClass = 'text-amber-400'; // stale
+                  } else if (timeDiff < 604800) {
+                    lastSeenDisplay = `${Math.floor(timeDiff / 86400)}d`;
+                    lastSeenClass = 'text-orange-400'; // very stale
+                  } else {
+                    lastSeenDisplay = `${Math.floor(timeDiff / 604800)}w`;
+                    lastSeenClass = 'text-red-400'; // very old
+                  }
                 } else {
                   lastSeenDisplay = '--'; // Placeholder during SSR
                 }
@@ -1181,7 +1245,7 @@ export function NodesPageClient({
 
                     {/* Last Seen */}
                     <td className="px-4 py-4 text-center">
-                      <span className="text-gray-400 font-mono text-sm">
+                      <span className={`${lastSeenClass} font-mono text-sm`}>
                         {lastSeenDisplay}
                       </span>
                     </td>

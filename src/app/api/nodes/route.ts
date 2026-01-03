@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callDirectRPC } from '@/libs/server';
 
+// Force dynamic - no caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export interface PaginatedNodesResponse {
   nodes: any[];
   pagination: {
@@ -35,11 +39,15 @@ export async function GET(request: NextRequest) {
     
     let result;
     
+    // Include server timestamp for accurate client-side time diff calculation
+    const serverTimestamp = Math.floor(Date.now() / 1000);
+    
     if (includeAll) {
       result = {
         nodes: allNodes,
         total: allNodes.length,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        serverTimestamp: serverTimestamp
       };
     } else {
       const total = allNodes.length;
@@ -50,11 +58,14 @@ export async function GET(request: NextRequest) {
       result = {
         nodes: paginatedNodes,
         pagination: { page, limit, total, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
+        serverTimestamp: serverTimestamp
       };
     }
 
     const response = NextResponse.json(result);
-    response.headers.set('Cache-Control', 'no-store');
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
     return response;
   } catch (error) {
     console.error('Nodes API error:', error);

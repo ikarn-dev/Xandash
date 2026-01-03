@@ -94,16 +94,14 @@ async function makeRPCCall<T>(endpoint: string, method: string, params?: any): P
 export async function callDirectRPC<T>(method: string, params?: any): Promise<RPCResponse<T>> {
   const primaryEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'http://161.97.97.41:6000/rpc';
   
-  // Active public nodes from the network (is_public: true, status: ACTIVE)
+  // Active public nodes from the network
   const fallbackEndpoints = [
     'http://173.212.203.145:6000/rpc',
     'http://173.212.220.65:6000/rpc',
     'http://62.171.138.27:6000/rpc',
-    'http://84.21.171.111:6000/rpc',
     'http://173.212.207.32:6000/rpc',
     'http://62.171.135.107:6000/rpc',
     'http://173.249.3.118:6000/rpc',
-    'http://144.126.137.111:6000/rpc',
   ];
   
   // Try primary endpoint first
@@ -123,6 +121,6 @@ export async function callDirectRPC<T>(method: string, params?: any): Promise<RP
   
   return {
     success: false,
-    error: `RPC call failed`
+    error: `RPC call failed - all endpoints unavailable`
   };
 }

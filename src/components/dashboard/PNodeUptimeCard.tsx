@@ -58,7 +58,8 @@ export const PNodeUptimeCard: React.FC<PNodeUptimeCardProps> = ({ className = ""
         // Calculate online nodes
         const onlineNodes = nodes.filter((node: any) => {
           const timeDiff = now - (node.last_seen_timestamp || now);
-          return timeDiff < 300;
+          // Simplified status logic - only last seen matters
+          return timeDiff < 1800; // Less than 30 minutes = online
         }).length;
         
         const uptimePercentage = nodes.length > 0 ? (onlineNodes / nodes.length) * 100 : 0;

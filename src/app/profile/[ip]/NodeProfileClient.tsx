@@ -464,11 +464,11 @@ const getStatusBgColor = (status: string) => {
 
 const getTimeAgo = (timestamp: number) => {
   const seconds = Math.floor(Date.now() / 1000 - timestamp);
-  if (seconds < 60) return 'just now';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-  return `${Math.floor(seconds / 604800)}w ago`;
+  if (seconds < 60) return { text: `${seconds}s ago`, class: 'text-emerald-400' };
+  if (seconds < 3600) return { text: `${Math.floor(seconds / 60)}m ago`, class: 'text-green-400' };
+  if (seconds < 86400) return { text: `${Math.floor(seconds / 3600)}h ago`, class: 'text-amber-400' };
+  if (seconds < 604800) return { text: `${Math.floor(seconds / 86400)}d ago`, class: 'text-orange-400' };
+  return { text: `${Math.floor(seconds / 604800)}w ago`, class: 'text-red-400' };
 };
 
 
@@ -904,7 +904,7 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
                         </div>
                       </td>
                       <td className="px-2 sm:px-4 py-2 sm:py-3 text-right">
-                        <span className="text-white/60 text-xs whitespace-nowrap">{timeAgo}</span>
+                        <span className={`${timeAgo.class} text-xs whitespace-nowrap`}>{timeAgo.text}</span>
                       </td>
                     </tr>
                   );

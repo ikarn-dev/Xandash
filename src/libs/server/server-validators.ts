@@ -55,11 +55,14 @@ export async function getValidatorsData(): Promise<{
     const processedValidators: ValidatorData[] = allValidators.map((validator: any, index: number) => {
       const timeDiff = now - (validator.last_seen_timestamp || now);
       
-      // Use the same status logic as profile API and database service
+      // Simplified status logic similar to endpoint tester
+      // Online: last seen < 30 minutes
+      // Syncing: last seen 30-60 minutes
+      // Offline: last seen > 60 minutes
       let status: 'online' | 'syncing' | 'offline' = 'offline';
-      if (timeDiff < 300) status = 'online';        // Less than 5 minutes = online
-      else if (timeDiff < 3600) status = 'syncing'; // Less than 1 hour = syncing
-      else status = 'offline';                      // 1 hour or more = offline
+      if (timeDiff < 1800) status = 'online';        // Less than 30 minutes = online
+      else if (timeDiff < 3600) status = 'syncing';  // 30-60 minutes = syncing
+      else status = 'offline';                       // More than 60 minutes = offline
       
       const isOnline = status === 'online'; // For score calculation
       
@@ -262,17 +265,29 @@ export function filterAndSortValidators(
 
   // Apply online filter
   if (filters.onlyOnline) {
-    filtered = filtered.filter(v => v.status === 'online');
+    filtered = filtered.filter(v => {
+      const now = Math.floor(Date.now() / 1000);
+      const timeDiff = now - v.last_seen_timestamp;
+      return timeDiff < 1800; // Less than 30 minutes = online
+    });
   }
 
   // Apply syncing filter
   if (filters.onlySyncing) {
-    filtered = filtered.filter(v => v.status === 'syncing');
+    filtered = filtered.filter(v => {
+      const now = Math.floor(Date.now() / 1000);
+      const timeDiff = now - v.last_seen_timestamp;
+      return timeDiff >= 1800 && timeDiff < 3600; // 30-60 minutes = syncing
+    });
   }
 
   // Apply inactive filter
   if (filters.onlyInactive) {
-    filtered = filtered.filter(v => v.status === 'offline');
+    filtered = filtered.filter(v => {
+      const now = Math.floor(Date.now() / 1000);
+      const timeDiff = now - v.last_seen_timestamp;
+      return timeDiff >= 3600; // More than 60 minutes = offline
+    });
   }
 
   // Apply version filter

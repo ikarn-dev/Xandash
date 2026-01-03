@@ -25,14 +25,22 @@ type NetworkType = 'devnet' | 'mainnet';
 
 function LeaderboardPageContent() {
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('devnet');
-  const { data: creditsData, isLoading, error, refetch } = usePodCredits(selectedNetwork);
+  const { data: creditsData, isLoading, isFetching, error, refetch } = usePodCredits(selectedNetwork);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [bookmarkedPods, setBookmarkedPods] = React.useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = React.useState(1);
   const [nodesData, setNodesData] = useState<NodeData[]>([]);
   const [nodesLoading, setNodesLoading] = useState(true);
   const [showBookmarks, setShowBookmarks] = useState(false);
+  const [hasInitialData, setHasInitialData] = useState(false);
   const itemsPerPage = 25;
+
+  // Track when we have initial data to avoid showing skeleton on network switch
+  useEffect(() => {
+    if (creditsData?.data && !hasInitialData) {
+      setHasInitialData(true);
+    }
+  }, [creditsData, hasInitialData]);
 
   // Reset pagination when network changes
   useEffect(() => {
@@ -199,7 +207,10 @@ function LeaderboardPageContent() {
     goToPage(currentPage + 1);
   }, [currentPage, goToPage]);
 
-  if (isLoading) {
+  // Only show skeleton on initial load, not on network switch
+  const showSkeleton = isLoading && !hasInitialData;
+
+  if (showSkeleton) {
     return (
       <div className="space-y-4 sm:space-y-6">
         {/* Title Card Skeleton */}
@@ -279,59 +290,79 @@ function LeaderboardPageContent() {
       <LeaderboardTitleCard />
 
       {/* Network Toggle */}
-      <div className="relative bg-black border border-white/10 p-4 sm:p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden">
-        {/* Corner Accents */}
-        <div className="absolute top-0 left-0 w-6 h-6">
-          <div className="absolute top-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
-          <div className="absolute top-0 left-0 w-0.5 h-3 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
-        </div>
-        <div className="absolute top-0 right-0 w-6 h-6">
-          <div className="absolute top-0 right-0 w-3 h-0.5 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
-          <div className="absolute top-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
-        </div>
-        <div className="absolute bottom-0 left-0 w-6 h-6">
-          <div className="absolute bottom-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
-          <div className="absolute bottom-0 left-0 w-0.5 h-3 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
-        </div>
-        <div className="absolute bottom-0 right-0 w-6 h-6">
-          <div className="absolute bottom-0 right-0 w-3 h-0.5 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
-          <div className="absolute bottom-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)] transition-all duration-300"></div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-500/20 border border-emerald-500/30 rounded-full flex items-center justify-center">
-              <Network className="w-5 h-5 text-emerald-400" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white">Network Selection</h2>
-              <p className="text-white/60 text-sm">Choose between Devnet and Mainnet leaderboards</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2 bg-white/5 rounded-lg p-1">
-            <button
-              onClick={() => setSelectedNetwork('devnet')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                selectedNetwork === 'devnet'
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'text-white/60 hover:text-white hover:bg-white/10'
+      <div className="flex items-center justify-center sm:justify-end">
+        <div className="inline-flex items-center p-1 rounded-full bg-white/5 border border-white/10">
+          {/* Devnet Button */}
+          <button
+            onClick={() => setSelectedNetwork('devnet')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full cursor-pointer ${
+              selectedNetwork === 'devnet'
+                ? 'bg-emerald-500/20 border border-emerald-500/40'
+                : ''
+            }`}
+          >
+            <span 
+              className={`w-1.5 h-1.5 rounded-full ${
+                selectedNetwork === 'devnet' 
+                  ? 'bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.8)]' 
+                  : 'bg-white/30'
+              }`}
+            />
+            <span 
+              className={`text-xs sm:text-sm font-medium ${
+                selectedNetwork === 'devnet' 
+                  ? 'text-emerald-400' 
+                  : 'text-white/50'
               }`}
             >
               Devnet
-            </button>
-            <button
-              onClick={() => setSelectedNetwork('mainnet')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 relative ${
-                selectedNetwork === 'mainnet'
-                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                  : 'text-white/60 hover:text-white hover:bg-white/10'
+            </span>
+          </button>
+
+          {/* Swap Icon */}
+          <button
+            onClick={() => setSelectedNetwork(selectedNetwork === 'devnet' ? 'mainnet' : 'devnet')}
+            className="p-1.5 mx-0.5 rounded-full hover:bg-white/10 cursor-pointer"
+            title="Switch network"
+          >
+            <svg 
+              className={`w-3.5 h-3.5 text-white/40 hover:text-white/70 transition-transform duration-500 ${
+                isFetching ? 'rotate-180' : ''
+              }`}
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+          </button>
+
+          {/* Mainnet Button */}
+          <button
+            onClick={() => setSelectedNetwork('mainnet')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full cursor-pointer ${
+              selectedNetwork === 'mainnet'
+                ? 'bg-blue-500/20 border border-blue-500/40'
+                : ''
+            }`}
+          >
+            <span 
+              className={`w-1.5 h-1.5 rounded-full ${
+                selectedNetwork === 'mainnet' 
+                  ? 'bg-blue-400 shadow-[0_0_6px_rgba(59,130,246,0.8)]' 
+                  : 'bg-white/30'
+              }`}
+            />
+            <span 
+              className={`text-xs sm:text-sm font-medium ${
+                selectedNetwork === 'mainnet' 
+                  ? 'text-blue-400' 
+                  : 'text-white/50'
               }`}
             >
               Mainnet
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-            </button>
-          </div>
+            </span>
+          </button>
         </div>
       </div>
 
@@ -475,19 +506,24 @@ function LeaderboardPageContent() {
       )}
 
       {/* Leaderboard Table */}
-      <div className="bg-black/90 border border-gray-800 rounded-lg overflow-hidden">
+      <div className={`bg-black/90 border border-gray-800 rounded-lg overflow-hidden transition-opacity duration-300 ${isFetching && !isRefreshing ? 'opacity-70' : 'opacity-100'}`}>
         {/* Header */}
         <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-800">
-          <h2 className="text-sm sm:text-lg font-bold text-white font-mono">// RANKINGS ({selectedNetwork.toUpperCase()})</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm sm:text-lg font-bold text-white font-mono">// RANKINGS ({selectedNetwork.toUpperCase()})</h2>
+            {isFetching && !isRefreshing && (
+              <div className="w-3 h-3 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+            )}
+          </div>
           <button
             onClick={handleRefresh}
-            disabled={isRefreshing}
+            disabled={isRefreshing || isFetching}
             className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg text-white/60 transition-all duration-300 disabled:opacity-50"
             title="Refresh Leaderboard"
           >
             <RefreshCw 
               className={`w-3 h-3 sm:w-4 sm:h-4 transition-all duration-500 ${
-                isRefreshing 
+                isRefreshing || isFetching
                   ? 'animate-spin text-white/60' 
                   : 'hover:rotate-180'
               }`} 

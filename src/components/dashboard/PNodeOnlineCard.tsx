@@ -46,7 +46,8 @@ export const PNodeOnlineCard: React.FC<PNodeOnlineCardProps> = ({ className = ""
         
         const onlineNodes = nodes.filter((node: any) => {
           const timeDiff = now - (node.last_seen_timestamp || now);
-          return timeDiff < 300;
+          // Simplified status logic - only last seen matters
+          return timeDiff < 1800; // Less than 30 minutes = online
         }).length;
         
         const totalNodes = nodes.length;

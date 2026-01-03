@@ -43,6 +43,7 @@ export const DashboardNodesCard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loadingLocations, setLoadingLocations] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [dataFetchTime, setDataFetchTime] = useState<number>(Math.floor(Date.now() / 1000));
   const router = useRouter();
 
   // Set mounted state after hydration
@@ -55,7 +56,14 @@ export const DashboardNodesCard: React.FC = () => {
     const fetchNodes = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/nodes?includeAll=true');
+        // Add cache buster and no-cache headers
+        const response = await fetch(`/api/nodes?includeAll=true&_t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
         if (!response.ok) {
           throw new Error(`Failed to fetch nodes: ${response.statusText}`);
         }
@@ -63,6 +71,11 @@ export const DashboardNodesCard: React.FC = () => {
         const data = await response.json();
         if (data.error) {
           throw new Error(data.error);
+        }
+        
+        // Store server timestamp for consistent time calculation
+        if (data.serverTimestamp) {
+          setDataFetchTime(data.serverTimestamp);
         }
         
         const allNodes = data.nodes || [];
@@ -154,7 +167,8 @@ export const DashboardNodesCard: React.FC = () => {
       
       const now = Math.floor(Date.now() / 1000);
       const timeDiff = now - node.last_seen_timestamp;
-      const isOnline = timeDiff < 300;
+      // Simplified status logic - only last seen matters
+      const isOnline = timeDiff < 1800; // Less than 30 minutes = online
       
       const storageGB = node.storage_committed ? (node.storage_committed / (1024**3)).toFixed(1) : '0';
       const usagePercent = node.storage_usage_percent ? (node.storage_usage_percent * 100).toFixed(4) : '0.0000';
@@ -324,14 +338,16 @@ export const DashboardNodesCard: React.FC = () => {
           {/* Table Body */}
           <tbody>
             {nodes.map((node, index) => {
-              // Calculate status based on last_seen_timestamp (same logic as nodes page)
-              const now = Math.floor(Date.now() / 1000);
-              const timeDiff = now - node.last_seen_timestamp;
+              // Use dataFetchTime for consistent status calculation
+              // Online: last seen < 30 minutes
+              // Syncing: last seen 30-60 minutes
+              // Offline: last seen > 60 minutes
+              const timeDiff = dataFetchTime - node.last_seen_timestamp;
               let calculatedStatus: 'online' | 'maintenance' | 'offline';
               
-              if (timeDiff < 300) calculatedStatus = 'online'; // Less than 5 minutes
-              else if (timeDiff < 3600) calculatedStatus = 'maintenance'; // Less than 1 hour
-              else calculatedStatus = 'offline'; // More than 1 hour
+              if (timeDiff < 1800) calculatedStatus = 'online';        // Less than 30 minutes = online
+              else if (timeDiff < 3600) calculatedStatus = 'maintenance'; // 30-60 minutes = syncing
+              else calculatedStatus = 'offline';                       // More than 60 minutes = offline
               
               const isOnline = calculatedStatus === 'online';
               
@@ -352,16 +368,28 @@ export const DashboardNodesCard: React.FC = () => {
               const uptimeDays = Math.floor(uptimeHours / 24);
               const uptimeDisplay = uptimeDays > 0 ? `${uptimeDays}d` : `${uptimeHours}h`;
 
-              // Format last seen timestamp (client-side only)
+              // Format last seen timestamp with color classes
+              // Use dataFetchTime for consistent calculation
               let lastSeenDisplay = '';
+              let lastSeenClass = 'text-gray-400';
               if (mounted) {
-                const lastSeenDate = new Date(node.last_seen_timestamp * 1000);
-                const now = new Date();
-                const timeDiff = Math.floor((now.getTime() - lastSeenDate.getTime()) / 1000);
-                if (timeDiff < 60) lastSeenDisplay = `${timeDiff}s`;
-                else if (timeDiff < 3600) lastSeenDisplay = `${Math.floor(timeDiff / 60)}m`;
-                else if (timeDiff < 86400) lastSeenDisplay = `${Math.floor(timeDiff / 3600)}h`;
-                else lastSeenDisplay = `${Math.floor(timeDiff / 86400)}d`;
+                const timeDiff = dataFetchTime - node.last_seen_timestamp;
+                if (timeDiff < 60) {
+                  lastSeenDisplay = `${Math.max(0, timeDiff)}s`;
+                  lastSeenClass = 'text-emerald-400'; // fresh
+                } else if (timeDiff < 3600) {
+                  lastSeenDisplay = `${Math.floor(timeDiff / 60)}m`;
+                  lastSeenClass = 'text-green-400'; // recent
+                } else if (timeDiff < 86400) {
+                  lastSeenDisplay = `${Math.floor(timeDiff / 3600)}h`;
+                  lastSeenClass = 'text-amber-400'; // stale
+                } else if (timeDiff < 604800) {
+                  lastSeenDisplay = `${Math.floor(timeDiff / 86400)}d`;
+                  lastSeenClass = 'text-orange-400'; // very stale
+                } else {
+                  lastSeenDisplay = `${Math.floor(timeDiff / 604800)}w`;
+                  lastSeenClass = 'text-red-400'; // very old
+                }
               } else {
                 lastSeenDisplay = '--';
               }
@@ -496,8 +524,11 @@ export const DashboardNodesCard: React.FC = () => {
 
                   {/* Version */}
                   <td className="px-4 py-4 text-center">
-                    <span className="text-gray-400 font-mono text-sm">
-                      {node.version || 'Unknown'}
+                    <span 
+                      className="text-gray-400 font-mono text-sm block max-w-[80px] truncate mx-auto" 
+                      title={node.version || 'Unknown'}
+                    >
+                      {node.version ? (node.version.length > 10 ? node.version.substring(0, 10) + '...' : node.version) : 'Unknown'}
                     </span>
                   </td>
 
@@ -510,7 +541,7 @@ export const DashboardNodesCard: React.FC = () => {
 
                   {/* Last Seen */}
                   <td className="px-4 py-4 text-center">
-                    <span className="text-gray-400 font-mono text-sm">
+                    <span className={`${lastSeenClass} font-mono text-sm`}>
                       {lastSeenDisplay}
                     </span>
                   </td>

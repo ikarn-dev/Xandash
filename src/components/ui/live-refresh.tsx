@@ -53,9 +53,9 @@ export const LiveRefresh: React.FC<LiveRefreshProps> = ({
   }, [interval]);
 
   return (
-    <div className="flex items-center">
-      {/* Live Status Badge - White theme */}
-      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-white shadow-md text-xs">
+    <div className="flex items-center justify-center w-full">
+      {/* Live Status Badge - Responsive design */}
+      <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full bg-white/10 border border-white/20 text-white shadow-md text-xs">
         {/* Pulsing Dot */}
         <div className="relative">
           <div className="w-1.5 h-1.5 rounded-full bg-green-400">
@@ -70,8 +70,8 @@ export const LiveRefresh: React.FC<LiveRefreshProps> = ({
         <Zap className="w-3 h-3 text-white/60" />
 
         {/* Timer */}
-        <div className="flex items-center gap-1 bg-white/10 rounded-full px-2 py-0.5">
-          <span className="font-mono text-[10px] leading-none min-w-[20px] text-center text-white/80">
+        <div className="flex items-center gap-1 bg-white/10 rounded-full px-1.5 sm:px-2 py-0.5">
+          <span className="font-mono text-[10px] leading-none min-w-[16px] sm:min-w-[20px] text-center text-white/80">
             {timeLeft}s
           </span>
           <button
