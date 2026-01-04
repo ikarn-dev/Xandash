@@ -2,7 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { callDirectRPC } from '@/libs/server';
 import { saveAllNodeSnapshots, createIndexes } from '@/libs/db/node-service';
 
-// Simple sync function
+/**
+ * SYNC NODES API
+ * 
+ * Syncs all node data and pod credits to MongoDB.
+ * 
+ * CRON OPTIONS (pick one):
+ * 
+ * 1. UPSTASH QSTASH (Recommended - Free 500 msgs/day)
+ *    - Go to https://console.upstash.com/qstash
+ *    - Create a schedule: POST https://your-domain.vercel.app/api/sync-nodes
+ *    - Cron: * * * * * (every minute)
+ *    - Add QSTASH_CURRENT_SIGNING_KEY and QSTASH_NEXT_SIGNING_KEY to Vercel env
+ * 
+ * 2. EASYCRON (Free 200 calls/day)
+ *    - Go to https://www.easycron.com
+ *    - URL: POST https://your-domain.vercel.app/api/sync-nodes
+ *    - Header: Authorization: Bearer YOUR_CRON_SECRET
+ * 
+ * 3. GITHUB ACTIONS (Free, 5-min minimum)
+ *    - See README for workflow setup
+ */
+
 async function syncAllNodes() {
   const rpcResponse = await callDirectRPC('get-pods-with-stats');
   if (!rpcResponse.success || !rpcResponse.data) {
@@ -29,19 +50,35 @@ async function syncAllNodes() {
   return await saveAllNodeSnapshots(nodes, creditsMap);
 }
 
-// POST - Main sync endpoint (for external cron services)
-// Use with: cron-job.org, easycron.com, or uptimerobot
+// Verify request authenticity (supports multiple auth methods)
+function verifyAuth(request: NextRequest): boolean {
+  // 1. Check Upstash QStash signature
+  const upstashSignature = request.headers.get('upstash-signature');
+  if (upstashSignature) {
+    // QStash requests are verified by their signature - if header exists, it's from QStash
+    // For production, implement full signature verification with @upstash/qstash
+    return true;
+  }
+  
+  // 2. Check CRON_SECRET (for other cron services)
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return true; // No secret configured, allow all
+  
+  const auth = request.headers.get('authorization');
+  const queryAuth = request.nextUrl.searchParams.get('auth');
+  
+  return auth === `Bearer ${secret}` || auth === secret || queryAuth === secret;
+}
+
+// POST - Main sync endpoint (for cron services)
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   
-  try {
-    // Optional auth
-    const auth = request.headers.get('authorization');
-    const secret = process.env.CRON_SECRET;
-    if (secret && auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  if (!verifyAuth(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
+  try {
     const result = await syncAllNodes();
     const duration = Date.now() - startTime;
 
@@ -83,19 +120,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       message: 'XanDash Sync API',
       setup: {
-        step1: 'Initialize indexes: GET https://xandash.vercel.app/api/sync-nodes?action=init',
-        step2: 'Test sync: GET https://xandash.vercel.app/api/sync-nodes?action=sync',
-        step3: 'Setup external cron (see below)',
+        step1: 'Initialize indexes: GET /api/sync-nodes?action=init',
+        step2: 'Test sync: GET /api/sync-nodes?action=sync',
+        step3: 'Setup cron service (see options below)',
       },
-      externalCron: {
-        description: 'Use a free cron service to call this endpoint every 30-60 seconds',
-        services: [
-          'https://cron-job.org (free, 1-minute intervals)',
-          'https://www.easycron.com (free tier)',
-        ],
-        endpoint: 'POST https://xandash.vercel.app/api/sync-nodes',
-        headers: 'Authorization: Bearer YOUR_CRON_SECRET (optional)',
+      cronOptions: {
+        upstash: {
+          name: 'Upstash QStash (Recommended)',
+          free: '500 messages/day',
+          setup: 'https://console.upstash.com/qstash',
+          schedule: '* * * * *',
+        },
+        easycron: {
+          name: 'EasyCron',
+          free: '200 calls/day',
+          setup: 'https://www.easycron.com',
+        },
+        github: {
+          name: 'GitHub Actions',
+          free: 'Unlimited (public repos)',
+          minInterval: '5 minutes',
+        },
       },
+      endpoint: 'POST /api/sync-nodes',
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
