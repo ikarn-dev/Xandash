@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { CopyBtn as CopyButton } from '@/components/ui/CopyBtn';
+import { CaptchaGate } from '@/components/ui/CaptchaGate';
 import { getCountryFlagUrl } from '@/libs/services/geolocation';
 import { toast } from 'sonner';
 
@@ -636,6 +637,10 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
 
 
   return (
+    <CaptchaGate 
+      title="Node Profile Access"
+      description="Please verify you're human to view node details."
+    >
     <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
       {/* Header */}
       <div className="relative bg-black border border-white/10 p-3 sm:p-4 group hover:border-white/20 transition-all">
@@ -963,5 +968,6 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
         </div>
       )}
     </div>
+    </CaptchaGate>
   );
 }
