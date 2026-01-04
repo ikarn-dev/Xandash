@@ -5,6 +5,7 @@ import { RPCProvider } from "@/libs";
 import { QueryProvider } from "@/libs/providers";
 import { Toaster } from "sonner";
 import { AIAssistant } from "@/components/ui/AIAssistant";
+import { AppCaptchaGate } from "@/components/ui/AppCaptchaGate";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -67,8 +68,10 @@ export default function RootLayout({
       >
         <QueryProvider>
           <RPCProvider>
-            {children}
-            <AIAssistant />
+            <AppCaptchaGate>
+              {children}
+              <AIAssistant />
+            </AppCaptchaGate>
           </RPCProvider>
         </QueryProvider>
         <Toaster 
