@@ -519,11 +519,12 @@ const TechStackContent = () => (
         </h3>
         <div className="space-y-2">
           {[
-            { name: 'Next.js 15', desc: 'React framework with App Router' },
-            { name: 'React 19', desc: 'UI component library' },
-            { name: 'TypeScript', desc: 'Type-safe JavaScript' },
-            { name: 'Tailwind CSS', desc: 'Utility-first CSS framework' },
+            { name: 'Next.js 16', desc: 'React framework with App Router & Turbopack' },
+            { name: 'React 19', desc: 'UI component library with Server Components' },
+            { name: 'TypeScript 5', desc: 'Type-safe JavaScript' },
+            { name: 'Tailwind CSS 4', desc: 'Utility-first CSS framework' },
             { name: 'React Query', desc: 'Data fetching and caching' },
+            { name: 'GSAP', desc: 'Scroll animations and transitions' },
           ].map((tech, i) => (
             <div key={i} className="flex items-center justify-between bg-white/5 rounded px-3 py-2">
               <span className="text-white text-sm font-mono">{tech.name}</span>
@@ -539,10 +540,11 @@ const TechStackContent = () => (
         <div className="space-y-2">
           {[
             { name: 'Next.js API Routes', desc: 'Serverless API endpoints' },
+            { name: 'MongoDB Atlas', desc: 'Historical data & snapshots' },
             { name: 'JSON-RPC 2.0', desc: 'RPC protocol for Xandeum' },
             { name: 'CoinGecko API', desc: 'Token market data' },
-            { name: 'IP Geolocation', desc: 'Node location services' },
-            { name: 'Web Workers', desc: 'Background processing' },
+            { name: 'GitHub Actions', desc: 'Cron jobs for data sync' },
+            { name: 'Cloudflare Turnstile', desc: 'CAPTCHA protection' },
           ].map((tech, i) => (
             <div key={i} className="flex items-center justify-between bg-white/5 rounded px-3 py-2">
               <span className="text-white text-sm font-mono">{tech.name}</span>
@@ -558,9 +560,10 @@ const TechStackContent = () => (
         <div className="space-y-2">
           {[
             { name: 'Custom SVG Icons', desc: 'Lightweight icon system' },
+            { name: 'Leaflet Maps', desc: 'Interactive world map' },
+            { name: 'Recharts', desc: 'Data visualization charts' },
             { name: 'Sonner', desc: 'Toast notifications' },
             { name: 'Custom Charts', desc: 'SVG-based visualizations' },
-            { name: 'Custom Maps', desc: 'SVG world map component' },
           ].map((tech, i) => (
             <div key={i} className="flex items-center justify-between bg-white/5 rounded px-3 py-2">
               <span className="text-white text-sm font-mono">{tech.name}</span>
@@ -575,10 +578,10 @@ const TechStackContent = () => (
         </h3>
         <div className="space-y-2">
           {[
+            { name: 'Vercel', desc: 'Deployment platform' },
+            { name: 'GitHub Actions', desc: 'CI/CD & scheduled cron' },
             { name: 'ESLint', desc: 'Code linting' },
             { name: 'PWA Support', desc: 'Offline capabilities' },
-            { name: 'Vercel', desc: 'Deployment platform' },
-            { name: 'Git', desc: 'Version control' },
           ].map((tech, i) => (
             <div key={i} className="flex items-center justify-between bg-white/5 rounded px-3 py-2">
               <span className="text-white text-sm font-mono">{tech.name}</span>

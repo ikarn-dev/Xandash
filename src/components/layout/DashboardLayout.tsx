@@ -24,6 +24,7 @@ const navigationItems: NavbarItem[] = [
   { title: 'XAND', href: '/xand', category: 'tools' },
   { title: 'STOINC', href: '/stoinc', category: 'tools' },
   { title: 'Endpoints', href: '/endpoints', category: 'tools' },
+  { title: 'About', href: '/about-xandash', category: 'info' },
   { title: 'Docs', href: '/about', category: 'info' },
 ];
 
@@ -202,11 +203,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       {/* Top Navbar */}
       <div className="w-full bg-black border-b border-white/10 sticky top-0 z-50">
         <div className="px-3 sm:px-4 lg:px-6">
-          <div className="flex items-center justify-between h-14">
+          <div className="flex items-center justify-between h-12">
             {/* Left side - Logo */}
             <div className="flex items-center flex-shrink-0">
               <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
-                <XanDashLogo className="h-5 sm:h-6" textClassName="text-sm sm:text-base" />
+                <XanDashLogo className="h-4 sm:h-5" textClassName="text-xs sm:text-sm" />
               </Link>
             </div>
 
@@ -222,7 +223,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'px-3 py-4 transition-all duration-200 border-b-2 text-sm font-medium whitespace-nowrap',
+                      'px-3 py-3 transition-all duration-200 border-b-2 text-sm font-medium whitespace-nowrap',
                       isActive 
                         ? 'text-white border-white' 
                         : 'text-white/60 border-transparent hover:text-white hover:border-white/30'
@@ -254,7 +255,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'px-3 py-4 transition-all duration-200 border-b-2 text-sm font-medium whitespace-nowrap',
+                      'px-3 py-3 transition-all duration-200 border-b-2 text-sm font-medium whitespace-nowrap',
                       isActive 
                         ? 'text-white border-white' 
                         : 'text-white/60 border-transparent hover:text-white hover:border-white/30'
@@ -269,7 +270,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
             </div>
 
             {/* Right side - Controls */}
-            <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
+            <div className="flex items-center space-x-2 flex-shrink-0">
               {/* Desktop Controls */}
               <div className="hidden sm:flex items-center space-x-2">
                 <NetworkSelector />
@@ -279,19 +280,19 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="xl:hidden p-2 text-white/70 hover:text-white transition-all duration-200 rounded-lg hover:bg-white/10 relative z-[60]"
+                className="xl:hidden p-1.5 text-white/70 hover:text-white transition-all duration-200 rounded-lg hover:bg-white/10 relative z-[60]"
               >
-                <div className="relative w-5 h-5">
+                <div className="relative w-5 h-5 flex items-center justify-center">
                   <span className={cn(
-                    "absolute block w-5 h-0.5 bg-current transform transition-all duration-300 ease-in-out",
+                    "absolute block w-4 h-0.5 bg-current transform transition-all duration-300 ease-in-out",
                     mobileMenuOpen ? "rotate-45 translate-y-0" : "-translate-y-1.5"
                   )} />
                   <span className={cn(
-                    "absolute block w-5 h-0.5 bg-current transform transition-all duration-300 ease-in-out",
+                    "absolute block w-4 h-0.5 bg-current transform transition-all duration-300 ease-in-out",
                     mobileMenuOpen ? "opacity-0" : "opacity-100"
                   )} />
                   <span className={cn(
-                    "absolute block w-5 h-0.5 bg-current transform transition-all duration-300 ease-in-out",
+                    "absolute block w-4 h-0.5 bg-current transform transition-all duration-300 ease-in-out",
                     mobileMenuOpen ? "-rotate-45 translate-y-0" : "translate-y-1.5"
                   )} />
                 </div>
@@ -315,21 +316,21 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         {/* Mobile Navigation Menu */}
         <div 
           className={cn(
-            "xl:hidden fixed top-14 left-0 right-0 bg-black border-b border-white/10 shadow-2xl transition-all duration-300 ease-in-out z-50",
+            "xl:hidden fixed top-12 left-0 right-0 bg-black border-b border-white/10 shadow-2xl transition-all duration-300 ease-in-out z-50",
             mobileMenuOpen 
               ? "translate-y-0 opacity-100" 
               : "-translate-y-full opacity-0"
           )}
         >
-          <div className="max-h-[calc(100vh-3.5rem)] overflow-y-auto">
-            <div className="px-4 py-6 space-y-6">
+          <div className="max-h-[calc(100vh-3rem)] overflow-y-auto">
+            <div className="px-3 py-4 space-y-4">
               {/* Main Navigation */}
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2 mb-4">
-                  <div className="w-1 h-4 bg-white rounded-full"></div>
-                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">Main</h3>
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-0.5 h-3 bg-white rounded-full"></div>
+                  <h3 className="text-[10px] font-bold text-white uppercase tracking-wider">Main</h3>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {mainItems.map((item, index) => {
                     const isActive = pathname === item.href;
                     
@@ -338,18 +339,18 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                         key={item.href}
                         href={item.href}
                         className={cn(
-                          'flex items-center space-x-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200',
+                          'flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                           isActive 
                             ? 'text-white bg-white/10 border border-white/20' 
                             : 'text-white/70 hover:text-white hover:bg-white/5 border border-transparent'
                         )}
                         style={{
-                          transitionDelay: mobileMenuOpen ? `${index * 50}ms` : '0ms'
+                          transitionDelay: mobileMenuOpen ? `${index * 30}ms` : '0ms'
                         }}
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         <div className={cn(
-                          "w-2 h-2 rounded-full transition-colors duration-200",
+                          "w-1.5 h-1.5 rounded-full transition-colors duration-200",
                           isActive ? "bg-white" : "bg-white/30"
                         )} />
                         <span>{item.title}</span>
@@ -360,12 +361,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
               </div>
 
               {/* Utilities Navigation */}
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2 mb-4">
-                  <div className="w-1 h-4 bg-white/60 rounded-full"></div>
-                  <h3 className="text-xs font-bold text-white/60 uppercase tracking-wider">Utilities</h3>
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-0.5 h-3 bg-white/60 rounded-full"></div>
+                  <h3 className="text-[10px] font-bold text-white/60 uppercase tracking-wider">Utilities</h3>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {toolsItems.map((item, index) => {
                     const isActive = pathname === item.href;
                     
@@ -374,18 +375,18 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                         key={item.href}
                         href={item.href}
                         className={cn(
-                          'flex items-center space-x-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200',
+                          'flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                           isActive 
                             ? 'text-white bg-white/10 border border-white/20' 
                             : 'text-white/70 hover:text-white hover:bg-white/5 border border-transparent'
                         )}
                         style={{
-                          transitionDelay: mobileMenuOpen ? `${(mainItems.length + index) * 50}ms` : '0ms'
+                          transitionDelay: mobileMenuOpen ? `${(mainItems.length + index) * 30}ms` : '0ms'
                         }}
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         <div className={cn(
-                          "w-2 h-2 rounded-full transition-colors duration-200",
+                          "w-1.5 h-1.5 rounded-full transition-colors duration-200",
                           isActive ? "bg-white" : "bg-white/30"
                         )} />
                         <span>{item.title}</span>
@@ -396,12 +397,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
               </div>
 
               {/* Info Navigation */}
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2 mb-4">
-                  <div className="w-1 h-4 bg-white/40 rounded-full"></div>
-                  <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider">Info</h3>
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-0.5 h-3 bg-white/40 rounded-full"></div>
+                  <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Info</h3>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {infoItems.map((item, index) => {
                     const isActive = pathname === item.href;
                     
@@ -410,18 +411,18 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                         key={item.href}
                         href={item.href}
                         className={cn(
-                          'flex items-center space-x-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200',
+                          'flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                           isActive 
                             ? 'text-white bg-white/10 border border-white/20' 
                             : 'text-white/70 hover:text-white hover:bg-white/5 border border-transparent'
                         )}
                         style={{
-                          transitionDelay: mobileMenuOpen ? `${(mainItems.length + toolsItems.length + index) * 50}ms` : '0ms'
+                          transitionDelay: mobileMenuOpen ? `${(mainItems.length + toolsItems.length + index) * 30}ms` : '0ms'
                         }}
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         <div className={cn(
-                          "w-2 h-2 rounded-full transition-colors duration-200",
+                          "w-1.5 h-1.5 rounded-full transition-colors duration-200",
                           isActive ? "bg-white" : "bg-white/30"
                         )} />
                         <span>{item.title}</span>
@@ -432,12 +433,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
               </div>
               
               {/* Mobile Controls */}
-              <div className="pt-6 border-t border-white/10">
-                <div className="flex items-center space-x-3">
-                  <div className="flex-1 bg-white/5 rounded-xl p-4 border border-white/10">
+              <div className="pt-3 border-t border-white/10">
+                <div className="flex items-center space-x-2">
+                  <div className="flex-1 bg-white/5 rounded-lg p-2.5 border border-white/10">
                     <NetworkSelector />
                   </div>
-                  <div className="flex-1 bg-white/5 rounded-xl p-4 border border-white/10">
+                  <div className="flex-1 bg-white/5 rounded-lg p-2.5 border border-white/10">
                     <LiveRefresh onRefresh={handleRefresh} interval={30} />
                   </div>
                 </div>

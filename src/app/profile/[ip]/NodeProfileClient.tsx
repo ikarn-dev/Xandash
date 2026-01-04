@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { CopyBtn as CopyButton } from '@/components/ui/CopyBtn';
+import { CaptchaGate } from '@/components/ui/CaptchaGate';
 import { getCountryFlagUrl } from '@/libs/services/geolocation';
 import { toast } from 'sonner';
 
@@ -615,11 +616,84 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
 
   if (loading) {
     return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-20 bg-white/5 rounded-lg"></div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 h-[200px] bg-white/5 rounded-lg"></div>
-          <div className="h-[200px] bg-white/5 rounded-lg"></div>
+      <div className="space-y-3 sm:space-y-4 px-2 sm:px-0 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="relative bg-black border border-white/10 p-3 sm:p-4">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="w-9 h-9 bg-white/10 rounded-lg"></div>
+              <div className="w-16 h-8 bg-white/10 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <div className="h-6 sm:h-7 bg-white/10 rounded w-48 sm:w-64"></div>
+                <div className="flex gap-2">
+                  <div className="h-5 w-16 bg-white/10 rounded-full"></div>
+                  <div className="h-5 w-14 bg-white/10 rounded-full"></div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 sm:gap-4">
+                <div className="h-4 bg-white/5 rounded w-32"></div>
+                <div className="h-4 bg-white/5 rounded w-24"></div>
+                <div className="h-4 bg-white/5 rounded w-28"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Cards Skeleton */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <div className="w-3 h-3 bg-white/10 rounded"></div>
+                <div className="h-3 bg-white/10 rounded w-12"></div>
+              </div>
+              <div className="h-6 sm:h-8 bg-white/10 rounded w-20 sm:w-24"></div>
+            </div>
+          ))}
+        </div>
+
+        {/* Charts Skeleton */}
+        <div className="bg-black/40 border border-white/10 rounded-lg overflow-hidden">
+          <div className="p-3 border-b border-white/10 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-white/10 rounded"></div>
+              <div className="h-4 bg-white/10 rounded w-32"></div>
+            </div>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-6 w-10 bg-white/10 rounded"></div>
+              ))}
+            </div>
+          </div>
+          <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-black/20 border border-white/5 rounded-lg p-3">
+                <div className="h-3 bg-white/10 rounded w-20 mb-2"></div>
+                <div className="h-20 bg-white/5 rounded"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Events Skeleton */}
+        <div className="bg-black/40 border border-white/10 rounded-lg overflow-hidden">
+          <div className="p-3 border-b border-white/10 flex items-center gap-2">
+            <div className="w-4 h-4 bg-white/10 rounded"></div>
+            <div className="h-4 bg-white/10 rounded w-24"></div>
+          </div>
+          <div className="p-3 space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3 p-2 bg-black/20 rounded">
+                <div className="w-2 h-2 bg-white/10 rounded-full"></div>
+                <div className="flex-1">
+                  <div className="h-3 bg-white/10 rounded w-3/4 mb-1"></div>
+                  <div className="h-2 bg-white/5 rounded w-1/2"></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -636,6 +710,11 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
 
 
   return (
+    <CaptchaGate
+      key={`profile-${ip}-${Date.now()}`}
+      title="// NODE_PROFILE_ACCESS"
+      description="Verify to view node details and historical data."
+    >
     <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
       {/* Header */}
       <div className="relative bg-black border border-white/10 p-3 sm:p-4 group hover:border-white/20 transition-all">
@@ -724,41 +803,41 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
 
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 hover:border-blue-500/30">
-          <div className="flex items-center gap-1.5 text-blue-400/70 text-xs mb-1"><ClockIcon className="w-3 h-3" /><span>Uptime</span></div>
-          <div className="text-sm sm:text-lg font-bold text-blue-400 break-words">{formatUptime(node?.uptime || 0)}</div>
-        </div>
-        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 hover:border-orange-500/30">
-          <div className="flex items-center gap-1.5 text-orange-400/70 text-xs mb-1"><ServerIcon className="w-3 h-3" /><span>Storage</span></div>
-          <div className="text-sm sm:text-lg font-bold text-orange-400 break-words">{formatBytes(node?.storage_committed || 0)}</div>
-        </div>
-        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 hover:border-yellow-500/30">
-          <div className="flex items-center gap-1.5 text-yellow-400/70 text-xs mb-1"><ServerIcon className="w-3 h-3" /><span>Used</span></div>
-          <div className="text-sm sm:text-lg font-bold text-yellow-400 break-words">{formatBytes(node?.storage_used || 0)}</div>
-        </div>
-        <div className="bg-black/40 border border-white/10 rounded-lg p-2 sm:p-3 hover:border-emerald-500/30 col-span-2 md:col-span-1">
-          <div className="flex items-center gap-1.5 text-emerald-400/70 text-xs mb-1"><ActivityIcon className="w-3 h-3" /><span>Credits</span></div>
-          <div className="space-y-1">
-            <div className="text-sm sm:text-lg font-bold text-emerald-400 break-words">{(node?.totalCredits || node?.credits || 0).toLocaleString()}</div>
-            <div className="text-xs text-white/50 space-y-0.5">
-              <div className="flex flex-col sm:flex-row sm:justify-between">
-                <span className="text-emerald-400/70">Current:</span> 
-                <span className="break-words">{(node?.credits || 0).toLocaleString()}</span>
-              </div>
-              {node?.previousCredits && node.previousCredits > 0 && (
-                <div className="flex flex-col sm:flex-row sm:justify-between">
-                  <span className="text-amber-400/70">Previous:</span> 
-                  <span className="break-words">{node.previousCredits.toLocaleString()}</span>
-                </div>
-              )}
-              {(node?.credits || 0) === 0 && (node?.totalCredits || 0) > 0 && (
-                <div className="text-yellow-400/70 text-[10px]">
-                  Using DB fallback
-                </div>
-              )}
-            </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+        <div className="bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4 hover:border-blue-500/30 transition-colors">
+          <div className="flex items-center gap-1.5 text-blue-400/70 text-[10px] sm:text-xs mb-1.5 sm:mb-2">
+            <ClockIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span>Uptime</span>
           </div>
+          <div className="text-base sm:text-xl lg:text-2xl font-bold text-blue-400 font-mono">{formatUptime(node?.uptime || 0)}</div>
+        </div>
+        <div className="bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4 hover:border-orange-500/30 transition-colors">
+          <div className="flex items-center gap-1.5 text-orange-400/70 text-[10px] sm:text-xs mb-1.5 sm:mb-2">
+            <ServerIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span>Storage</span>
+          </div>
+          <div className="text-base sm:text-xl lg:text-2xl font-bold text-orange-400 font-mono">{formatBytes(node?.storage_committed || 0)}</div>
+        </div>
+        <div className="bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4 hover:border-yellow-500/30 transition-colors">
+          <div className="flex items-center gap-1.5 text-yellow-400/70 text-[10px] sm:text-xs mb-1.5 sm:mb-2">
+            <ServerIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span>Used</span>
+          </div>
+          <div className="text-base sm:text-xl lg:text-2xl font-bold text-yellow-400 font-mono">{formatBytes(node?.storage_used || 0)}</div>
+        </div>
+        <div className="bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4 hover:border-emerald-500/30 transition-colors">
+          <div className="flex items-center gap-1.5 text-emerald-400/70 text-[10px] sm:text-xs mb-1.5 sm:mb-2">
+            <ActivityIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span>Credits</span>
+          </div>
+          <div className="text-base sm:text-xl lg:text-2xl font-bold text-emerald-400 font-mono">{(node?.totalCredits || node?.credits || 0).toLocaleString()}</div>
+          {(node?.previousCredits && node.previousCredits > 0) && (
+            <div className="flex items-center gap-2 mt-1 text-[9px] sm:text-[10px] text-white/40">
+              <span>Current: <span className="text-emerald-400/80">{(node?.credits || 0).toLocaleString()}</span></span>
+              <span>•</span>
+              <span>Prev: <span className="text-amber-400/80">{node.previousCredits.toLocaleString()}</span></span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -963,5 +1042,6 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
         </div>
       )}
     </div>
+    </CaptchaGate>
   );
 }

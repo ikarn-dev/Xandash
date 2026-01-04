@@ -290,7 +290,7 @@ function NetworkPageContent() {
         </div>
 
         {/* Stats Overlay - Top Left */}
-        <div className="absolute top-3 left-3 sm:top-4 sm:left-4 md:top-6 md:left-6 z-50 space-y-2 sm:space-y-3 bg-black/60 backdrop-blur-sm rounded-lg p-2 sm:p-3 border border-white/10">
+        <div className="absolute top-3 left-3 sm:top-4 sm:left-4 md:top-6 md:left-6 z-30 space-y-2 sm:space-y-3 bg-black/60 backdrop-blur-sm rounded-lg p-2 sm:p-3 border border-white/10">
           <div className="text-left">
             <div className="text-white text-xl sm:text-2xl md:text-3xl font-bold font-mono">{totalNodes}</div>
             <div className="text-white/60 text-[10px] sm:text-xs md:text-sm">pNodes</div>
@@ -302,14 +302,14 @@ function NetworkPageContent() {
         </div>
 
         {/* Live indicator - Top Right */}
-        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 md:top-6 md:right-6 z-50 flex items-center space-x-1.5 sm:space-x-2 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-white/10">
+        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 md:top-6 md:right-6 z-30 flex items-center space-x-1.5 sm:space-x-2 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-white/10">
           <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse"></div>
           <span className="text-white text-xs sm:text-sm font-medium">Live</span>
         </div>
 
         {/* Country Stats - Bottom Left */}
         {countryStats.length > 0 && (
-          <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 md:bottom-6 md:left-6 z-50 bg-black/60 backdrop-blur-sm rounded-lg p-2 sm:p-3 border border-white/10 max-h-28 sm:max-h-40 md:max-h-48">
+          <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 md:bottom-6 md:left-6 z-30 bg-black/60 backdrop-blur-sm rounded-lg p-2 sm:p-3 border border-white/10 max-h-28 sm:max-h-40 md:max-h-48">
             <div className="text-white/80 text-[10px] sm:text-xs font-medium mb-1.5 sm:mb-2 font-mono">// TOP COUNTRIES</div>
             <div className="space-y-1 max-w-32 sm:max-w-40 md:max-w-48 max-h-16 sm:max-h-28 md:max-h-32 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
               {countryStats.slice(0, 5).map((country) => (

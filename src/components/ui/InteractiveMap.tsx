@@ -123,7 +123,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
             cursor: pointer;
             transition: all 0.2s ease;
             position: relative;
-            z-index: 1000;
+            z-index: 20;
             text-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
           ">${validator.count}</div>
         `,
@@ -134,7 +134,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
 
       const marker = L.marker([validator.lat, validator.lng], {
         icon: customIcon,
-        zIndexOffset: 1000
+        zIndexOffset: 100
       });
 
       // Add hover tooltip
@@ -221,7 +221,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
           border: none !important;
           box-shadow: none !important;
           padding: 0 !important;
-          z-index: 1000 !important;
+          z-index: 20 !important;
         }
         .leaflet-tooltip.custom-tooltip::before {
           display: none !important;
@@ -233,10 +233,10 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
         .custom-marker {
           background: transparent !important;
           border: none !important;
-          z-index: 1000 !important;
+          z-index: 20 !important;
         }
         .leaflet-marker-pane {
-          z-index: 1000 !important;
+          z-index: 20 !important;
         }
         .validator-marker:hover {
           transform: scale(1.15) !important;
@@ -244,7 +244,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
           border-color: rgba(255, 255, 255, 1) !important;
         }
         .leaflet-tooltip-pane {
-          z-index: 1000 !important;
+          z-index: 20 !important;
         }
         .leaflet-control-zoom {
           border: none !important;
@@ -267,6 +267,12 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
         }
         .leaflet-control-zoom a:last-child {
           border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        .leaflet-pane {
+          z-index: 10 !important;
+        }
+        .leaflet-top, .leaflet-bottom {
+          z-index: 20 !important;
         }
       `}</style>
     </div>
