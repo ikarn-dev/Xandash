@@ -91,7 +91,7 @@ NEXT_PUBLIC_IP_API_COM_URL=http://ip-api.com
 NEXT_PUBLIC_IPAPI_CO_URL=https://ipapi.co
 
 # Pod Credits (Devnet)
-NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL=https://podcredits.xandeum.network/api/devnet-pod-credits
+NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL=https://podcredits.xandeum.network/api/pods-credits
 
 # MongoDB (Required for historical data)
 MONGODB_URI=mongodb+srv:mongodb url
@@ -227,17 +227,19 @@ Since Vercel's free tier only allows 2 cron jobs per day, we recommend using ext
 #### Option 1: cron-job.org (Free)
 1. Visit [cron-job.org](https://cron-job.org) and create a free account
 2. Create a new cron job with these settings:
-   - **URL**: `https://your-domain.vercel.app/api/cron/sync-nodes`
+   - **URL**: `https://your-domain.vercel.app/api/sync-nodes`
    - **Schedule**: Every 1 minute (`* * * * *`)
-   - **Method**: GET
+   - **Method**: POST
+   - **Header**: `Authorization: Bearer YOUR_CRON_SECRET`
    - **Timeout**: 60 seconds
 
 #### Option 2: EasyCron (Free tier available)
 1. Visit [EasyCron](https://www.easycron.com) and create an account
 2. Create a new cron job:
-   - **URL**: `https://your-domain.vercel.app/api/cron/sync-nodes`
+   - **URL**: `https://your-domain.vercel.app/api/sync-nodes`
    - **Schedule**: Every 1 minute
-   - **Method**: GET
+   - **Method**: POST
+   - **Header**: `Authorization: Bearer YOUR_CRON_SECRET`
 
 #### Option 3: GitHub Actions (Free for public repos)
 Create `.github/workflows/sync-nodes.yml`:
@@ -245,7 +247,7 @@ Create `.github/workflows/sync-nodes.yml`:
 name: Sync Nodes Data
 on:
   schedule:
-    - cron: '* * * * *'  # Every minute
+    - cron: '*/5 * * * *'  # Every 5 minutes (GitHub minimum)
   workflow_dispatch:  # Manual trigger
 
 jobs:
@@ -254,10 +256,11 @@ jobs:
     steps:
       - name: Sync nodes data
         run: |
-          curl -X GET "https://your-domain.vercel.app/api/cron/sync-nodes?auth=${{ secrets.CRON_SECRET }}"
+          curl -X POST "https://your-domain.vercel.app/api/sync-nodes" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
 ```
 
-### Authentication (Optional but Recommended)
+### Authentication (Recommended)
 
 To secure your cron endpoint, add a `CRON_SECRET` environment variable:
 
@@ -266,31 +269,22 @@ To secure your cron endpoint, add a `CRON_SECRET` environment variable:
    - Add environment variable: `CRON_SECRET=your-random-secret-string`
 
 2. **In your cron service**:
-   - Add query parameter: `?auth=your-random-secret-string`
-   - Or add header: `Authorization: Bearer your-random-secret-string`
+   - Add header: `Authorization: Bearer your-random-secret-string`
 
-### Cron Endpoint Options
+### Cron Endpoint
 
-The `/api/cron/sync-nodes` endpoint supports multiple authentication methods:
+**Endpoint**: `POST https://your-domain.vercel.app/api/sync-nodes`
 
 ```bash
-# Query parameter
-GET https://your-domain.vercel.app/api/cron/sync-nodes?auth=your-secret
+# With authentication (recommended)
+curl -X POST "https://your-domain.vercel.app/api/sync-nodes" \
+  -H "Authorization: Bearer your-secret"
 
-# Authorization header (Bearer)
-GET https://your-domain.vercel.app/api/cron/sync-nodes
-Authorization: Bearer your-secret
+# Manual sync via GET (for testing)
+curl "https://your-domain.vercel.app/api/sync-nodes?action=sync"
 
-# Authorization header (Direct)
-GET https://your-domain.vercel.app/api/cron/sync-nodes
-Authorization: your-secret
-
-# POST with body
-POST https://your-domain.vercel.app/api/cron/sync-nodes
-Content-Type: application/json
-{
-  "auth": "your-secret"
-}
+# Initialize indexes (run once after deployment)
+curl "https://your-domain.vercel.app/api/sync-nodes?action=init"
 ```
 
 ### What Gets Synced Automatically
@@ -307,17 +301,13 @@ Check if your cron jobs are working:
 curl "https://your-domain.vercel.app/api/db-status"
 
 # Manual sync test
-curl "https://your-domain.vercel.app/api/cron/sync-nodes?auth=your-secret"
-
-# Test without authentication (if CRON_SECRET not set)
-curl "https://your-domain.vercel.app/api/cron/sync-nodes"
+curl "https://your-domain.vercel.app/api/sync-nodes?action=sync"
 ```
 
 The response will show:
 ```json
 {
   "success": true,
-  "message": "External cron sync completed",
   "total": 265,
   "newNodes": 2,
   "statusChanges": 15,
@@ -325,8 +315,7 @@ The response will show:
   "storageChanges": 0,
   "creditsChanges": 45,
   "duration": "2847ms",
-  "timestamp": "2026-01-02T10:30:00.000Z",
-  "source": "external-cron"
+  "timestamp": "2026-01-02T10:30:00.000Z"
 }
 ```
 
@@ -337,27 +326,12 @@ The response will show:
 curl "https://your-domain.vercel.app/api/sync-nodes?action=init"
 ```
 
-2. **Add CRON_SECRET to Vercel** (optional security):
+2. **Add CRON_SECRET to Vercel** (recommended for security):
 ```env
 CRON_SECRET=your-random-secret-string
 ```
 
-### Manual Sync
-```bash
-# Test sync manually
-curl "https://your-domain.vercel.app/api/cron/sync-nodes"
-
-# Or via the original endpoint
-curl "https://your-domain.vercel.app/api/sync-nodes?action=sync"
-```
-
-### Alternative: External Cron Services
-
-If you need more frequent syncs (e.g., every 30 seconds), use an external cron service:
-- [cron-job.org](https://cron-job.org) - Free, supports 1-minute intervals
-- [EasyCron](https://www.easycron.com) - Free tier available
-
-Configure to call: `POST https://your-domain.vercel.app/api/sync-nodes`
+3. **Setup external cron** (cron-job.org recommended)
 
 ### What Gets Synced
 - All node metrics (status, uptime, storage, version)

@@ -15,7 +15,7 @@ async function syncAllNodes() {
   // Fetch credits in parallel
   const creditsMap = new Map<string, number>();
   try {
-    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/devnet-pod-credits';
+    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
     const res = await fetch(url, { 
       headers: { 'User-Agent': 'XanDash/1.0' },
       signal: AbortSignal.timeout(10000),

@@ -190,7 +190,7 @@ async function fetchCreditsData(): Promise<any[] | null> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
     
-    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/devnet-pod-credits';
+    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
     const res = await fetch(url, {
       signal: controller.signal,
       headers: { 'User-Agent': 'XanDash/1.0' },

@@ -176,7 +176,7 @@ export async function saveNodeSnapshot(nodeData: {
   return { isNew, statusChanged, versionChanged, storageChanged, creditsChanged };
 }
 
-// Save multiple node snapshots (batch)
+// Save multiple node snapshots (batch) - OPTIMIZED
 export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string, number>): Promise<{
   total: number;
   newNodes: number;
@@ -185,23 +185,145 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
   storageChanges: number;
   creditsChanges: number;
 }> {
+  const db = await connectToDatabase();
+  const snapshotsCol = db.collection<NodeSnapshot>(COLLECTIONS.NODE_SNAPSHOTS);
+  const eventsCol = db.collection<NodeEventLog>(COLLECTIONS.NODE_EVENTS);
+  
+  const now = Date.now();
+  const timestamp = Math.floor(now / 1000);
+  
+  // Filter valid nodes
+  const validNodes = nodes.filter(node => {
+    const ip = node.address?.split(':')[0] || '';
+    return ip && ip !== '127.0.0.1';
+  });
+  
+  if (validNodes.length === 0) {
+    return { total: 0, newNodes: 0, statusChanges: 0, versionChanges: 0, storageChanges: 0, creditsChanges: 0 };
+  }
+  
+  // Get all IPs
+  const ips = validNodes.map(n => n.address?.split(':')[0]);
+  
+  // Batch fetch latest snapshots for all nodes
+  const latestSnapshots = await snapshotsCol.aggregate([
+    { $match: { ip: { $in: ips } } },
+    { $sort: { timestamp: -1 } },
+    { $group: { _id: '$ip', doc: { $first: '$$ROOT' } } }
+  ]).toArray();
+  
+  const snapshotMap = new Map(latestSnapshots.map(s => [s._id, s.doc]));
+  
+  // Prepare batch inserts
+  const snapshotsToInsert: NodeSnapshot[] = [];
+  const eventsToInsert: NodeEventLog[] = [];
+  
   let newNodes = 0;
   let statusChanges = 0;
   let versionChanges = 0;
   let storageChanges = 0;
   let creditsChanges = 0;
   
-  for (const node of nodes) {
-    const ip = node.address?.split(':')[0] || '';
-    if (!ip || ip === '127.0.0.1') continue; // Skip localhost
-    
+  for (const node of validNodes) {
+    const ip = node.address?.split(':')[0];
     const credits = creditsMap?.get(node.pubkey) || 0;
+    const lastSnapshot = snapshotMap.get(ip);
     
-    const result = await saveNodeSnapshot({
+    // Determine node status
+    const timeDiff = timestamp - (node.last_seen_timestamp || 0);
+    let status: 'online' | 'offline' | 'syncing' = 'offline';
+    if (timeDiff < 300) status = 'online';
+    else if (timeDiff < 3600) status = 'syncing';
+    
+    // Check for changes and create events
+    if (!lastSnapshot) {
+      newNodes++;
+      eventsToInsert.push({
+        ip,
+        pubkey: node.pubkey || '',
+        event_type: 'node_new',
+        new_status: status,
+        new_value: node.version || '',
+        details: {
+          version: node.version,
+          storage_committed: node.storage_committed,
+          credits,
+        },
+        timestamp,
+        created_at: new Date(),
+      });
+    } else {
+      // Status change
+      if (lastSnapshot.status !== status) {
+        statusChanges++;
+        eventsToInsert.push({
+          ip,
+          pubkey: node.pubkey || '',
+          event_type: status === 'online' ? 'node_online' : status === 'offline' ? 'node_offline' : 'status_change',
+          previous_status: lastSnapshot.status,
+          new_status: status,
+          previous_value: lastSnapshot.uptime,
+          new_value: node.uptime,
+          details: { previous_last_seen: lastSnapshot.last_seen_timestamp, new_last_seen: node.last_seen_timestamp },
+          timestamp,
+          created_at: new Date(),
+        });
+      }
+      
+      // Version change
+      if (lastSnapshot.version !== node.version && node.version) {
+        versionChanges++;
+        eventsToInsert.push({
+          ip,
+          pubkey: node.pubkey || '',
+          event_type: 'version_change',
+          previous_version: lastSnapshot.version,
+          new_version: node.version,
+          previous_value: lastSnapshot.version,
+          new_value: node.version,
+          timestamp,
+          created_at: new Date(),
+        });
+      }
+      
+      // Storage change (>5%)
+      const prevStorage = lastSnapshot.storage_usage_percent || 0;
+      const newStorage = node.storage_usage_percent || 0;
+      if (Math.abs(newStorage - prevStorage) > STORAGE_CHANGE_THRESHOLD) {
+        storageChanges++;
+        eventsToInsert.push({
+          ip,
+          pubkey: node.pubkey || '',
+          event_type: 'storage_change',
+          previous_value: prevStorage,
+          new_value: newStorage,
+          timestamp,
+          created_at: new Date(),
+        });
+      }
+      
+      // Credits change (>100)
+      const prevCredits = lastSnapshot.credits || 0;
+      if (Math.abs(credits - prevCredits) >= CREDITS_CHANGE_THRESHOLD) {
+        creditsChanges++;
+        eventsToInsert.push({
+          ip,
+          pubkey: node.pubkey || '',
+          event_type: 'credits_change',
+          previous_value: prevCredits,
+          new_value: credits,
+          timestamp,
+          created_at: new Date(),
+        });
+      }
+    }
+    
+    // Add snapshot
+    snapshotsToInsert.push({
       ip,
       pubkey: node.pubkey || '',
       address: node.address || '',
-      status: node.status || 'unknown',
+      status,
       uptime: node.uptime || 0,
       storage_committed: node.storage_committed || 0,
       storage_used: node.storage_used || 0,
@@ -212,16 +334,20 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
       last_seen_timestamp: node.last_seen_timestamp || 0,
       credits,
       active_streams: node.active_streams || 0,
+      timestamp,
+      created_at: new Date(),
     });
-    
-    if (result.isNew) newNodes++;
-    if (result.statusChanged) statusChanges++;
-    if (result.versionChanged) versionChanges++;
-    if (result.storageChanged) storageChanges++;
-    if (result.creditsChanged) creditsChanges++;
   }
   
-  return { total: nodes.length, newNodes, statusChanges, versionChanges, storageChanges, creditsChanges };
+  // Batch insert all snapshots and events
+  if (snapshotsToInsert.length > 0) {
+    await snapshotsCol.insertMany(snapshotsToInsert, { ordered: false });
+  }
+  if (eventsToInsert.length > 0) {
+    await eventsCol.insertMany(eventsToInsert, { ordered: false });
+  }
+  
+  return { total: validNodes.length, newNodes, statusChanges, versionChanges, storageChanges, creditsChanges };
 }
 
 // Get node history from database

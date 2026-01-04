@@ -71,7 +71,7 @@ async function fetchNodeByIdentifier(identifier: string) {
     // Get credits for this node
     let credits = 0;
     try {
-      const creditsUrl = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/devnet-pod-credits';
+      const creditsUrl = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
       const creditsRes = await fetch(creditsUrl, { headers: { 'User-Agent': 'XanDash/1.0' } });
       if (creditsRes.ok) {
         const creditsData = await creditsRes.json();
@@ -235,7 +235,7 @@ async function fetchNetworkSummary() {
 // Fetch credits summary
 async function fetchCreditsSummary() {
   try {
-    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/devnet-pod-credits';
+    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
     const res = await fetch(url, { headers: { 'User-Agent': 'XanDash/1.0' } });
     if (!res.ok) return null;
     

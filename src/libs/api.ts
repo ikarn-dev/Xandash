@@ -6,7 +6,7 @@ const getEndpoint = () => {
     return '/api/rpc';
   } else {
     // Server-side: use direct endpoint
-    return process.env.RPC_ENDPOINT_FALLBACK || 'http://161.97.97.41:6000/rpc';
+    return process.env.RPC_ENDPOINT_PRIMARY || 'http://161.97.97.41:6000/rpc';
   }
 };
 
