@@ -7,6 +7,8 @@ interface CaptchaGateProps {
   children: ReactNode;
   title?: string;
   description?: string;
+  /** Optional unique identifier for session-based caching (e.g., page name or feature) */
+  cacheKey?: string;
 }
 
 // Custom Shield Icon matching app theme
@@ -25,13 +27,17 @@ const LoaderIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
 );
 
 const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
+const SESSION_KEY_PREFIX = 'xandash_captcha_';
 
-export function CaptchaGate({ children, title, description }: CaptchaGateProps) {
+export function CaptchaGate({ children, title, description, cacheKey }: CaptchaGateProps) {
   const [isVerified, setIsVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLocalhost, setIsLocalhost] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  // Generate session storage key based on cacheKey prop
+  const sessionKey = cacheKey ? `${SESSION_KEY_PREFIX}${cacheKey}` : null;
 
   useEffect(() => {
     setMounted(true);
@@ -40,9 +46,18 @@ export function CaptchaGate({ children, title, description }: CaptchaGateProps) 
       if (hostname === 'localhost' || hostname === '127.0.0.1') {
         setIsLocalhost(true);
         setIsVerified(true);
+        return;
+      }
+      
+      // Check session storage for cached verification (if cacheKey is provided)
+      if (sessionKey) {
+        const verified = sessionStorage.getItem(sessionKey);
+        if (verified === 'true') {
+          setIsVerified(true);
+        }
       }
     }
-  }, []);
+  }, [sessionKey]);
 
   const handleVerify = useCallback(async (token: string) => {
     setIsVerifying(true);
@@ -58,6 +73,10 @@ export function CaptchaGate({ children, title, description }: CaptchaGateProps) 
       const data = await res.json();
       
       if (data.success) {
+        // Cache verification in session storage if cacheKey is provided
+        if (sessionKey) {
+          sessionStorage.setItem(sessionKey, 'true');
+        }
         setIsVerified(true);
       } else {
         setError('Verification failed. Please try again.');
@@ -67,7 +86,7 @@ export function CaptchaGate({ children, title, description }: CaptchaGateProps) 
     } finally {
       setIsVerifying(false);
     }
-  }, []);
+  }, [sessionKey]);
 
   if (!SITE_KEY || isLocalhost) {
     return <>{children}</>;

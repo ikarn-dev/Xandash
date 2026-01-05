@@ -427,7 +427,7 @@ const NodeLocationMap = ({ lat, lon, city, country }: { lat: number; lon: number
 
   if (!isClient || !L) return <div className="w-full h-full min-h-[180px] bg-gray-900 rounded-lg flex items-center justify-center"><div className="text-white/60 text-sm">Loading map...</div></div>;
 
-  return <div ref={mapRef} className="w-full h-full min-h-[180px] rounded-lg overflow-hidden" />;
+  return <div ref={mapRef} className="w-full h-full min-h-[180px] rounded-lg overflow-hidden relative z-10" />;
 };
 
 // Format helpers
@@ -711,7 +711,7 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
 
   return (
     <CaptchaGate
-      key={`profile-${ip}-${Date.now()}`}
+      cacheKey="node-profile"
       title="// NODE_PROFILE_ACCESS"
       description="Verify to view node details and historical data."
     >
@@ -765,12 +765,12 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
 
       {/* Map and Location */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
-        <div className="lg:col-span-2 bg-black/40 border border-white/10 rounded-lg overflow-hidden">
-          <div className="p-3 border-b border-white/10 flex items-center gap-2">
+        <div className="lg:col-span-2 bg-black/40 border border-white/10 rounded-lg overflow-hidden relative z-0">
+          <div className="p-3 border-b border-white/10 flex items-center gap-2 relative z-20">
             <MapPinIcon className="w-4 h-4 text-emerald-400" />
             <h2 className="text-sm font-semibold text-white">Node Location</h2>
           </div>
-          <div className="h-[160px] sm:h-[180px]">
+          <div className="h-[160px] sm:h-[180px] relative z-10">
             {location?.lat && location?.lon ? <NodeLocationMap lat={location.lat} lon={location.lon} city={location.city} country={location.country} /> : <div className="flex items-center justify-center h-full text-white/40 text-sm">Location unavailable</div>}
           </div>
         </div>

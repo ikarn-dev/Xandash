@@ -13,7 +13,8 @@ XanDash uses Cloudflare Turnstile for CAPTCHA protection. This prevents API abus
    - Handles token generation and callbacks
 
 2. **CaptchaGate** (`src/components/ui/CaptchaGate.tsx`)
-   - Per-page CAPTCHA gate (strict, no caching)
+   - Per-page CAPTCHA gate with optional session-based caching
+   - Supports `cacheKey` prop for session persistence
    - Used for node profile pages
 
 3. **AppCaptchaGate** (`src/components/ui/AppCaptchaGate.tsx`)
@@ -59,9 +60,9 @@ export default function RootLayout({ children }) {
 }
 ```
 
-### Per-Page Strict CAPTCHA
+### Per-Page CAPTCHA with Session Caching
 
-Used in node profile pages:
+Used in node profile pages with session-based caching:
 
 ```tsx
 import { CaptchaGate } from '@/components/ui/CaptchaGate';
@@ -69,7 +70,7 @@ import { CaptchaGate } from '@/components/ui/CaptchaGate';
 export function NodeProfile({ ip }) {
   return (
     <CaptchaGate
-      key={`profile-${ip}-${Date.now()}`}
+      cacheKey="node-profile"
       title="// NODE_PROFILE_ACCESS"
       description="Verify to view node details."
     >
@@ -79,7 +80,7 @@ export function NodeProfile({ ip }) {
 }
 ```
 
-The `key` prop with `Date.now()` forces re-verification on every visit.
+The `cacheKey` prop enables session-based caching - users only need to verify once per browser session, even when navigating between different node profiles or when data auto-refreshes.
 
 ## Localhost Bypass
 

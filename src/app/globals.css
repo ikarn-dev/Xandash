@@ -360,3 +360,48 @@
 .animate-beam-vertical {
   animation: beam-vertical 2s ease-in-out infinite;
 }
+
+/* Leaflet Map Z-Index Fixes for Mobile Navbar Overlap */
+.leaflet-container {
+  z-index: 10 !important;
+  position: relative;
+}
+
+.leaflet-pane {
+  z-index: 10 !important;
+}
+
+.leaflet-control-zoom {
+  z-index: 15 !important;
+}
+
+.leaflet-control {
+  z-index: 15 !important;
+}
+
+.leaflet-popup {
+  z-index: 20 !important;
+}
+
+.leaflet-tooltip {
+  z-index: 20 !important;
+}
+
+.leaflet-shadow {
+  z-index: 10 !important;
+}
+
+.leaflet-marker {
+  z-index: 10 !important;
+}
+
+/* Ensure navbar stays on top */
+@media (max-width: 1024px) {
+  .leaflet-container {
+    z-index: 10 !important;
+  }
+  
+  .leaflet-control-zoom {
+    z-index: 15 !important;
+  }
+}
