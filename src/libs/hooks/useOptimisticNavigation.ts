@@ -1,5 +1,6 @@
 import { useRouter } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
+import { toast } from 'sonner';
 
 /**
  * Hook for optimistic navigation with immediate feedback
@@ -7,26 +8,25 @@ import { useCallback, useState } from 'react';
  */
 export function useOptimisticNavigation() {
   const router = useRouter();
-  const [isNavigating, setIsNavigating] = useState(false);
-  const [navigationTarget, setNavigationTarget] = useState<string>('');
 
   const navigateWithFeedback = useCallback((url: string, label?: string) => {
-    setIsNavigating(true);
-    setNavigationTarget(label || 'page');
+    // Show immediate toast feedback and return the toast ID
+    const loadingToast = toast.loading(`Loading ${label || 'page'}...`, {
+      duration: 5000, // Longer duration, will be dismissed manually
+    });
+    
+    // Store toast ID in sessionStorage so the destination page can dismiss it
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('navigationToastId', loadingToast.toString());
+    }
     
     // Start navigation immediately
     router.push(url);
 
-    // Clean up after navigation should be complete
-    setTimeout(() => {
-      setIsNavigating(false);
-      setNavigationTarget('');
-    }, 2000);
+    return loadingToast;
   }, [router]);
 
   return {
     navigateWithFeedback,
-    isNavigating,
-    navigationTarget,
   };
 }

@@ -45,6 +45,7 @@ export const DashboardNodesCard: React.FC = () => {
   const [loadingLocations, setLoadingLocations] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [dataFetchTime, setDataFetchTime] = useState<number>(Math.floor(Date.now() / 1000));
+  const [clickedNodeId, setClickedNodeId] = useState<string | null>(null);
   const router = useRouter();
   const { prefetchProfile, navigateToProfile } = usePrefetchProfile();
 
@@ -149,6 +150,21 @@ export const DashboardNodesCard: React.FC = () => {
     
     fetchCredits();
   }, [nodes]);
+
+  // Prefetch visible nodes after loading
+  useEffect(() => {
+    if (nodes.length > 0 && !loading) {
+      // Prefetch first 5 nodes after a short delay
+      setTimeout(() => {
+        nodes.slice(0, 5).forEach(node => {
+          const ip = extractIPFromAddress(node.address || '');
+          if (ip) {
+            prefetchProfile(ip);
+          }
+        });
+      }, 1000);
+    }
+  }, [nodes, loading, prefetchProfile]);
 
   const copyToClipboard = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
@@ -399,14 +415,27 @@ export const DashboardNodesCard: React.FC = () => {
               return (
                 <tr 
                   key={`${node.pubkey}-${index}`}
-                  className={`hover:bg-white/10 transition-colors duration-200 border-b border-gray-800/30 last:border-b-0 cursor-pointer animate-blur-reveal-row animate-blur-reveal-row-${Math.min(index + 1, 10)}`}
+                  className={`hover:bg-white/10 transition-colors duration-200 border-b border-gray-800/30 last:border-b-0 cursor-pointer animate-blur-reveal-row animate-blur-reveal-row-${Math.min(index + 1, 10)} ${
+                    clickedNodeId === `${node.pubkey}-${index}` ? 'bg-cyan-500/20 animate-pulse' : ''
+                  }`}
                   onMouseEnter={() => {
                     const ip = extractIPFromAddress(node.address || '');
                     if (ip) prefetchProfile(ip);
                   }}
                   onClick={() => {
                     const ip = extractIPFromAddress(node.address || '');
-                    if (ip) navigateToProfile(ip);
+                    if (ip) {
+                      const nodeId = `${node.pubkey}-${index}`;
+                      setClickedNodeId(nodeId);
+                      // Show immediate feedback
+                      toast.loading('Loading node profile...', { 
+                        duration: 5000,
+                        id: 'node-profile-loading'
+                      });
+                      navigateToProfile(ip);
+                      // Clear clicked state after navigation
+                      setTimeout(() => setClickedNodeId(null), 2000);
+                    }
                   }}
                 >
                   {/* Location */}

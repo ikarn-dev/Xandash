@@ -475,6 +475,11 @@ const getTimeAgo = (timestamp: number) => {
 
 // Main Component
 export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
+  // Dismiss navigation toast immediately when component loads
+  useEffect(() => {
+    toast.dismiss('node-profile-loading');
+  }, []);
+
   const router = useRouter();
   const [loading, setLoading] = useState(!initialData); // Don't show loading if we have initial data
   const [error, setError] = useState<string | null>(null);

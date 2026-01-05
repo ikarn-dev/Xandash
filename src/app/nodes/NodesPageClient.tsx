@@ -68,6 +68,7 @@ export function NodesPageClient({
   const [mounted, setMounted] = useState(false);
   const [stats, setStats] = useState(initialStats);
   const [dataFetchTime, setDataFetchTime] = useState<number>(Math.floor(Date.now() / 1000));
+  const [clickedNodeId, setClickedNodeId] = useState<string | null>(null);
 
   // Set mounted state after hydration
   useEffect(() => {
@@ -537,10 +538,20 @@ export function NodesPageClient({
     }
   };
 
-  const navigateToNodeProfile = (address: string) => {
+  const { prefetchProfile, navigateToProfile } = usePrefetchProfile();
+
+  const navigateToNodeProfile = (address: string, nodeId?: string) => {
     const ip = extractIPFromAddress(address);
     if (ip) {
+      if (nodeId) setClickedNodeId(nodeId);
+      // Show immediate feedback
+      toast.loading('Loading node profile...', { 
+        duration: 5000,
+        id: 'node-profile-loading'
+      });
       navigateToProfile(ip);
+      // Clear clicked state after navigation
+      setTimeout(() => setClickedNodeId(null), 2000);
     }
   };
 
@@ -550,8 +561,6 @@ export function NodesPageClient({
       prefetchProfile(ip);
     }
   };
-
-  const { prefetchProfile, navigateToProfile } = usePrefetchProfile();
 
   const formatUptime = (seconds: number) => {
     const days = Math.floor(seconds / 86400);
@@ -630,6 +639,21 @@ export function NodesPageClient({
     
     toast.success(`Exported ${filteredData.length} pNodes to CSV`);
   };
+
+  // Prefetch visible nodes on page load
+  useEffect(() => {
+    if (validators.length > 0) {
+      // Prefetch first 5 visible nodes after a short delay
+      setTimeout(() => {
+        validators.slice(0, 5).forEach(validator => {
+          const ip = extractIPFromAddress(validator.address || '');
+          if (ip) {
+            prefetchProfile(ip);
+          }
+        });
+      }, 1000);
+    }
+  }, [validators, prefetchProfile]);
 
   // Scroll animations for table rows
   const { elementRef: tableRef, shouldAnimate } = useStaggeredScrollAnimation<HTMLTableElement>(validators.length, {
@@ -1101,18 +1125,21 @@ export function NodesPageClient({
                 }
 
                 const nodeIP = extractIPFromAddress(validator.address || '');
+                const nodeId = `${validator.pubkey}-${validator.address}-${index}`;
                 
                 return (
                   <tr 
-                    key={`${validator.pubkey}-${validator.address}-${index}`} 
+                    key={nodeId} 
                     className={`hover:bg-white/10 transition-colors duration-200 border-b border-gray-800/30 last:border-b-0 cursor-pointer ${
                       shouldAnimate(index) ? 'animate-scroll-blur-reveal' : ''
+                    } ${
+                      clickedNodeId === nodeId ? 'bg-cyan-500/20 animate-pulse' : ''
                     }`}
                     style={{
                       animationDelay: shouldAnimate(index) ? `${index * 50}ms` : '0ms'
                     }}
                     onMouseEnter={() => prefetchNodeProfile(validator.address || '')}
-                    onClick={() => navigateToNodeProfile(validator.address || '')}
+                    onClick={() => navigateToNodeProfile(validator.address || '', nodeId)}
                   >
                     {/* Location */}
                     <td className="px-6 py-4">

@@ -1,5 +1,6 @@
 import { DashboardLayout } from '@/components/layout';
 import { NodeProfileClient } from './NodeProfileClient';
+import { ToastDismisser } from '@/components/ui/ToastDismisser';
 import { callDirectRPC } from '@/libs/server';
 import { getNodeStatsHistory, getNodeEvents, getLatestNodeSnapshot } from '@/libs/db/node-service';
 import { ProfileCacheService } from '@/libs/services/profile-cache';
@@ -241,6 +242,7 @@ export default async function ProfilePage({ params }: PageProps) {
 
   return (
     <DashboardLayout>
+      <ToastDismisser toastId="node-profile-loading" />
       <NodeProfileClient ip={decodedIP} initialData={initialData} />
     </DashboardLayout>
   );
