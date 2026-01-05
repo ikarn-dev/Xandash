@@ -9,6 +9,7 @@ import { PNodeVersionCard, PNodeOnlineCard, PNodeStorageCard, PNodeUptimeCard } 
 import { filterAndSortValidators, paginateValidators, type ValidatorData } from '@/libs/server';
 import { getLocationsForIPs, extractIPFromAddress, formatLocation, getCountryFlagUrl } from '@/libs/services/geolocation';
 import { useStaggeredScrollAnimation } from '@/libs/hooks/useScrollAnimation';
+import { usePrefetchProfile } from '@/libs/hooks/usePrefetchProfile';
 import { toast } from 'sonner';
 
 interface LocationData {
@@ -539,9 +540,18 @@ export function NodesPageClient({
   const navigateToNodeProfile = (address: string) => {
     const ip = extractIPFromAddress(address);
     if (ip) {
-      router.push(`/profile/${encodeURIComponent(ip)}`);
+      navigateToProfile(ip);
     }
   };
+
+  const prefetchNodeProfile = (address: string) => {
+    const ip = extractIPFromAddress(address);
+    if (ip) {
+      prefetchProfile(ip);
+    }
+  };
+
+  const { prefetchProfile, navigateToProfile } = usePrefetchProfile();
 
   const formatUptime = (seconds: number) => {
     const days = Math.floor(seconds / 86400);
@@ -1101,6 +1111,7 @@ export function NodesPageClient({
                     style={{
                       animationDelay: shouldAnimate(index) ? `${index * 50}ms` : '0ms'
                     }}
+                    onMouseEnter={() => prefetchNodeProfile(validator.address || '')}
                     onClick={() => navigateToNodeProfile(validator.address || '')}
                   >
                     {/* Location */}

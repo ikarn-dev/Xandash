@@ -5,6 +5,7 @@ import { Globe, ArrowRight, Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CopyBtn as CopyButton } from '@/components/ui/CopyBtn';
 import { getLocationsForIPs, extractIPFromAddress, getCountryFlagUrl } from '@/libs/services/geolocation';
+import { usePrefetchProfile } from '@/libs/hooks/usePrefetchProfile';
 import { toast } from 'sonner';
 
 interface LocationData {
@@ -45,6 +46,7 @@ export const DashboardNodesCard: React.FC = () => {
   const [mounted, setMounted] = useState(false);
   const [dataFetchTime, setDataFetchTime] = useState<number>(Math.floor(Date.now() / 1000));
   const router = useRouter();
+  const { prefetchProfile, navigateToProfile } = usePrefetchProfile();
 
   // Set mounted state after hydration
   useEffect(() => {
@@ -398,9 +400,13 @@ export const DashboardNodesCard: React.FC = () => {
                 <tr 
                   key={`${node.pubkey}-${index}`}
                   className={`hover:bg-white/10 transition-colors duration-200 border-b border-gray-800/30 last:border-b-0 cursor-pointer animate-blur-reveal-row animate-blur-reveal-row-${Math.min(index + 1, 10)}`}
+                  onMouseEnter={() => {
+                    const ip = extractIPFromAddress(node.address || '');
+                    if (ip) prefetchProfile(ip);
+                  }}
                   onClick={() => {
                     const ip = extractIPFromAddress(node.address || '');
-                    if (ip) router.push(`/profile/${encodeURIComponent(ip)}`);
+                    if (ip) navigateToProfile(ip);
                   }}
                 >
                   {/* Location */}
