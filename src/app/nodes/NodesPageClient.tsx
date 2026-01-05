@@ -544,11 +544,12 @@ export function NodesPageClient({
     const ip = extractIPFromAddress(address);
     if (ip) {
       if (nodeId) setClickedNodeId(nodeId);
+      
       // Show immediate feedback
       toast.loading('Loading node profile...', { 
-        duration: 5000,
         id: 'node-profile-loading'
       });
+      
       navigateToProfile(ip);
       // Clear clicked state after navigation
       setTimeout(() => setClickedNodeId(null), 2000);

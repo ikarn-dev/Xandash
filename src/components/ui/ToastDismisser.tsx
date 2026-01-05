@@ -8,8 +8,13 @@ interface ToastDismisserProps {
 }
 
 export function ToastDismisser({ toastId }: ToastDismisserProps) {
+  // Dismiss immediately on mount
+  if (typeof window !== 'undefined') {
+    toast.dismiss(toastId);
+  }
+
+  // Also dismiss in useEffect as backup
   useEffect(() => {
-    // Dismiss the toast immediately when this component mounts
     toast.dismiss(toastId);
   }, [toastId]);
 

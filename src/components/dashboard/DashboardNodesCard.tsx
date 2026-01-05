@@ -427,11 +427,12 @@ export const DashboardNodesCard: React.FC = () => {
                     if (ip) {
                       const nodeId = `${node.pubkey}-${index}`;
                       setClickedNodeId(nodeId);
+                      
                       // Show immediate feedback
                       toast.loading('Loading node profile...', { 
-                        duration: 5000,
                         id: 'node-profile-loading'
                       });
+                      
                       navigateToProfile(ip);
                       // Clear clicked state after navigation
                       setTimeout(() => setClickedNodeId(null), 2000);

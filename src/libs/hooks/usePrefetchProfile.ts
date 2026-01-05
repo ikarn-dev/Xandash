@@ -41,7 +41,8 @@ export function usePrefetchProfile() {
 
   const navigateToProfile = useCallback((ip: string) => {
     if (!ip) return;
-    navigateWithFeedback(`/profile/${encodeURIComponent(ip)}`, 'node profile');
+    // Just navigate - toast is handled by the caller
+    navigateWithFeedback(`/profile/${encodeURIComponent(ip)}`);
   }, [navigateWithFeedback]);
 
   return { prefetchProfile, navigateToProfile };

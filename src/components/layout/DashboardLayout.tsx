@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LiveRefresh, NetworkSelector, Breadcrumb } from '@/components/ui';
@@ -8,6 +8,7 @@ import { useRPCContext } from '@/libs';
 import { cn } from '@/libs';
 import { Footer } from './Footer';
 import { ChevronDown, Menu, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface NavbarItem {
   title: string;
@@ -193,6 +194,18 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   const pathname = usePathname();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Dismiss loading toasts immediately when on profile pages
+  if (typeof window !== 'undefined' && pathname.includes('/profile/')) {
+    toast.dismiss('node-profile-loading');
+  }
+  
+  // Also dismiss in useEffect as backup
+  useEffect(() => {
+    if (pathname.includes('/profile/')) {
+      toast.dismiss('node-profile-loading');
+    }
+  }, [pathname]);
   
   const handleRefresh = () => {
     refreshAll();
