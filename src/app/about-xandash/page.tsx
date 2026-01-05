@@ -112,45 +112,45 @@ function AboutContent() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Hero animation
+      // Hero animation - subtle fade up
       gsap.fromTo(heroRef.current?.querySelectorAll('.hero-animate') || [],
-        { opacity: 0, y: 50 },
-        { opacity: 1, y: 0, duration: 0.8, stagger: 0.15, ease: 'power3.out' }
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power2.out' }
       );
 
-      // Features cards animation
+      // Features cards animation - consistent fade up
       gsap.fromTo(featuresRef.current?.querySelectorAll('.feature-card') || [],
-        { opacity: 0, y: 60, scale: 0.95 },
+        { opacity: 0, y: 30 },
         {
-          opacity: 1, y: 0, scale: 1, duration: 0.6, stagger: 0.1, ease: 'power2.out',
-          scrollTrigger: { trigger: featuresRef.current, start: 'top 80%', toggleActions: 'play none none reverse' }
+          opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: 'power2.out',
+          scrollTrigger: { trigger: featuresRef.current, start: 'top 85%', toggleActions: 'play none none none' }
         }
       );
 
-      // Why section animation
+      // Why section animation - subtle fade up
       gsap.fromTo(whyRef.current?.querySelectorAll('.why-animate') || [],
-        { opacity: 0, x: -40 },
+        { opacity: 0, y: 20 },
         {
-          opacity: 1, x: 0, duration: 0.7, stagger: 0.12, ease: 'power2.out',
-          scrollTrigger: { trigger: whyRef.current, start: 'top 75%', toggleActions: 'play none none reverse' }
+          opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: 'power2.out',
+          scrollTrigger: { trigger: whyRef.current, start: 'top 85%', toggleActions: 'play none none none' }
         }
       );
 
-      // Stats counter animation
+      // Stats counter animation - consistent fade up
       gsap.fromTo(statsRef.current?.querySelectorAll('.stat-card') || [],
-        { opacity: 0, y: 40 },
+        { opacity: 0, y: 20 },
         {
-          opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: 'back.out(1.2)',
-          scrollTrigger: { trigger: statsRef.current, start: 'top 80%', toggleActions: 'play none none reverse' }
+          opacity: 1, y: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out',
+          scrollTrigger: { trigger: statsRef.current, start: 'top 85%', toggleActions: 'play none none none' }
         }
       );
 
-      // CTA animation
+      // CTA animation - subtle fade up
       gsap.fromTo(ctaRef.current?.querySelectorAll('.cta-animate') || [],
-        { opacity: 0, scale: 0.9 },
+        { opacity: 0, y: 20 },
         {
-          opacity: 1, scale: 1, duration: 0.6, stagger: 0.1, ease: 'elastic.out(1, 0.5)',
-          scrollTrigger: { trigger: ctaRef.current, start: 'top 85%', toggleActions: 'play none none reverse' }
+          opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: 'power2.out',
+          scrollTrigger: { trigger: ctaRef.current, start: 'top 85%', toggleActions: 'play none none none' }
         }
       );
     }, containerRef);
@@ -282,15 +282,15 @@ function AboutContent() {
         
         <div className="flex items-center gap-2 mb-6">
           <ChartIcon className="w-5 h-5 text-white/60" />
-          <span className="text-white/60 text-sm font-mono">// NETWORK_STATS</span>
+          <span className="text-white/60 text-sm font-mono">// PLATFORM_FEATURES</span>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { value: '265+', label: 'Active pNodes', color: 'text-emerald-400' },
-            { value: '38+', label: 'Countries', color: 'text-blue-400' },
-            { value: '30s', label: 'Refresh Rate', color: 'text-amber-400' },
-            { value: '99.9%', label: 'Uptime', color: 'text-purple-400' },
+            { value: 'Live', label: 'Real-Time Data', color: 'text-emerald-400' },
+            { value: 'Global', label: 'Network Coverage', color: 'text-blue-400' },
+            { value: '30s', label: 'Auto Refresh', color: 'text-amber-400' },
+            { value: '7d+', label: 'Historical Data', color: 'text-purple-400' },
           ].map((stat, i) => (
             <div key={i} className="stat-card text-center p-4 bg-white/5 rounded-lg">
               <div className={`text-2xl sm:text-3xl font-bold font-mono ${stat.color}`}>{stat.value}</div>

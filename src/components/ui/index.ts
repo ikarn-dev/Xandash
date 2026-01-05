@@ -11,3 +11,4 @@ export { InteractiveMap } from './InteractiveMap';
 export { Pagination } from './Pagination';
 export { ValidatorTableSkeleton } from './ValidatorSkeleton';
 export { NodeProfileCard } from './NodeProfileCard';
+export { ToastDismisser } from './ToastDismisser';
