@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 
@@ -19,7 +21,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   className = '',
 }) => {
   const getVisiblePages = () => {
-    const delta = 2;
+    const delta = 1; // Reduced for mobile
     const range = [];
     const rangeWithDots = [];
 
@@ -49,79 +51,58 @@ export const Pagination: React.FC<PaginationProps> = ({
   const visiblePages = getVisiblePages();
 
   return (
-    <div className={`flex items-center justify-center space-x-2 ${className}`}>
+    <div className={`flex items-center justify-center gap-1 sm:gap-2 ${className}`}>
       {/* Previous Button */}
-      <div className="relative group">
-        <div className={`absolute -inset-1 rounded-lg blur-sm opacity-50 group-hover:opacity-70 transition duration-300 ${
-          hasPrev 
-            ? 'bg-gradient-to-r from-gray-400/20 to-gray-600/10' 
-            : 'bg-gradient-to-r from-gray-600/10 to-gray-800/5'
-        }`}></div>
-        <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={!hasPrev}
-          className={`relative flex items-center px-4 py-2 bg-gradient-to-br from-black/60 to-black/80 border rounded-lg transition-all duration-200 cursor-pointer ${
-            hasPrev
-              ? 'border-white/20 text-white hover:border-white/40 hover:text-white'
-              : 'border-white/5 text-white/30 cursor-not-allowed'
-          }`}
-        >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Previous
-        </button>
-      </div>
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={!hasPrev}
+        className={`flex items-center px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg border transition-all duration-200 ${
+          hasPrev
+            ? 'bg-black/50 border-white/20 text-white/80 hover:bg-white/10 hover:border-white/30 hover:text-white cursor-pointer'
+            : 'bg-black/30 border-white/10 text-white/30 cursor-not-allowed'
+        }`}
+      >
+        <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+        <span className="hidden sm:inline ml-1">Previous</span>
+      </button>
 
       {/* Page Numbers */}
-      <div className="flex items-center space-x-1">
+      <div className="flex items-center gap-1">
         {visiblePages.map((page, index) => (
           <React.Fragment key={index}>
             {page === '...' ? (
-              <div className="flex items-center justify-center w-10 h-10 text-white/40">
-                <MoreHorizontal className="w-4 h-4" />
+              <div className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 text-white/40">
+                <MoreHorizontal className="w-3 h-3 sm:w-4 sm:h-4" />
               </div>
             ) : (
-              <div className="relative group">
-                <div className={`absolute -inset-1 rounded-lg blur-sm opacity-50 group-hover:opacity-70 transition duration-300 ${
-                  currentPage === page 
-                    ? 'bg-gradient-to-r from-orange-400/40 to-red-600/30' 
-                    : 'bg-gradient-to-r from-gray-400/20 to-gray-600/10'
-                }`}></div>
-                <button
-                  onClick={() => onPageChange(page as number)}
-                  className={`relative w-10 h-10 bg-gradient-to-br from-black/60 to-black/80 border rounded-lg transition-all duration-200 cursor-pointer ${
-                    currentPage === page
-                      ? 'border-orange-400/40 text-orange-400 shadow-lg'
-                      : 'border-white/20 text-white hover:border-white/40 hover:text-white'
-                  }`}
-                >
-                  {page}
-                </button>
-              </div>
+              <button
+                onClick={() => onPageChange(page as number)}
+                className={`w-7 h-7 sm:w-9 sm:h-9 text-xs sm:text-sm rounded-lg border transition-all duration-200 ${
+                  currentPage === page
+                    ? 'bg-white/20 border-white/40 text-white font-medium'
+                    : 'bg-black/50 border-white/20 text-white/70 hover:bg-white/10 hover:border-white/30 hover:text-white cursor-pointer'
+                }`}
+              >
+                {page}
+              </button>
             )}
           </React.Fragment>
         ))}
       </div>
 
       {/* Next Button */}
-      <div className="relative group">
-        <div className={`absolute -inset-1 rounded-lg blur-sm opacity-50 group-hover:opacity-70 transition duration-300 ${
-          hasNext 
-            ? 'bg-gradient-to-r from-gray-400/20 to-gray-600/10' 
-            : 'bg-gradient-to-r from-gray-600/10 to-gray-800/5'
-        }`}></div>
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={!hasNext}
-          className={`relative flex items-center px-4 py-2 bg-gradient-to-br from-black/60 to-black/80 border rounded-lg transition-all duration-200 cursor-pointer ${
-            hasNext
-              ? 'border-white/20 text-white hover:border-white/40 hover:text-white'
-              : 'border-white/5 text-white/30 cursor-not-allowed'
-          }`}
-        >
-          Next
-          <ChevronRight className="w-4 h-4 ml-1" />
-        </button>
-      </div>
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={!hasNext}
+        className={`flex items-center px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg border transition-all duration-200 ${
+          hasNext
+            ? 'bg-black/50 border-white/20 text-white/80 hover:bg-white/10 hover:border-white/30 hover:text-white cursor-pointer'
+            : 'bg-black/30 border-white/10 text-white/30 cursor-not-allowed'
+        }`}
+      >
+        <span className="hidden sm:inline mr-1">Next</span>
+        <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
+      </button>
     </div>
   );
 };

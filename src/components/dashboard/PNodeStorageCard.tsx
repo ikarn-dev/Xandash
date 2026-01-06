@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { useNetwork } from '@/libs/context/network-context';
+import { AnimatedValue } from '@/components/ui/SlotNumber';
 
 interface StorageStats {
   totalStorage: number; // in bytes
@@ -14,19 +16,35 @@ interface PNodeStorageCardProps {
 }
 
 export const PNodeStorageCard: React.FC<PNodeStorageCardProps> = ({ className = "" }) => {
+  const { network } = useNetwork();
   const [stats, setStats] = useState<StorageStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Use ref to track if data has been loaded
+  const hasLoadedRef = useRef(false);
+  const prevNetworkRef = useRef(network);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Only show loading on initial load, not on refresh
-        if (isInitialLoad) {
-          setLoading(true);
+        // Check if network changed - if so, show loading skeleton
+        const networkChanged = prevNetworkRef.current !== network;
+        if (networkChanged) {
+          prevNetworkRef.current = network;
+          hasLoadedRef.current = false;
         }
-        const response = await fetch('/api/nodes?includeAll=true');
+        
+        // Show loading spinner only on initial load or network change
+        if (!hasLoadedRef.current) {
+          setLoading(true);
+        } else {
+          // For auto-refresh, just show subtle updating state
+          setIsUpdating(true);
+        }
+        
+        const response = await fetch(`/api/nodes?includeAll=true&network=${network}`);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch nodes: ${response.statusText}`);
@@ -61,7 +79,8 @@ export const PNodeStorageCard: React.FC<PNodeStorageCardProps> = ({ className = 
         setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {
         setLoading(false);
-        setIsInitialLoad(false);
+        hasLoadedRef.current = true;
+        setTimeout(() => setIsUpdating(false), 300);
       }
     };
 
@@ -70,7 +89,7 @@ export const PNodeStorageCard: React.FC<PNodeStorageCardProps> = ({ className = 
     // Auto-refresh every 30 seconds
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
-  }, [isInitialLoad]);
+  }, [network]);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -162,10 +181,10 @@ export const PNodeStorageCard: React.FC<PNodeStorageCardProps> = ({ className = 
       <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
         <div className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider mb-2 sm:mb-4">// STORAGE USED</div>
         <div className="text-orange-400 text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1 sm:mb-2">
-          {stats ? formatBytes(stats.usedStorage) : '0 B'}
+          <AnimatedValue value={stats ? formatBytes(stats.usedStorage) : '0 B'} />
         </div>
         <div className="text-white/40 text-[10px] sm:text-xs">
-          of {stats ? formatBytes(stats.totalStorage) : '0 B'}
+          of <AnimatedValue value={stats ? formatBytes(stats.totalStorage) : '0 B'} />
         </div>
       </div>
     </div>

@@ -105,6 +105,13 @@ export interface NodeEventLog {
   created_at: Date;
 }
 
+// Network-aware collection names
+export const getCollectionNames = (network: 'devnet' | 'mainnet' = 'devnet') => ({
+  NODE_SNAPSHOTS: network === 'mainnet' ? 'mainnet_node_snapshots' : 'node_snapshots',
+  NODE_EVENTS: network === 'mainnet' ? 'mainnet_node_events' : 'node_events',
+});
+
+// Default collections (devnet) - for backward compatibility
 export const COLLECTIONS = {
   NODE_SNAPSHOTS: 'node_snapshots',
   NODE_EVENTS: 'node_events',

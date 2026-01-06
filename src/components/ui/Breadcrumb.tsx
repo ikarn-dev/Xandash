@@ -21,6 +21,7 @@ const ChevronRightIcon = ({ className = "w-4 h-4" }: { className?: string }) => 
 const routeNames: Record<string, string> = {
   '': 'Analytics',
   'nodes': 'pNodes',
+  'mainnet': 'Mainnet',
   'leaderboard': 'Leaderboard',
   'network': 'Network',
   'xand': 'XAND',

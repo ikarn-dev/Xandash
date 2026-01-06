@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { InteractiveMap } from '@/components/ui';
 import { getLocationsForIPs, extractIPFromAddress } from '@/libs/services/geolocation';
+import { useNetwork } from '@/libs/context/network-context';
 
 interface LocationData {
   country: string;
@@ -45,19 +46,38 @@ interface RawNodeData {
 }
 
 export const GeoLocationCard: React.FC = () => {
+  const { network } = useNetwork();
   const [nodes, setNodes] = useState<RawNodeData[]>([]);
   const [locations, setLocations] = useState<{ [ip: string]: LocationData | null }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Use ref to track if this is the first load (survives re-renders and interval callbacks)
+  const hasLoadedRef = useRef(false);
+  const prevNetworkRef = useRef(network);
 
-  // Fetch nodes and location data
+  // Fetch nodes and location data - refetch when network changes
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
+        // Check if network changed - if so, show loading skeleton
+        const networkChanged = prevNetworkRef.current !== network;
+        if (networkChanged) {
+          prevNetworkRef.current = network;
+          hasLoadedRef.current = false;
+        }
         
-        // Fetch nodes from API
-        const response = await fetch('/api/nodes?includeAll=true');
+        // Only show loading skeleton on initial load or network change
+        if (!hasLoadedRef.current) {
+          setLoading(true);
+        } else {
+          // For auto-refresh, just show subtle updating state
+          setIsUpdating(true);
+        }
+        
+        // Fetch nodes from API with network parameter
+        const response = await fetch(`/api/nodes?includeAll=true&network=${network}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch nodes: ${response.statusText}`);
         }
@@ -82,11 +102,18 @@ export const GeoLocationCard: React.FC = () => {
           setLocations(locationData);
         }
         
+        setError(null);
       } catch (err) {
         console.error('Failed to fetch node data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load data');
+        // Only set error if we don't have existing data
+        if (nodes.length === 0) {
+          setError(err instanceof Error ? err.message : 'Failed to load data');
+        }
       } finally {
         setLoading(false);
+        hasLoadedRef.current = true;
+        // Delay removing updating state for smooth transition
+        setTimeout(() => setIsUpdating(false), 300);
       }
     };
 
@@ -95,10 +122,10 @@ export const GeoLocationCard: React.FC = () => {
     // Set up auto-refresh every 30 seconds
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [network]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Process nodes into map locations
-  const { mapValidators, countryStats, totalValidators, totalNodes } = useMemo(() => {
+  const { mapValidators, countryStats, totalNodes } = useMemo(() => {
     const locationGroups = new Map<string, {
       lat: number;
       lng: number;
@@ -109,15 +136,12 @@ export const GeoLocationCard: React.FC = () => {
     }>();
     
     const countryMap = new Map<string, { country: string; country_code: string; count: number }>();
-    let validNodes = 0;
 
-    nodes.forEach((node, index) => {
+    nodes.forEach((node) => {
       const ip = extractIPFromAddress(node.address || '');
       const location = locations[ip];
       
       if (location && location.lat && location.lon) {
-        validNodes++;
-        
         // Group by city/country for map markers
         const locationKey = `${location.city}-${location.country}`;
         const existing = locationGroups.get(locationKey);
@@ -166,8 +190,8 @@ export const GeoLocationCard: React.FC = () => {
       }
     });
 
-    const mapValidators: ValidatorLocation[] = Array.from(locationGroups.entries()).map(([key, data], index) => ({
-      id: `location-${index}`,
+    const mapValidators: ValidatorLocation[] = Array.from(locationGroups.entries()).map(([, data], idx) => ({
+      id: `location-${idx}`,
       lat: data.lat,
       lng: data.lng,
       count: data.count,
@@ -181,7 +205,6 @@ export const GeoLocationCard: React.FC = () => {
     return {
       mapValidators,
       countryStats,
-      totalValidators: validNodes,
       totalNodes: nodes.length // Total including unknown locations
     };
   }, [nodes, locations]);
@@ -212,11 +235,11 @@ export const GeoLocationCard: React.FC = () => {
     <div className="bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-lg h-full min-h-[300px] sm:min-h-[400px] md:min-h-[500px] flex flex-col relative overflow-hidden">
       {/* Stats Overlay - Top Left */}
       <div className="absolute top-3 left-3 sm:top-6 sm:left-6 z-50 space-y-2 sm:space-y-3 bg-black/40 backdrop-blur-sm rounded-lg p-2 sm:p-3">
-        <div className="text-left">
+        <div className={`text-left transition-all duration-300 ${isUpdating ? 'opacity-60' : 'opacity-100'}`}>
           <div className="text-white text-xl sm:text-2xl md:text-3xl font-bold font-mono">{totalNodes}</div>
           <div className="text-white/60 text-xs sm:text-sm">pNodes</div>
         </div>
-        <div className="text-left">
+        <div className={`text-left transition-all duration-300 ${isUpdating ? 'opacity-60' : 'opacity-100'}`}>
           <div className="text-white text-lg sm:text-xl md:text-2xl font-bold font-mono">{countryStats.length}</div>
           <div className="text-white/60 text-xs sm:text-sm">Countries</div>
         </div>

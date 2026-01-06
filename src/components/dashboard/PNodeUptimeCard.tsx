@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { useNetwork } from '@/libs/context/network-context';
+import { AnimatedValue } from '@/components/ui/SlotNumber';
 
 interface UptimeStats {
   averageUptime: number;
@@ -18,19 +20,35 @@ interface PNodeUptimeCardProps {
 }
 
 export const PNodeUptimeCard: React.FC<PNodeUptimeCardProps> = ({ className = "" }) => {
+  const { network } = useNetwork();
   const [stats, setStats] = useState<UptimeStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Use ref to track if data has been loaded
+  const hasLoadedRef = useRef(false);
+  const prevNetworkRef = useRef(network);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Only show loading on initial load, not on refresh
-        if (isInitialLoad) {
-          setLoading(true);
+        // Check if network changed - if so, show loading skeleton
+        const networkChanged = prevNetworkRef.current !== network;
+        if (networkChanged) {
+          prevNetworkRef.current = network;
+          hasLoadedRef.current = false;
         }
-        const response = await fetch('/api/nodes?includeAll=true');
+        
+        // Show loading spinner only on initial load or network change
+        if (!hasLoadedRef.current) {
+          setLoading(true);
+        } else {
+          // For auto-refresh, just show subtle updating state
+          setIsUpdating(true);
+        }
+        
+        const response = await fetch(`/api/nodes?includeAll=true&network=${network}`);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch nodes: ${response.statusText}`);
@@ -104,14 +122,16 @@ export const PNodeUptimeCard: React.FC<PNodeUptimeCardProps> = ({ className = ""
         setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {
         setLoading(false);
-        setIsInitialLoad(false);
+        hasLoadedRef.current = true;
+        // Delay removing updating state for smooth animation
+        setTimeout(() => setIsUpdating(false), 300);
       }
     };
 
     fetchData();
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
-  }, [isInitialLoad]);
+  }, [network]);
 
   const formatUptime = (seconds: number) => {
     const days = Math.floor(seconds / 86400);
@@ -173,10 +193,10 @@ export const PNodeUptimeCard: React.FC<PNodeUptimeCardProps> = ({ className = ""
       <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
         <div className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider mb-2 sm:mb-3">// AVG UPTIME</div>
         <div className="text-blue-400 text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1">
-          {stats ? formatUptime(stats.averageUptime) : '0h'}
+          <AnimatedValue value={stats ? formatUptime(stats.averageUptime) : '0h'} />
         </div>
         <div className="text-white/40 text-[9px] sm:text-[10px] mb-2 sm:mb-3">
-          {stats?.uptimePercentage.toFixed(1)}% online
+          <AnimatedValue value={`${stats?.uptimePercentage.toFixed(1) || '0.0'}%`} /> online
         </div>
         
         {/* Uptime Bar Graph - SVG based like statuspage */}

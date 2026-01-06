@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useEffect, useState } from 'react';
-import { Star, RefreshCw, ChevronLeft, ChevronRight, X, Bookmark, Network } from 'lucide-react';
+import { Star, RefreshCw, ChevronLeft, ChevronRight, X, Bookmark } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout';
 import { 
   LeaderboardTitleCard, 
@@ -11,7 +11,9 @@ import {
 } from '@/components/dashboard';
 import { usePodCredits } from '@/libs/hooks/usePodCredits';
 import { CopyBtn } from '@/components/ui/CopyBtn';
+import { SearchBox } from '@/components/ui/SearchBox';
 import { toast } from 'sonner';
+import { useNetwork } from '@/libs/context/network-context';
 
 const BOOKMARKS_STORAGE_KEY = 'leaderboard_bookmarks';
 
@@ -21,10 +23,9 @@ interface NodeData {
   status: string;
 }
 
-type NetworkType = 'devnet' | 'mainnet';
-
 function LeaderboardPageContent() {
-  const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('devnet');
+  // Use global network context instead of local state
+  const { network: selectedNetwork, isMainnet } = useNetwork();
   const { data: creditsData, isLoading, isFetching, error, refetch } = usePodCredits(selectedNetwork);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [bookmarkedPods, setBookmarkedPods] = React.useState<Set<string>>(new Set());
@@ -33,6 +34,7 @@ function LeaderboardPageContent() {
   const [nodesLoading, setNodesLoading] = useState(true);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [hasInitialData, setHasInitialData] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const itemsPerPage = 25;
 
   // Track when we have initial data to avoid showing skeleton on network switch
@@ -46,6 +48,12 @@ function LeaderboardPageContent() {
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedNetwork]);
+
+  // Reset pagination when search changes
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+  }, []);
 
   // Load bookmarks from localStorage on mount (network-specific)
   useEffect(() => {
@@ -73,12 +81,12 @@ function LeaderboardPageContent() {
     }
   }, [bookmarkedPods, selectedNetwork]);
 
-  // Fetch nodes data for uptime
+  // Fetch nodes data for uptime - refetch when network changes
   useEffect(() => {
     const fetchNodesData = async () => {
       try {
         setNodesLoading(true);
-        const response = await fetch('/api/nodes?includeAll=true');
+        const response = await fetch(`/api/nodes?includeAll=true&network=${selectedNetwork}`);
         if (response.ok) {
           const data = await response.json();
           setNodesData(data.nodes || []);
@@ -90,7 +98,7 @@ function LeaderboardPageContent() {
       }
     };
     fetchNodesData();
-  }, []);
+  }, [selectedNetwork]);
 
   // Create a map of pubkey to uptime for quick lookup
   const uptimeMap = useMemo(() => {
@@ -139,23 +147,30 @@ function LeaderboardPageContent() {
         };
       });
 
-    const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+    // Filter by search query
+    const filteredData = searchQuery.trim()
+      ? sortedData.filter(pod => 
+          pod.pod_id.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : sortedData;
+
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = sortedData.slice(startIndex, startIndex + itemsPerPage);
+    const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
     return { 
-      leaderboard: sortedData, 
+      leaderboard: filteredData, 
       totalPages, 
       paginatedData 
     };
-  }, [creditsData, currentPage, itemsPerPage, uptimeMap]);
+  }, [creditsData, currentPage, itemsPerPage, uptimeMap, searchQuery]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
       await refetch();
-      // Also refresh nodes data
-      const response = await fetch('/api/nodes?includeAll=true');
+      // Also refresh nodes data with network parameter
+      const response = await fetch(`/api/nodes?includeAll=true&network=${selectedNetwork}`);
       if (response.ok) {
         const data = await response.json();
         setNodesData(data.nodes || []);
@@ -189,7 +204,6 @@ function LeaderboardPageContent() {
   // Get bookmarked pods data
   const bookmarkedPodsData = useMemo(() => {
     if (!creditsData?.data || bookmarkedPods.size === 0) return [];
-    
     return leaderboard.filter(pod => bookmarkedPods.has(pod.pod_id));
   }, [creditsData, bookmarkedPods, leaderboard]);
 
@@ -209,6 +223,7 @@ function LeaderboardPageContent() {
 
   // Only show skeleton on initial load, not on network switch
   const showSkeleton = isLoading && !hasInitialData;
+
 
   if (showSkeleton) {
     return (
@@ -238,13 +253,7 @@ function LeaderboardPageContent() {
             <div className="h-5 sm:h-6 bg-gray-700/50 rounded w-24 sm:w-32 animate-pulse"></div>
             <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-700/50 rounded animate-pulse"></div>
           </div>
-          <div 
-            className="overflow-x-auto"
-            style={{
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
-            }}
-          >
+          <div className="overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             <table className="w-full min-w-[500px]">
               <thead>
                 <tr className="border-b border-gray-800 bg-black/50">
@@ -289,94 +298,22 @@ function LeaderboardPageContent() {
       {/* Title Card */}
       <LeaderboardTitleCard />
 
-      {/* Network Toggle */}
-      <div className="flex items-center justify-center sm:justify-end">
-        <div className="inline-flex items-center p-1 rounded-full bg-white/5 border border-white/10">
-          {/* Devnet Button */}
-          <button
-            onClick={() => setSelectedNetwork('devnet')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full cursor-pointer ${
-              selectedNetwork === 'devnet'
-                ? 'bg-emerald-500/20 border border-emerald-500/40'
-                : ''
-            }`}
-          >
-            <span 
-              className={`w-1.5 h-1.5 rounded-full ${
-                selectedNetwork === 'devnet' 
-                  ? 'bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.8)]' 
-                  : 'bg-white/30'
-              }`}
-            />
-            <span 
-              className={`text-xs sm:text-sm font-medium ${
-                selectedNetwork === 'devnet' 
-                  ? 'text-emerald-400' 
-                  : 'text-white/50'
-              }`}
-            >
-              Devnet
-            </span>
-          </button>
-
-          {/* Swap Icon */}
-          <button
-            onClick={() => setSelectedNetwork(selectedNetwork === 'devnet' ? 'mainnet' : 'devnet')}
-            className="p-1.5 mx-0.5 rounded-full hover:bg-white/10 cursor-pointer"
-            title="Switch network"
-          >
-            <svg 
-              className={`w-3.5 h-3.5 text-white/40 hover:text-white/70 transition-transform duration-500 ${
-                isFetching ? 'rotate-180' : ''
-              }`}
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-            </svg>
-          </button>
-
-          {/* Mainnet Button */}
-          <button
-            onClick={() => setSelectedNetwork('mainnet')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full cursor-pointer ${
-              selectedNetwork === 'mainnet'
-                ? 'bg-blue-500/20 border border-blue-500/40'
-                : ''
-            }`}
-          >
-            <span 
-              className={`w-1.5 h-1.5 rounded-full ${
-                selectedNetwork === 'mainnet' 
-                  ? 'bg-blue-400 shadow-[0_0_6px_rgba(59,130,246,0.8)]' 
-                  : 'bg-white/30'
-              }`}
-            />
-            <span 
-              className={`text-xs sm:text-sm font-medium ${
-                selectedNetwork === 'mainnet' 
-                  ? 'text-blue-400' 
-                  : 'text-white/50'
-              }`}
-            >
-              Mainnet
-            </span>
-          </button>
-        </div>
-      </div>
-
       {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        <LeaderboardTotalCreditsCard network={selectedNetwork} />
-        <LeaderboardDistributionCard network={selectedNetwork} />
-        <LeaderboardTopPodCard network={selectedNetwork} />
+        <LeaderboardTotalCreditsCard />
+        <LeaderboardDistributionCard />
+        <LeaderboardTopPodCard />
       </div>
+
+      {/* Search Box */}
+      <SearchBox 
+        onSearch={handleSearch}
+        placeholder="Search by Pod ID..."
+      />
 
       {/* Bookmarks Section */}
       {bookmarkedPods.size > 0 && (
         <div className="bg-black/90 border border-yellow-500/30 rounded-lg overflow-hidden">
-          {/* Header */}
           <div 
             className="flex items-center justify-between p-3 sm:p-4 border-b border-yellow-500/20 cursor-pointer hover:bg-yellow-500/5 transition-colors"
             onClick={() => setShowBookmarks(!showBookmarks)}
@@ -402,20 +339,8 @@ function LeaderboardPageContent() {
             </div>
           </div>
 
-          {/* Bookmarked Pods Table */}
           {showBookmarks && (
-            <div 
-              className="overflow-x-auto"
-              style={{
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-              }}
-            >
-              <style jsx>{`
-                div::-webkit-scrollbar {
-                  display: none;
-                }
-              `}</style>
+            <div className="overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               <table className="w-full min-w-[500px]">
                 <thead>
                   <tr className="border-b border-yellow-500/20 bg-black/50">
@@ -430,70 +355,32 @@ function LeaderboardPageContent() {
                   {bookmarkedPodsData.map((pod) => {
                     const tier = getTier(pod.credits);
                     return (
-                      <tr 
-                        key={`bookmark-${pod.pod_id}`} 
-                        className="group hover:bg-yellow-500/5 transition-all duration-200 border-b border-yellow-500/10"
-                      >
-                        {/* Rank with Remove */}
+                      <tr key={`bookmark-${pod.pod_id}`} className="group hover:bg-yellow-500/5 transition-all duration-200 border-b border-yellow-500/10">
                         <td className="py-2 sm:py-3 px-2 sm:px-3">
                           <div className="flex items-center space-x-1">
                             <span className="text-white text-xs sm:text-sm font-medium">#{pod.rank}</span>
-                            <button
-                              onClick={() => toggleBookmark(pod.pod_id)}
-                              className="text-yellow-400 hover:text-red-400 transition-colors duration-200 cursor-pointer"
-                              title="Remove bookmark"
-                            >
+                            <button onClick={() => toggleBookmark(pod.pod_id)} className="text-yellow-400 hover:text-red-400 transition-colors duration-200 cursor-pointer" title="Remove bookmark">
                               <X className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                             </button>
                           </div>
                         </td>
-                        
-                        {/* Pod ID */}
                         <td className="py-2 sm:py-3 px-2 sm:px-3">
                           <div className="flex items-center space-x-1 sm:space-x-2">
-                            <div className="font-mono text-yellow-100 text-[10px] sm:text-sm group-hover:text-yellow-300 transition-colors duration-300 truncate max-w-[80px] sm:max-w-none">
-                              {pod.pod_id}
-                            </div>
-                            <CopyBtn 
-                              text={pod.pod_id} 
-                              onCopy={handleCopy}
-                              type="Pod ID"
-                            />
+                            <div className="font-mono text-yellow-100 text-[10px] sm:text-sm group-hover:text-yellow-300 transition-colors duration-300 truncate max-w-[80px] sm:max-w-none">{pod.pod_id}</div>
+                            <CopyBtn text={pod.pod_id} onCopy={handleCopy} type="Pod ID" />
                           </div>
                         </td>
-                        
-                        {/* Tier Badge */}
                         <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
-                          <span 
-                            className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium"
-                            style={{ 
-                              color: tier.color, 
-                              backgroundColor: tier.bgColor,
-                              border: `1px solid ${tier.color}30`
-                            }}
-                          >
-                            <span 
-                              className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 sm:mr-1.5" 
-                              style={{ backgroundColor: tier.color }}
-                            />
+                          <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium" style={{ color: tier.color, backgroundColor: tier.bgColor, border: `1px solid ${tier.color}30` }}>
+                            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 sm:mr-1.5" style={{ backgroundColor: tier.color }} />
                             <span>{tier.name}</span>
                           </span>
                         </td>
-                        
-                        {/* Credits */}
                         <td className="py-2 sm:py-3 px-2 sm:px-3 text-right">
-                          <div className="text-green-400 font-mono text-[10px] sm:text-sm font-bold">
-                            +{pod.credits.toLocaleString()}
-                          </div>
+                          <div className="text-green-400 font-mono text-[10px] sm:text-sm font-bold">+{pod.credits.toLocaleString()}</div>
                         </td>
-                        
-                        {/* Uptime */}
                         <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
-                          <span className={`text-[10px] sm:text-xs font-mono ${
-                            pod.uptime > 0 ? 'text-blue-400' : 'text-gray-500'
-                          }`}>
-                            {formatUptime(pod.uptime)}
-                          </span>
+                          <span className={`text-[10px] sm:text-xs font-mono ${pod.uptime > 0 ? 'text-blue-400' : 'text-gray-500'}`}>{formatUptime(pod.uptime)}</span>
                         </td>
                       </tr>
                     );
@@ -505,9 +392,9 @@ function LeaderboardPageContent() {
         </div>
       )}
 
+
       {/* Leaderboard Table */}
       <div className={`bg-black/90 border border-gray-800 rounded-lg overflow-hidden transition-opacity duration-300 ${isFetching && !isRefreshing ? 'opacity-70' : 'opacity-100'}`}>
-        {/* Header */}
         <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-800">
           <div className="flex items-center gap-2">
             <h2 className="text-sm sm:text-lg font-bold text-white font-mono">// RANKINGS ({selectedNetwork.toUpperCase()})</h2>
@@ -521,29 +408,11 @@ function LeaderboardPageContent() {
             className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg text-white/60 transition-all duration-300 disabled:opacity-50"
             title="Refresh Leaderboard"
           >
-            <RefreshCw 
-              className={`w-3 h-3 sm:w-4 sm:h-4 transition-all duration-500 ${
-                isRefreshing || isFetching
-                  ? 'animate-spin text-white/60' 
-                  : 'hover:rotate-180'
-              }`} 
-            />
+            <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 transition-all duration-500 ${isRefreshing || isFetching ? 'animate-spin text-white/60' : 'hover:rotate-180'}`} />
           </button>
         </div>
 
-        {/* Table */}
-        <div 
-          className="overflow-x-auto"
-          style={{
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-          }}
-        >
-          <style jsx>{`
-            div::-webkit-scrollbar {
-              display: none;
-            }
-          `}</style>
+        <div className="overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           <table className="w-full min-w-[500px]">
             <thead>
               <tr className="border-b border-gray-800 bg-black/50">
@@ -558,77 +427,36 @@ function LeaderboardPageContent() {
               {paginatedData.map((pod) => {
                 const isBookmarked = bookmarkedPods.has(pod.pod_id);
                 const tier = getTier(pod.credits);
-                
                 return (
-                  <tr 
-                    key={pod.pod_id} 
-                    className="group hover:bg-gray-900/50 transition-all duration-200 border-b border-gray-800/50"
-                  >
-                    {/* Rank with Star */}
+                  <tr key={pod.pod_id} className="group hover:bg-gray-900/50 transition-all duration-200 border-b border-gray-800/50">
                     <td className="py-2 sm:py-3 px-2 sm:px-3">
                       <div className="flex items-center space-x-1">
                         <span className="text-white text-xs sm:text-sm font-medium">#{pod.rank}</span>
-                        <button
-                          onClick={() => toggleBookmark(pod.pod_id)}
-                          className="text-gray-500 hover:text-yellow-400 transition-colors duration-200 cursor-pointer"
-                          title={isBookmarked ? 'Remove bookmark' : 'Bookmark pod'}
-                        >
-                          <Star 
-                            className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${isBookmarked ? 'fill-yellow-400 text-yellow-400' : 'text-gray-500'}`} 
-                          />
+                        <button onClick={() => toggleBookmark(pod.pod_id)} className="text-gray-500 hover:text-yellow-400 transition-colors duration-200 cursor-pointer" title={isBookmarked ? 'Remove bookmark' : 'Bookmark pod'}>
+                          <Star className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${isBookmarked ? 'fill-yellow-400 text-yellow-400' : 'text-gray-500'}`} />
                         </button>
                       </div>
                     </td>
-                    
-                    {/* Pod ID */}
                     <td className="py-2 sm:py-3 px-2 sm:px-3">
                       <div className="flex items-center space-x-1 sm:space-x-2">
-                        <div className="font-mono text-white text-[10px] sm:text-sm group-hover:text-blue-300 transition-colors duration-300 truncate max-w-[80px] sm:max-w-none">
-                          {pod.pod_id}
-                        </div>
-                        <CopyBtn 
-                          text={pod.pod_id} 
-                          onCopy={handleCopy}
-                          type="Pod ID"
-                        />
+                        <div className="font-mono text-white text-[10px] sm:text-sm group-hover:text-blue-300 transition-colors duration-300 truncate max-w-[80px] sm:max-w-none">{pod.pod_id}</div>
+                        <CopyBtn text={pod.pod_id} onCopy={handleCopy} type="Pod ID" />
                       </div>
                     </td>
-                    
-                    {/* Tier Badge */}
                     <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
-                      <span 
-                        className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium"
-                        style={{ 
-                          color: tier.color, 
-                          backgroundColor: tier.bgColor,
-                          border: `1px solid ${tier.color}30`
-                        }}
-                      >
-                        <span 
-                          className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 sm:mr-1.5" 
-                          style={{ backgroundColor: tier.color }}
-                        />
+                      <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium" style={{ color: tier.color, backgroundColor: tier.bgColor, border: `1px solid ${tier.color}30` }}>
+                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 sm:mr-1.5" style={{ backgroundColor: tier.color }} />
                         <span>{tier.name}</span>
                       </span>
                     </td>
-                    
-                    {/* Credits */}
                     <td className="py-2 sm:py-3 px-2 sm:px-3 text-right">
-                      <div className="text-green-400 font-mono text-[10px] sm:text-sm font-bold">
-                        +{pod.credits.toLocaleString()}
-                      </div>
+                      <div className="text-green-400 font-mono text-[10px] sm:text-sm font-bold">+{pod.credits.toLocaleString()}</div>
                     </td>
-                    
-                    {/* Uptime */}
                     <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
                       {nodesLoading ? (
                         <div className="h-3 sm:h-4 bg-gray-700/50 rounded w-10 sm:w-12 mx-auto animate-pulse"></div>
                       ) : (
-                        <span className={`text-[10px] sm:text-xs font-mono ${
-                          pod.uptime > 0 ? 'text-blue-400' : 'text-gray-500'
-                        }`}>
-                          {formatUptime(pod.uptime)}
-                        </span>
+                        <span className={`text-[10px] sm:text-xs font-mono ${pod.uptime > 0 ? 'text-blue-400' : 'text-gray-500'}`}>{formatUptime(pod.uptime)}</span>
                       )}
                     </td>
                   </tr>
@@ -644,66 +472,27 @@ function LeaderboardPageContent() {
             <div className="text-xs sm:text-sm text-gray-400 order-2 sm:order-1">
               Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, leaderboard.length)} of {leaderboard.length}
             </div>
-            
             <div className="flex items-center space-x-1 sm:space-x-2 order-1 sm:order-2">
-              <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-gray-400/20 to-gray-600/10 rounded blur-sm opacity-50 group-hover:opacity-70 transition duration-300"></div>
-                <button
-                  onClick={goToPreviousPage}
-                  disabled={currentPage === 1}
-                  className="relative p-1.5 sm:p-2 bg-gradient-to-br from-black/60 to-black/80 border border-white/20 rounded text-gray-400 hover:text-white hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
-                  title="Previous page"
-                >
-                  <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
-                </button>
-              </div>
-              
+              <button onClick={goToPreviousPage} disabled={currentPage === 1} className="p-1.5 sm:p-2 bg-black/60 border border-white/20 rounded text-gray-400 hover:text-white hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer" title="Previous page">
+                <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+              </button>
               <div className="flex items-center space-x-1">
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  
+                  if (totalPages <= 5) pageNum = i + 1;
+                  else if (currentPage <= 3) pageNum = i + 1;
+                  else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                  else pageNum = currentPage - 2 + i;
                   return (
-                    <div key={pageNum} className="relative group">
-                      <div className={`absolute -inset-1 rounded blur-sm opacity-50 group-hover:opacity-70 transition duration-300 ${
-                        currentPage === pageNum 
-                          ? 'bg-gradient-to-r from-blue-400/40 to-purple-600/30' 
-                          : 'bg-gradient-to-r from-gray-400/20 to-gray-600/10'
-                      }`}></div>
-                      <button
-                        onClick={() => goToPage(pageNum)}
-                        className={`relative px-2 sm:px-3 py-0.5 sm:py-1 bg-gradient-to-br from-black/60 to-black/80 border rounded text-xs sm:text-sm transition-all duration-200 cursor-pointer ${
-                          currentPage === pageNum
-                            ? 'border-white/40 text-white'
-                            : 'border-white/20 text-gray-400 hover:text-white hover:border-white/40'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    </div>
+                    <button key={pageNum} onClick={() => goToPage(pageNum)} className={`px-2 sm:px-3 py-0.5 sm:py-1 bg-black/60 border rounded text-xs sm:text-sm transition-all duration-200 cursor-pointer ${currentPage === pageNum ? 'border-white/40 text-white' : 'border-white/20 text-gray-400 hover:text-white hover:border-white/40'}`}>
+                      {pageNum}
+                    </button>
                   );
                 })}
               </div>
-              
-              <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-gray-400/20 to-gray-600/10 rounded blur-sm opacity-50 group-hover:opacity-70 transition duration-300"></div>
-                <button
-                  onClick={goToNextPage}
-                  disabled={currentPage === totalPages}
-                  className="relative p-1.5 sm:p-2 bg-gradient-to-br from-black/60 to-black/80 border border-white/20 rounded text-gray-400 hover:text-white hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
-                  title="Next page"
-                >
-                  <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
-                </button>
-              </div>
+              <button onClick={goToNextPage} disabled={currentPage === totalPages} className="p-1.5 sm:p-2 bg-black/60 border border-white/20 rounded text-gray-400 hover:text-white hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer" title="Next page">
+                <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
+              </button>
             </div>
           </div>
         )}

@@ -4,6 +4,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, X } from 'lucide-react';
 import { usePodCredits } from '@/libs/hooks/usePodCredits';
+import { useNetwork } from '@/libs/context/network-context';
 
 interface LeaderboardDistributionCardProps {
   className?: string;
@@ -20,8 +21,10 @@ interface TierStats {
 
 export const LeaderboardDistributionCard: React.FC<LeaderboardDistributionCardProps> = ({ 
   className = "", 
-  network = 'devnet' 
+  network: networkProp
 }) => {
+  const { network: globalNetwork } = useNetwork();
+  const network = networkProp || globalNetwork;
   const { data: creditsData, isLoading, error } = usePodCredits(network);
   const [showModal, setShowModal] = React.useState(false);
   const [isClosing, setIsClosing] = React.useState(false);

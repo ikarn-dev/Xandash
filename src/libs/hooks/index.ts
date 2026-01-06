@@ -1,6 +1,5 @@
-export * from './useDebounce';
-export * from './useEndpointTester';
-export * from './usePodCredits';
-export * from './useRPCData';
+// Hooks Index
 export * from './useScrollAnimation';
-export * from './useValidators';
+export * from './usePrefetchProfile';
+export * from './useOptimisticNavigation';
+export * from './usePodCredits';

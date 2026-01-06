@@ -1,25 +1,17 @@
 import { NextResponse, NextRequest } from 'next/server';
 import https from 'https';
+import { getCreditsApiUrl, type NetworkType } from '@/libs/services/network-service';
 
 export async function GET(request: NextRequest) {
   try {
     // Get network parameter from query string
     const { searchParams } = new URL(request.url);
-    const network = searchParams.get('network') || 'devnet';
+    const network = (searchParams.get('network') || 'devnet') as NetworkType;
     
-    // Get URL from environment variable based on network
-    let externalUrl: string;
-    if (network === 'mainnet') {
-      externalUrl = process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL || '';
-      if (!externalUrl) {
-        throw new Error('Mainnet pod credits URL not configured');
-      }
-    } else {
-      // Default to devnet
-      externalUrl = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || '';
-      if (!externalUrl) {
-        throw new Error('Devnet pod credits URL not configured');
-      }
+    // Get URL from network service
+    const externalUrl = getCreditsApiUrl(network);
+    if (!externalUrl) {
+      throw new Error(`${network} pod credits URL not configured`);
     }
     
     const url = new URL(externalUrl);

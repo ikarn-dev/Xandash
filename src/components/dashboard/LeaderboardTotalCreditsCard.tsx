@@ -3,6 +3,7 @@
 import React from 'react';
 import { AlertCircle, TrendingUp } from 'lucide-react';
 import { usePodCredits } from '@/libs/hooks/usePodCredits';
+import { useNetwork } from '@/libs/context/network-context';
 
 interface LeaderboardTotalCreditsCardProps {
   className?: string;
@@ -11,8 +12,10 @@ interface LeaderboardTotalCreditsCardProps {
 
 export const LeaderboardTotalCreditsCard: React.FC<LeaderboardTotalCreditsCardProps> = ({ 
   className = "", 
-  network = 'devnet' 
+  network: networkProp
 }) => {
+  const { network: globalNetwork } = useNetwork();
+  const network = networkProp || globalNetwork;
   const { data: creditsData, isLoading, error } = usePodCredits(network);
 
   const stats = React.useMemo(() => {

@@ -91,7 +91,12 @@ async function makeRPCCall<T>(endpoint: string, method: string, params?: any): P
 }
 
 // Direct RPC call function with failover logic
-export async function callDirectRPC<T>(method: string, params?: any): Promise<RPCResponse<T>> {
+export async function callDirectRPC<T>(method: string, params?: any, customEndpoint?: string): Promise<RPCResponse<T>> {
+  // If custom endpoint provided, use it directly without fallback
+  if (customEndpoint) {
+    return makeRPCCall<T>(customEndpoint, method, params);
+  }
+  
   const primaryEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'http://161.97.97.41:6000/rpc';
   
   // Active public nodes from the network

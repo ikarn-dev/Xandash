@@ -2,7 +2,6 @@ import React from 'react';
 import { VersionCardSSR } from './VersionCardSSR';
 import { NetworkStatsCardSSR } from './NetworkStatsCardSSR';
 import { GeoLocationCard, CombinedTokenCard, DashboardNodesCard } from './';
-import { SearchBox } from '@/components/ui';
 import { VersionCardSkeleton } from './VersionCardSkeleton';
 import { NetworkStatsCardSkeleton } from './NetworkStatsCardSkeleton';
 

@@ -2,7 +2,17 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { XanDashLogo } from './DashboardLayout';
+import { cn } from '@/libs';
+
+// XanDash Logo Component
+export const XanDashLogo: React.FC<{ className?: string; textClassName?: string }> = ({ 
+  className = "h-6", 
+  textClassName = "text-base"
+}) => (
+  <div className={cn("text-white font-bold flex items-center", textClassName)}>
+    <span className="tracking-tight">XANDASH</span>
+  </div>
+);
 
 // Custom SVG Icons
 const TwitterIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -52,7 +62,7 @@ export const Footer: React.FC = () => {
       { label: 'Network', href: '/network' },
     ],
     resources: [
-      { label: 'Documentation', href: '/about' },
+      { label: 'Documentation', href: '/docs' },
       { label: 'XAND Token', href: '/xand' },
       { label: 'Endpoints', href: '/endpoints' },
       { label: 'Xandeum Docs', href: 'https://docs.xandeum.network/', external: true },

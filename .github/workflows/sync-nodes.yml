@@ -1,4 +1,4 @@
-name: Sync Nodes Data
+name: Sync Devnet Nodes Data
 
 on:
   schedule:
@@ -12,10 +12,10 @@ jobs:
     timeout-minutes: 2
     
     steps:
-      - name: Sync nodes to MongoDB
+      - name: Sync devnet nodes to MongoDB
         run: |
           response=$(curl -s -w "\n%{http_code}" -X POST \
-            "https://xandash.vercel.app/api/sync-nodes" \
+            "https://xandash.vercel.app/api/sync-nodes?network=devnet" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json")
           
@@ -26,8 +26,8 @@ jobs:
           echo "Status: $http_code"
           
           if [ "$http_code" != "200" ]; then
-            echo "Sync failed with status $http_code"
+            echo "Devnet sync failed with status $http_code"
             exit 1
           fi
           
-          echo "✅ Sync completed successfully"
+          echo "✅ Devnet sync completed successfully"

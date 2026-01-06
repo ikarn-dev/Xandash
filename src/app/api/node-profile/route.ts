@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cache } from '@/libs/cache/LocalCache';
 import { callDirectRPC } from '@/libs/server';
-import { getNodeHistory as getDbNodeHistory, getNodeEvents, getLatestNodeSnapshot, getNodeStatsHistory } from '@/libs/db/node-service';
+import { getNodeEvents, getLatestNodeSnapshot, getNodeStatsHistory, saveNodeSnapshot } from '@/libs/db/node-service';
+import { fetchMainnetPubkeys } from '@/libs/services/mainnet-filter-service';
+
+type NetworkType = 'devnet' | 'mainnet';
 
 interface LocationData {
   country: string;
@@ -14,31 +17,52 @@ interface LocationData {
   lon?: number;
 }
 
+// Credits endpoints for each network
+const CREDITS_ENDPOINTS = {
+  devnet: process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits',
+  mainnet: process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL || 'https://podcredits.xandeum.network/api/mainnet-pod-credits',
+};
+
 export async function GET(request: NextRequest) {
-  const startTime = Date.now();
-  
   try {
     const { searchParams } = new URL(request.url);
     const ip = searchParams.get('ip');
     const quick = searchParams.get('quick') === 'true';
-    const hours = parseInt(searchParams.get('hours') || '168'); // Default to 7 days (168 hours)
+    const hoursParam = searchParams.get('hours');
+    const network = (searchParams.get('network') as NetworkType) || 'devnet';
+    const hours = hoursParam !== null ? parseInt(hoursParam) : 168;
 
     if (!ip) {
       return NextResponse.json({ error: 'IP address is required' }, { status: 400 });
     }
 
-    // Fetch ALL data in parallel for maximum speed
-    // Use getNodeStatsHistory for time-based queries (better for charts)
+    if (network !== 'devnet' && network !== 'mainnet') {
+      return NextResponse.json({ error: 'Invalid network' }, { status: 400 });
+    }
+
+    // For mainnet, we need to check if the node is a mainnet node
+    let mainnetPubkeys: Map<string, number> | null = null;
+    if (network === 'mainnet') {
+      mainnetPubkeys = await fetchMainnetPubkeys().catch(() => new Map());
+    }
+
     const [locationData, currentNodeData, creditsData, dbHistory, dbEvents, dbSnapshot] = await Promise.all([
-      fetchLocationData(ip).catch((err) => { console.error('[NODE-PROFILE] Location fetch failed:', err); return null; }),
-      fetchCurrentNodeData(ip).catch((err) => { console.error('[NODE-PROFILE] Current node fetch failed:', err); return null; }),
-      quick ? Promise.resolve(null) : fetchCreditsData().catch((err) => { console.error('[NODE-PROFILE] Credits fetch failed:', err); return null; }),
-      getNodeStatsHistory(ip, hours).catch((err) => { console.error('[NODE-PROFILE] DB history fetch failed:', err); return []; }), // Time-based query for charts
-      getNodeEvents(ip, 100).catch((err) => { console.error('[NODE-PROFILE] DB events fetch failed:', err); return []; }), // More events
-      getLatestNodeSnapshot(ip).catch((err) => { console.error('[NODE-PROFILE] Latest snapshot fetch failed:', err); return null; }),
+      fetchLocationData(ip).catch(() => null),
+      fetchCurrentNodeData(ip, network, mainnetPubkeys).catch(() => null),
+      quick ? Promise.resolve(null) : fetchCreditsData(network).catch(() => null),
+      getNodeStatsHistory(ip, hours, network).catch(() => []),
+      getNodeEvents(ip, 100, network).catch(() => []),
+      getLatestNodeSnapshot(ip, network).catch(() => null),
     ]);
 
-    // Derive status
+    // Save node snapshot on visit (if we have live data)
+    if (currentNodeData) {
+      const credits = creditsData?.find((c: any) => c.pod_id === currentNodeData.pubkey)?.credits || 0;
+      saveNodeSnapshotOnVisit(ip, currentNodeData, credits, network).catch(err => {
+        console.error('[NODE-PROFILE] Failed to save snapshot on visit:', err);
+      });
+    }
+
     let status = 'unknown';
     if (currentNodeData) {
       const timeDiff = Math.floor(Date.now() / 1000) - (currentNodeData.last_seen_timestamp || 0);
@@ -47,7 +71,6 @@ export async function GET(request: NextRequest) {
       status = dbSnapshot.status;
     }
 
-    // Find current credits
     let currentCredits = 0;
     const pubkey = currentNodeData?.pubkey || dbSnapshot?.pubkey;
     
@@ -56,20 +79,16 @@ export async function GET(request: NextRequest) {
       if (entry) currentCredits = entry.credits;
     }
 
-    // Calculate previous month's credits from MongoDB
     let previousCredits = 0;
     if (dbHistory.length > 0) {
-      // Get the highest credits value from history (before reset)
       const maxHistoricalCredits = Math.max(...dbHistory.map(h => h.credits || 0));
       if (maxHistoricalCredits > currentCredits) {
         previousCredits = maxHistoricalCredits;
       }
     }
 
-    // FALLBACK: If no current credits from API but we have recent DB data, use the latest DB credits
     if (currentCredits === 0 && dbSnapshot?.credits) {
       currentCredits = dbSnapshot.credits;
-      // Recalculate previous credits to avoid double counting
       if (dbHistory.length > 0) {
         const maxHistoricalCredits = Math.max(...dbHistory.map(h => h.credits || 0));
         if (maxHistoricalCredits > currentCredits) {
@@ -80,11 +99,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Build response - prefer live data, fallback to DB
     const nodeData = currentNodeData || dbSnapshot;
     
     const response = {
       ip,
+      network,
       location: locationData,
       currentNode: nodeData ? {
         pubkey: nodeData.pubkey || '',
@@ -100,7 +119,7 @@ export async function GET(request: NextRequest) {
         last_seen_timestamp: nodeData.last_seen_timestamp || 0,
         active_streams: nodeData.active_streams || 0,
         credits: currentCredits,
-        previousCredits: previousCredits,
+        previousCredits,
         totalCredits: currentCredits + previousCredits,
       } : null,
       dbHistory: dbHistory.length > 0 ? dbHistory : undefined,
@@ -110,7 +129,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response, {
       headers: { 
         'Cache-Control': 'no-store',
-        'X-Data-Timestamp': new Date().toISOString(),
+        'X-Network': network,
       },
     });
   } catch (error) {
@@ -119,6 +138,38 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Save node snapshot when user visits the profile page
+async function saveNodeSnapshotOnVisit(ip: string, nodeData: any, credits: number, network: NetworkType): Promise<void> {
+  const cacheKey = `snapshot-saved:${network}:${ip}`;
+  const recentlySaved = await cache.get(cacheKey);
+  if (recentlySaved) return;
+  
+  try {
+    await saveNodeSnapshot({
+      ip,
+      pubkey: nodeData.pubkey || '',
+      address: nodeData.address || `${ip}:9001`,
+      status: nodeData.status || 'unknown',
+      uptime: nodeData.uptime || 0,
+      storage_committed: nodeData.storage_committed || 0,
+      storage_used: nodeData.storage_used || 0,
+      storage_usage_percent: nodeData.storage_usage_percent || 0,
+      version: nodeData.version || '',
+      rpc_port: nodeData.rpc_port || 0,
+      is_public: nodeData.is_public || false,
+      last_seen_timestamp: nodeData.last_seen_timestamp || 0,
+      credits,
+      active_streams: nodeData.active_streams || 0,
+    }, network);
+    
+    await cache.set(cacheKey, true, 60);
+    console.log(`[NODE-PROFILE] Saved snapshot for ${ip} on ${network}`);
+  } catch (err) {
+    console.error(`[NODE-PROFILE] Failed to save snapshot for ${ip}:`, err);
+  }
+}
+
+
 async function fetchLocationData(ip: string): Promise<LocationData | null> {
   const cacheKey = `loc:${ip}`;
   const cached = await cache.get(cacheKey);
@@ -126,7 +177,7 @@ async function fetchLocationData(ip: string): Promise<LocationData | null> {
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000); // 3s timeout
+    const timeout = setTimeout(() => controller.abort(), 3000);
     
     const res = await fetch(
       `http://ip-api.com/json/${ip}?fields=country,countryCode,regionName,city,lat,lon,isp`,
@@ -148,20 +199,20 @@ async function fetchLocationData(ip: string): Promise<LocationData | null> {
       lon: data.lon,
     };
     
-    await cache.set(cacheKey, location, 86400); // Cache 24h
+    await cache.set(cacheKey, location, 86400);
     return location;
   } catch {
     return null;
   }
 }
 
-async function fetchCurrentNodeData(ip: string): Promise<any | null> {
-  // Check cache first
-  const cacheKey = `node:${ip}`;
+async function fetchCurrentNodeData(ip: string, network: NetworkType, mainnetPubkeys: Map<string, number> | null): Promise<any | null> {
+  const cacheKey = `node:${network}:${ip}`;
   const cached = await cache.get(cacheKey);
   if (cached) return cached;
 
   try {
+    // Always use the same RPC endpoint (devnet RPC has all nodes)
     const rpcResponse = await callDirectRPC('get-pods-with-stats');
     if (!rpcResponse.success || !rpcResponse.data) return null;
 
@@ -171,26 +222,36 @@ async function fetchCurrentNodeData(ip: string): Promise<any | null> {
       return nodeIp === ip;
     });
 
-    if (node) {
-      await cache.set(cacheKey, node, 30); // Cache 30s
-      return node;
+    if (!node) return null;
+
+    // For mainnet, verify the node is a mainnet node
+    if (network === 'mainnet' && mainnetPubkeys) {
+      if (!mainnetPubkeys.has(node.pubkey)) {
+        // Node exists but is not a mainnet node
+        console.log(`[NODE-PROFILE] Node ${ip} is not a mainnet node`);
+        return null;
+      }
+      // Add mainnet credits to the node data
+      node.mainnet_credits = mainnetPubkeys.get(node.pubkey) || 0;
     }
-    return null;
+
+    await cache.set(cacheKey, node, 30);
+    return node;
   } catch {
     return null;
   }
 }
 
-async function fetchCreditsData(): Promise<any[] | null> {
-  const cacheKey = 'credits:all';
+async function fetchCreditsData(network: NetworkType): Promise<any[] | null> {
+  const cacheKey = `credits:${network}:all`;
   const cached = await cache.get(cacheKey);
   if (cached) return cached as any[];
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
+    const timeout = setTimeout(() => controller.abort(), 5000);
     
-    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
+    const url = CREDITS_ENDPOINTS[network];
     const res = await fetch(url, {
       signal: controller.signal,
       headers: { 'User-Agent': 'XanDash/1.0' },
@@ -201,7 +262,7 @@ async function fetchCreditsData(): Promise<any[] | null> {
     const data = await res.json();
     const credits = data.pods_credits || [];
     
-    await cache.set(cacheKey, credits, 60); // Cache 1min
+    await cache.set(cacheKey, credits, 60);
     return credits;
   } catch {
     return null;

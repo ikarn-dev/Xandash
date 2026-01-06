@@ -8,8 +8,10 @@ import { NodeProfileCard } from '@/components/ui/NodeProfileCard';
 import { nodeSearchService, type SearchableNode } from '@/libs/search/NodeSearchService';
 import { getLocationsForIPs, extractIPFromAddress } from '@/libs/services/geolocation';
 import { toast } from 'sonner';
+import { useNetwork } from '@/libs/context/network-context';
 
 export const DashboardInteractive: React.FC = () => {
+  const { network } = useNetwork();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchableNode[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -23,12 +25,10 @@ export const DashboardInteractive: React.FC = () => {
     return () => setMounted(false);
   }, []);
 
-  // Initialize search index
+  // Initialize search index - refetch when network changes
   const initializeSearchIndex = useCallback(async () => {
-    if (nodesData.length > 0) return;
-    
     try {
-      const response = await fetch('/api/nodes?includeAll=true');
+      const response = await fetch(`/api/nodes?includeAll=true&network=${network}`);
       const data = await response.json();
       
       if (data.nodes) {
@@ -91,7 +91,7 @@ export const DashboardInteractive: React.FC = () => {
       console.error('Failed to initialize search index:', error);
       toast.error('Failed to load search data');
     }
-  }, [nodesData.length]);
+  }, [network]);
 
   useEffect(() => {
     initializeSearchIndex();

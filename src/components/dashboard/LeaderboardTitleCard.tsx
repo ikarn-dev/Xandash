@@ -1,12 +1,15 @@
 'use client';
 
 import React from 'react';
+import { useNetwork } from '@/libs/context/network-context';
 
 interface LeaderboardTitleCardProps {
   className?: string;
 }
 
 export const LeaderboardTitleCard: React.FC<LeaderboardTitleCardProps> = ({ className = "" }) => {
+  const { network, isMainnet } = useNetwork();
+  
   const CornerAccents = () => (
     <>
       <div className="absolute top-0 left-0 w-6 h-6">
@@ -37,6 +40,10 @@ export const LeaderboardTitleCard: React.FC<LeaderboardTitleCardProps> = ({ clas
           <h1 className="text-3xl font-bold text-white/90 font-mono">
             // <span className="text-white">LEADERBOARD</span>
           </h1>
+          <div className={`flex items-center space-x-1.5 px-2 py-1 rounded-full text-xs font-medium ${isMainnet ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`}>
+            <div className={`w-1.5 h-1.5 rounded-full ${isMainnet ? 'bg-blue-400' : 'bg-green-400'}`}></div>
+            <span>{isMainnet ? 'Mainnet' : 'Devnet'}</span>
+          </div>
         </div>
         
         <div className="flex items-center space-x-2 text-white/60">

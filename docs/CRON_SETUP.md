@@ -4,31 +4,44 @@
 
 XanDash uses scheduled cron jobs to automatically sync node data to MongoDB every 5 minutes. This ensures historical data is captured even when no users are visiting the dashboard.
 
-## GitHub Actions (Recommended)
+**Both devnet and mainnet are synced separately** to their own MongoDB collections.
 
-The project uses GitHub Actions for cron jobs since Vercel's free tier only allows 2 cron jobs per day.
+## How Mainnet Works
 
-### Configuration
+Mainnet nodes are **not on a separate RPC** - they are filtered from the devnet RPC by checking if their pubkey exists in the mainnet credits API. This means:
 
-The workflow is defined in `.github/workflows/sync-nodes.yml`:
+1. All nodes come from the same RPC endpoint
+2. Mainnet nodes are identified by their pubkey being in the mainnet credits API
+3. Mainnet data is stored in separate MongoDB collections
 
-```yaml
-name: Sync Nodes Data
-on:
-  schedule:
-    - cron: '*/5 * * * *'  # Every 5 minutes
-  workflow_dispatch:  # Manual trigger
+## MongoDB Collections
 
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Sync nodes data
-        run: |
-          curl -X POST "https://your-domain.vercel.app/api/sync-nodes" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json"
-```
+| Network | Snapshots Collection | Events Collection |
+|---------|---------------------|-------------------|
+| Devnet  | `node_snapshots` | `node_events` |
+| Mainnet | `mainnet_node_snapshots` | `mainnet_node_events` |
+
+## Data Sources
+
+### Node Profile Page
+When a user visits a node profile page:
+1. Live data is fetched from RPC
+2. For mainnet, the node's pubkey is verified against mainnet credits API
+3. **The node snapshot is automatically saved to MongoDB** (rate-limited to once per minute per node)
+4. Historical data is fetched from the network-specific MongoDB collection
+
+This means the database gets updated from both:
+- Cron jobs (every 5 minutes)
+- User visits (on-demand)
+
+## GitHub Actions
+
+Two separate workflows handle each network:
+
+1. **Devnet**: `.github/workflows/sync-nodes.yml`
+2. **Mainnet**: `.github/workflows/sync-mainnet-nodes.yml`
+
+Both run every 5 minutes.
 
 ### Setup Steps
 
@@ -36,36 +49,80 @@ jobs:
    - Go to your repository Settings → Secrets and variables → Actions
    - Add new secret: `CRON_SECRET` with your secret value
 
-2. **Add Vercel Environment Variable**
-   - Go to Vercel Dashboard → Project Settings → Environment Variables
-   - Add: `CRON_SECRET` with the same value
+2. **Add Vercel Environment Variables**
+   ```
+   CRON_SECRET=your_secret_value
+   ```
 
-3. **Enable Workflow**
-   - The workflow runs automatically once pushed to main branch
+3. **Enable Workflows**
+   - The workflows run automatically once pushed to main branch
    - You can also trigger manually from Actions tab
 
-## Alternative: External Cron Services
+## API Endpoints
 
-### cron-job.org (Free)
+### Sync Nodes
 
-1. Visit [cron-job.org](https://cron-job.org) and create account
-2. Create new cron job:
-   - **URL**: `https://your-domain.vercel.app/api/sync-nodes`
-   - **Schedule**: Every 1 minute (`* * * * *`)
-   - **Method**: POST
-   - **Header**: `Authorization: Bearer YOUR_CRON_SECRET`
-   - **Timeout**: 60 seconds
+```bash
+# Sync devnet (default)
+POST /api/sync-nodes?network=devnet
 
-### EasyCron (Free tier)
+# Sync mainnet (filters by mainnet pubkeys)
+POST /api/sync-nodes?network=mainnet
+```
 
-1. Visit [EasyCron](https://www.easycron.com)
-2. Create cron job with same settings as above
+### Initialize Indexes
+
+```bash
+# Initialize indexes for both networks
+GET /api/sync-nodes?action=init
+
+# Initialize for specific network
+GET /api/sync-nodes?action=init&network=mainnet
+```
+
+### Manual Sync Test
+
+```bash
+# Test devnet sync
+GET /api/sync-nodes?action=sync&network=devnet
+
+# Test mainnet sync
+GET /api/sync-nodes?action=sync&network=mainnet
+```
+
+### Check Database Status
+
+```bash
+# Check devnet collections
+GET /api/db-status?network=devnet
+
+# Check mainnet collections
+GET /api/db-status?network=mainnet
+```
+
+## Node Profile API
+
+The node profile API accepts a `network` parameter:
+
+```bash
+# Get devnet node profile (default)
+GET /api/node-profile?ip=1.2.3.4&network=devnet
+
+# Get mainnet node profile
+GET /api/node-profile?ip=1.2.3.4&network=mainnet
+```
+
+For mainnet requests:
+- The API verifies the node's pubkey is in the mainnet credits API
+- If not a mainnet node, returns null for currentNode
+- Historical data comes from mainnet-specific MongoDB collections
 
 ## What Gets Synced
 
-Each sync operation:
-- Fetches all nodes from Xandeum RPC
-- Saves snapshots to MongoDB (status, uptime, storage, credits)
+Each sync operation per network:
+- Fetches all nodes from RPC
+- For mainnet: filters to only nodes with pubkeys in mainnet credits API
+- Saves snapshots to network-specific MongoDB collections
 - Logs events for significant changes:
   - New nodes discovered
   - Status changes (online/offline)
@@ -73,42 +130,40 @@ Each sync operation:
   - Storage changes (>5%)
   - Credit changes (>100)
 
-## Monitoring
-
-### Check Sync Status
-
-```bash
-# Check database status
-curl "https://your-domain.vercel.app/api/db-status"
-
-# Manual sync test
-curl "https://your-domain.vercel.app/api/sync-nodes?action=sync"
-```
-
-### Response Example
+## Response Example
 
 ```json
 {
   "success": true,
-  "total": 265,
-  "newNodes": 2,
-  "statusChanges": 15,
-  "versionChanges": 3,
+  "network": "mainnet",
+  "total": 45,
+  "newNodes": 1,
+  "statusChanges": 3,
+  "versionChanges": 0,
   "storageChanges": 0,
-  "creditsChanges": 45,
-  "duration": "2847ms",
-  "timestamp": "2026-01-04T10:30:00.000Z"
+  "creditsChanges": 12,
+  "duration": "1847ms",
+  "timestamp": "2026-01-06T10:30:00.000Z"
 }
 ```
 
-### GitHub Actions Logs
+## Environment Variables
 
-View sync history in your repository's Actions tab. Each run shows:
-- Execution time
-- Success/failure status
-- Response from sync endpoint
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CRON_SECRET` | Auth secret for cron jobs | - |
+| `NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL` | Devnet credits API | `https://podcredits.xandeum.network/api/pods-credits` |
+| `NEXT_PUBLIC_POD_CREDITS_MAINNET_URL` | Mainnet credits API | `https://podcredits.xandeum.network/api/mainnet-pod-credits` |
 
 ## Troubleshooting
+
+### Mainnet Node Shows "Unknown"
+
+This means the node is **not a mainnet node**. The node exists on devnet but its pubkey is not in the mainnet credits API.
+
+To verify:
+1. Check if the node appears in the mainnet nodes list
+2. Check the mainnet credits API for the node's pubkey
 
 ### Sync Failing
 
@@ -116,14 +171,13 @@ View sync history in your repository's Actions tab. Each run shows:
 2. Verify MongoDB connection string is correct
 3. Check Vercel function logs for errors
 
-### Missing Data
+### Missing Mainnet Data
 
-1. Ensure cron is running (check GitHub Actions history)
-2. Verify MongoDB indexes are initialized:
-   ```bash
-   curl "https://your-domain.vercel.app/api/sync-nodes?action=init"
-   ```
+1. Verify mainnet credits API is accessible
+2. Check if mainnet workflow is running (GitHub Actions tab)
+3. Initialize mainnet indexes: `GET /api/sync-nodes?action=init&network=mainnet`
+4. Check db status: `GET /api/db-status?network=mainnet`
 
 ### Rate Limiting
 
-GitHub Actions minimum interval is 5 minutes. For more frequent syncs, use external services like cron-job.org.
+GitHub Actions minimum interval is 5 minutes. For more frequent syncs, use external services like cron-job.org with separate jobs for each network.

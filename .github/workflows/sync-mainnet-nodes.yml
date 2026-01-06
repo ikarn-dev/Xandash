@@ -1,0 +1,33 @@
+name: Sync Mainnet Nodes Data
+
+on:
+  schedule:
+    # Runs every 5 minutes (GitHub Actions minimum)
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    
+    steps:
+      - name: Sync mainnet nodes to MongoDB
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://xandash.vercel.app/api/sync-nodes?network=mainnet" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "Response: $body"
+          echo "Status: $http_code"
+          
+          if [ "$http_code" != "200" ]; then
+            echo "Mainnet sync failed with status $http_code"
+            exit 1
+          fi
+          
+          echo "✅ Mainnet sync completed successfully"

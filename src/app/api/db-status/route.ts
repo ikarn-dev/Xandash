@@ -1,39 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase, COLLECTIONS } from '@/libs/db/mongodb';
+import { connectToDatabase, getCollectionNames } from '@/libs/db/mongodb';
+
+type NetworkType = 'devnet' | 'mainnet';
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const network = (searchParams.get('network') as NetworkType) || 'devnet';
+    
+    if (network !== 'devnet' && network !== 'mainnet') {
+      return NextResponse.json({ error: 'Invalid network' }, { status: 400 });
+    }
+    
     const db = await connectToDatabase();
+    const collections = getCollectionNames(network);
     
     // Get counts from each collection
-    const snapshotsCount = await db.collection(COLLECTIONS.NODE_SNAPSHOTS).countDocuments();
-    const eventsCount = await db.collection(COLLECTIONS.NODE_EVENTS).countDocuments();
+    const snapshotsCount = await db.collection(collections.NODE_SNAPSHOTS).countDocuments();
+    const eventsCount = await db.collection(collections.NODE_EVENTS).countDocuments();
     
     // Get recent snapshots (last 10)
-    const recentSnapshots = await db.collection(COLLECTIONS.NODE_SNAPSHOTS)
+    const recentSnapshots = await db.collection(collections.NODE_SNAPSHOTS)
       .find({})
       .sort({ timestamp: -1 })
       .limit(10)
       .toArray();
     
     // Get recent events
-    const recentEvents = await db.collection(COLLECTIONS.NODE_EVENTS)
+    const recentEvents = await db.collection(collections.NODE_EVENTS)
       .find({})
       .sort({ timestamp: -1 })
       .limit(10)
       .toArray();
     
     // Get unique nodes count
-    const uniqueNodes = await db.collection(COLLECTIONS.NODE_SNAPSHOTS).distinct('ip');
+    const uniqueNodes = await db.collection(collections.NODE_SNAPSHOTS).distinct('ip');
     
     // Get oldest and newest snapshot timestamps
-    const oldestSnapshot = await db.collection(COLLECTIONS.NODE_SNAPSHOTS)
+    const oldestSnapshot = await db.collection(collections.NODE_SNAPSHOTS)
       .findOne({}, { sort: { timestamp: 1 } });
-    const newestSnapshot = await db.collection(COLLECTIONS.NODE_SNAPSHOTS)
+    const newestSnapshot = await db.collection(collections.NODE_SNAPSHOTS)
       .findOne({}, { sort: { timestamp: -1 } });
     
     // Get snapshots per node (sample)
-    const snapshotsPerNode = await db.collection(COLLECTIONS.NODE_SNAPSHOTS).aggregate([
+    const snapshotsPerNode = await db.collection(collections.NODE_SNAPSHOTS).aggregate([
       { $group: { _id: '$ip', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 5 }
@@ -41,10 +51,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       status: 'connected',
+      network,
       database: process.env.MONGODB_DB_NAME || 'xandash',
       collections: {
-        snapshots: snapshotsCount,
-        events: eventsCount,
+        snapshots: { name: collections.NODE_SNAPSHOTS, count: snapshotsCount },
+        events: { name: collections.NODE_EVENTS, count: eventsCount },
       },
       uniqueNodes: uniqueNodes.length,
       timeRange: {
@@ -67,7 +78,6 @@ export async function GET(request: NextRequest) {
         timestamp: new Date(e.timestamp * 1000).toISOString(),
         previous_value: e.previous_value,
         new_value: e.new_value,
-        details: e.details,
       })),
     });
   } catch (error) {

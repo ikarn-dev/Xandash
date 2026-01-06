@@ -2,13 +2,15 @@ import {
   connectToDatabase, 
   NodeSnapshot, 
   NodeEventLog, 
-  COLLECTIONS 
+  getCollectionNames 
 } from './mongodb';
 
 // Threshold for storage change events (5% change)
 const STORAGE_CHANGE_THRESHOLD = 0.05;
 // Threshold for credits change events (100 credits)
 const CREDITS_CHANGE_THRESHOLD = 100;
+
+type NetworkType = 'devnet' | 'mainnet';
 
 // Save a node snapshot and detect changes
 export async function saveNodeSnapshot(nodeData: {
@@ -26,10 +28,11 @@ export async function saveNodeSnapshot(nodeData: {
   last_seen_timestamp: number;
   credits?: number;
   active_streams?: number;
-}): Promise<{ isNew: boolean; statusChanged: boolean; versionChanged: boolean; storageChanged: boolean; creditsChanged: boolean }> {
+}, network: NetworkType = 'devnet'): Promise<{ isNew: boolean; statusChanged: boolean; versionChanged: boolean; storageChanged: boolean; creditsChanged: boolean }> {
   const db = await connectToDatabase();
-  const snapshotsCol = db.collection<NodeSnapshot>(COLLECTIONS.NODE_SNAPSHOTS);
-  const eventsCol = db.collection<NodeEventLog>(COLLECTIONS.NODE_EVENTS);
+  const collections = getCollectionNames(network);
+  const snapshotsCol = db.collection<NodeSnapshot>(collections.NODE_SNAPSHOTS);
+  const eventsCol = db.collection<NodeEventLog>(collections.NODE_EVENTS);
   
   const now = Date.now();
   const timestamp = Math.floor(now / 1000);
@@ -177,7 +180,7 @@ export async function saveNodeSnapshot(nodeData: {
 }
 
 // Save multiple node snapshots (batch) - OPTIMIZED
-export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string, number>): Promise<{
+export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string, number>, network: NetworkType = 'devnet'): Promise<{
   total: number;
   newNodes: number;
   statusChanges: number;
@@ -186,8 +189,9 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
   creditsChanges: number;
 }> {
   const db = await connectToDatabase();
-  const snapshotsCol = db.collection<NodeSnapshot>(COLLECTIONS.NODE_SNAPSHOTS);
-  const eventsCol = db.collection<NodeEventLog>(COLLECTIONS.NODE_EVENTS);
+  const collections = getCollectionNames(network);
+  const snapshotsCol = db.collection<NodeSnapshot>(collections.NODE_SNAPSHOTS);
+  const eventsCol = db.collection<NodeEventLog>(collections.NODE_EVENTS);
   
   const now = Date.now();
   const timestamp = Math.floor(now / 1000);
@@ -351,9 +355,10 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
 }
 
 // Get node history from database
-export async function getNodeHistory(ip: string, limit: number = 100): Promise<NodeSnapshot[]> {
+export async function getNodeHistory(ip: string, limit: number = 100, network: NetworkType = 'devnet'): Promise<NodeSnapshot[]> {
   const db = await connectToDatabase();
-  const col = db.collection<NodeSnapshot>(COLLECTIONS.NODE_SNAPSHOTS);
+  const collections = getCollectionNames(network);
+  const col = db.collection<NodeSnapshot>(collections.NODE_SNAPSHOTS);
   
   return col
     .find({ ip })
@@ -363,9 +368,10 @@ export async function getNodeHistory(ip: string, limit: number = 100): Promise<N
 }
 
 // Get node events/logs
-export async function getNodeEvents(ip: string, limit: number = 50): Promise<NodeEventLog[]> {
+export async function getNodeEvents(ip: string, limit: number = 50, network: NetworkType = 'devnet'): Promise<NodeEventLog[]> {
   const db = await connectToDatabase();
-  const col = db.collection<NodeEventLog>(COLLECTIONS.NODE_EVENTS);
+  const collections = getCollectionNames(network);
+  const col = db.collection<NodeEventLog>(collections.NODE_EVENTS);
   
   return col
     .find({ ip })
@@ -375,17 +381,19 @@ export async function getNodeEvents(ip: string, limit: number = 50): Promise<Nod
 }
 
 // Get latest snapshot for a node
-export async function getLatestNodeSnapshot(ip: string): Promise<NodeSnapshot | null> {
+export async function getLatestNodeSnapshot(ip: string, network: NetworkType = 'devnet'): Promise<NodeSnapshot | null> {
   const db = await connectToDatabase();
-  const col = db.collection<NodeSnapshot>(COLLECTIONS.NODE_SNAPSHOTS);
+  const collections = getCollectionNames(network);
+  const col = db.collection<NodeSnapshot>(collections.NODE_SNAPSHOTS);
   
   return col.findOne({ ip }, { sort: { timestamp: -1 } });
 }
 
 // Get all events (for dashboard/monitoring)
-export async function getAllRecentEvents(limit: number = 100): Promise<NodeEventLog[]> {
+export async function getAllRecentEvents(limit: number = 100, network: NetworkType = 'devnet'): Promise<NodeEventLog[]> {
   const db = await connectToDatabase();
-  const col = db.collection<NodeEventLog>(COLLECTIONS.NODE_EVENTS);
+  const collections = getCollectionNames(network);
+  const col = db.collection<NodeEventLog>(collections.NODE_EVENTS);
   
   return col
     .find({})
@@ -395,9 +403,18 @@ export async function getAllRecentEvents(limit: number = 100): Promise<NodeEvent
 }
 
 // Get node stats over time for charts
-export async function getNodeStatsHistory(ip: string, hours: number = 24): Promise<NodeSnapshot[]> {
+export async function getNodeStatsHistory(ip: string, hours: number = 24, network: NetworkType = 'devnet'): Promise<NodeSnapshot[]> {
   const db = await connectToDatabase();
-  const col = db.collection<NodeSnapshot>(COLLECTIONS.NODE_SNAPSHOTS);
+  const collections = getCollectionNames(network);
+  const col = db.collection<NodeSnapshot>(collections.NODE_SNAPSHOTS);
+  
+  // If hours is 0, fetch all data (no time filter)
+  if (hours === 0) {
+    return col
+      .find({ ip })
+      .sort({ timestamp: 1 })
+      .toArray();
+  }
   
   const cutoffTime = Math.floor(Date.now() / 1000) - (hours * 3600);
   
@@ -408,9 +425,10 @@ export async function getNodeStatsHistory(ip: string, hours: number = 24): Promi
 }
 
 // Cleanup old snapshots (keep last 7 days)
-export async function cleanupOldSnapshots(daysToKeep: number = 7): Promise<number> {
+export async function cleanupOldSnapshots(daysToKeep: number = 7, network: NetworkType = 'devnet'): Promise<number> {
   const db = await connectToDatabase();
-  const col = db.collection<NodeSnapshot>(COLLECTIONS.NODE_SNAPSHOTS);
+  const collections = getCollectionNames(network);
+  const col = db.collection<NodeSnapshot>(collections.NODE_SNAPSHOTS);
   
   const cutoffTime = Math.floor(Date.now() / 1000) - (daysToKeep * 24 * 3600);
   
@@ -419,18 +437,25 @@ export async function cleanupOldSnapshots(daysToKeep: number = 7): Promise<numbe
 }
 
 // Create indexes for better query performance
-export async function createIndexes(): Promise<void> {
+export async function createIndexes(network?: NetworkType): Promise<void> {
   const db = await connectToDatabase();
   
-  // Node snapshots indexes
-  const snapshotsCol = db.collection(COLLECTIONS.NODE_SNAPSHOTS);
-  await snapshotsCol.createIndex({ ip: 1, timestamp: -1 });
-  await snapshotsCol.createIndex({ pubkey: 1 });
-  await snapshotsCol.createIndex({ timestamp: -1 });
+  // Create indexes for specified network or both
+  const networks: NetworkType[] = network ? [network] : ['devnet', 'mainnet'];
   
-  // Node events indexes
-  const eventsCol = db.collection(COLLECTIONS.NODE_EVENTS);
-  await eventsCol.createIndex({ ip: 1, timestamp: -1 });
-  await eventsCol.createIndex({ event_type: 1, timestamp: -1 });
-  await eventsCol.createIndex({ timestamp: -1 });
+  for (const net of networks) {
+    const collections = getCollectionNames(net);
+    
+    // Node snapshots indexes
+    const snapshotsCol = db.collection(collections.NODE_SNAPSHOTS);
+    await snapshotsCol.createIndex({ ip: 1, timestamp: -1 });
+    await snapshotsCol.createIndex({ pubkey: 1 });
+    await snapshotsCol.createIndex({ timestamp: -1 });
+    
+    // Node events indexes
+    const eventsCol = db.collection(collections.NODE_EVENTS);
+    await eventsCol.createIndex({ ip: 1, timestamp: -1 });
+    await eventsCol.createIndex({ event_type: 1, timestamp: -1 });
+    await eventsCol.createIndex({ timestamp: -1 });
+  }
 }

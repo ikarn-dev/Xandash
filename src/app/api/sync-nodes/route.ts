@@ -1,43 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callDirectRPC } from '@/libs/server';
 import { saveAllNodeSnapshots, createIndexes } from '@/libs/db/node-service';
+import { fetchMainnetPubkeys, filterMainnetNodes } from '@/libs/services/mainnet-filter-service';
 
 /**
  * SYNC NODES API
  * 
  * Syncs all node data and pod credits to MongoDB.
+ * Supports both devnet and mainnet networks.
  * 
- * CRON OPTIONS (pick one):
- * 
- * 1. UPSTASH QSTASH (Recommended - Free 500 msgs/day)
- *    - Go to https://console.upstash.com/qstash
- *    - Create a schedule: POST https://your-domain.vercel.app/api/sync-nodes
- *    - Cron: * * * * * (every minute)
- *    - Add QSTASH_CURRENT_SIGNING_KEY and QSTASH_NEXT_SIGNING_KEY to Vercel env
- * 
- * 2. EASYCRON (Free 200 calls/day)
- *    - Go to https://www.easycron.com
- *    - URL: POST https://your-domain.vercel.app/api/sync-nodes
- *    - Header: Authorization: Bearer YOUR_CRON_SECRET
- * 
- * 3. GITHUB ACTIONS (Free, 5-min minimum)
- *    - See README for workflow setup
+ * For mainnet: filters nodes by pubkeys from mainnet credits API
  */
 
-async function syncAllNodes() {
+type NetworkType = 'devnet' | 'mainnet';
+
+// Credits endpoints for each network
+const CREDITS_ENDPOINTS = {
+  devnet: process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits',
+  mainnet: process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL || 'https://podcredits.xandeum.network/api/mainnet-pod-credits',
+};
+
+async function syncAllNodes(network: NetworkType = 'devnet') {
+  // Always use the same RPC endpoint (devnet RPC has all nodes)
   const rpcResponse = await callDirectRPC('get-pods-with-stats');
+  
   if (!rpcResponse.success || !rpcResponse.data) {
-    throw new Error('RPC failed');
+    throw new Error(`RPC failed for ${network}`);
   }
 
-  const nodes = (rpcResponse.data as any)?.pods || [];
-  if (nodes.length === 0) return { total: 0, newNodes: 0, statusChanges: 0, versionChanges: 0, storageChanges: 0, creditsChanges: 0 };
+  let nodes = (rpcResponse.data as any)?.pods || [];
+  
+  // For mainnet, filter nodes by mainnet pubkeys
+  if (network === 'mainnet') {
+    const mainnetPubkeys = await fetchMainnetPubkeys();
+    if (mainnetPubkeys.size === 0) {
+      console.warn('[SYNC] No mainnet pubkeys found, skipping mainnet sync');
+      return { total: 0, newNodes: 0, statusChanges: 0, versionChanges: 0, storageChanges: 0, creditsChanges: 0 };
+    }
+    nodes = filterMainnetNodes(nodes, mainnetPubkeys);
+    console.log(`[SYNC] Filtered to ${nodes.length} mainnet nodes`);
+  }
+  
+  if (nodes.length === 0) {
+    return { total: 0, newNodes: 0, statusChanges: 0, versionChanges: 0, storageChanges: 0, creditsChanges: 0 };
+  }
 
-  // Fetch credits in parallel
+  // Fetch credits from network-specific endpoint
   const creditsMap = new Map<string, number>();
   try {
-    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
-    const res = await fetch(url, { 
+    const creditsUrl = CREDITS_ENDPOINTS[network];
+    const res = await fetch(creditsUrl, { 
       headers: { 'User-Agent': 'XanDash/1.0' },
       signal: AbortSignal.timeout(10000),
     });
@@ -45,24 +57,21 @@ async function syncAllNodes() {
       const data = await res.json();
       data.pods_credits?.forEach((c: any) => creditsMap.set(c.pod_id, c.credits));
     }
-  } catch {}
+  } catch (err) {
+    console.warn(`[SYNC] Failed to fetch credits for ${network}:`, err);
+  }
 
-  return await saveAllNodeSnapshots(nodes, creditsMap);
+  // Save to network-specific collections
+  return await saveAllNodeSnapshots(nodes, creditsMap, network);
 }
 
-// Verify request authenticity (supports multiple auth methods)
+// Verify request authenticity
 function verifyAuth(request: NextRequest): boolean {
-  // 1. Check Upstash QStash signature
   const upstashSignature = request.headers.get('upstash-signature');
-  if (upstashSignature) {
-    // QStash requests are verified by their signature - if header exists, it's from QStash
-    // For production, implement full signature verification with @upstash/qstash
-    return true;
-  }
+  if (upstashSignature) return true;
   
-  // 2. Check CRON_SECRET (for other cron services)
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true; // No secret configured, allow all
+  if (!secret) return true;
   
   const auth = request.headers.get('authorization');
   const queryAuth = request.nextUrl.searchParams.get('auth');
@@ -78,19 +87,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const network = (searchParams.get('network') as NetworkType) || 'devnet';
+  
+  if (network !== 'devnet' && network !== 'mainnet') {
+    return NextResponse.json({ error: 'Invalid network. Use devnet or mainnet' }, { status: 400 });
+  }
+
   try {
-    const result = await syncAllNodes();
+    const result = await syncAllNodes(network);
     const duration = Date.now() - startTime;
 
     return NextResponse.json({
       success: true,
+      network,
       ...result,
       duration: `${duration}ms`,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('Sync error:', error);
-    return NextResponse.json({ error: error.message || 'Sync failed' }, { status: 500 });
+    console.error(`[SYNC] Error for ${network}:`, error);
+    return NextResponse.json({ error: error.message || 'Sync failed', network }, { status: 500 });
   }
 }
 
@@ -98,51 +115,53 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');
+  const network = (searchParams.get('network') as NetworkType) || 'devnet';
+
+  if (network !== 'devnet' && network !== 'mainnet') {
+    return NextResponse.json({ error: 'Invalid network. Use devnet or mainnet' }, { status: 400 });
+  }
 
   try {
     if (action === 'init') {
-      await createIndexes();
-      return NextResponse.json({ success: true, message: 'MongoDB indexes created' });
+      const targetNetwork = searchParams.get('network') as NetworkType | undefined;
+      await createIndexes(targetNetwork);
+      return NextResponse.json({ 
+        success: true, 
+        message: targetNetwork 
+          ? `MongoDB indexes created for ${targetNetwork}` 
+          : 'MongoDB indexes created for both networks'
+      });
     }
     
     if (action === 'sync') {
       const startTime = Date.now();
-      const result = await syncAllNodes();
+      const result = await syncAllNodes(network);
       return NextResponse.json({
         success: true,
+        network,
         ...result,
         duration: `${Date.now() - startTime}ms`,
         timestamp: new Date().toISOString(),
       });
     }
 
-    // Return setup instructions
     return NextResponse.json({
       message: 'XanDash Sync API',
+      networks: ['devnet', 'mainnet'],
+      note: 'Mainnet nodes are filtered from devnet RPC by pubkeys in mainnet credits API',
       setup: {
         step1: 'Initialize indexes: GET /api/sync-nodes?action=init',
-        step2: 'Test sync: GET /api/sync-nodes?action=sync',
-        step3: 'Setup cron service (see options below)',
+        step2_devnet: 'Test devnet sync: GET /api/sync-nodes?action=sync&network=devnet',
+        step2_mainnet: 'Test mainnet sync: GET /api/sync-nodes?action=sync&network=mainnet',
       },
-      cronOptions: {
-        upstash: {
-          name: 'Upstash QStash (Recommended)',
-          free: '500 messages/day',
-          setup: 'https://console.upstash.com/qstash',
-          schedule: '* * * * *',
-        },
-        easycron: {
-          name: 'EasyCron',
-          free: '200 calls/day',
-          setup: 'https://www.easycron.com',
-        },
-        github: {
-          name: 'GitHub Actions',
-          free: 'Unlimited (public repos)',
-          minInterval: '5 minutes',
-        },
+      endpoints: {
+        devnet: 'POST /api/sync-nodes?network=devnet',
+        mainnet: 'POST /api/sync-nodes?network=mainnet',
       },
-      endpoint: 'POST /api/sync-nodes',
+      collections: {
+        devnet: ['node_snapshots', 'node_events'],
+        mainnet: ['mainnet_node_snapshots', 'mainnet_node_events'],
+      },
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

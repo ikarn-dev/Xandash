@@ -405,3 +405,29 @@
     z-index: 15 !important;
   }
 }
+/* Hide scrollbars while maintaining functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
+
+/* Prevent horizontal overflow on all containers */
+.overflow-x-hidden {
+  overflow-x: hidden;
+}
+
+/* Ensure table cells don't break layout */
+.table-cell-fixed {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+/* Table row animation for responsive table */
+.animate-blur-reveal-item {
+  animation: blur-reveal-subtle 0.4s ease-out forwards;
+  opacity: 0;
+}

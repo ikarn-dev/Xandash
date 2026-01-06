@@ -1,14 +1,15 @@
-// UI components exports
-
-export { Badge } from './badge';
-export { Breadcrumb } from './Breadcrumb';
-export { CopyBtn as CopyButton } from './CopyBtn';
-export { RefreshIcon } from './RefreshIcon';
-export { LiveRefresh } from './live-refresh';
-export { NetworkSelector } from './network-selector';
-export { SearchBox } from './SearchBox';
-export { InteractiveMap } from './InteractiveMap';
-export { Pagination } from './Pagination';
-export { ValidatorTableSkeleton } from './ValidatorSkeleton';
-export { NodeProfileCard } from './NodeProfileCard';
-export { ToastDismisser } from './ToastDismisser';
+// UI Components Index
+export * from './badge';
+export * from './FilterBadge';
+export * from './VersionDropdown';
+export * from './CopyBtn';
+export * from './InteractiveMap';
+export * from './Pagination';
+export * from './SearchBox';
+export * from './ValidatorTableSkeleton';
+export * from './NodeProfileCard';
+export * from './ToastDismisser';
+export * from './Breadcrumb';
+export * from './CaptchaGate';
+export * from './CornerAccents';
+export * from './SlotNumber';

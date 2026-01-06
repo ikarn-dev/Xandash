@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callDirectRPC } from '@/libs/server';
+import { fetchMainnetPubkeys, filterMainnetNodes } from '@/libs/services/mainnet-filter-service';
 
 // Force dynamic - no caching
 export const dynamic = 'force-dynamic';
@@ -23,6 +24,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const includeAll = searchParams.get('includeAll') === 'true';
+    const network = searchParams.get('network') || 'devnet';
     
     if (page < 1 || limit < 1 || limit > 1000) {
       return NextResponse.json({ error: 'Invalid pagination parameters' }, { status: 400 });
@@ -35,7 +37,13 @@ export async function GET(request: NextRequest) {
     }
 
     const responseData = rpcResponse.data as any;
-    const allNodes = Array.isArray(responseData?.pods) ? responseData.pods : [];
+    let allNodes = Array.isArray(responseData?.pods) ? responseData.pods : [];
+    
+    // Filter for mainnet if requested
+    if (network === 'mainnet') {
+      const mainnetPubkeys = await fetchMainnetPubkeys();
+      allNodes = filterMainnetNodes(allNodes, mainnetPubkeys);
+    }
     
     let result;
     
@@ -47,7 +55,8 @@ export async function GET(request: NextRequest) {
         nodes: allNodes,
         total: allNodes.length,
         timestamp: Date.now(),
-        serverTimestamp: serverTimestamp
+        serverTimestamp: serverTimestamp,
+        network: network
       };
     } else {
       const total = allNodes.length;
@@ -58,7 +67,8 @@ export async function GET(request: NextRequest) {
       result = {
         nodes: paginatedNodes,
         pagination: { page, limit, total, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
-        serverTimestamp: serverTimestamp
+        serverTimestamp: serverTimestamp,
+        network: network
       };
     }
 

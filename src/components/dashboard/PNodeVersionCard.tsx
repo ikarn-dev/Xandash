@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, X } from 'lucide-react';
+import { useNetwork } from '@/libs/context/network-context';
+import { AnimatedValue } from '@/components/ui/SlotNumber';
 
 interface VersionStats {
   totalVersions: number;
@@ -21,12 +23,17 @@ interface PNodeVersionCardProps {
 }
 
 export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = "" }) => {
+  const { network } = useNetwork();
   const [stats, setStats] = useState<VersionStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Use ref to track if data has been loaded (survives re-renders and interval callbacks)
+  const hasLoadedRef = useRef(false);
+  const prevNetworkRef = useRef(network);
 
   const handleCloseModal = () => {
     setIsClosing(true);
@@ -43,11 +50,22 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Only show loading on initial load, not on refresh
-        if (isInitialLoad) {
-          setLoading(true);
+        // Check if network changed - if so, show loading skeleton
+        const networkChanged = prevNetworkRef.current !== network;
+        if (networkChanged) {
+          prevNetworkRef.current = network;
+          hasLoadedRef.current = false;
         }
-        const response = await fetch('/api/nodes?includeAll=true');
+        
+        // Show loading spinner only on initial load or network change
+        if (!hasLoadedRef.current) {
+          setLoading(true);
+        } else {
+          // For auto-refresh, just show subtle updating state
+          setIsUpdating(true);
+        }
+        
+        const response = await fetch(`/api/nodes?includeAll=true&network=${network}`);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch nodes: ${response.statusText}`);
@@ -94,14 +112,16 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
         setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {
         setLoading(false);
-        setIsInitialLoad(false);
+        hasLoadedRef.current = true;
+        // Add small delay before removing updating state for smooth transition
+        setTimeout(() => setIsUpdating(false), 300);
       }
     };
 
     fetchData();
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
-  }, [isInitialLoad]);
+  }, [network]);
 
   const getVersionColor = (index: number) => {
     const colors = [
@@ -249,7 +269,9 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
         <CornerAccents />
         <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
           <div className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider mb-2 sm:mb-4">// VERSIONS</div>
-          <div className="text-white text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1 sm:mb-2">{stats?.totalVersions || '0'}</div>
+          <div className="text-white text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1 sm:mb-2">
+            <AnimatedValue value={stats?.totalVersions || '0'} />
+          </div>
           <div className="text-white/40 text-[10px] sm:text-xs mb-1">versions</div>
           <div className="text-white/30 text-[9px] sm:text-[10px] hover:text-white/50 transition-colors cursor-pointer">click for details</div>
         </div>

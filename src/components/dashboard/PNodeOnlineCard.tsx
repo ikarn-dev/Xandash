@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { useNetwork } from '@/libs/context/network-context';
+import { AnimatedValue } from '@/components/ui/SlotNumber';
 
 interface OnlineStats {
   onlineNodes: number;
@@ -17,19 +19,35 @@ interface PNodeOnlineCardProps {
 }
 
 export const PNodeOnlineCard: React.FC<PNodeOnlineCardProps> = ({ className = "" }) => {
+  const { network } = useNetwork();
   const [stats, setStats] = useState<OnlineStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Use ref to track if data has been loaded
+  const hasLoadedRef = useRef(false);
+  const prevNetworkRef = useRef(network);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Only show loading on initial load, not on refresh
-        if (isInitialLoad) {
-          setLoading(true);
+        // Check if network changed - if so, show loading skeleton
+        const networkChanged = prevNetworkRef.current !== network;
+        if (networkChanged) {
+          prevNetworkRef.current = network;
+          hasLoadedRef.current = false;
         }
-        const response = await fetch('/api/nodes?includeAll=true');
+        
+        // Show loading spinner only on initial load or network change
+        if (!hasLoadedRef.current) {
+          setLoading(true);
+        } else {
+          // For auto-refresh, just show subtle updating state
+          setIsUpdating(true);
+        }
+        
+        const response = await fetch(`/api/nodes?includeAll=true&network=${network}`);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch nodes: ${response.statusText}`);
@@ -71,14 +89,15 @@ export const PNodeOnlineCard: React.FC<PNodeOnlineCardProps> = ({ className = ""
         setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {
         setLoading(false);
-        setIsInitialLoad(false);
+        hasLoadedRef.current = true;
+        setTimeout(() => setIsUpdating(false), 300);
       }
     };
 
     fetchData();
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
-  }, [isInitialLoad]);
+  }, [network]);
 
   const CornerAccents = () => (
     <>
@@ -137,10 +156,10 @@ export const PNodeOnlineCard: React.FC<PNodeOnlineCardProps> = ({ className = ""
       <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
         <div className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider mb-2 sm:mb-3">// ONLINE RATE</div>
         <div className="text-green-400 text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1">
-          {stats?.onlinePercentage.toFixed(1) || '0.0'}%
+          <AnimatedValue value={`${stats?.onlinePercentage.toFixed(1) || '0.0'}%`} />
         </div>
         <div className="text-white/40 text-[9px] sm:text-[10px] mb-2 sm:mb-3">
-          {stats?.onlineNodes || 0} of {stats?.totalNodes || 0} nodes
+          <AnimatedValue value={stats?.onlineNodes || 0} /> of <AnimatedValue value={stats?.totalNodes || 0} /> nodes
         </div>
         
         {/* Online Status Bar Graph */}
