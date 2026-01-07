@@ -39,19 +39,19 @@ export const CopyBtn: React.FC<CopyBtnProps> = ({
     }
   };
 
-  const sizeClasses = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4';
-  const iconSizeClasses = size === 'sm' ? 'w-2.5 h-2.5' : 'w-3 h-3';
+  const sizeClasses = size === 'sm' ? 'w-4 h-4 sm:w-3 sm:h-3' : 'w-5 h-5 sm:w-4 sm:h-4';
+  const iconSizeClasses = size === 'sm' ? 'w-3 h-3 sm:w-2.5 sm:h-2.5' : 'w-3.5 h-3.5 sm:w-3 sm:h-3';
 
   return (
     <button
       onClick={handleCopy}
-      className={`${sizeClasses} cursor-pointer hover:bg-white/10 rounded transition-all duration-200 flex-shrink-0 relative ${className}`}
+      className={`${sizeClasses} cursor-pointer hover:bg-white/10 active:bg-white/20 rounded transition-all duration-200 flex-shrink-0 relative flex items-center justify-center ${className}`}
       title={`Copy ${type}`}
       style={{ cursor: 'pointer' }}
     >
-      {/* Light copy icon - always visible */}
+      {/* Copy icon */}
       <svg 
-        className={`${iconSizeClasses} text-white/40 hover:text-white/60 transition-colors duration-200`} 
+        className={`${iconSizeClasses} text-white/50 hover:text-white/70 transition-colors duration-200`} 
         fill="none" 
         stroke="currentColor" 
         viewBox="0 0 24 24"

@@ -173,7 +173,7 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                       <span className="text-white/80 font-mono truncate max-w-[100px]">
                         {ip || 'Unknown'}
                       </span>
-                      {ip && <CopyBtn text={ip} type="IP" size="sm" className="opacity-0 group-hover:opacity-100 flex-shrink-0" />}
+                      {ip && <CopyBtn text={ip} type="IP" size="sm" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex-shrink-0" />}
                     </div>
                   </td>
 
@@ -183,7 +183,7 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                       <span className="text-white/60 font-mono truncate max-w-[140px]">
                         {validator.pubkey || 'Unknown'}
                       </span>
-                      {validator.pubkey && <CopyBtn text={validator.pubkey} type="Pubkey" size="sm" className="opacity-0 group-hover:opacity-100 flex-shrink-0" />}
+                      {validator.pubkey && <CopyBtn text={validator.pubkey} type="Pubkey" size="sm" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex-shrink-0" />}
                     </div>
                   </td>
 

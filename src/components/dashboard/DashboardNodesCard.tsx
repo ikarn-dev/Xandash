@@ -324,13 +324,13 @@ export const DashboardNodesCard: React.FC = () => {
                     <td className="px-3 py-3 text-xs">
                       <div className="flex items-center space-x-1 min-w-0">
                         <span className="text-white/80 font-mono truncate max-w-[100px]">{ip || 'Unknown'}</span>
-                        {ip && <CopyBtn text={ip} type="IP" size="sm" className="opacity-0 group-hover:opacity-100 flex-shrink-0" />}
+                        {ip && <CopyBtn text={ip} type="IP" size="sm" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex-shrink-0" />}
                       </div>
                     </td>
                     <td className="px-3 py-3 text-xs">
                       <div className="flex items-center space-x-1 min-w-0">
                         <span className="text-white/60 font-mono truncate max-w-[120px]">{node.pubkey || 'Unknown'}</span>
-                        {node.pubkey && <CopyBtn text={node.pubkey} type="Pubkey" size="sm" className="opacity-0 group-hover:opacity-100 flex-shrink-0" />}
+                        {node.pubkey && <CopyBtn text={node.pubkey} type="Pubkey" size="sm" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex-shrink-0" />}
                       </div>
                     </td>
                     <td className="px-3 py-3 text-xs">

@@ -30,7 +30,7 @@ const mainItems = navItems.filter(item => item.category === 'main');
 const toolsItems = navItems.filter(item => item.category === 'tools');
 const infoItems = navItems.filter(item => item.category === 'info');
 
-// Mobile Network Selector - Full width, more prominent
+// Mobile Network Selector - Compact for mobile
 const MobileNetworkSelector: React.FC = () => {
   const { setNetwork, isMainnet } = useNetwork();
   const { refreshAll } = useRPCContext();
@@ -64,53 +64,44 @@ const MobileNetworkSelector: React.FC = () => {
   }, []);
 
   return (
-    <div className="space-y-2">
-      {/* Network Toggle Buttons */}
-      <div className="flex gap-2">
+    <div className="flex items-center gap-2 p-2 bg-white/5 rounded-lg border border-white/10">
+      {/* Network Toggle Buttons - Compact */}
+      <div className="flex gap-1.5 flex-1">
         <button
           onClick={() => setNetwork('devnet')}
           className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-medium transition-all',
+            'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[10px] font-medium transition-all',
             !isMainnet 
               ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400' 
-              : 'bg-white/5 border border-white/10 text-white/50 hover:bg-white/10'
+              : 'bg-white/5 border border-transparent text-white/40'
           )}
         >
-          <div className={cn('w-2 h-2 rounded-full', !isMainnet ? 'bg-emerald-400 animate-pulse' : 'bg-white/30')} />
+          <div className={cn('w-1.5 h-1.5 rounded-full', !isMainnet ? 'bg-emerald-400' : 'bg-white/30')} />
           Devnet
-          {!isMainnet && <span className="text-[9px] opacity-60">LIVE</span>}
         </button>
         <button
           onClick={() => setNetwork('mainnet')}
           className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-medium transition-all',
+            'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[10px] font-medium transition-all',
             isMainnet 
               ? 'bg-blue-500/20 border border-blue-500/40 text-blue-400' 
-              : 'bg-white/5 border border-white/10 text-white/50 hover:bg-white/10'
+              : 'bg-white/5 border border-transparent text-white/40'
           )}
         >
-          <div className={cn('w-2 h-2 rounded-full', isMainnet ? 'bg-blue-400 animate-pulse' : 'bg-white/30')} />
+          <div className={cn('w-1.5 h-1.5 rounded-full', isMainnet ? 'bg-blue-400' : 'bg-white/30')} />
           Mainnet
-          {isMainnet && <span className="text-[9px] opacity-60">LIVE</span>}
         </button>
       </div>
       
-      {/* Refresh Timer */}
-      <div className="flex items-center justify-between px-3 py-2 bg-white/5 rounded-lg border border-white/10">
-        <div className="flex items-center gap-2">
-          <div className={cn(
-            'w-1.5 h-1.5 rounded-full',
-            isMainnet ? 'bg-blue-400' : 'bg-emerald-400'
-          )} />
-          <span className="text-white/50 text-xs">Auto-refresh in</span>
-          <span className="font-mono text-white/70 text-xs">{timeLeft}s</span>
-        </div>
+      {/* Refresh Timer - Compact */}
+      <div className="flex items-center gap-1.5 pl-2 border-l border-white/10">
+        <span className="font-mono text-white/50 text-[10px]">{timeLeft}s</span>
         <button
           onClick={handleRefresh}
-          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+          className="p-1 rounded hover:bg-white/10 transition-colors"
         >
           <RefreshCw className={cn(
-            'w-3.5 h-3.5 text-white/50 hover:text-white/80',
+            'w-3 h-3 text-white/40',
             isRefreshing && 'animate-spin'
           )} />
         </button>
