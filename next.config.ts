@@ -58,9 +58,6 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', '@tanstack/react-query'],
   },
   
-  // Enable static optimization
-  output: 'standalone',
-  
   // Image optimization
   images: {
     formats: ['image/webp', 'image/avif'],
