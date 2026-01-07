@@ -48,4 +48,4 @@ __tests__/
 *.spec.ts
 
 # Documentation (optional - remove if you want docs deployed)
-docs/
+documentation/
