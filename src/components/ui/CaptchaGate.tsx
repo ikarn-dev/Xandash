@@ -31,7 +31,6 @@ const SESSION_KEY_PREFIX = 'xandash_captcha_';
 
 export function CaptchaGate({ children, title, description, cacheKey }: CaptchaGateProps) {
   const [isVerified, setIsVerified] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLocalhost, setIsLocalhost] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -60,7 +59,6 @@ export function CaptchaGate({ children, title, description, cacheKey }: CaptchaG
   }, [sessionKey]);
 
   const handleVerify = useCallback(async (token: string) => {
-    setIsVerifying(true);
     setError(null);
     
     try {
@@ -83,8 +81,6 @@ export function CaptchaGate({ children, title, description, cacheKey }: CaptchaG
       }
     } catch {
       setError('Network error. Please try again.');
-    } finally {
-      setIsVerifying(false);
     }
   }, [sessionKey]);
 
@@ -141,22 +137,15 @@ export function CaptchaGate({ children, title, description, cacheKey }: CaptchaG
 
             {/* Captcha Widget */}
             <div className="w-full">
-              {isVerifying ? (
-                <div className="flex items-center justify-center gap-3 py-4 text-white/60">
-                  <LoaderIcon className="w-5 h-5 animate-spin" />
-                  <span className="font-mono text-sm">VERIFYING...</span>
-                </div>
-              ) : (
-                <div className="flex justify-center">
-                  <TurnstileWidget
-                    siteKey={SITE_KEY}
-                    onVerify={handleVerify}
-                    onError={() => setError('Captcha error. Please refresh.')}
-                    onExpire={() => setError('Captcha expired. Please try again.')}
-                    theme="dark"
-                  />
-                </div>
-              )}
+              <div className="flex justify-center">
+                <TurnstileWidget
+                  siteKey={SITE_KEY}
+                  onVerify={handleVerify}
+                  onError={() => setError('Captcha error. Please refresh.')}
+                  onExpire={() => setError('Captcha expired. Please try again.')}
+                  theme="dark"
+                />
+              </div>
             </div>
 
             {/* Error */}

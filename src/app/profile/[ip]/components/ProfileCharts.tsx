@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 
 interface LineChartProps {
   data: { time: number; value: number }[];
@@ -48,12 +48,24 @@ export const LineChart = ({
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; value: number; time: number; index: number } | null>(null);
   const [isAnimating, setIsAnimating] = useState(true);
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number | null>(null);
+  const lastInteractionRef = useRef<number>(0);
 
   useEffect(() => {
     setIsAnimating(true);
     const timer = setTimeout(() => setIsAnimating(false), 800);
     return () => clearTimeout(timer);
   }, [data]);
+
+  // Cleanup RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
 
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return null;
@@ -63,12 +75,10 @@ export const LineChart = ({
     const rawMax = Math.max(...values);
     const rawRange = rawMax - rawMin;
     
-    // Handle constant or near-constant data - create artificial range for visibility
     const isConstant = rawRange < 0.001 || (rawRange / Math.max(Math.abs(rawMax), 0.001)) < 0.01;
     
     let minValue: number, maxValue: number, range: number;
     if (isConstant) {
-      // Create a 10% padding around the constant value for visibility
       const avgValue = (rawMin + rawMax) / 2;
       const padding = Math.max(Math.abs(avgValue) * 0.1, 1);
       minValue = avgValue - padding;
@@ -87,16 +97,75 @@ export const LineChart = ({
     
     const points = data.map((d, i) => {
       const x = padding.left + (i / (data.length - 1 || 1)) * chartWidth;
-      // For constant data, center the line in the middle of the chart
-      const normalizedValue = isConstant 
-        ? 0.5 
-        : (d.value - minValue) / range;
+      const normalizedValue = isConstant ? 0.5 : (d.value - minValue) / range;
       const y = padding.top + chartHeight - normalizedValue * chartHeight;
       return { x, y, value: d.value, time: d.time, index: i };
     });
 
     return { points, minValue: rawMin, maxValue: rawMax, width, height, padding, chartHeight, isConstant };
   }, [data, height]);
+
+  // Throttled interaction handler
+  const findClosestPoint = useCallback((clientX: number) => {
+    if (!svgRef.current || !chartData) return;
+    
+    const now = Date.now();
+    // Throttle to 60fps (16ms) on desktop, 30fps (33ms) on mobile
+    const throttleMs = 'ontouchstart' in window ? 33 : 16;
+    if (now - lastInteractionRef.current < throttleMs) return;
+    lastInteractionRef.current = now;
+
+    const rect = svgRef.current.getBoundingClientRect();
+    const mouseX = ((clientX - rect.left) / rect.width) * chartData.width;
+    
+    let closestPoint = chartData.points[0];
+    let minDistance = Math.abs(mouseX - chartData.points[0].x);
+    
+    for (const point of chartData.points) {
+      const distance = Math.abs(mouseX - point.x);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestPoint = point;
+      }
+    }
+    
+    setHoveredPoint(closestPoint);
+  }, [chartData]);
+
+  const handleMouseMove = useCallback((event: React.MouseEvent<SVGSVGElement>) => {
+    // Use RAF for smooth updates
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
+    rafRef.current = requestAnimationFrame(() => {
+      findClosestPoint(event.clientX);
+    });
+  }, [findClosestPoint]);
+
+  const handleTouchMove = useCallback((event: React.TouchEvent<SVGSVGElement>) => {
+    event.preventDefault(); // Prevent scroll while interacting with chart
+    if (event.touches.length > 0) {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+      rafRef.current = requestAnimationFrame(() => {
+        findClosestPoint(event.touches[0].clientX);
+      });
+    }
+  }, [findClosestPoint]);
+
+  const handleTouchStart = useCallback((event: React.TouchEvent<SVGSVGElement>) => {
+    if (event.touches.length > 0) {
+      findClosestPoint(event.touches[0].clientX);
+    }
+  }, [findClosestPoint]);
+
+  const handleInteractionEnd = useCallback(() => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
+    setHoveredPoint(null);
+  }, []);
 
   if (!chartData) {
     return (
@@ -111,55 +180,27 @@ export const LineChart = ({
   const areaPath = `${smoothPath} L ${points[points.length - 1].x},${height - padding.bottom} L ${points[0].x},${height - padding.bottom} Z`;
   const lastPoint = points[points.length - 1];
 
-  const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
-    if (!svgRef.current) return;
-    const rect = svgRef.current.getBoundingClientRect();
-    const mouseX = ((event.clientX - rect.left) / rect.width) * width;
-    
-    let closestPoint = points[0];
-    let minDistance = Math.abs(mouseX - points[0].x);
-    
-    points.forEach(point => {
-      const distance = Math.abs(mouseX - point.x);
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestPoint = point;
-      }
-    });
-    
-    setHoveredPoint(closestPoint);
-  };
-
   const gridLines = [0.25, 0.5, 0.75].map(ratio => padding.top + chartHeight * ratio);
 
   return (
-    <div className="relative w-full" style={{ height }}>
+    <div ref={containerRef} className="relative w-full touch-none" style={{ height }}>
       <svg 
         ref={svgRef}
         viewBox={`0 0 ${width} ${height}`} 
         className="w-full h-full cursor-crosshair" 
         preserveAspectRatio="none"
         onMouseMove={handleMouseMove}
-        onMouseLeave={() => setHoveredPoint(null)}
+        onMouseLeave={handleInteractionEnd}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleInteractionEnd}
+        onTouchCancel={handleInteractionEnd}
       >
         <defs>
           <linearGradient id={`areaGradient-${label}`} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={color} stopOpacity="0.4" />
-            <stop offset="50%" stopColor={color} stopOpacity="0.15" />
+            <stop offset="0%" stopColor={color} stopOpacity="0.3" />
             <stop offset="100%" stopColor={color} stopOpacity="0.02" />
           </linearGradient>
-          <linearGradient id={`lineGradient-${label}`} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor={color} stopOpacity="0.6" />
-            <stop offset="50%" stopColor={color} stopOpacity="1" />
-            <stop offset="100%" stopColor={color} stopOpacity="1" />
-          </linearGradient>
-          <filter id={`glow-${label}`} x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-            <feMerge>
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
         </defs>
         
         {/* Grid lines */}
@@ -169,101 +210,80 @@ export const LineChart = ({
           />
         ))}
         
-        {/* Area fill */}
+        {/* Area fill - simplified, no filter */}
         <path 
           d={areaPath} 
           fill={`url(#areaGradient-${label})`}
-          className={`transition-opacity duration-500 ${isAnimating ? 'opacity-0' : 'opacity-100'}`}
+          className={isAnimating ? 'opacity-0' : 'opacity-100'}
+          style={{ transition: 'opacity 0.3s' }}
         />
         
-        {/* Main line with glow */}
+        {/* Main line - no filter for performance */}
         <path 
           d={smoothPath} 
           fill="none" 
-          stroke={`url(#lineGradient-${label})`}
-          strokeWidth="2.5" 
+          stroke={color}
+          strokeWidth="2" 
           strokeLinecap="round" 
           strokeLinejoin="round"
-          filter={`url(#glow-${label})`}
-          className={`transition-all duration-500 ${isAnimating ? 'opacity-0' : 'opacity-100'}`}
-          style={{ 
-            strokeDasharray: isAnimating ? '1000' : '0',
-            strokeDashoffset: isAnimating ? '1000' : '0',
-          }}
+          className={isAnimating ? 'opacity-0' : 'opacity-100'}
+          style={{ transition: 'opacity 0.3s' }}
         />
         
         {/* Hover vertical line */}
         {hoveredPoint && (
-          <g>
-            <line 
-              x1={hoveredPoint.x} y1={padding.top} 
-              x2={hoveredPoint.x} y2={height - padding.bottom}
-              stroke="white" strokeWidth="1" strokeOpacity="0.2"
-            />
-            <line 
-              x1={padding.left} y1={hoveredPoint.y} 
-              x2={width - padding.right} y2={hoveredPoint.y}
-              stroke={color} strokeWidth="0.5" strokeOpacity="0.4" strokeDasharray="3,3"
-            />
-          </g>
+          <line 
+            x1={hoveredPoint.x} y1={padding.top} 
+            x2={hoveredPoint.x} y2={height - padding.bottom}
+            stroke="white" strokeWidth="1" strokeOpacity="0.3"
+          />
         )}
         
-        {/* Data points - only show on hover or last point */}
-        {points.map((point, i) => {
-          const isHovered = hoveredPoint?.index === i;
-          const isLast = i === points.length - 1;
-          const showPoint = isHovered || (highlightCurrent && isLast);
-          
-          if (!showPoint) return null;
-          
-          return (
-            <g key={i}>
-              {/* Outer glow ring */}
-              <circle 
-                cx={point.x} cy={point.y} r={isLast && highlightCurrent ? "5" : "4"}
-                fill="none" stroke={color} strokeWidth="1" strokeOpacity="0.3"
-                className={isLast && highlightCurrent ? 'animate-ping' : ''}
-              />
-              {/* Inner solid circle */}
-              <circle 
-                cx={point.x} cy={point.y} r="3"
-                fill={color} stroke="#000" strokeWidth="1.5"
-              />
-              {/* Center dot */}
-              <circle cx={point.x} cy={point.y} r="1" fill="white" />
-            </g>
-          );
-        })}
+        {/* Hovered point */}
+        {hoveredPoint && (
+          <circle 
+            cx={hoveredPoint.x} cy={hoveredPoint.y} r="4"
+            fill={color} stroke="#000" strokeWidth="1.5"
+          />
+        )}
+        
+        {/* Last point indicator */}
+        {highlightCurrent && lastPoint && !hoveredPoint && (
+          <circle 
+            cx={lastPoint.x} cy={lastPoint.y} r="3"
+            fill={color} stroke="#000" strokeWidth="1"
+          />
+        )}
       </svg>
       
       {/* Labels */}
-      <div className="absolute top-0.5 left-2 text-[10px] text-white/40 font-medium tracking-wide uppercase">{label}</div>
-      <div className={`absolute top-0.5 right-2 flex items-center gap-1.5 text-[11px] font-mono font-bold px-1.5 py-0.5 rounded ${highlightCurrent ? 'bg-black/60 backdrop-blur-sm' : ''}`}>
+      <div className="absolute top-0.5 left-2 text-[10px] text-white/40 font-medium tracking-wide uppercase pointer-events-none">{label}</div>
+      <div className={`absolute top-0.5 right-2 flex items-center gap-1.5 text-[11px] font-mono font-bold px-1.5 py-0.5 rounded pointer-events-none ${highlightCurrent ? 'bg-black/60' : ''}`}>
         <span style={{ color }}>{valueFormatter(chartData.points[chartData.points.length - 1]?.value || 0)}</span>
         {highlightCurrent && (
           <span className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: color }}></span>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }}></span>
             <span className="text-white/50 text-[9px]">LIVE</span>
           </span>
         )}
       </div>
       
       {/* Min/Max labels */}
-      <div className="absolute bottom-0 left-2 text-[8px] text-white/25 font-mono">
+      <div className="absolute bottom-0 left-2 text-[8px] text-white/25 font-mono pointer-events-none">
         {isConstant ? 'stable' : `min: ${valueFormatter(minValue)}`}
       </div>
-      <div className="absolute bottom-0 right-2 text-[8px] text-white/25 font-mono">
+      <div className="absolute bottom-0 right-2 text-[8px] text-white/25 font-mono pointer-events-none">
         {isConstant ? valueFormatter(maxValue) : `max: ${valueFormatter(maxValue)}`}
       </div>
       
-      {/* Tooltip - positioned to stay within bounds */}
+      {/* Tooltip */}
       {hoveredPoint && (
         <div 
-          className="absolute bg-black/95 backdrop-blur-md border border-white/20 rounded px-2.5 py-1.5 pointer-events-none z-50 shadow-xl whitespace-nowrap"
+          className="absolute bg-black/95 border border-white/20 rounded px-2 py-1.5 pointer-events-none z-50 shadow-lg"
           style={{ 
-            left: `${Math.min(Math.max((hoveredPoint.x / width) * 100, 5), 95)}%`, 
+            left: `${Math.min(Math.max((hoveredPoint.x / width) * 100, 10), 90)}%`, 
             top: '50%',
-            transform: `translateX(-50%) translateY(-50%)`,
+            transform: 'translateX(-50%) translateY(-50%)',
           }}
         >
           <div className="flex items-center gap-2">
@@ -287,101 +307,114 @@ interface StatusChartProps {
 export const StatusChart = ({ data, height = 50 }: StatusChartProps) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [isAnimating, setIsAnimating] = useState(true);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const rafRef = useRef<number | null>(null);
+  const lastInteractionRef = useRef<number>(0);
 
   useEffect(() => {
     setIsAnimating(true);
-    const timer = setTimeout(() => setIsAnimating(false), 600);
+    const timer = setTimeout(() => setIsAnimating(false), 400);
     return () => clearTimeout(timer);
   }, [data]);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
+
+  const statusConfig: Record<string, { color: string; label: string }> = {
+    online: { color: '#10b981', label: 'Online' },
+    syncing: { color: '#f59e0b', label: 'Syncing' },
+    offline: { color: '#ef4444', label: 'Offline' },
+  };
+
+  const findHoveredBar = useCallback((clientX: number) => {
+    if (!svgRef.current || !data.length) return;
+    
+    const now = Date.now();
+    const throttleMs = 'ontouchstart' in window ? 50 : 16;
+    if (now - lastInteractionRef.current < throttleMs) return;
+    lastInteractionRef.current = now;
+
+    const rect = svgRef.current.getBoundingClientRect();
+    const relativeX = (clientX - rect.left) / rect.width;
+    const index = Math.floor(relativeX * data.length);
+    setHoveredIndex(Math.max(0, Math.min(data.length - 1, index)));
+  }, [data.length]);
+
+  const handleMouseMove = useCallback((event: React.MouseEvent<SVGSVGElement>) => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => findHoveredBar(event.clientX));
+  }, [findHoveredBar]);
+
+  const handleTouchMove = useCallback((event: React.TouchEvent<SVGSVGElement>) => {
+    event.preventDefault();
+    if (event.touches.length > 0) {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => findHoveredBar(event.touches[0].clientX));
+    }
+  }, [findHoveredBar]);
+
+  const handleTouchStart = useCallback((event: React.TouchEvent<SVGSVGElement>) => {
+    if (event.touches.length > 0) {
+      findHoveredBar(event.touches[0].clientX);
+    }
+  }, [findHoveredBar]);
+
+  const handleInteractionEnd = useCallback(() => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    setHoveredIndex(null);
+  }, []);
 
   if (!data || data.length === 0) {
     return <div className="flex items-center justify-center h-full text-white/40 text-sm">No data</div>;
   }
 
-  const statusConfig: Record<string, { color: string; glow: string; label: string }> = {
-    online: { color: '#10b981', glow: 'rgba(16, 185, 129, 0.5)', label: 'Online' },
-    syncing: { color: '#f59e0b', glow: 'rgba(245, 158, 11, 0.5)', label: 'Syncing' },
-    offline: { color: '#ef4444', glow: 'rgba(239, 68, 68, 0.5)', label: 'Offline' },
-  };
-
   const barWidth = 100 / data.length;
   const gap = Math.min(0.5, 2 / data.length);
 
   return (
-    <div className="relative w-full" style={{ height }}>
+    <div className="relative w-full touch-none" style={{ height }}>
       <svg 
+        ref={svgRef}
         viewBox="0 0 100 35" 
         className="w-full h-full" 
         preserveAspectRatio="none"
-        onMouseLeave={() => setHoveredIndex(null)}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleInteractionEnd}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleInteractionEnd}
+        onTouchCancel={handleInteractionEnd}
       >
-        <defs>
-          {Object.entries(statusConfig).map(([status, config]) => (
-            <linearGradient key={status} id={`statusGradient-${status}`} x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={config.color} stopOpacity="1" />
-              <stop offset="100%" stopColor={config.color} stopOpacity="0.6" />
-            </linearGradient>
-          ))}
-        </defs>
-        
         {data.map((d, i) => {
           const config = statusConfig[d.status] || statusConfig.offline;
           const isHovered = hoveredIndex === i;
-          const isLast = i === data.length - 1;
           
           return (
-            <g key={i} onMouseEnter={() => setHoveredIndex(i)}>
-              {/* Glow effect for hovered/last */}
-              {(isHovered || isLast) && (
-                <rect 
-                  x={i * barWidth + gap} 
-                  y="0" 
-                  width={barWidth - gap * 2} 
-                  height="30"
-                  fill={config.glow}
-                  filter="blur(4px)"
-                  opacity="0.5"
-                />
-              )}
-              {/* Main bar */}
-              <rect 
-                x={i * barWidth + gap} 
-                y="2" 
-                width={barWidth - gap * 2} 
-                height="26"
-                rx="1"
-                fill={`url(#statusGradient-${d.status})`}
-                className="transition-all duration-200"
-                style={{ 
-                  opacity: isAnimating ? 0 : (isHovered ? 1 : 0.85),
-                  transform: isHovered ? 'scaleY(1.1)' : 'scaleY(1)',
-                  transformOrigin: 'center',
-                  animationDelay: `${i * 20}ms`,
-                }}
-              />
-              {/* Top highlight */}
-              <rect 
-                x={i * barWidth + gap + 1} 
-                y="3" 
-                width={barWidth - gap * 2 - 2} 
-                height="2"
-                rx="0.5"
-                fill="white"
-                opacity={isAnimating ? 0 : 0.2}
-              />
-            </g>
+            <rect 
+              key={i}
+              x={i * barWidth + gap} 
+              y="2" 
+              width={barWidth - gap * 2} 
+              height="26"
+              rx="1"
+              fill={config.color}
+              opacity={isAnimating ? 0 : (isHovered ? 1 : 0.7)}
+              style={{ transition: 'opacity 0.15s' }}
+            />
           );
         })}
       </svg>
       
       {/* Legend */}
-      <div className="flex justify-center gap-4 mt-1.5">
+      <div className="flex justify-center gap-4 mt-1.5 pointer-events-none">
         {Object.entries(statusConfig).map(([status, config]) => (
           <div key={status} className="flex items-center gap-1.5 text-[10px]">
-            <div 
-              className="w-2.5 h-2.5 rounded-sm shadow-sm" 
-              style={{ backgroundColor: config.color, boxShadow: `0 0 6px ${config.glow}` }}
-            />
+            <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: config.color }} />
             <span className="text-white/50">{config.label}</span>
           </div>
         ))}
@@ -390,21 +423,16 @@ export const StatusChart = ({ data, height = 50 }: StatusChartProps) => {
       {/* Tooltip */}
       {hoveredIndex !== null && data[hoveredIndex] && (
         <div 
-          className="absolute bg-black/90 backdrop-blur-md border border-white/10 rounded-lg px-3 py-2 pointer-events-none z-20 shadow-xl"
+          className="absolute bg-black/95 border border-white/10 rounded-lg px-3 py-2 pointer-events-none z-20 shadow-lg"
           style={{ 
-            left: `${Math.min(Math.max((hoveredIndex / data.length) * 100, 10), 90)}%`,
-            top: '-10px',
+            left: `${Math.min(Math.max((hoveredIndex / data.length) * 100, 15), 85)}%`,
+            top: '-8px',
             transform: 'translate(-50%, -100%)'
           }}
         >
           <div className="flex items-center gap-2 mb-1">
-            <div 
-              className="w-2 h-2 rounded-full" 
-              style={{ backgroundColor: statusConfig[data[hoveredIndex].status]?.color }}
-            />
-            <span className="font-medium text-white text-xs capitalize">
-              {data[hoveredIndex].status}
-            </span>
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: statusConfig[data[hoveredIndex].status]?.color }} />
+            <span className="font-medium text-white text-xs capitalize">{data[hoveredIndex].status}</span>
           </div>
           <div className="text-white/50 text-[10px] font-mono">
             {new Date(data[hoveredIndex].time * 1000).toLocaleString()}

@@ -13,3 +13,4 @@ export * from './Breadcrumb';
 export * from './CaptchaGate';
 export * from './CornerAccents';
 export * from './SlotNumber';
+export * from './Marquee';

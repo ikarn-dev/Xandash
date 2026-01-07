@@ -30,6 +30,95 @@ const mainItems = navItems.filter(item => item.category === 'main');
 const toolsItems = navItems.filter(item => item.category === 'tools');
 const infoItems = navItems.filter(item => item.category === 'info');
 
+// Mobile Network Selector - Full width, more prominent
+const MobileNetworkSelector: React.FC = () => {
+  const { setNetwork, isMainnet } = useNetwork();
+  const { refreshAll } = useRPCContext();
+  const [timeLeft, setTimeLeft] = useState(30);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshRef = useRef(refreshAll);
+
+  useEffect(() => {
+    refreshRef.current = refreshAll;
+  }, [refreshAll]);
+
+  useEffect(() => {
+    const tick = () => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          setTimeout(() => refreshRef.current(), 0);
+          return 30;
+        }
+        return prev - 1;
+      });
+    };
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    refreshRef.current();
+    setTimeLeft(30);
+    setTimeout(() => setIsRefreshing(false), 500);
+  }, []);
+
+  return (
+    <div className="space-y-2">
+      {/* Network Toggle Buttons */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setNetwork('devnet')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-medium transition-all',
+            !isMainnet 
+              ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400' 
+              : 'bg-white/5 border border-white/10 text-white/50 hover:bg-white/10'
+          )}
+        >
+          <div className={cn('w-2 h-2 rounded-full', !isMainnet ? 'bg-emerald-400 animate-pulse' : 'bg-white/30')} />
+          Devnet
+          {!isMainnet && <span className="text-[9px] opacity-60">LIVE</span>}
+        </button>
+        <button
+          onClick={() => setNetwork('mainnet')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-medium transition-all',
+            isMainnet 
+              ? 'bg-blue-500/20 border border-blue-500/40 text-blue-400' 
+              : 'bg-white/5 border border-white/10 text-white/50 hover:bg-white/10'
+          )}
+        >
+          <div className={cn('w-2 h-2 rounded-full', isMainnet ? 'bg-blue-400 animate-pulse' : 'bg-white/30')} />
+          Mainnet
+          {isMainnet && <span className="text-[9px] opacity-60">LIVE</span>}
+        </button>
+      </div>
+      
+      {/* Refresh Timer */}
+      <div className="flex items-center justify-between px-3 py-2 bg-white/5 rounded-lg border border-white/10">
+        <div className="flex items-center gap-2">
+          <div className={cn(
+            'w-1.5 h-1.5 rounded-full',
+            isMainnet ? 'bg-blue-400' : 'bg-emerald-400'
+          )} />
+          <span className="text-white/50 text-xs">Auto-refresh in</span>
+          <span className="font-mono text-white/70 text-xs">{timeLeft}s</span>
+        </div>
+        <button
+          onClick={handleRefresh}
+          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+        >
+          <RefreshCw className={cn(
+            'w-3.5 h-3.5 text-white/50 hover:text-white/80',
+            isRefreshing && 'animate-spin'
+          )} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // Network Status with Live indicator
 const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
   const { setNetwork, isMainnet } = useNetwork();
@@ -334,9 +423,10 @@ export const Navbar: React.FC = () => {
         )}>
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 space-y-3 sm:space-y-4 scrollbar-hide">
-            {/* Mobile Network Status */}
-            <div className="sm:hidden pb-3 border-b border-white/10">
-              <NetworkStatus compact />
+            {/* Mobile Network Status - Full Width Prominent */}
+            <div className="sm:hidden">
+              <p className="text-[9px] sm:text-[10px] font-bold text-white/40 uppercase tracking-wider px-2 mb-2">Network</p>
+              <MobileNetworkSelector />
             </div>
 
             {/* Main Links */}

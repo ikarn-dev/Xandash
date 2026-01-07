@@ -45,7 +45,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#3B82F6",
+  themeColor: "#000000",
 };
 
 export default function RootLayout({
@@ -54,18 +54,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark bg-black">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#3B82F6" />
+        <meta name="theme-color" content="#000000" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="XanDash" />
         <link rel="apple-touch-icon" href="/icon.png" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <style dangerouslySetInnerHTML={{ __html: `html,body{background:#000!important}` }} />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased gradient-bg min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased gradient-bg min-h-screen bg-black`}
       >
         <QueryProvider>
           <RPCProvider>

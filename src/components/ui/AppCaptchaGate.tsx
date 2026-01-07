@@ -27,7 +27,6 @@ const SESSION_KEY = 'xandash_verified';
 
 export function AppCaptchaGate({ children }: AppCaptchaGateProps) {
   const [isVerified, setIsVerified] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLocalhost, setIsLocalhost] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -51,7 +50,6 @@ export function AppCaptchaGate({ children }: AppCaptchaGateProps) {
   }, []);
 
   const handleVerify = useCallback(async (token: string) => {
-    setIsVerifying(true);
     setError(null);
     
     try {
@@ -71,8 +69,6 @@ export function AppCaptchaGate({ children }: AppCaptchaGateProps) {
       }
     } catch {
       setError('Network error. Please try again.');
-    } finally {
-      setIsVerifying(false);
     }
   }, []);
 
@@ -123,20 +119,13 @@ export function AppCaptchaGate({ children }: AppCaptchaGateProps) {
             </div>
 
             <div className="w-full pt-2">
-              {isVerifying ? (
-                <div className="flex items-center justify-center gap-3 py-6 text-white/60">
-                  <LoaderIcon className="w-5 h-5" />
-                  <span className="font-mono text-sm">VERIFYING...</span>
-                </div>
-              ) : (
-                <TurnstileWidget
-                  siteKey={SITE_KEY}
-                  onVerify={handleVerify}
-                  onError={() => setError('Captcha error. Please refresh.')}
-                  onExpire={() => setError('Captcha expired. Please try again.')}
-                  theme="dark"
-                />
-              )}
+              <TurnstileWidget
+                siteKey={SITE_KEY}
+                onVerify={handleVerify}
+                onError={() => setError('Captcha error. Please refresh.')}
+                onExpire={() => setError('Captcha expired. Please try again.')}
+                theme="dark"
+              />
             </div>
 
             {error && (
