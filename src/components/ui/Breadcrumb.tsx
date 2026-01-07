@@ -25,8 +25,10 @@ const routeNames: Record<string, string> = {
   'leaderboard': 'Leaderboard',
   'network': 'Network',
   'xand': 'XAND',
+  'stoinc': 'STOINC',
   'endpoints': 'Endpoints',
-  'about': 'Docs',
+  'about-xandash': 'About',
+  'docs': 'Docs',
   'profile': 'Node Profile',
   'country': 'Country',
 };
