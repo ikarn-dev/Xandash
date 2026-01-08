@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Pagination, ValidatorTableSkeleton, SearchBox } from '@/components/ui';
@@ -27,6 +27,13 @@ import {
 } from './hooks';
 import { CustomDropdown, CaptchaGate } from '@/components/ui';
 
+// Compare icon
+const CompareIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/>
+  </svg>
+);
+
 interface NodesPageClientProps {
   allValidators: ValidatorData[];
   initialPagination: {
@@ -52,6 +59,7 @@ export function NodesPageClientRefactored({
   const { network } = useNetwork();
   const [mounted, setMounted] = useState(false);
   const [clickedNodeId, setClickedNodeId] = useState<string | null>(null);
+  const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
 
   // Custom hooks for data management
   const { allValidators, dataFetchTime, stats, isLoadingNetwork, fetchData } = useNodesData(network);
@@ -77,6 +85,31 @@ export function NodesPageClientRefactored({
   } = useNodesFilters(allValidators, dataFetchTime);
 
   const { prefetchProfile, navigateToProfile } = usePrefetchProfile();
+
+  // Toggle node for comparison
+  const handleToggleCompare = useCallback((pubkey: string) => {
+    setSelectedForCompare(prev => {
+      if (prev.includes(pubkey)) {
+        return prev.filter(p => p !== pubkey);
+      }
+      if (prev.length >= 4) return prev;
+      return [...prev, pubkey];
+    });
+  }, []);
+
+  // Navigate to compare page with selected nodes
+  const handleCompareSelected = useCallback(() => {
+    if (selectedForCompare.length >= 2) {
+      const params = new URLSearchParams();
+      params.set('nodes', selectedForCompare.join(','));
+      router.push(`/compare?${params.toString()}`);
+    }
+  }, [selectedForCompare, router]);
+
+  // Clear compare selection
+  const handleClearCompare = useCallback(() => {
+    setSelectedForCompare([]);
+  }, []);
 
   // Set mounted state after hydration
   useEffect(() => {
@@ -286,8 +319,48 @@ export function NodesPageClientRefactored({
               getSortIcon={(column: string) => getSortIcon(column as any)}
               handleSort={(column: string) => handleSort(column as any)}
               sortBy={sortBy}
+              selectedForCompare={selectedForCompare}
+              onToggleCompare={handleToggleCompare}
             />
           </div>
+
+          {/* Floating Compare Button */}
+          {selectedForCompare.length > 0 && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-black/95 border border-emerald-500/30 rounded-full px-4 py-2 shadow-lg shadow-emerald-500/20 backdrop-blur-xl animate-blur-reveal">
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-1">
+                  {selectedForCompare.slice(0, 4).map((_, i) => (
+                    <div 
+                      key={i} 
+                      className="w-6 h-6 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-[10px] text-emerald-400 font-bold"
+                    >
+                      {i + 1}
+                    </div>
+                  ))}
+                </div>
+                <span className="text-white/60 text-sm">{selectedForCompare.length} selected</span>
+              </div>
+              <div className="w-px h-6 bg-white/10" />
+              <button
+                onClick={handleClearCompare}
+                className="px-3 py-1.5 text-xs text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+              >
+                Clear
+              </button>
+              <button
+                onClick={handleCompareSelected}
+                disabled={selectedForCompare.length < 2}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  selectedForCompare.length >= 2
+                    ? 'bg-emerald-500 text-white hover:bg-emerald-400'
+                    : 'bg-white/10 text-white/40 cursor-not-allowed'
+                }`}
+              >
+                <CompareIcon className="w-4 h-4" />
+                Compare
+              </button>
+            </div>
+          )}
 
           {/* Pagination */}
           {pagination.totalPages > 1 && (

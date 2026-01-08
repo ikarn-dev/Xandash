@@ -198,15 +198,97 @@ export function AIAssistant() {
                 <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
                   <TriangleLogo className="w-5 h-5 sm:w-6 sm:h-6 text-white/60" />
                 </div>
-                <p className="text-white/40 text-sm">How can I help you today?</p>
-                <div className="mt-3 sm:mt-4 space-y-2">
-                  {['Network overview', 'Analyze node health', 'Top performing nodes'].map((q) => (
+                <p className="text-white/40 text-sm mb-3">How can I help you today?</p>
+                
+                {/* Quick Templates */}
+                <div className="space-y-1.5 text-left">
+                  <p className="text-[10px] text-white/30 uppercase tracking-wider px-1 mb-2">Quick queries</p>
+                  {[
+                    { label: 'Network overview', icon: (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+                      </svg>
+                    )},
+                    { label: 'Top earning nodes', icon: (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+                      </svg>
+                    )},
+                    { label: 'XAND token price', icon: (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/><path d="M12 6v12"/><path d="M15 9.5c-.5-1-1.5-1.5-3-1.5s-2.5.5-3 1.5c-.5 1 .5 2 3 2.5s3.5 1.5 3 2.5c-.5 1-1.5 1.5-3 1.5s-2.5-.5-3-1.5"/>
+                      </svg>
+                    )},
+                  ].map((q) => (
                     <button
-                      key={q}
-                      onClick={() => setInput(q)}
-                      className="block w-full px-3 py-2 text-xs text-white/60 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 rounded-lg transition-colors text-left cursor-pointer"
+                      key={q.label}
+                      onClick={() => setInput(q.label)}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-xs text-white/60 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 rounded-lg transition-colors text-left cursor-pointer"
                     >
-                      {q}
+                      <span className="text-white/40">{q.icon}</span>
+                      <span>{q.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Node Analysis */}
+                <div className="space-y-1.5 text-left mt-3">
+                  <p className="text-[10px] text-white/30 uppercase tracking-wider px-1 mb-2">Node analysis</p>
+                  {[
+                    { label: 'Analyze node 173.249.54.191', icon: (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                      </svg>
+                    )},
+                    { label: 'Nodes in Germany', icon: (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                      </svg>
+                    )},
+                    { label: 'Offline nodes count', icon: (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+                      </svg>
+                    )},
+                  ].map((q) => (
+                    <button
+                      key={q.label}
+                      onClick={() => setInput(q.label)}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-xs text-white/60 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 rounded-lg transition-colors text-left cursor-pointer"
+                    >
+                      <span className="text-white/40">{q.icon}</span>
+                      <span>{q.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Advanced */}
+                <div className="space-y-1.5 text-left mt-3">
+                  <p className="text-[10px] text-white/30 uppercase tracking-wider px-1 mb-2">Advanced</p>
+                  {[
+                    { label: 'Network health analysis', icon: (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                      </svg>
+                    )},
+                    { label: 'Storage utilization stats', icon: (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/>
+                      </svg>
+                    )},
+                    { label: 'Version distribution', icon: (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
+                      </svg>
+                    )},
+                  ].map((q) => (
+                    <button
+                      key={q.label}
+                      onClick={() => setInput(q.label)}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-xs text-white/60 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 rounded-lg transition-colors text-left cursor-pointer"
+                    >
+                      <span className="text-white/40">{q.icon}</span>
+                      <span>{q.label}</span>
                     </button>
                   ))}
                 </div>

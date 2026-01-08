@@ -32,8 +32,10 @@ XanDash is a comprehensive monitoring dashboard for the Xandeum decentralized st
 
 ### Node Compare
 - **Multi-Node Comparison** - Compare up to 4 nodes side by side
+- **Quick Compare from Tables** - Select nodes directly from pNodes and Dashboard tables
 - **Instant Results** - Uses pre-fetched data for immediate comparison
 - **Historical Charts** - Credits, uptime, storage committed, and storage used trends
+- **AI-Powered Analysis** - Automatic comparison summary with insights
 - **Performance Metrics** - Side-by-side stats with "BEST" indicators
 
 ### Leaderboards
@@ -48,6 +50,8 @@ XanDash is a comprehensive monitoring dashboard for the Xandeum decentralized st
 - **Voting Stats** - Track voting participation and results
 
 ### Analytics
+- **AI Assistant** - Chat with XanDash AI for node analysis and network insights
+- **AI Node Summaries** - Automatic analysis on node profiles and comparisons
 - **Token Analytics** - Live XAND token price, market cap, and 24h charts via CoinGecko
 - **Country Analytics** - Node distribution and statistics by country
 - **Network Stats** - Total storage, uptime averages, version distribution
@@ -182,12 +186,15 @@ src/
 ## Recent Updates
 
 ### January 2026
+- **AI-Powered Analysis** - AI summaries on node profiles and comparison results
+- **Quick Compare from Tables** - Select nodes directly from pNodes and Dashboard tables
 - **Node Compare** - Compare up to 4 nodes with instant results and historical charts
 - **Multi-Leaderboards** - Separate rankings for Credits, Uptime, and Storage
 - **Governance Tracking** - Monitor proposals, treasury, and voting
 - **Performance Optimization** - Parallel API fetching, pre-loaded data for instant comparisons
 - **Mainnet Support** - Full dual-network support with network switcher
 - **Treasury Display** - Real-time SOL price conversion with exact token amounts
+- **Discord Community** - Added Discord link in footer
 
 ### Previous Updates
 - Cloudflare Turnstile CAPTCHA protection

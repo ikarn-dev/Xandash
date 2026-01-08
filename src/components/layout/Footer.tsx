@@ -75,12 +75,14 @@ export const Footer: React.FC = () => {
     ],
     community: [
       { label: 'Twitter/X', href: 'https://x.com/Xandeum', external: true },
+      { label: 'Discord', href: 'https://discord.com/invite/mGAxAuwnR9', external: true },
       { label: 'Xandeum Website', href: 'https://www.xandeum.network/', external: true },
     ],
   };
 
   const socialLinks = [
     { icon: TwitterIcon, href: 'https://x.com/Xandeum', label: 'Twitter' },
+    { icon: DiscordIcon, href: 'https://discord.com/invite/mGAxAuwnR9', label: 'Discord' },
     { icon: GlobeIcon, href: 'https://www.xandeum.network/', label: 'Website' },
   ];
 
@@ -200,7 +202,7 @@ export const Footer: React.FC = () => {
           <div className="flex items-center gap-2 text-white/40 text-xs">
             <span>© {currentYear} XanDash</span>
             <span className="text-white/20">•</span>
-            <span>v1.0.0</span>
+            <span>v1.1.0</span>
             <span className="text-white/20">•</span>
             <span className="flex items-center gap-1">
               Built by <a href="https://x.com/iKK6600" target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors">Karan</a>

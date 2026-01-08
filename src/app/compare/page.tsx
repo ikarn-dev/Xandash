@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout';
 import { useNetwork } from '@/libs/context/network-context';
 import { NodeSelector } from './components/NodeSelector';
@@ -37,6 +38,7 @@ const NODE_COLORS = ['#10b981', '#3b82f6', '#a855f7', '#f59e0b'];
 
 function ComparePageContent() {
   const { network } = useNetwork();
+  const searchParams = useSearchParams();
   const [allNodes, setAllNodes] = useState<NodeData[]>([]);
   const [serverTimestamp, setServerTimestamp] = useState<number>(0);
   const [selectedPubkeys, setSelectedPubkeys] = useState<string[]>([]);
@@ -44,6 +46,7 @@ function ComparePageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isComparing, setIsComparing] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [autoCompareTriggered, setAutoCompareTriggered] = useState(false);
 
   // Fetch all nodes with full data
   useEffect(() => {
@@ -82,6 +85,20 @@ function ComparePageContent() {
             .sort((a: NodeData, b: NodeData) => (b.credits || 0) - (a.credits || 0));
           
           setAllNodes(nodes);
+          
+          // Check for URL params and auto-select nodes
+          const nodesParam = searchParams.get('nodes');
+          if (nodesParam && !autoCompareTriggered) {
+            const pubkeysFromUrl = nodesParam.split(',').filter(Boolean);
+            const validPubkeys = pubkeysFromUrl.filter(pk => 
+              nodes.some((n: NodeData) => n.pubkey === pk)
+            ).slice(0, 4);
+            
+            if (validPubkeys.length >= 2) {
+              setSelectedPubkeys(validPubkeys);
+              setAutoCompareTriggered(true);
+            }
+          }
         }
       } catch (err) {
         toast.error('Failed to load nodes');
@@ -93,6 +110,13 @@ function ComparePageContent() {
     fetchNodes();
     handleReset();
   }, [network]);
+
+  // Auto-compare when nodes are selected from URL
+  useEffect(() => {
+    if (autoCompareTriggered && selectedPubkeys.length >= 2 && allNodes.length > 0 && !showResults) {
+      handleCompare();
+    }
+  }, [autoCompareTriggered, selectedPubkeys, allNodes]);
 
   const handleToggleNode = useCallback((pubkey: string) => {
     setSelectedPubkeys(prev => {

@@ -30,7 +30,17 @@ interface ResponsiveNodesTableProps {
   getSortIcon: (column: string) => React.ReactNode;
   handleSort: (column: string) => void;
   sortBy: string;
+  // Compare props
+  selectedForCompare?: string[];
+  onToggleCompare?: (pubkey: string) => void;
 }
+
+// Compare icon component
+const CompareIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/>
+  </svg>
+);
 
 export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
   validators,
@@ -47,33 +57,41 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
   getCountryFlagUrl,
   getSortIcon,
   handleSort,
+  selectedForCompare = [],
+  onToggleCompare,
 }) => {
   return (
     <div className="w-full bg-black border border-white/10 rounded-lg overflow-hidden">
       <div className="overflow-x-auto scrollbar-hide">
-        <table className="w-full min-w-[900px]">
+        <table className="w-full min-w-[950px]">
           <thead className="bg-white/5 border-b border-white/10">
             <tr>
+              {/* Compare column */}
+              {onToggleCompare && (
+                <th className="w-[4%] px-2 py-3 text-center text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
+                  <CompareIcon className="w-3.5 h-3.5 mx-auto text-white/50" />
+                </th>
+              )}
               <th 
-                className="w-[15%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
+                className="w-[14%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
                 onClick={() => handleSort('address')}
               >
                 Location {getSortIcon('address')}
               </th>
               <th 
-                className="w-[12%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
+                className="w-[11%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
                 onClick={() => handleSort('address')}
               >
                 IP Address {getSortIcon('address')}
               </th>
               <th 
-                className="w-[18%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
+                className="w-[17%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
                 onClick={() => handleSort('pubkey')}
               >
                 Pubkey {getSortIcon('pubkey')}
               </th>
               <th 
-                className="w-[7%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
+                className="w-[6%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
                 onClick={() => handleSort('public')}
               >
                 Public {getSortIcon('public')}
@@ -120,6 +138,8 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
               const nodeCredits = validator.pubkey ? credits[validator.pubkey] : null;
               const nodeId = `${validator.pubkey}-${validator.address}`;
               const animate = shouldAnimate(index);
+              const isSelected = selectedForCompare.includes(validator.pubkey);
+              const canSelect = selectedForCompare.length < 4 || isSelected;
               
               const timeDiff = dataFetchTime - validator.last_seen_timestamp;
               const isOnline = timeDiff < 1800;
@@ -143,11 +163,38 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                   key={nodeId}
                   className={`border-b border-white/5 hover:bg-white/5 transition-all duration-200 cursor-pointer group ${
                     clickedNodeId === nodeId ? 'bg-cyan-500/10 animate-pulse' : ''
-                  } ${animate ? 'animate-blur-reveal-item' : ''}`}
+                  } ${isSelected ? 'bg-emerald-500/10' : ''} ${animate ? 'animate-blur-reveal-item' : ''}`}
                   style={animate ? { animationDelay: `${index * 50}ms` } : {}}
                   onClick={() => onNavigate(validator.address || '', nodeId)}
                   onMouseEnter={() => onPrefetch(validator.address || '')}
                 >
+                  {/* Compare checkbox */}
+                  {onToggleCompare && (
+                    <td className="px-2 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (canSelect && validator.pubkey) onToggleCompare(validator.pubkey);
+                        }}
+                        disabled={!canSelect && !isSelected}
+                        className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${
+                          isSelected 
+                            ? 'bg-emerald-500 border-emerald-500 text-white' 
+                            : canSelect 
+                              ? 'border-white/30 hover:border-emerald-500/50 hover:bg-emerald-500/10' 
+                              : 'border-white/10 opacity-30 cursor-not-allowed'
+                        }`}
+                        title={isSelected ? 'Remove from compare' : canSelect ? 'Add to compare' : 'Max 4 nodes'}
+                      >
+                        {isSelected && (
+                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                            <path d="M5 12l5 5L20 7" />
+                          </svg>
+                        )}
+                      </button>
+                    </td>
+                  )}
+
                   {/* Location */}
                   <td className="px-3 py-3 text-xs">
                     <div className="flex items-center space-x-2 min-w-0">

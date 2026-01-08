@@ -252,6 +252,48 @@ Verifies Cloudflare Turnstile CAPTCHA token.
 
 ---
 
+### POST /api/ai-chat
+
+AI-powered chat endpoint for node analysis and network insights.
+
+**Body:**
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Analyze node 173.249.54.191"
+    }
+  ]
+}
+```
+
+**Response:** Server-Sent Events (SSE) stream
+
+```
+data: {"content": "Node "}
+data: {"content": "173.249.54.191 "}
+data: {"content": "is online..."}
+data: [DONE]
+```
+
+**Features:**
+- Automatic context building based on query type
+- Fetches live node data, network stats, token info
+- Supports node lookup by IP or pubkey
+- Country-based node statistics
+- Network health analysis
+- Streaming responses for real-time display
+
+**Supported Query Types:**
+- Node analysis: "Analyze node 173.249.54.191"
+- Country stats: "Nodes in Germany"
+- Network overview: "Network overview"
+- Token info: "XAND token price"
+- Credits: "Top earning nodes"
+
+---
+
 ### GET /api/db-status
 
 Checks MongoDB connection status.

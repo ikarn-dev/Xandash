@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { ComparisonChart } from './ComparisonChart';
+import { AISummary } from '@/components/ui/AISummary';
 
 interface NodeProfile {
   ip: string;
@@ -43,6 +44,27 @@ export function ResultsView({ nodes, onReset }: ResultsViewProps) {
     { key: 'uptime', label: 'Uptime', format: formatUptime, best: getBest('uptime') },
     { key: 'storage_committed', label: 'Storage', format: formatStorage, best: getBest('storage_committed') },
   ];
+
+  // Generate AI comparison prompt - clear format with proper storage units
+  const aiComparisonPrompt = useMemo(() => {
+    if (nodes.length < 2) return '';
+    
+    const formatStorageAI = (bytes: number) => {
+      if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}GB`;
+      if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+      if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+      return `${bytes}B`;
+    };
+    
+    const nodeDetails = nodes.map((n, i) => {
+      const days = (n.uptime / 86400).toFixed(1);
+      const storageCommitted = formatStorageAI(n.storage_committed);
+      const storageUsed = formatStorageAI(n.storage_used);
+      return `Node ${i+1} (${n.ip}): ${n.status}, ${n.credits.toLocaleString()} credits, ${days}d uptime, ${storageCommitted} committed (${storageUsed} used)`;
+    }).join('. ');
+
+    return `Compare these ${nodes.length} Xandeum network nodes and provide a brief summary. ${nodeDetails}. In 2-3 sentences: identify the best overall performer, note key differences between them, and give one actionable recommendation.`;
+  }, [nodes]);
 
   const creditsChartData = useMemo(() => 
     nodes.map(p => ({
@@ -230,6 +252,15 @@ export function ResultsView({ nodes, onReset }: ResultsViewProps) {
           />
         </div>
       </div>
+
+      {/* AI Comparison Summary */}
+      {aiComparisonPrompt && (
+        <AISummary 
+          prompt={aiComparisonPrompt}
+          title="Comparison Analysis"
+          autoLoad={true}
+        />
+      )}
     </div>
   );
 }

@@ -25,6 +25,10 @@ XanDash is a real-time monitoring dashboard built with Next.js 16, following a m
 │   │              Network Context (Mainnet/Devnet Switcher)               │       │
 │   └─────────────────────────────────────────────────────────────────────┘       │
 │                                                                                  │
+│   ┌─────────────────────────────────────────────────────────────────────┐       │
+│   │              AI Assistant (XanDash AI - Floating Chat)               │       │
+│   └─────────────────────────────────────────────────────────────────────┘       │
+│                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
                                         │
                                         ▼
@@ -42,9 +46,10 @@ XanDash is a real-time monitoring dashboard built with Next.js 16, following a m
 │   │   history    │  │  location    │  │  governance  │  │    nodes     │        │
 │   └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘        │
 │                                                                                  │
-│   ┌─────────────────────────────────────────────────────────────────────┐       │
-│   │                    React Query Cache Layer                           │       │
-│   └─────────────────────────────────────────────────────────────────────┘       │
+│   ┌──────────────┐  ┌─────────────────────────────────────────────────────┐     │
+│   │ /api/ai-chat │  │                    React Query Cache Layer           │     │
+│   │  (OpenRouter)│  └─────────────────────────────────────────────────────┘     │
+│   └──────────────┘                                                               │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
                                         │
@@ -317,9 +322,62 @@ RootLayout
 | Decision | Rationale |
 |----------|-----------|
 | **Pre-fetched Data for Compare** | Instant comparison results without API calls |
+| **Quick Compare from Tables** | Select nodes directly from pNodes/Dashboard tables |
 | **Parallel API Fetching** | Promise.all for concurrent requests |
 | **Batch Geolocation** | Single POST request for multiple IPs |
 | **Sequential RPC for Governance** | Avoid rate limiting on governance RPC |
 | **Network Context** | Global state for Mainnet/Devnet switching |
 | **LocalStorage Bookmarks** | Per-network bookmark persistence |
 | **Custom SVG Charts** | Lightweight, no external chart library for comparison |
+| **AI Streaming Responses** | Real-time text streaming for better UX |
+| **Auto AI Summaries** | Automatic analysis on node profiles and comparisons |
+
+## AI Integration
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                           AI ASSISTANT FLOW                                   │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────┐
+│  User Message   │
+└─────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Context Builder (buildContext function)                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Detects query type and fetches relevant data:                              │
+│  • IP address → fetchNodeByIdentifier()                                     │
+│  • Pubkey → fetchNodeByIdentifier()                                         │
+│  • Country name/code → fetchCountryData()                                   │
+│  • Network keywords → fetchNetworkSummary()                                 │
+│  • Credits keywords → fetchCreditsSummary()                                 │
+│  • Token keywords → fetchTokenData()                                        │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  OpenRouter API (Streaming)                                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Models (fallback chain):                                                    │
+│  1. google/gemini-2.0-flash-001                                             │
+│  2. meta-llama/llama-3.1-8b-instruct                                        │
+│  3. mistralai/mistral-7b-instruct                                           │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Streaming      │ ──▶ Real-time text display with typing animation
+│  Response       │
+└─────────────────┘
+
+AI Summary Components:
+• Node Profile Page - Auto-generates analysis on page load
+• Compare Results - Auto-generates comparison summary after results
+• AI Assistant - Floating chat for interactive queries
+```

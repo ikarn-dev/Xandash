@@ -1,7 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useMemo } from 'react';
 import { CaptchaGate } from '@/components/ui/CaptchaGate';
+import { AISummary } from '@/components/ui/AISummary';
 import { useNodeProfile } from './hooks';
 import {
   NodeProfileData,
@@ -36,6 +38,28 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
     hasAnyData,
     fetchData
   } = useNodeProfile({ ip, initialData });
+
+  // Generate AI summary prompt - includes node details + feedback with proper units
+  const aiSummaryPrompt = useMemo(() => {
+    if (!node) return '';
+    
+    const formatStorageAI = (bytes: number) => {
+      if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)}GB`;
+      if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)}MB`;
+      if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)}KB`;
+      return `${bytes}B`;
+    };
+    
+    const uptimeDays = (node.uptime / 86400).toFixed(1);
+    const uptimeHours = (node.uptime / 3600).toFixed(0);
+    const storageCommitted = formatStorageAI(node.storage_committed);
+    const storageUsed = formatStorageAI(node.storage_used);
+    const efficiency = node.storage_committed > 0 
+      ? ((node.storage_used / node.storage_committed) * 100).toFixed(1) 
+      : '0';
+    
+    return `Summarize this node in format: "Node [IP] is [status] with [uptime]d uptime, [credits] credits earned, [storage] committed ([used] used, [efficiency]% utilized). [One sentence assessment and recommendation]." Data: IP=${ip}, Status=${node.status}, Uptime=${uptimeDays}d (${uptimeHours}h), Credits=${node.credits?.toLocaleString() || 0}, Storage Committed=${storageCommitted}, Storage Used=${storageUsed} (${efficiency}% efficiency), Version=${node.version || 'N/A'}${location ? `, Location=${location.city}, ${location.country}` : ''}.`;
+  }, [node, ip, location]);
 
   if (loading) {
     return <ProfileSkeleton />;
@@ -85,6 +109,15 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
             setTimeRange={setTimeRange}
             filteredDbHistoryLength={filteredDbHistoryLength}
             isShowingFallbackData={isShowingFallbackData}
+          />
+        )}
+
+        {/* AI Summary - Above Events */}
+        {node && aiSummaryPrompt && (
+          <AISummary 
+            prompt={aiSummaryPrompt}
+            title="AI Analysis"
+            autoLoad={true}
           />
         )}
 

@@ -260,8 +260,8 @@ function AboutContent() {
             { icon: EyeIcon, title: 'Real-Time Monitoring', desc: 'Track 265+ pNodes with live status updates every 30 seconds. See online/offline states, resource usage, and performance metrics instantly.' },
             { icon: NetworkIcon, title: 'Interactive Network Map', desc: 'Visualize global node distribution across 38+ locations. Explore nodes by country and region with detailed statistics.' },
             { icon: ChartIcon, title: 'Historical Analytics', desc: 'MongoDB-powered snapshots track node performance over time. Analyze trends, uptime patterns, and credit earnings.' },
-            { icon: LayersIcon, title: 'Node Compare', desc: 'Compare up to 4 nodes side by side with instant results. View historical charts for credits, uptime, and storage metrics.' },
-            { icon: ZapIcon, title: 'Multi-Leaderboards', desc: 'Separate rankings for Credits, Uptime, and Storage. Tier badges for top performers and bookmark your favorite nodes.' },
+            { icon: LayersIcon, title: 'Node Compare', desc: 'Compare up to 4 nodes side by side. Select directly from tables or use the compare page. View historical charts and AI-powered analysis.' },
+            { icon: ZapIcon, title: 'AI-Powered Analysis', desc: 'XanDash AI provides automatic summaries on node profiles and comparisons. Chat with AI for network insights and node analysis.' },
             { icon: ShieldIcon, title: 'Governance Tracking', desc: 'Monitor proposals, treasury balance with real-time SOL conversion, and voting statistics across the network.' },
           ].map((feature, i) => (
             <div key={i} className="feature-card relative bg-black border border-white/10 p-5 group hover:border-white/20 transition-all">

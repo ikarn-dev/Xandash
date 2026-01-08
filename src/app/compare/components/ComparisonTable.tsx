@@ -51,15 +51,20 @@ export function ComparisonTable({ nodes }: ComparisonTableProps) {
     return higher ? Math.max(...values) : Math.min(...values);
   };
 
-  const rows = [
-    { label: 'Status', key: 'status', format: (v: string) => v.toUpperCase(), isBest: () => false },
-    { label: 'Uptime', key: 'uptime', format: formatUptime, isBest: (v: number) => v === getBestValue('uptime') },
-    { label: 'Credits', key: 'credits', format: (v: number) => `+${v.toLocaleString()}`, isBest: (v: number) => v === getBestValue('credits') },
-    { label: 'Storage Committed', key: 'storage_committed', format: formatStorage, isBest: (v: number) => v === getBestValue('storage_committed') },
-    { label: 'Storage Used', key: 'storage_used', format: formatStorage, isBest: (v: number) => v === getBestValue('storage_used') },
-    { label: 'Version', key: 'version', format: (v: string) => v || 'N/A', isBest: () => false },
-    { label: 'Location', key: 'location', format: (v: any) => v ? `${v.city}, ${v.country}` : 'N/A', isBest: () => false },
-    { label: 'Provider', key: 'location', format: (v: any) => v?.provider || 'N/A', isBest: () => false },
+  const rows: Array<{
+    label: string;
+    key: string;
+    format: (v: any) => string;
+    isBest: (v: any) => boolean;
+  }> = [
+    { label: 'Status', key: 'status', format: (v) => String(v).toUpperCase(), isBest: () => false },
+    { label: 'Uptime', key: 'uptime', format: formatUptime, isBest: (v) => v === getBestValue('uptime') },
+    { label: 'Credits', key: 'credits', format: (v) => `+${Number(v).toLocaleString()}`, isBest: (v) => v === getBestValue('credits') },
+    { label: 'Storage Committed', key: 'storage_committed', format: formatStorage, isBest: (v) => v === getBestValue('storage_committed') },
+    { label: 'Storage Used', key: 'storage_used', format: formatStorage, isBest: (v) => v === getBestValue('storage_used') },
+    { label: 'Version', key: 'version', format: (v) => v || 'N/A', isBest: () => false },
+    { label: 'Location', key: 'location', format: (v) => v ? `${v.city}, ${v.country}` : 'N/A', isBest: () => false },
+    { label: 'Provider', key: 'location', format: (v) => v?.provider || 'N/A', isBest: () => false },
   ];
 
   if (nodes.length === 0) {
@@ -91,9 +96,9 @@ export function ComparisonTable({ nodes }: ComparisonTableProps) {
             <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
               <td className="py-3 px-4 text-white/60 text-sm">{row.label}</td>
               {nodes.map(node => {
-                const value = node[row.key as keyof NodeProfile];
-                const formatted = row.format(value as any);
-                const isBest = row.isBest(value as number);
+                const value = (node as any)[row.key];
+                const formatted = row.format(value);
+                const isBest = row.isBest(value);
                 const isStatus = row.key === 'status';
                 
                 return (

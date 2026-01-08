@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Globe, Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CopyBtn } from '@/components/ui/CopyBtn';
@@ -8,6 +8,13 @@ import { getLocationsForIPs, extractIPFromAddress, getCountryFlagUrl } from '@/l
 import { usePrefetchProfile } from '@/libs/hooks/usePrefetchProfile';
 import { toast } from 'sonner';
 import { useNetwork } from '@/libs/context/network-context';
+
+// Compare icon
+const CompareIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/>
+  </svg>
+);
 
 interface LocationData {
   country: string;
@@ -46,8 +53,35 @@ export const DashboardNodesCard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [dataFetchTime, setDataFetchTime] = useState<number>(Math.floor(Date.now() / 1000));
   const [clickedNodeId, setClickedNodeId] = useState<string | null>(null);
+  const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
   const router = useRouter();
   const { prefetchProfile, navigateToProfile } = usePrefetchProfile();
+
+  // Toggle node for comparison
+  const handleToggleCompare = useCallback((pubkey: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedForCompare(prev => {
+      if (prev.includes(pubkey)) {
+        return prev.filter(p => p !== pubkey);
+      }
+      if (prev.length >= 4) return prev;
+      return [...prev, pubkey];
+    });
+  }, []);
+
+  // Navigate to compare page
+  const handleCompareSelected = useCallback(() => {
+    if (selectedForCompare.length >= 2) {
+      const params = new URLSearchParams();
+      params.set('nodes', selectedForCompare.join(','));
+      router.push(`/compare?${params.toString()}`);
+    }
+  }, [selectedForCompare, router]);
+
+  // Clear compare selection
+  const handleClearCompare = useCallback(() => {
+    setSelectedForCompare([]);
+  }, []);
 
   // Fetch nodes data
   useEffect(() => {
@@ -254,9 +288,12 @@ export const DashboardNodesCard: React.FC = () => {
       {/* Table with horizontal scroll */}
       <div className="bg-black border border-white/10 rounded-lg overflow-hidden">
         <div className="overflow-x-auto scrollbar-hide">
-          <table className="w-full min-w-[900px]">
+          <table className="w-full min-w-[950px]">
             <thead className="bg-white/5 border-b border-white/10">
               <tr>
+                <th className="w-[4%] px-2 py-3 text-center text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
+                  <CompareIcon className="w-3.5 h-3.5 mx-auto text-white/50" />
+                </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Location</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">IP Address</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Pubkey</th>
@@ -281,6 +318,8 @@ export const DashboardNodesCard: React.FC = () => {
                 const location = locations[ip];
                 const nodeCredits = node.pubkey ? credits[node.pubkey] : null;
                 const nodeId = `${node.pubkey}-${index}`;
+                const isSelected = selectedForCompare.includes(node.pubkey);
+                const canSelect = selectedForCompare.length < 4 || isSelected;
                 
                 const timeDiff = dataFetchTime - node.last_seen_timestamp;
                 const isOnline = timeDiff < 1800;
@@ -302,10 +341,31 @@ export const DashboardNodesCard: React.FC = () => {
                     key={nodeId}
                     className={`border-b border-white/5 hover:bg-white/5 transition-all duration-200 cursor-pointer group ${
                       clickedNodeId === nodeId ? 'bg-cyan-500/10 animate-pulse' : ''
-                    }`}
+                    } ${isSelected ? 'bg-emerald-500/10' : ''}`}
                     onClick={() => navigateToNodeProfile(node.address || '', nodeId)}
                     onMouseEnter={() => { if (ip) prefetchProfile(ip); }}
                   >
+                    {/* Compare checkbox */}
+                    <td className="px-2 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={(e) => canSelect && node.pubkey && handleToggleCompare(node.pubkey, e)}
+                        disabled={!canSelect && !isSelected}
+                        className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${
+                          isSelected 
+                            ? 'bg-emerald-500 border-emerald-500 text-white' 
+                            : canSelect 
+                              ? 'border-white/30 hover:border-emerald-500/50 hover:bg-emerald-500/10' 
+                              : 'border-white/10 opacity-30 cursor-not-allowed'
+                        }`}
+                        title={isSelected ? 'Remove from compare' : canSelect ? 'Add to compare' : 'Max 4 nodes'}
+                      >
+                        {isSelected && (
+                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                            <path d="M5 12l5 5L20 7" />
+                          </svg>
+                        )}
+                      </button>
+                    </td>
                     <td className="px-3 py-3 text-xs">
                       <div className="flex items-center space-x-2 min-w-0">
                         {location?.country_code ? (
@@ -370,6 +430,44 @@ export const DashboardNodesCard: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Floating Compare Button */}
+      {selectedForCompare.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-black/95 border border-emerald-500/30 rounded-full px-4 py-2 shadow-lg shadow-emerald-500/20 backdrop-blur-xl animate-blur-reveal">
+          <div className="flex items-center gap-2">
+            <div className="flex -space-x-1">
+              {selectedForCompare.slice(0, 4).map((_, i) => (
+                <div 
+                  key={i} 
+                  className="w-6 h-6 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-[10px] text-emerald-400 font-bold"
+                >
+                  {i + 1}
+                </div>
+              ))}
+            </div>
+            <span className="text-white/60 text-sm">{selectedForCompare.length} selected</span>
+          </div>
+          <div className="w-px h-6 bg-white/10" />
+          <button
+            onClick={handleClearCompare}
+            className="px-3 py-1.5 text-xs text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+          >
+            Clear
+          </button>
+          <button
+            onClick={handleCompareSelected}
+            disabled={selectedForCompare.length < 2}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+              selectedForCompare.length >= 2
+                ? 'bg-emerald-500 text-white hover:bg-emerald-400'
+                : 'bg-white/10 text-white/40 cursor-not-allowed'
+            }`}
+          >
+            <CompareIcon className="w-4 h-4" />
+            Compare
+          </button>
+        </div>
+      )}
     </div>
   );
 };

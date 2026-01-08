@@ -49,6 +49,14 @@ export function useNodeProfile({ ip, initialData }: UseNodeProfileProps) {
       
       const profileData = await response.json();
       
+      // Check if node exists on this network
+      if (!profileData.currentNode && (!profileData.dbHistory || profileData.dbHistory.length === 0)) {
+        setError(`Node not found on ${network}. This node may only exist on ${network === 'mainnet' ? 'devnet' : 'mainnet'}.`);
+        setData(null);
+        return;
+      }
+      
+      setError(null);
       setData(profileData);
       setLastUpdate(new Date());
       if (showToast) toast.success('Data refreshed');
@@ -66,6 +74,7 @@ export function useNodeProfile({ ip, initialData }: UseNodeProfileProps) {
   // Initial fetch and refetch when network changes
   useEffect(() => {
     setLoading(true);
+    setError(null);
     setData(null);
     fetchData(true, 168);
   }, [ip, network]);
