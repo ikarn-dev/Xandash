@@ -2,7 +2,7 @@
 
 ## Overview
 
-XanDash is a real-time monitoring dashboard built with Next.js 16, following a modern serverless architecture optimized for performance and scalability.
+XanDash is a real-time monitoring dashboard built with Next.js 16, following a modern serverless architecture optimized for performance and scalability. It supports both Mainnet and Devnet networks.
 
 ## High-Level Design (HLD)
 
@@ -17,12 +17,12 @@ XanDash is a real-time monitoring dashboard built with Next.js 16, following a m
 │   └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘        │
 │                                                                                  │
 │   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
-│   │    Node      │  │   Country    │  │  Endpoints   │  │    XAND      │        │
-│   │   Profile    │  │    Page      │  │    Tester    │  │    Token     │        │
+│   │    Node      │  │   Country    │  │  Governance  │  │    Node      │        │
+│   │   Profile    │  │    Page      │  │    Page      │  │   Compare    │        │
 │   └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘        │
 │                                                                                  │
 │   ┌─────────────────────────────────────────────────────────────────────┐       │
-│   │              Cloudflare Turnstile CAPTCHA Protection                 │       │
+│   │              Network Context (Mainnet/Devnet Switcher)               │       │
 │   └─────────────────────────────────────────────────────────────────────┘       │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
@@ -38,8 +38,8 @@ XanDash is a real-time monitoring dashboard built with Next.js 16, following a m
 │   └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘        │
 │                                                                                  │
 │   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
-│   │  /api/sync-  │  │  /api/rpc    │  │ /api/verify- │  │ /api/db-     │        │
-│   │    nodes     │  │   (proxy)    │  │  turnstile   │  │   status     │        │
+│   │  /api/node-  │  │ /api/geo-    │  │ /api/        │  │ /api/sync-   │        │
+│   │   history    │  │  location    │  │  governance  │  │    nodes     │        │
 │   └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘        │
 │                                                                                  │
 │   ┌─────────────────────────────────────────────────────────────────────┐       │
@@ -56,161 +56,200 @@ XanDash is a real-time monitoring dashboard built with Next.js 16, following a m
 │   ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐     │
 │   │   MongoDB Atlas     │  │   Xandeum RPC       │  │   Cloudflare        │     │
 │   │   ─────────────     │  │   ───────────       │  │   Turnstile         │     │
-│   │   • node_snapshots  │  │   • Primary RPC     │  │   ───────────       │     │
-│   │   • node_events     │  │   • Fallback RPC    │  │   • Token verify    │     │
-│   │   • Historical data │  │   • JSON-RPC 2.0    │  │   • Bot protection  │     │
+│   │   • node_snapshots  │  │   • Devnet RPC      │  │   ───────────       │     │
+│   │   • node_events     │  │   • Mainnet RPC     │  │   • Token verify    │     │
+│   │   • Historical data │  │   • Governance RPC  │  │   • Bot protection  │     │
 │   └─────────────────────┘  └─────────────────────┘  └─────────────────────┘     │
 │                                                                                  │
 │   ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐     │
 │   │   Pod Credits API   │  │   CoinGecko API     │  │   IP Geolocation    │     │
 │   │   ─────────────     │  │   ───────────       │  │   ──────────────    │     │
-│   │   • Credit balances │  │   • Token price     │  │   • ip-api.com      │     │
-│   │   • Reward tracking │  │   • Market data     │  │   • ipapi.co        │     │
+│   │   • Devnet credits  │  │   • Token price     │  │   • ip-api.com      │     │
+│   │   • Mainnet credits │  │   • Market data     │  │   • Batch lookup    │     │
 │   └─────────────────────┘  └─────────────────────┘  └─────────────────────┘     │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
-                                        │
-                                        ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              SCHEDULED JOBS                                      │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                  │
-│   ┌─────────────────────────────────────────────────────────────────────┐       │
-│   │                    GitHub Actions Cron (Every 5 min)                 │       │
-│   │   ─────────────────────────────────────────────────────────────     │       │
-│   │   • Triggers POST /api/sync-nodes                                    │       │
-│   │   • Saves all node snapshots to MongoDB                              │       │
-│   │   • Logs events (status changes, version updates, etc.)              │       │
-│   └─────────────────────────────────────────────────────────────────────┘       │
-│                                                                                  │
-└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Data Flow Diagram
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Browser   │────▶│  Next.js    │────▶│  API Route  │────▶│  External  │
-│   Client    │     │   SSR/CSR   │     │   Handler   │     │    APIs     │
-└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
-       ▲                   │                   │                   │
-       │                   │                   ▼                   │
-       │                   │            ┌─────────────┐            │
-       │                   │            │  MongoDB    │◀───────────┘
-       │                   │            │  (History)  │
-       │                   │            └─────────────┘
-       │                   ▼                   │
-       │            ┌─────────────┐            │
-       └────────────│ React Query │◀───────────┘
-                    │   Cache     │
-                    └─────────────┘
-
-
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  GitHub     │────▶│ /api/sync-  │────▶│  MongoDB    │
-│  Actions    │     │   nodes     │     │  (Persist)  │
-│  (5 min)    │     │             │     │             │
-└─────────────┘     └─────────────┘     └─────────────┘
-```
-
-## Request Flow: Node Profile Page
+## Node Compare Data Flow
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                           NODE PROFILE REQUEST FLOW                           │
+│                           NODE COMPARE FLOW                                   │
 └──────────────────────────────────────────────────────────────────────────────┘
 
-1. User clicks node in table
-         │
-         ▼
-┌─────────────────┐
-│  CaptchaGate    │ ◀── Cloudflare Turnstile verification
-│  Component      │     (skipped on localhost)
-└─────────────────┘
-         │
-         ▼ (on success)
-┌─────────────────┐
-│  /api/verify-   │ ◀── Server-side token validation
-│  turnstile      │
-└─────────────────┘
+1. Page Load - Pre-fetch all node data
          │
          ▼
 ┌─────────────────┐     ┌─────────────────┐
-│  /api/node-     │────▶│  Xandeum RPC    │ ◀── Current node data
-│  profile        │     └─────────────────┘
-│                 │     ┌─────────────────┐
-│                 │────▶│  MongoDB        │ ◀── Historical snapshots
-│                 │     └─────────────────┘
-│                 │     ┌─────────────────┐
-│                 │────▶│  IP Geolocation │ ◀── Location data
+│  /api/nodes     │────▶│  Store in       │
+│  (all nodes)    │     │  React State    │
 └─────────────────┘     └─────────────────┘
          │
          ▼
+┌─────────────────┐     ┌─────────────────┐
+│  /api/pod-      │────▶│  Merge credits  │
+│  credits        │     │  with nodes     │
+└─────────────────┘     └─────────────────┘
+
+2. User selects nodes (up to 4)
+         │
+         ▼
+3. Click "Compare" button
+         │
+         ▼
 ┌─────────────────┐
-│  NodeProfile    │ ◀── Renders profile with charts,
-│  Client         │     events, and location map
+│  Build profiles │ ◀── INSTANT (uses pre-fetched data)
+│  from state     │     • IP, pubkey, status
+└─────────────────┘     • uptime, credits, storage, version
+         │
+         ▼
+┌─────────────────┐
+│  Show Results   │ ◀── Immediate display
+│  View           │
 └─────────────────┘
+         │
+         ▼ (background)
+┌─────────────────┐     ┌─────────────────┐
+│  /api/node-     │────▶│  Update charts  │
+│  history        │     │  with history   │
+└─────────────────┘     └─────────────────┘
+         │
+         ▼
+┌─────────────────┐     ┌─────────────────┐
+│  /api/geo-      │────▶│  Update         │
+│  location       │     │  locations      │
+│  (batch POST)   │     │                 │
+└─────────────────┘     └─────────────────┘
 ```
 
-## API Architecture
+## Leaderboard Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                              API ENDPOINTS                                    │
+│                           LEADERBOARD SYSTEM                                  │
 └──────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  PUBLIC ENDPOINTS (No Auth Required)                                         │
+│  Data Sources                                                                │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  GET /api/nodes                                                              │
-│  ├── Fetches all nodes from Xandeum RPC                                     │
-│  ├── Returns: { nodes: [...], total: number }                               │
-│  └── Caching: React Query (30s stale time)                                  │
-│                                                                              │
-│  GET /api/node-profile?ip={ip}&hours={hours}                                │
-│  ├── Fetches node details + historical data                                 │
-│  ├── Sources: RPC (current) + MongoDB (history)                             │
-│  └── Protected by: Cloudflare Turnstile CAPTCHA                             │
-│                                                                              │
-│  GET /api/pod-credits                                                        │
-│  ├── Fetches credit balances from Pod Credits API                           │
-│  └── Returns: { credits: [...] }                                            │
-│                                                                              │
-│  GET /api/xand-info                                                          │
-│  ├── Fetches XAND token data from CoinGecko                                 │
-│  └── Caching: 5-minute cooldown                                             │
-│                                                                              │
-│  GET /api/db-status                                                          │
-│  └── Returns MongoDB connection status                                       │
-│                                                                              │
-│  POST /api/rpc                                                               │
-│  ├── Proxies JSON-RPC calls to Xandeum network                              │
-│  └── Hides backend RPC endpoints from client                                │
-│                                                                              │
-│  POST /api/verify-turnstile                                                  │
-│  ├── Validates Cloudflare Turnstile tokens                                  │
-│  └── Returns: { success: boolean }                                          │
+│  /api/nodes ──────────────────┐                                             │
+│  • uptime                     │                                             │
+│  • storage_committed          ├──▶ Merged Data ──▶ Sorted by criteria       │
+│  • storage_used               │                                             │
+│  • address (IP:PORT)          │                                             │
+│                               │                                             │
+│  /api/pod-credits ────────────┘                                             │
+│  • credits per pod_id                                                        │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  PROTECTED ENDPOINTS (Auth Required)                                         │
+│  Leaderboard Tabs                                                            │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  POST /api/sync-nodes                                                        │
-│  ├── Header: Authorization: Bearer {CRON_SECRET}                            │
-│  ├── Syncs all nodes to MongoDB                                             │
-│  ├── Logs events (status changes, version updates)                          │
-│  └── Called by: GitHub Actions (every 5 min)                                │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                          │
+│  │  CREDITS    │  │   UPTIME    │  │   STORAGE   │                          │
+│  │  ─────────  │  │  ─────────  │  │  ─────────  │                          │
+│  │  Sorted by  │  │  Sorted by  │  │  Sorted by  │                          │
+│  │  credits    │  │  uptime     │  │  storage_   │                          │
+│  │             │  │  (seconds)  │  │  committed  │                          │
+│  │  + Tier     │  │             │  │             │                          │
+│  │  badges     │  │             │  │             │                          │
+│  └─────────────┘  └─────────────┘  └─────────────┘                          │
 │                                                                              │
-│  GET /api/sync-nodes?action=init                                            │
-│  └── Initializes MongoDB indexes (run once)                                 │
-│                                                                              │
-│  GET /api/sync-nodes?action=sync                                            │
-│  └── Manual sync for testing                                                │
+│  Tier System (Credits only):                                                 │
+│  • Diamond:  ≥50,000 credits                                                │
+│  • Platinum: ≥25,000 credits                                                │
+│  • Gold:     ≥10,000 credits                                                │
+│  • Silver:   ≥5,000 credits                                                 │
+│  • Bronze:   <5,000 credits                                                 │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Governance Data Flow
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                           GOVERNANCE FLOW                                     │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────┐
+│  /api/governance│
+└─────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Sequential RPC Batching (to avoid rate limits)                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  1. Fetch all proposal accounts                                              │
+│  2. Batch decode (5 at a time with delays)                                  │
+│  3. bs58 decode addresses for accurate comparison                           │
+│  4. Fetch treasury balance                                                   │
+│  5. Return combined data                                                     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Treasury Tab                                                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  • Real-time SOL price from CoinGecko                                       │
+│  • Exact token amounts (no abbreviation)                                    │
+│  • formatExactNumber for thousand separators                                │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Component Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                           COMPONENT HIERARCHY                                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+RootLayout
+│
+├── NetworkProvider (Mainnet/Devnet context)
+│   │
+│   └── DashboardLayout
+│       │
+│       ├── Navbar
+│       │   ├── Logo
+│       │   ├── Navigation Links
+│       │   ├── Utilities Dropdown (Compare, XAND, STOINC, Endpoints)
+│       │   ├── NetworkSelector (Mainnet/Devnet)
+│       │   └── LiveRefresh (30s auto-refresh)
+│       │
+│       ├── Marquee (announcements banner)
+│       │
+│       ├── Page Content
+│       │   │
+│       │   ├── Compare (/compare)
+│       │   │   ├── NodeSelector (multi-select with checkboxes)
+│       │   │   ├── CompareButton
+│       │   │   └── ResultsView
+│       │   │       ├── Node Cards
+│       │   │       ├── Comparison Table
+│       │   │       └── ComparisonChart (x4)
+│       │   │
+│       │   ├── Leaderboard (/leaderboard)
+│       │   │   ├── LeaderboardTabs (Credits, Uptime, Storage)
+│       │   │   ├── RankingTable
+│       │   │   └── BookmarksTable
+│       │   │
+│       │   ├── Governance (/governance)
+│       │   │   ├── ProposalsTab
+│       │   │   ├── TreasuryTab
+│       │   │   └── VotingTab
+│       │   │
+│       │   └── ... other pages
+│       │
+│       └── Footer
 ```
 
 ## Database Schema
@@ -237,10 +276,11 @@ XanDash is a real-time monitoring dashboard built with Next.js 16, following a m
 │    version: string,               // Node version                            │
 │    credits: number,               // Current credits                         │
 │    timestamp: number,             // Unix timestamp (indexed)                │
-│    created_at: Date               // ISO date                                │
+│    created_at: Date,              // ISO date                                │
+│    network: string                // "devnet" | "mainnet"                    │
 │  }                                                                           │
 │                                                                              │
-│  Indexes: { ip: 1 }, { timestamp: -1 }, { ip: 1, timestamp: -1 }            │
+│  Indexes: { ip: 1, network: 1 }, { timestamp: -1 }                          │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 
@@ -255,201 +295,31 @@ XanDash is a real-time monitoring dashboard built with Next.js 16, following a m
 │    event_type: string,            // Event type (see below)                  │
 │    previous_value: mixed,         // Previous value (optional)               │
 │    new_value: mixed,              // New value (optional)                    │
-│    previous_status: string,       // For status changes                      │
-│    new_status: string,            // For status changes                      │
-│    details: object,               // Additional event details                │
 │    timestamp: number,             // Unix timestamp (indexed)                │
-│    created_at: Date               // ISO date                                │
+│    created_at: Date,              // ISO date                                │
+│    network: string                // "devnet" | "mainnet"                    │
 │  }                                                                           │
 │                                                                              │
 │  Event Types:                                                                │
 │  • node_new        - New node discovered                                     │
 │  • node_online     - Node came online                                        │
 │  • node_offline    - Node went offline                                       │
-│  • status_change   - Status changed (online/offline/syncing)                 │
+│  • status_change   - Status changed                                          │
 │  • version_change  - Node version updated                                    │
 │  • storage_change  - Storage changed by >5%                                  │
 │  • credits_change  - Credits changed by >100                                 │
 │                                                                              │
-│  Indexes: { ip: 1 }, { timestamp: -1 }, { event_type: 1 }                   │
-│                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
-```
-
-## Component Architecture
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                           COMPONENT HIERARCHY                                 │
-└──────────────────────────────────────────────────────────────────────────────┘
-
-RootLayout
-│
-├── AppCaptchaGate (App-wide CAPTCHA, session-based)
-│   │
-│   └── DashboardLayout
-│       │
-│       ├── Navbar
-│       │   ├── Logo (Link to home)
-│       │   ├── Navigation Links
-│       │   ├── NetworkSelector (Mainnet/Devnet)
-│       │   ├── LiveRefresh (30s auto-refresh)
-│       │   └── Mobile Menu (hamburger)
-│       │
-│       ├── Breadcrumb
-│       │
-│       ├── Page Content
-│       │   │
-│       │   ├── Analytics (/)
-│       │   │   ├── StatsCards
-│       │   │   ├── VersionCard
-│       │   │   └── Charts
-│       │   │
-│       │   ├── pNodes (/nodes)
-│       │   │   ├── SearchBar
-│       │   │   ├── NodesTable (virtualized)
-│       │   │   └── Pagination
-│       │   │
-│       │   ├── Network (/network)
-│       │   │   ├── InteractiveMap (Leaflet)
-│       │   │   ├── StatsOverlay
-│       │   │   └── CountryCards
-│       │   │
-│       │   ├── Leaderboard (/leaderboard)
-│       │   │   ├── NetworkSwitch
-│       │   │   └── LeaderboardTable
-│       │   │
-│       │   ├── Node Profile (/profile/[ip])
-│       │   │   ├── CaptchaGate (strict, per-visit)
-│       │   │   ├── ProfileHeader
-│       │   │   ├── StatsCards
-│       │   │   ├── Charts (uptime, credits, storage)
-│       │   │   ├── EventsTable
-│       │   │   └── LocationMap
-│       │   │
-│       │   └── About (/about-xandash)
-│       │       └── GSAP ScrollTrigger animations
-│       │
-│       └── Footer
-```
-
-## Security Architecture
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                           SECURITY LAYERS                                     │
-└──────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Layer 1: CAPTCHA Protection                                                 │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐        │
-│  │  AppCaptchaGate │────▶│  TurnstileWidget│────▶│  Cloudflare     │        │
-│  │  (session-based)│     │  (generates     │     │  Verification   │        │
-│  │                 │     │   token)        │     │                 │        │
-│  └─────────────────┘     └─────────────────┘     └─────────────────┘        │
-│                                                                              │
-│  ┌─────────────────┐     ┌─────────────────┐                                │
-│  │  CaptchaGate    │────▶│  Per-visit      │ ◀── Node profiles require      │
-│  │  (strict mode)  │     │  verification   │     fresh CAPTCHA each time    │
-│  └─────────────────┘     └─────────────────┘                                │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Layer 2: API Security                                                       │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  • Environment Variables: All secrets stored server-side only                │
-│  • RPC Proxy: Backend endpoints hidden from client                           │
-│  • CRON_SECRET: Protects sync endpoint from unauthorized access              │
-│  • Input Validation: All user inputs sanitized                               │
-│  • HTTPS: All communications encrypted                                       │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Layer 3: Rate Limiting                                                      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  • React Query: Client-side caching (30s stale time)                         │
-│  • Token Data: 5-minute refresh cooldown                                     │
-│  • Geolocation: 24-hour cache per IP                                         │
-│  • Vercel: Built-in DDoS protection                                          │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-## Environment Variables
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                        ENVIRONMENT CONFIGURATION                              │
-│                        (Never commit actual values!)                          │
-└──────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Server-Side Only (not exposed to client)                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  RPC_ENDPOINT_PRIMARY      - Primary Xandeum RPC endpoint                    │
-│  RPC_BASE_URL              - Base URL for RPC calls                          │
-│  MONGODB_URI               - MongoDB connection string                       │
-│  MONGODB_DB_NAME           - Database name                                   │
-│  TURNSTILE_SECRET_KEY      - Cloudflare Turnstile secret                     │
-│  CRON_SECRET               - Secret for cron job authentication              │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Client-Side (NEXT_PUBLIC_ prefix)                                           │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  NEXT_PUBLIC_TURNSTILE_SITE_KEY    - Cloudflare Turnstile site key          │
-│  NEXT_PUBLIC_COINGECKO_API_URL     - CoinGecko API endpoint                 │
-│  NEXT_PUBLIC_POD_CREDITS_URL       - Pod credits API endpoint               │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-## Deployment Architecture
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                           DEPLOYMENT FLOW                                     │
-└──────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   GitHub    │────▶│   Vercel    │────▶│   Build     │────▶│  Deploy     │
-│   Push      │     │   Webhook   │     │   (Next.js) │     │  (Edge)     │
-└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
-                                                                   │
-                                                                   ▼
-                    ┌─────────────────────────────────────────────────────┐
-                    │                    Vercel Edge Network              │
-                    │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
-                    │  │   Static    │  │  Serverless │  │    Edge     │ │
-                    │  │   Assets    │  │  Functions  │  │   Runtime   │ │
-                    │  └─────────────┘  └─────────────┘  └─────────────┘ │
-                    └─────────────────────────────────────────────────────┘
-
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   GitHub    │────▶│   Actions   │────▶│  /api/sync  │
-│   Schedule  │     │   Runner    │     │   -nodes    │
-│  (5 min)    │     │             │     │             │
-└─────────────┘     └─────────────┘     └─────────────┘
 ```
 
 ## Key Design Decisions
 
 | Decision | Rationale |
 |----------|-----------|
-| **Next.js App Router** | Server components for SEO, API routes for backend |
-| **MongoDB Atlas** | Persistent storage, free tier, global distribution |
-| **React Query** | Intelligent caching, background refetching |
-| **GitHub Actions Cron** | Free, reliable, 5-minute intervals |
-| **Cloudflare Turnstile** | Invisible CAPTCHA, better UX than reCAPTCHA |
-| **Leaflet Maps** | Open source, customizable, no API key required |
-| **Custom SVG Icons** | Smaller bundle, no external dependencies |
-| **GSAP Animations** | Smooth scroll animations, performant |
+| **Pre-fetched Data for Compare** | Instant comparison results without API calls |
+| **Parallel API Fetching** | Promise.all for concurrent requests |
+| **Batch Geolocation** | Single POST request for multiple IPs |
+| **Sequential RPC for Governance** | Avoid rate limiting on governance RPC |
+| **Network Context** | Global state for Mainnet/Devnet switching |
+| **LocalStorage Bookmarks** | Per-network bookmark persistence |
+| **Custom SVG Charts** | Lightweight, no external chart library for comparison |

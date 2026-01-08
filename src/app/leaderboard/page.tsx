@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useEffect, useState } from 'react';
-import { Star, RefreshCw, ChevronLeft, ChevronRight, X, Bookmark } from 'lucide-react';
+import { RefreshCw, ChevronLeft, ChevronRight, Bookmark } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout';
 import { 
   LeaderboardTitleCard, 
@@ -10,52 +10,53 @@ import {
   LeaderboardTopPodCard 
 } from '@/components/dashboard';
 import { usePodCredits } from '@/libs/hooks/usePodCredits';
-import { CopyBtn } from '@/components/ui/CopyBtn';
 import { SearchBox } from '@/components/ui/SearchBox';
 import { toast } from 'sonner';
 import { useNetwork } from '@/libs/context/network-context';
+import { LeaderboardTabs, type LeaderboardType } from './components/LeaderboardTabs';
+import { RankingTable, type NodeData } from './components/RankingTable';
+import { BookmarksTable } from './components/BookmarksTable';
 
 const BOOKMARKS_STORAGE_KEY = 'leaderboard_bookmarks';
 
-interface NodeData {
+interface RawNodeData {
   pubkey: string;
-  uptime: number;
-  status: string;
+  uptime?: number;
+  status?: string;
+  storage_used?: number;
+  storage_committed?: number;
+  address?: string;
 }
 
 function LeaderboardPageContent() {
-  // Use global network context instead of local state
-  const { network: selectedNetwork, isMainnet } = useNetwork();
+  const { network: selectedNetwork } = useNetwork();
   const { data: creditsData, isLoading, isFetching, error, refetch } = usePodCredits(selectedNetwork);
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
-  const [bookmarkedPods, setBookmarkedPods] = React.useState<Set<string>>(new Set());
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [nodesData, setNodesData] = useState<NodeData[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [bookmarkedPods, setBookmarkedPods] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [nodesData, setNodesData] = useState<RawNodeData[]>([]);
   const [nodesLoading, setNodesLoading] = useState(true);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [hasInitialData, setHasInitialData] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<LeaderboardType>('credits');
   const itemsPerPage = 25;
 
-  // Track when we have initial data to avoid showing skeleton on network switch
   useEffect(() => {
     if (creditsData?.data && !hasInitialData) {
       setHasInitialData(true);
     }
   }, [creditsData, hasInitialData]);
 
-  // Reset pagination when network changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedNetwork]);
+  }, [selectedNetwork, activeTab]);
 
-  // Reset pagination when search changes
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
     setCurrentPage(1);
   }, []);
 
-  // Load bookmarks from localStorage on mount (network-specific)
   useEffect(() => {
     try {
       const stored = localStorage.getItem(`${BOOKMARKS_STORAGE_KEY}_${selectedNetwork}`);
@@ -67,21 +68,19 @@ function LeaderboardPageContent() {
       } else {
         setBookmarkedPods(new Set());
       }
-    } catch (err) {
+    } catch {
       setBookmarkedPods(new Set());
     }
   }, [selectedNetwork]);
 
-  // Save bookmarks to localStorage whenever they change (network-specific)
   useEffect(() => {
     try {
       localStorage.setItem(`${BOOKMARKS_STORAGE_KEY}_${selectedNetwork}`, JSON.stringify(Array.from(bookmarkedPods)));
-    } catch (err) {
+    } catch {
       // Silently handle localStorage errors
     }
   }, [bookmarkedPods, selectedNetwork]);
 
-  // Fetch nodes data for uptime - refetch when network changes
   useEffect(() => {
     const fetchNodesData = async () => {
       try {
@@ -91,8 +90,8 @@ function LeaderboardPageContent() {
           const data = await response.json();
           setNodesData(data.nodes || []);
         }
-      } catch (err) {
-        console.error('Failed to fetch nodes data:', err);
+      } catch {
+        console.error('Failed to fetch nodes data');
       } finally {
         setNodesLoading(false);
       }
@@ -100,92 +99,74 @@ function LeaderboardPageContent() {
     fetchNodesData();
   }, [selectedNetwork]);
 
-  // Create a map of pubkey to uptime for quick lookup
-  const uptimeMap = useMemo(() => {
-    const map = new Map<string, { uptime: number; status: string }>();
+  const nodesMap = useMemo(() => {
+    const map = new Map<string, RawNodeData>();
     nodesData.forEach(node => {
       if (node.pubkey) {
-        map.set(node.pubkey, { uptime: node.uptime || 0, status: node.status || 'unknown' });
+        map.set(node.pubkey, node);
       }
     });
     return map;
   }, [nodesData]);
 
-  // Format uptime display
-  const formatUptime = (seconds: number) => {
-    if (!seconds || seconds <= 0) return 'N/A';
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    if (days > 0) return `${days}d ${hours}h`;
-    if (hours > 0) return `${hours}h`;
-    return '<1h';
-  };
-
-  // Get tier based on credits
-  const getTier = (credits: number): { name: string; short: string; color: string; bgColor: string } => {
-    if (credits >= 50000) return { name: 'Diamond', short: 'DIA', color: '#60a5fa', bgColor: 'rgba(96, 165, 250, 0.15)' };
-    if (credits >= 25000) return { name: 'Platinum', short: 'PLA', color: '#a78bfa', bgColor: 'rgba(167, 139, 250, 0.15)' };
-    if (credits >= 10000) return { name: 'Gold', short: 'GLD', color: '#fbbf24', bgColor: 'rgba(251, 191, 36, 0.15)' };
-    if (credits >= 5000) return { name: 'Silver', short: 'SLV', color: '#9ca3af', bgColor: 'rgba(156, 163, 175, 0.15)' };
-    return { name: 'Bronze', short: 'BRZ', color: '#f97316', bgColor: 'rgba(249, 115, 22, 0.15)' };
-  };
-
-  // Create leaderboard from credits data
-  const { leaderboard, totalPages, paginatedData } = useMemo(() => {
-    if (!creditsData?.data) return { leaderboard: [], totalPages: 0, paginatedData: [] };
+  // Merge credits data with nodes data
+  const mergedData: NodeData[] = useMemo(() => {
+    if (!creditsData?.data) return [];
     
-    const sortedData = creditsData.data
-      .sort((a, b) => b.credits - a.credits)
-      .map((pod, index) => {
-        const nodeInfo = uptimeMap.get(pod.pod_id);
-        return {
-          rank: index + 1,
-          pod_id: pod.pod_id,
-          credits: pod.credits,
-          uptime: nodeInfo?.uptime || 0,
-          status: nodeInfo?.status || 'unknown',
-        };
-      });
+    return creditsData.data.map((pod) => {
+      const nodeInfo = nodesMap.get(pod.pod_id);
+      return {
+        pod_id: pod.pod_id,
+        credits: pod.credits,
+        uptime: nodeInfo?.uptime || 0,
+        storage_used: nodeInfo?.storage_used || 0,
+        storage_committed: nodeInfo?.storage_committed || 0,
+        address: nodeInfo?.address,
+      };
+    });
+  }, [creditsData, nodesMap]);
 
-    // Filter by search query
-    const filteredData = searchQuery.trim()
-      ? sortedData.filter(pod => 
-          pod.pod_id.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      : sortedData;
+  // Filter by search query
+  const filteredData = useMemo(() => {
+    if (!searchQuery.trim()) return mergedData;
+    return mergedData.filter(pod => 
+      pod.pod_id.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [mergedData, searchQuery]);
 
+  // Paginate data
+  const { paginatedData, totalPages } = useMemo(() => {
     const totalPages = Math.ceil(filteredData.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+    return { paginatedData, totalPages };
+  }, [filteredData, currentPage, itemsPerPage]);
 
-    return { 
-      leaderboard: filteredData, 
-      totalPages, 
-      paginatedData 
-    };
-  }, [creditsData, currentPage, itemsPerPage, uptimeMap, searchQuery]);
+  // Get bookmarked pods data
+  const bookmarkedPodsData = useMemo(() => {
+    if (bookmarkedPods.size === 0) return [];
+    return mergedData
+      .filter(pod => bookmarkedPods.has(pod.pod_id))
+      .sort((a, b) => b.credits - a.credits)
+      .map((pod, index) => ({ ...pod, rank: index + 1 }));
+  }, [mergedData, bookmarkedPods]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
       await refetch();
-      // Also refresh nodes data with network parameter
       const response = await fetch(`/api/nodes?includeAll=true&network=${selectedNetwork}`);
       if (response.ok) {
         const data = await response.json();
         setNodesData(data.nodes || []);
       }
-      toast.success(`${selectedNetwork.charAt(0).toUpperCase() + selectedNetwork.slice(1)} leaderboard updated successfully!`);
-    } catch (err) {
+      toast.success(`${selectedNetwork.charAt(0).toUpperCase() + selectedNetwork.slice(1)} leaderboard updated!`);
+    } catch {
       toast.error('Failed to refresh leaderboard');
     } finally {
       setIsRefreshing(false);
     }
   }, [refetch, selectedNetwork]);
-
-  const handleCopy = useCallback(() => {
-    toast.success('Pod ID copied to clipboard!');
-  }, []);
 
   const toggleBookmark = useCallback((podId: string) => {
     setBookmarkedPods(prev => {
@@ -201,40 +182,21 @@ function LeaderboardPageContent() {
     });
   }, []);
 
-  // Get bookmarked pods data
-  const bookmarkedPodsData = useMemo(() => {
-    if (!creditsData?.data || bookmarkedPods.size === 0) return [];
-    return leaderboard.filter(pod => bookmarkedPods.has(pod.pod_id));
-  }, [creditsData, bookmarkedPods, leaderboard]);
-
   const goToPage = useCallback((page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     }
   }, [totalPages]);
 
-  const goToPreviousPage = useCallback(() => {
-    goToPage(currentPage - 1);
-  }, [currentPage, goToPage]);
-
-  const goToNextPage = useCallback(() => {
-    goToPage(currentPage + 1);
-  }, [currentPage, goToPage]);
-
-  // Only show skeleton on initial load, not on network switch
   const showSkeleton = isLoading && !hasInitialData;
-
 
   if (showSkeleton) {
     return (
       <div className="space-y-4 sm:space-y-6">
-        {/* Title Card Skeleton */}
         <div className="relative bg-black border border-white/10 p-4 sm:p-6 h-20 sm:h-24 animate-pulse">
           <div className="h-6 sm:h-8 bg-gray-700/50 rounded w-36 sm:w-48 mb-2 sm:mb-3"></div>
           <div className="h-3 sm:h-4 bg-gray-700/50 rounded w-48 sm:w-64"></div>
         </div>
-
-        {/* Stats Cards Skeleton */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {[1, 2, 3].map(i => (
             <div key={i} className="relative bg-black border border-white/10 p-4 sm:p-6 h-32 sm:h-40 animate-pulse">
@@ -246,36 +208,14 @@ function LeaderboardPageContent() {
             </div>
           ))}
         </div>
-
-        {/* Table Skeleton */}
         <div className="bg-black/90 border border-gray-800 rounded-lg overflow-hidden">
           <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-800">
             <div className="h-5 sm:h-6 bg-gray-700/50 rounded w-24 sm:w-32 animate-pulse"></div>
-            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-700/50 rounded animate-pulse"></div>
           </div>
-          <div className="overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            <table className="w-full min-w-[500px]">
-              <thead>
-                <tr className="border-b border-gray-800 bg-black/50">
-                  {['#', 'Pod ID', 'Tier', 'Credits', 'Uptime'].map((_, i) => (
-                    <th key={i} className="py-2 sm:py-3 px-2 sm:px-3">
-                      <div className="h-2 sm:h-3 bg-gray-700/50 rounded w-12 sm:w-16 animate-pulse"></div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <tr key={i} className="border-b border-gray-800/50">
-                    {[1, 2, 3, 4, 5].map(j => (
-                      <td key={j} className="py-2 sm:py-3 px-2 sm:px-3">
-                        <div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div>
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="p-4">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="h-10 bg-gray-700/30 rounded mb-2 animate-pulse"></div>
+            ))}
           </div>
         </div>
       </div>
@@ -295,17 +235,14 @@ function LeaderboardPageContent() {
 
   return (
     <div className="space-y-6">
-      {/* Title Card */}
       <LeaderboardTitleCard />
 
-      {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <LeaderboardTotalCreditsCard />
         <LeaderboardDistributionCard />
         <LeaderboardTopPodCard />
       </div>
 
-      {/* Search Box */}
       <SearchBox 
         onSearch={handleSearch}
         placeholder="Search by Pod ID..."
@@ -334,64 +271,17 @@ function LeaderboardPageContent() {
               >
                 Clear All
               </button>
-              <span className="text-white/40 text-[10px] sm:text-xs hidden sm:inline">{showBookmarks ? 'Collapse' : 'Expand'}</span>
               <ChevronRight className={`w-3 h-3 sm:w-4 sm:h-4 text-white/40 transition-transform duration-200 ${showBookmarks ? 'rotate-90' : ''}`} />
             </div>
           </div>
-
           {showBookmarks && (
-            <div className="overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              <table className="w-full min-w-[500px]">
-                <thead>
-                  <tr className="border-b border-yellow-500/20 bg-black/50">
-                    <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[15%]">#</th>
-                    <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[35%]">Pod ID</th>
-                    <th className="text-center py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[15%]">Tier</th>
-                    <th className="text-right py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[20%]">Credits</th>
-                    <th className="text-center py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[15%]">Uptime</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bookmarkedPodsData.map((pod) => {
-                    const tier = getTier(pod.credits);
-                    return (
-                      <tr key={`bookmark-${pod.pod_id}`} className="group hover:bg-yellow-500/5 transition-all duration-200 border-b border-yellow-500/10">
-                        <td className="py-2 sm:py-3 px-2 sm:px-3">
-                          <div className="flex items-center space-x-1">
-                            <span className="text-white text-xs sm:text-sm font-medium">#{pod.rank}</span>
-                            <button onClick={() => toggleBookmark(pod.pod_id)} className="text-yellow-400 hover:text-red-400 transition-colors duration-200 cursor-pointer" title="Remove bookmark">
-                              <X className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                            </button>
-                          </div>
-                        </td>
-                        <td className="py-2 sm:py-3 px-2 sm:px-3">
-                          <div className="flex items-center space-x-1 sm:space-x-2">
-                            <div className="font-mono text-yellow-100 text-[10px] sm:text-sm group-hover:text-yellow-300 transition-colors duration-300 truncate max-w-[80px] sm:max-w-none">{pod.pod_id}</div>
-                            <CopyBtn text={pod.pod_id} onCopy={handleCopy} type="Pod ID" />
-                          </div>
-                        </td>
-                        <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
-                          <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium" style={{ color: tier.color, backgroundColor: tier.bgColor, border: `1px solid ${tier.color}30` }}>
-                            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 sm:mr-1.5" style={{ backgroundColor: tier.color }} />
-                            <span>{tier.name}</span>
-                          </span>
-                        </td>
-                        <td className="py-2 sm:py-3 px-2 sm:px-3 text-right">
-                          <div className="text-green-400 font-mono text-[10px] sm:text-sm font-bold">+{pod.credits.toLocaleString()}</div>
-                        </td>
-                        <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
-                          <span className={`text-[10px] sm:text-xs font-mono ${pod.uptime > 0 ? 'text-blue-400' : 'text-gray-500'}`}>{formatUptime(pod.uptime)}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <BookmarksTable 
+              data={bookmarkedPodsData}
+              onRemoveBookmark={toggleBookmark}
+            />
           )}
         </div>
       )}
-
 
       {/* Leaderboard Table */}
       <div className={`bg-black/90 border border-gray-800 rounded-lg overflow-hidden transition-opacity duration-300 ${isFetching && !isRefreshing ? 'opacity-70' : 'opacity-100'}`}>
@@ -412,68 +302,30 @@ function LeaderboardPageContent() {
           </button>
         </div>
 
-        <div className="overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          <table className="w-full min-w-[500px]">
-            <thead>
-              <tr className="border-b border-gray-800 bg-black/50">
-                <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[15%]">#</th>
-                <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[35%]">Pod ID</th>
-                <th className="text-center py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[15%]">Tier</th>
-                <th className="text-right py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[20%]">Credits</th>
-                <th className="text-center py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[15%]">Uptime</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedData.map((pod) => {
-                const isBookmarked = bookmarkedPods.has(pod.pod_id);
-                const tier = getTier(pod.credits);
-                return (
-                  <tr key={pod.pod_id} className="group hover:bg-gray-900/50 transition-all duration-200 border-b border-gray-800/50">
-                    <td className="py-2 sm:py-3 px-2 sm:px-3">
-                      <div className="flex items-center space-x-1">
-                        <span className="text-white text-xs sm:text-sm font-medium">#{pod.rank}</span>
-                        <button onClick={() => toggleBookmark(pod.pod_id)} className="text-gray-500 hover:text-yellow-400 transition-colors duration-200 cursor-pointer" title={isBookmarked ? 'Remove bookmark' : 'Bookmark pod'}>
-                          <Star className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${isBookmarked ? 'fill-yellow-400 text-yellow-400' : 'text-gray-500'}`} />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-2 sm:py-3 px-2 sm:px-3">
-                      <div className="flex items-center space-x-1 sm:space-x-2">
-                        <div className="font-mono text-white text-[10px] sm:text-sm group-hover:text-blue-300 transition-colors duration-300 truncate max-w-[80px] sm:max-w-none">{pod.pod_id}</div>
-                        <CopyBtn text={pod.pod_id} onCopy={handleCopy} type="Pod ID" />
-                      </div>
-                    </td>
-                    <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
-                      <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium" style={{ color: tier.color, backgroundColor: tier.bgColor, border: `1px solid ${tier.color}30` }}>
-                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 sm:mr-1.5" style={{ backgroundColor: tier.color }} />
-                        <span>{tier.name}</span>
-                      </span>
-                    </td>
-                    <td className="py-2 sm:py-3 px-2 sm:px-3 text-right">
-                      <div className="text-green-400 font-mono text-[10px] sm:text-sm font-bold">+{pod.credits.toLocaleString()}</div>
-                    </td>
-                    <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
-                      {nodesLoading ? (
-                        <div className="h-3 sm:h-4 bg-gray-700/50 rounded w-10 sm:w-12 mx-auto animate-pulse"></div>
-                      ) : (
-                        <span className={`text-[10px] sm:text-xs font-mono ${pod.uptime > 0 ? 'text-blue-400' : 'text-gray-500'}`}>{formatUptime(pod.uptime)}</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        {/* Tabs for different leaderboards */}
+        <LeaderboardTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+        {/* Ranking Table */}
+        <RankingTable 
+          data={paginatedData}
+          type={activeTab}
+          bookmarkedPods={bookmarkedPods}
+          onToggleBookmark={toggleBookmark}
+          isLoading={nodesLoading}
+        />
 
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 sm:p-4 border-t border-gray-800 bg-black/30">
             <div className="text-xs sm:text-sm text-gray-400 order-2 sm:order-1">
-              Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, leaderboard.length)} of {leaderboard.length}
+              Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length}
             </div>
             <div className="flex items-center space-x-1 sm:space-x-2 order-1 sm:order-2">
-              <button onClick={goToPreviousPage} disabled={currentPage === 1} className="p-1.5 sm:p-2 bg-black/60 border border-white/20 rounded text-gray-400 hover:text-white hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer" title="Previous page">
+              <button 
+                onClick={() => goToPage(currentPage - 1)} 
+                disabled={currentPage === 1} 
+                className="p-1.5 sm:p-2 bg-black/60 border border-white/20 rounded text-gray-400 hover:text-white hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              >
                 <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
               <div className="flex items-center space-x-1">
@@ -484,13 +336,25 @@ function LeaderboardPageContent() {
                   else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
                   else pageNum = currentPage - 2 + i;
                   return (
-                    <button key={pageNum} onClick={() => goToPage(pageNum)} className={`px-2 sm:px-3 py-0.5 sm:py-1 bg-black/60 border rounded text-xs sm:text-sm transition-all duration-200 cursor-pointer ${currentPage === pageNum ? 'border-white/40 text-white' : 'border-white/20 text-gray-400 hover:text-white hover:border-white/40'}`}>
+                    <button 
+                      key={pageNum} 
+                      onClick={() => goToPage(pageNum)} 
+                      className={`px-2 sm:px-3 py-0.5 sm:py-1 bg-black/60 border rounded text-xs sm:text-sm transition-all duration-200 ${
+                        currentPage === pageNum 
+                          ? 'border-white/40 text-white' 
+                          : 'border-white/20 text-gray-400 hover:text-white hover:border-white/40'
+                      }`}
+                    >
                       {pageNum}
                     </button>
                   );
                 })}
               </div>
-              <button onClick={goToNextPage} disabled={currentPage === totalPages} className="p-1.5 sm:p-2 bg-black/60 border border-white/20 rounded text-gray-400 hover:text-white hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer" title="Next page">
+              <button 
+                onClick={() => goToPage(currentPage + 1)} 
+                disabled={currentPage === totalPages} 
+                className="p-1.5 sm:p-2 bg-black/60 border border-white/20 rounded text-gray-400 hover:text-white hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              >
                 <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
             </div>

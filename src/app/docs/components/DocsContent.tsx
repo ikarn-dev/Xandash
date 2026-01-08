@@ -69,9 +69,37 @@ export const PNodesContent = () => (
 
 export const LeaderboardContent = () => (
   <div className="space-y-6">
-    <SectionHeader icon={ChartIcon} label="LEADERBOARD" title="Leaderboard" />
-    <p className="text-white/70 leading-relaxed mb-4">The leaderboard ranks nodes based on their performance and contribution to the network:</p>
-    <InfoCard title="Ranking Criteria"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem label="Credits Earned" desc="Total rewards accumulated by the node" /><ListItem label="Uptime Score" desc="Percentage of time the node has been online" /><ListItem label="Response Time" desc="Average latency for network requests" /><ListItem label="Storage Contribution" desc="Amount of storage provided to the network" /></ul></InfoCard>
+    <SectionHeader icon={ChartIcon} label="LEADERBOARD" title="Multi-Criteria Leaderboard" />
+    <p className="text-white/70 leading-relaxed mb-4">The leaderboard ranks nodes based on multiple performance criteria with separate rankings for each:</p>
+    <div className="space-y-4">
+      <InfoCard title="Leaderboard Tabs"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem label="Credits" desc="Rankings by total credits earned with tier badges (Diamond, Platinum, Gold, Silver, Bronze)" /><ListItem label="Uptime" desc="Rankings by total uptime duration" /><ListItem label="Storage" desc="Rankings by storage committed to the network" /></ul></InfoCard>
+      <InfoCard title="Tier System (Credits Only)"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem label="Diamond" desc="≥50,000 credits" /><ListItem label="Platinum" desc="≥25,000 credits" /><ListItem label="Gold" desc="≥10,000 credits" /><ListItem label="Silver" desc="≥5,000 credits" /><ListItem label="Bronze" desc="<5,000 credits" /></ul></InfoCard>
+      <InfoCard title="Features"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem desc="Bookmark your favorite nodes for quick access" /><ListItem desc="Search by Pod ID to find specific nodes" /><ListItem desc="Pagination for browsing large datasets" /><ListItem desc="Per-network bookmarks (Mainnet/Devnet)" /></ul></InfoCard>
+    </div>
+  </div>
+);
+
+export const NodeCompareContent = () => (
+  <div className="space-y-6">
+    <SectionHeader icon={LayersIcon} label="NODE COMPARE" title="Node Comparison Tool" />
+    <p className="text-white/70 leading-relaxed mb-4">Compare up to 4 nodes side by side to analyze their performance metrics:</p>
+    <div className="space-y-4">
+      <InfoCard title="How to Use"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem desc="Select 2-4 nodes using checkboxes from the node list" /><ListItem desc="Use search to filter by IP address or Pod ID" /><ListItem desc="Click 'Compare' button to view results" /><ListItem desc="Results show instantly using pre-loaded data" /></ul></InfoCard>
+      <InfoCard title="Comparison Metrics"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem label="Status" desc="Online/Offline/Syncing state" /><ListItem label="Credits" desc="Total credits earned" /><ListItem label="Uptime" desc="Time since last restart" /><ListItem label="Storage" desc="Committed and used storage" /><ListItem label="Version" desc="Node software version" /><ListItem label="Location" desc="Geographic location and provider" /></ul></InfoCard>
+      <InfoCard title="Historical Charts"><p className="text-white/60 text-sm">View 7-day historical trends for Credits, Uptime, Storage Committed, and Storage Used. Charts load in the background after initial results display.</p></InfoCard>
+    </div>
+  </div>
+);
+
+export const GovernanceContent = () => (
+  <div className="space-y-6">
+    <SectionHeader icon={ShieldIcon} label="GOVERNANCE" title="Governance Tracking" />
+    <p className="text-white/70 leading-relaxed mb-4">Monitor Xandeum network governance proposals and treasury:</p>
+    <div className="space-y-4">
+      <InfoCard title="Proposals Tab"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem desc="View active and completed governance proposals" /><ListItem desc="Track voting progress and results" /><ListItem desc="See proposal details and voting deadlines" /></ul></InfoCard>
+      <InfoCard title="Treasury Tab"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem desc="Real-time treasury balance display" /><ListItem desc="SOL price conversion from CoinGecko" /><ListItem desc="Exact token amounts with thousand separators" /><ListItem desc="Treasury address with copy functionality" /></ul></InfoCard>
+      <InfoCard title="Voting Stats"><p className="text-white/60 text-sm">Track overall voting participation, quorum requirements, and historical voting patterns across proposals.</p></InfoCard>
+    </div>
   </div>
 );
 
@@ -150,14 +178,17 @@ export const TechStackContent = () => (
 export const ApiReferenceContent = () => (
   <div className="space-y-6">
     <SectionHeader icon={LinkIcon} label="API REFERENCE" title="API Reference" />
-    <p className="text-white/70 leading-relaxed mb-6">XanDash uses several internal API routes to fetch and process data:</p>
+    <p className="text-white/70 leading-relaxed mb-6">XanDash uses several internal API routes to fetch and process data. All endpoints support both Mainnet and Devnet via the network query parameter:</p>
     <div className="space-y-4">
-      <ApiEndpoint method="GET" path="/api/rpc" desc="Proxy endpoint for Xandeum JSON-RPC calls" />
       <ApiEndpoint method="GET" path="/api/nodes" desc="Fetches all network nodes with status and metrics" />
-      <ApiEndpoint method="GET" path="/api/node-profile?ip={ip}" desc="Fetches detailed profile for a specific node" />
-      <ApiEndpoint method="GET" path="/api/pod-credits" desc="Fetches credit/reward data for all pods" />
-      <ApiEndpoint method="GET" path="/api/geolocation?ip={ip}" desc="Returns geographic location data for an IP" />
+      <ApiEndpoint method="GET" path="/api/node-profile?ip={ip}&network={network}" desc="Fetches detailed profile for a specific node including history" />
+      <ApiEndpoint method="GET" path="/api/node-history?ip={ip}&type=stats&hours=168" desc="Fetches historical stats for a node" />
+      <ApiEndpoint method="GET" path="/api/pod-credits?network={network}" desc="Fetches credit/reward data for all pods" />
+      <ApiEndpoint method="POST" path="/api/geolocation" desc="Batch IP geolocation lookup (POST with {ips: [...]})" />
+      <ApiEndpoint method="GET" path="/api/governance?network={network}" desc="Fetches governance proposals and treasury data" />
       <ApiEndpoint method="GET" path="/api/xand-info" desc="Fetches XAND token data from CoinGecko API" />
+      <ApiEndpoint method="POST" path="/api/rpc" desc="Proxy endpoint for Xandeum JSON-RPC calls" />
+      <ApiEndpoint method="POST" path="/api/sync-nodes" desc="Syncs all nodes to MongoDB (requires auth)" />
     </div>
   </div>
 );
@@ -218,6 +249,7 @@ export const ContributingContent = () => (
 export const contentMap: Record<string, React.FC> = {
   'introduction': IntroductionContent, 'overview': OverviewContent, 'quick-start': QuickStartContent,
   'analytics': AnalyticsContent, 'pnodes': PNodesContent, 'leaderboard': LeaderboardContent,
+  'node-compare': NodeCompareContent, 'governance': GovernanceContent,
   'network': NetworkContent, 'xand-token': XandTokenContent, 'endpoints': EndpointsContent,
   'architecture': ArchitectureContent, 'tech-stack': TechStackContent, 'api-reference': ApiReferenceContent,
   'data-flow': DataFlowContent, 'security': SecurityContent, 'performance': PerformanceContent, 'contributing': ContributingContent,

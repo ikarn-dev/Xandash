@@ -22,7 +22,7 @@ const ChevronUpIcon = ({ className = "w-3 h-3" }: { className?: string }) => (
 const STORAGE_KEY = 'xandash_marquee_hidden';
 
 export const Marquee = ({ className = '' }: MarqueeProps) => {
-  const [isHidden, setIsHidden] = useState(true); // Start hidden to prevent flash
+  const [isHidden, setIsHidden] = useState(true);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -44,15 +44,16 @@ export const Marquee = ({ className = '' }: MarqueeProps) => {
     { text: '•', color: 'text-white/20', dot: '' },
     { text: 'DEVNET IS LIVE', color: 'text-emerald-400', dot: 'bg-emerald-400' },
     { text: '•', color: 'text-white/20', dot: '' },
+    { text: 'NODE COMPARE', color: 'text-cyan-400', dot: 'bg-cyan-400' },
+    { text: '•', color: 'text-white/20', dot: '' },
+    { text: 'MULTI-LEADERBOARDS', color: 'text-amber-400', dot: 'bg-amber-400' },
+    { text: '•', color: 'text-white/20', dot: '' },
+    { text: 'GOVERNANCE TRACKING', color: 'text-purple-400', dot: 'bg-purple-400' },
+    { text: '•', color: 'text-white/20', dot: '' },
     { text: 'REAL-TIME MONITORING', color: 'text-white/60', dot: 'bg-white/40' },
-    { text: '•', color: 'text-white/20', dot: '' },
-    { text: 'TRACK YOUR PNODES', color: 'text-amber-400', dot: 'bg-amber-400' },
-    { text: '•', color: 'text-white/20', dot: '' },
-    { text: 'EARN STOINC REWARDS', color: 'text-purple-400', dot: 'bg-purple-400' },
     { text: '•', color: 'text-white/20', dot: '' },
   ];
 
-  // Show toggle button when hidden
   if (isHidden) {
     return (
       <div className={`relative ${className}`}>
@@ -70,7 +71,6 @@ export const Marquee = ({ className = '' }: MarqueeProps) => {
 
   return (
     <div className={`relative overflow-hidden bg-black/60 border-b border-white/10 ${className}`}>
-      {/* Hide button */}
       <button
         onClick={toggleVisibility}
         className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded hover:bg-white/10 transition-colors group"
@@ -79,13 +79,10 @@ export const Marquee = ({ className = '' }: MarqueeProps) => {
         <XIcon className="w-3 h-3 text-white/30 group-hover:text-white/60" />
       </button>
 
-      {/* Gradient masks */}
       <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-black/80 to-transparent z-[1] pointer-events-none" />
       <div className="absolute right-8 top-0 bottom-0 w-12 bg-gradient-to-l from-black/80 to-transparent z-[1] pointer-events-none" />
 
-      {/* Marquee content */}
       <div className="flex animate-marquee py-2">
-        {/* Duplicate content for seamless loop */}
         {[...Array(4)].map((_, repeatIndex) => (
           <div key={repeatIndex} className="flex items-center gap-4 px-4 shrink-0">
             {announcements.map((item, i) => (
@@ -112,10 +109,15 @@ export const Marquee = ({ className = '' }: MarqueeProps) => {
           }
         }
         .animate-marquee {
-          animation: marquee 20s linear infinite;
+          animation: marquee 25s linear infinite;
         }
         .animate-marquee:hover {
           animation-play-state: paused;
+        }
+        @media (max-width: 640px) {
+          .animate-marquee {
+            animation: marquee 12s linear infinite;
+          }
         }
       `}</style>
     </div>

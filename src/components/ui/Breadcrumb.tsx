@@ -24,6 +24,7 @@ const routeNames: Record<string, string> = {
   'mainnet': 'Mainnet',
   'leaderboard': 'Leaderboard',
   'network': 'Network',
+  'governance': 'Governance',
   'xand': 'XAND',
   'stoinc': 'STOINC',
   'endpoints': 'Endpoints',

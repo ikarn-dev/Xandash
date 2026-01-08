@@ -19,6 +19,8 @@ const navItems: NavItem[] = [
   { title: 'pNodes', href: '/nodes', category: 'main' },
   { title: 'Network', href: '/network', category: 'main' },
   { title: 'Leaderboard', href: '/leaderboard', category: 'main' },
+  { title: 'Governance', href: '/governance', category: 'main' },
+  { title: 'Compare', href: '/compare', category: 'tools' },
   { title: 'XAND', href: '/xand', category: 'tools' },
   { title: 'STOINC', href: '/stoinc', category: 'tools' },
   { title: 'Endpoints', href: '/endpoints', category: 'tools' },
@@ -193,16 +195,19 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
             'font-mono text-white/50 text-center',
             compact ? 'text-[9px] min-w-[14px]' : 'text-[9px] sm:text-[10px] min-w-[14px] sm:min-w-[18px]'
           )}>{timeLeft}s</span>
-          <button
+          <span
             onClick={(e) => { e.stopPropagation(); handleRefresh(); }}
-            className="p-0.5 rounded-full hover:bg-white/10 transition-colors"
+            className="p-0.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleRefresh(); } }}
           >
             <RefreshCw className={cn(
               'text-white/40 hover:text-white/70',
               compact ? 'w-2.5 h-2.5' : 'w-2.5 h-2.5 sm:w-3 sm:h-3',
               isRefreshing && 'animate-spin'
             )} />
-          </button>
+          </span>
         </div>
 
         <ChevronDown className={cn(

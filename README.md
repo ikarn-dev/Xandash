@@ -12,7 +12,7 @@
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb)](https://www.mongodb.com/)
 [![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react)](https://react.dev/)
 
-[Live Demo](https://xandash.vercel.app) · [Documentation](https://xandash.vercel.app/about) · [Xandeum Network](https://www.xandeum.network)
+[Live Demo](https://xandash.vercel.app) · [Documentation](https://xandash.vercel.app/docs) · [Xandeum Network](https://www.xandeum.network)
 
 </div>
 
@@ -20,21 +20,42 @@
 
 ## Overview
 
-XanDash is a comprehensive monitoring dashboard for the Xandeum decentralized storage network. It provides real-time insights into pNode performance, network statistics, historical data tracking, and detailed analytics.
+XanDash is a comprehensive monitoring dashboard for the Xandeum decentralized storage network. It provides real-time insights into pNode performance, network statistics, historical data tracking, governance monitoring, and detailed analytics for both Mainnet and Devnet.
 
 ## Features
 
+### Core Features
 - **Real-time pNode Monitoring** - Track 265+ nodes with live status updates every 30 seconds
+- **Dual Network Support** - Full support for both Mainnet and Devnet with network switcher
 - **Interactive Network Map** - Visualize global node distribution across 38+ locations using Leaflet
-- **Node Profiles** - Detailed performance metrics, uptime history, and event logs with CAPTCHA protection
-- **Historical Data** - MongoDB-powered snapshots and trend analysis
-- **Leaderboard** - Rankings based on pod credits and node performance
+- **Node Profiles** - Detailed performance metrics, uptime history, and event logs
+
+### Node Compare
+- **Multi-Node Comparison** - Compare up to 4 nodes side by side
+- **Instant Results** - Uses pre-fetched data for immediate comparison
+- **Historical Charts** - Credits, uptime, storage committed, and storage used trends
+- **Performance Metrics** - Side-by-side stats with "BEST" indicators
+
+### Leaderboards
+- **Multi-Criteria Rankings** - Separate leaderboards for Credits, Uptime, and Storage
+- **Tier System** - Diamond, Platinum, Gold, Silver, Bronze tiers for Credits
+- **Bookmarks** - Save and track your favorite nodes
+- **Search & Pagination** - Find nodes quickly with search and pagination
+
+### Governance
+- **Proposal Tracking** - Monitor active and completed governance proposals
+- **Treasury Overview** - Real-time treasury balance with SOL price conversion
+- **Voting Stats** - Track voting participation and results
+
+### Analytics
 - **Token Analytics** - Live XAND token price, market cap, and 24h charts via CoinGecko
 - **Country Analytics** - Node distribution and statistics by country
+- **Network Stats** - Total storage, uptime averages, version distribution
+
+### Tools
 - **Endpoint Testing** - Built-in RPC endpoint health checker with Web Workers
-- **Auto-Sync** - Automatic data synchronization every 5 minutes via GitHub Actions
-- **CAPTCHA Protection** - Cloudflare Turnstile integration to prevent API abuse
-- **GSAP Animations** - Smooth scroll animations on About page
+- **XAND Calculator** - Token utility calculator
+- **STOINC Rewards** - Staking rewards tracker
 
 ## Tech Stack
 
@@ -91,6 +112,7 @@ NEXT_PUBLIC_COINGECKO_API_KEY=your_api_key
 
 # Pod Credits
 NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL=https://podcredits.xandeum.network/api/pods-credits
+NEXT_PUBLIC_POD_CREDITS_MAINNET_URL=https://podcredits.xandeum.network/api/mainnet-pod-credits
 
 # MongoDB
 MONGODB_URI=mongodb+srv://your-connection-string
@@ -102,6 +124,9 @@ TURNSTILE_SECRET_KEY=your_secret_key
 
 # Cron Secret
 CRON_SECRET=your-secure-random-string
+
+# Governance RPC
+GOVERNANCE_RPC_URL=your_governance_rpc_url
 ```
 
 ## Project Structure
@@ -109,15 +134,16 @@ CRON_SECRET=your-secure-random-string
 ```
 src/
 ├── app/                    # Next.js App Router pages
-│   ├── about/             # Documentation page
-│   ├── about-xandash/     # About page with GSAP animations
 │   ├── api/               # API routes
+│   │   ├── governance/    # Governance data API
+│   │   ├── node-history/  # Historical node data
 │   │   ├── node-profile/  # Node profile data
 │   │   ├── nodes/         # All nodes listing
-│   │   ├── sync-nodes/    # Auto-sync endpoint
-│   │   └── verify-turnstile/ # CAPTCHA verification
-│   ├── country/[code]/    # Country profile pages
-│   ├── leaderboard/       # Leaderboard page
+│   │   ├── pod-credits/   # Credits data
+│   │   └── geolocation/   # IP geolocation batch API
+│   ├── compare/           # Node comparison page
+│   ├── governance/        # Governance tracking page
+│   ├── leaderboard/       # Multi-criteria leaderboards
 │   ├── network/           # Network map page
 │   ├── nodes/             # pNodes listing page
 │   └── profile/[ip]/      # Node profile pages
@@ -125,9 +151,6 @@ src/
 │   ├── dashboard/         # Dashboard cards and widgets
 │   ├── layout/            # Layout components (Navbar, Footer)
 │   └── ui/                # Reusable UI components
-│       ├── CaptchaGate.tsx    # Per-page CAPTCHA
-│       ├── AppCaptchaGate.tsx # App-wide CAPTCHA
-│       └── InteractiveMap.tsx # Leaflet map
 └── libs/
     ├── db/                # MongoDB integration
     └── services/          # External service integrations
@@ -137,6 +160,7 @@ src/
 
 | Document | Description |
 |----------|-------------|
+| [Architecture](docs/ARCHITECTURE.md) | System design and data flow diagrams |
 | [Tech Stack](docs/TECH_STACK.md) | Detailed technology overview |
 | [API Reference](docs/API_REFERENCE.md) | API endpoints documentation |
 | [Cron Setup](docs/CRON_SETUP.md) | GitHub Actions cron configuration |
@@ -148,42 +172,29 @@ src/
 |----------|--------|-------------|
 | `/api/nodes` | GET | Get all pNodes with stats |
 | `/api/node-profile` | GET | Get detailed node profile with history |
+| `/api/node-history` | GET | Get node historical data and events |
 | `/api/pod-credits` | GET | Get pod credits data |
+| `/api/governance` | GET | Get governance proposals and treasury |
+| `/api/geolocation` | POST | Batch IP geolocation lookup |
 | `/api/xand-info` | GET | Get XAND token info |
 | `/api/sync-nodes` | POST | Sync all nodes to MongoDB |
-| `/api/verify-turnstile` | POST | Verify CAPTCHA token |
-| `/api/db-status` | GET | Check MongoDB connection |
-
-## Auto-Sync with GitHub Actions
-
-XanDash uses GitHub Actions to sync node data every 5 minutes:
-
-1. Add `CRON_SECRET` to GitHub repository secrets
-2. Add same `CRON_SECRET` to Vercel environment variables
-3. Workflow runs automatically on push to main
-
-See [Cron Setup](docs/CRON_SETUP.md) for details.
-
-## CAPTCHA Protection
-
-Node profile pages are protected with Cloudflare Turnstile:
-- Prevents API abuse and scraping
-- Smooth user experience (invisible challenge)
-- Localhost automatically bypassed for development
-
-See [CAPTCHA Setup](docs/CAPTCHA_SETUP.md) for configuration.
 
 ## Recent Updates
 
 ### January 2026
-- Added Cloudflare Turnstile CAPTCHA protection
-- Created About page with GSAP scroll animations
-- Optimized MongoDB sync (batch operations, ~2s completion)
-- Added GitHub Actions cron (every 5 minutes)
-- Fixed mobile navbar z-index issues
-- Made navbar more compact for mobile
-- Added skeleton loading for profile pages
-- Updated version card to show most popular version
+- **Node Compare** - Compare up to 4 nodes with instant results and historical charts
+- **Multi-Leaderboards** - Separate rankings for Credits, Uptime, and Storage
+- **Governance Tracking** - Monitor proposals, treasury, and voting
+- **Performance Optimization** - Parallel API fetching, pre-loaded data for instant comparisons
+- **Mainnet Support** - Full dual-network support with network switcher
+- **Treasury Display** - Real-time SOL price conversion with exact token amounts
+
+### Previous Updates
+- Cloudflare Turnstile CAPTCHA protection
+- GSAP scroll animations on About page
+- MongoDB sync optimization (~2s completion)
+- GitHub Actions cron (every 5 minutes)
+- Mobile-responsive navbar and tables
 
 ## Deployment
 

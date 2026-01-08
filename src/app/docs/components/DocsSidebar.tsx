@@ -33,6 +33,8 @@ export const sidebarSections: SidebarSection[] = [
       { id: 'analytics', title: 'Analytics Dashboard', icon: ChartIcon },
       { id: 'pnodes', title: 'pNodes Monitoring', icon: ServerIcon },
       { id: 'leaderboard', title: 'Leaderboard', icon: ChartIcon },
+      { id: 'node-compare', title: 'Node Compare', icon: LayersIcon },
+      { id: 'governance', title: 'Governance', icon: ShieldIcon },
       { id: 'network', title: 'Network Map', icon: GlobeIcon },
       { id: 'xand-token', title: 'XAND Token Info', icon: DatabaseIcon },
       { id: 'endpoints', title: 'Endpoint Testing', icon: TerminalIcon },

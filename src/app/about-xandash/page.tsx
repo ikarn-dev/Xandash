@@ -260,9 +260,9 @@ function AboutContent() {
             { icon: EyeIcon, title: 'Real-Time Monitoring', desc: 'Track 265+ pNodes with live status updates every 30 seconds. See online/offline states, resource usage, and performance metrics instantly.' },
             { icon: NetworkIcon, title: 'Interactive Network Map', desc: 'Visualize global node distribution across 38+ locations. Explore nodes by country and region with detailed statistics.' },
             { icon: ChartIcon, title: 'Historical Analytics', desc: 'MongoDB-powered snapshots track node performance over time. Analyze trends, uptime patterns, and credit earnings.' },
-            { icon: DatabaseIcon, title: 'Node Profiles', desc: 'Detailed profiles for each node including location, resources, uptime history, event logs, and credit tracking.' },
-            { icon: ZapIcon, title: 'Leaderboard', desc: 'Rankings based on pod credits and node performance. See top earners and compare node statistics.' },
-            { icon: ShieldIcon, title: 'CAPTCHA Protection', desc: 'Cloudflare Turnstile integration protects API endpoints from abuse while maintaining smooth user experience.' },
+            { icon: LayersIcon, title: 'Node Compare', desc: 'Compare up to 4 nodes side by side with instant results. View historical charts for credits, uptime, and storage metrics.' },
+            { icon: ZapIcon, title: 'Multi-Leaderboards', desc: 'Separate rankings for Credits, Uptime, and Storage. Tier badges for top performers and bookmark your favorite nodes.' },
+            { icon: ShieldIcon, title: 'Governance Tracking', desc: 'Monitor proposals, treasury balance with real-time SOL conversion, and voting statistics across the network.' },
           ].map((feature, i) => (
             <div key={i} className="feature-card relative bg-black border border-white/10 p-5 group hover:border-white/20 transition-all">
               <CornerAccents />
@@ -287,8 +287,8 @@ function AboutContent() {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { value: 'Live', label: 'Real-Time Data', color: 'text-emerald-400' },
-            { value: 'Global', label: 'Network Coverage', color: 'text-blue-400' },
+            { value: 'Dual', label: 'Network Support', color: 'text-emerald-400' },
+            { value: 'Compare', label: 'Up to 4 Nodes', color: 'text-blue-400' },
             { value: '30s', label: 'Auto Refresh', color: 'text-amber-400' },
             { value: '7d+', label: 'Historical Data', color: 'text-purple-400' },
           ].map((stat, i) => (
@@ -349,13 +349,13 @@ function AboutContent() {
             <ChartIcon className="w-4 h-4" />
             Analytics Dashboard
           </Link>
-          <Link href="/nodes" className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white font-medium rounded-lg hover:bg-white/20 transition-all border border-white/20">
-            <ServerIcon className="w-4 h-4" />
-            View pNodes
+          <Link href="/compare" className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white font-medium rounded-lg hover:bg-white/20 transition-all border border-white/20">
+            <LayersIcon className="w-4 h-4" />
+            Node Compare
           </Link>
-          <Link href="/network" className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white font-medium rounded-lg hover:bg-white/20 transition-all border border-white/20">
-            <NetworkIcon className="w-4 h-4" />
-            Network Map
+          <Link href="/governance" className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white font-medium rounded-lg hover:bg-white/20 transition-all border border-white/20">
+            <ShieldIcon className="w-4 h-4" />
+            Governance
           </Link>
         </div>
 

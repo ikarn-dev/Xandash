@@ -2,7 +2,7 @@
 
 ## Overview
 
-XanDash is built with modern web technologies optimized for performance, developer experience, and scalability.
+XanDash is built with modern web technologies optimized for performance, developer experience, and scalability. The application supports both Mainnet and Devnet networks with real-time data synchronization.
 
 ## Frontend
 
@@ -23,7 +23,7 @@ XanDash is built with modern web technologies optimized for performance, develop
 | MongoDB Atlas | Historical data storage, node snapshots |
 | JSON-RPC 2.0 | Communication with Xandeum network |
 | CoinGecko API | XAND token market data |
-| IP Geolocation | Node location services (ip-api.com, ipapi.co) |
+| IP Geolocation | Node location services (ip-api.com batch) |
 
 ## UI Components
 
@@ -32,8 +32,8 @@ XanDash is built with modern web technologies optimized for performance, develop
 | Custom SVG Icons | Lightweight, inline icon system |
 | Leaflet | Interactive world map |
 | Recharts | Data visualization charts |
+| Custom SVG Charts | Comparison charts, historical trends |
 | Sonner | Toast notifications |
-| Custom Charts | SVG-based line charts, status charts |
 
 ## Security
 
@@ -52,6 +52,26 @@ XanDash is built with modern web technologies optimized for performance, develop
 | ESLint | Code linting and quality |
 | PWA | Progressive Web App support |
 
+## Key Features Implementation
+
+### Node Compare
+- Pre-fetched data for instant comparison results
+- Parallel API fetching for historical data
+- Batch geolocation lookup
+- Custom SVG comparison charts
+
+### Multi-Leaderboards
+- Separate rankings for Credits, Uptime, Storage
+- Tier system (Diamond, Platinum, Gold, Silver, Bronze)
+- LocalStorage bookmarks per network
+- Responsive tables with hidden scrollbars
+
+### Governance Tracking
+- Real-time proposal monitoring
+- Treasury balance with SOL price conversion
+- Sequential RPC batching to avoid rate limits
+- bs58 address decoding for accurate comparison
+
 ## Database Schema
 
 ### Node Snapshots Collection
@@ -69,6 +89,7 @@ XanDash is built with modern web technologies optimized for performance, develop
   credits: number;
   timestamp: number;
   created_at: Date;
+  network: 'devnet' | 'mainnet';
 }
 ```
 
@@ -84,6 +105,7 @@ XanDash is built with modern web technologies optimized for performance, develop
   new_value?: string | number;
   timestamp: number;
   created_at: Date;
+  network: 'devnet' | 'mainnet';
 }
 ```
 
@@ -91,6 +113,9 @@ XanDash is built with modern web technologies optimized for performance, develop
 
 - **Server-Side Rendering (SSR)**: Initial page loads are server-rendered
 - **React Query Caching**: Intelligent data caching with stale-while-revalidate
+- **Pre-fetched Data**: Node comparison uses already-loaded data for instant results
+- **Parallel API Calls**: Promise.all for concurrent data fetching
+- **Batch Operations**: Geolocation batch API for multiple IPs
 - **Code Splitting**: Automatic route-based code splitting
 - **Lazy Loading**: Maps and charts loaded on demand
 - **Web Workers**: Background processing for endpoint testing

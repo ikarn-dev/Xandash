@@ -60,15 +60,22 @@ export const Footer: React.FC = () => {
       { label: 'pNodes', href: '/nodes' },
       { label: 'Leaderboard', href: '/leaderboard' },
       { label: 'Network', href: '/network' },
+      { label: 'Governance', href: '/governance' },
+    ],
+    utilities: [
+      { label: 'Node Compare', href: '/compare' },
+      { label: 'XAND Token', href: '/xand' },
+      { label: 'STOINC', href: '/stoinc' },
+      { label: 'Endpoints', href: '/endpoints' },
     ],
     resources: [
       { label: 'Documentation', href: '/docs' },
-      { label: 'XAND Token', href: '/xand' },
-      { label: 'Endpoints', href: '/endpoints' },
+      { label: 'About XanDash', href: '/about-xandash' },
       { label: 'Xandeum Docs', href: 'https://docs.xandeum.network/', external: true },
     ],
     community: [
       { label: 'Twitter/X', href: 'https://x.com/Xandeum', external: true },
+      { label: 'Xandeum Website', href: 'https://www.xandeum.network/', external: true },
     ],
   };
 
@@ -81,7 +88,7 @@ export const Footer: React.FC = () => {
     <footer className="bg-black border-t border-white/10 mt-auto">
       <div className="container mx-auto px-4 sm:px-6">
         {/* Main Footer Content */}
-        <div className="py-12 grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="py-12 grid grid-cols-2 md:grid-cols-5 gap-8">
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center mb-4">
@@ -123,15 +130,43 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
+          {/* Utilities Links */}
+          <div>
+            <h4 className="text-white/40 text-xs font-mono uppercase tracking-wider mb-4">// Utilities</h4>
+            <ul className="space-y-2">
+              {footerLinks.utilities.map((link, i) => (
+                <li key={i}>
+                  <Link href={link.href} className="text-white/60 hover:text-white text-sm transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
           {/* Resources Links */}
           <div>
             <h4 className="text-white/40 text-xs font-mono uppercase tracking-wider mb-4">// Resources</h4>
             <ul className="space-y-2">
               {footerLinks.resources.map((link, i) => (
                 <li key={i}>
-                  <Link href={link.href} className="text-white/60 hover:text-white text-sm transition-colors">
-                    {link.label}
-                  </Link>
+                  {'external' in link && link.external ? (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white/60 hover:text-white text-sm transition-colors inline-flex items-center gap-1"
+                    >
+                      {link.label}
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
+                      </svg>
+                    </a>
+                  ) : (
+                    <Link href={link.href} className="text-white/60 hover:text-white text-sm transition-colors">
+                      {link.label}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
@@ -168,7 +203,7 @@ export const Footer: React.FC = () => {
             <span>v1.0.0</span>
             <span className="text-white/20">•</span>
             <span className="flex items-center gap-1">
-              Built with <HeartIcon className="w-3 h-3 text-red-400" /> for Xandeum
+              Built by <a href="https://x.com/iKK6600" target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors">Karan</a>
             </span>
           </div>
           
