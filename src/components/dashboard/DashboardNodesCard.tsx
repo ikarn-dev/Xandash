@@ -26,6 +26,7 @@ interface LocationData {
   region: string;
   provider: string;
   ip: string;
+  name?: string; // Node name from mainnet geo data
 }
 
 interface ValidatorData {
@@ -157,9 +158,9 @@ export const DashboardNodesCard: React.FC = () => {
     fetchNodes();
   }, [network, isMainnet]);
 
-  // Load geolocation data (devnet only - mainnet uses external geo)
+  // Load geolocation data (for both networks - ip-api.com provides city data)
   useEffect(() => {
-    if (isMainnet || nodes.length === 0) return;
+    if (nodes.length === 0) return;
     
     const loadGeolocationData = async () => {
       try {
@@ -177,7 +178,7 @@ export const DashboardNodesCard: React.FC = () => {
     };
 
     loadGeolocationData();
-  }, [nodes, isMainnet]);
+  }, [nodes]);
 
   // Fetch credits (devnet only - mainnet uses external credits)
   useEffect(() => {
@@ -371,8 +372,9 @@ export const DashboardNodesCard: React.FC = () => {
 
   const formatLocation = (location: LocationData | null): string => {
     if (!location) return 'Unknown';
-    if (location.city !== 'Unknown') return `${location.city}, ${location.country}`;
-    return location.country || 'Unknown';
+    // Handle empty city or 'Unknown' city - just show country
+    if (!location.city || location.city === 'Unknown') return location.country || 'Unknown';
+    return `${location.city}, ${location.country}`;
   };
 
   const navigateToNodeProfile = (address: string, nodeId: string) => {
@@ -464,9 +466,31 @@ export const DashboardNodesCard: React.FC = () => {
                 const nodeCredits = node.pubkey ? credits[node.pubkey] : null;
                 // Use external data for mainnet (geo + ping)
                 const mainnetGeo = mainnetGeoData[ip];
-                const displayLocation = isMainnet && mainnetGeo && mainnetGeo.country
-                  ? { country: mainnetGeo.country, country_code: mainnetGeo.country_code, city: 'Unknown', region: '', provider: mainnetGeo.provider || 'Unknown', ip }
-                  : location;
+                
+                // Merge location data: prefer ip-api.com (has city), enrich with mainnet geo (has name)
+                let displayLocation = location;
+                if (isMainnet) {
+                  if (location && mainnetGeo) {
+                    // Merge: ip-api city + mainnet geo name
+                    displayLocation = {
+                      ...location,
+                      name: mainnetGeo.name,
+                      provider: mainnetGeo.provider || location.provider,
+                    };
+                  } else if (mainnetGeo && mainnetGeo.country) {
+                    // Only mainnet geo available
+                    displayLocation = { 
+                      country: mainnetGeo.country, 
+                      country_code: mainnetGeo.country_code, 
+                      city: '', 
+                      region: '', 
+                      provider: mainnetGeo.provider || 'Unknown', 
+                      ip,
+                      name: mainnetGeo.name,
+                    };
+                  }
+                }
+                
                 // Use external ping for mainnet, native ping for devnet
                 const nodePing = isMainnet && mainnetGeo
                   ? { ping: mainnetGeo.ping, status: (mainnetGeo.ping !== null && mainnetGeo.ping > 0 ? 'online' : 'offline') as 'online' | 'offline' | 'timeout' }
@@ -522,9 +546,17 @@ export const DashboardNodesCard: React.FC = () => {
                     </td>
                     {/* Name */}
                     <td className="px-3 py-3 text-xs">
-                      <span className={`${getNodeName(node.pubkey) !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
-                        {getNodeName(node.pubkey)}
-                      </span>
+                      {(() => {
+                        // For mainnet, prefer geo data name, fallback to hardcoded names
+                        const geoName = isMainnet && mainnetGeo?.name;
+                        const hardcodedName = getNodeName(node.pubkey);
+                        const displayName = geoName || (hardcodedName !== 'N/A' ? hardcodedName : null);
+                        return (
+                          <span className={`${displayName ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
+                            {displayName || 'N/A'}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-3 py-3 text-xs">
                       <div className="flex items-center space-x-2 min-w-0">

@@ -198,7 +198,7 @@ export function useCountryData(countryCode: string) {
               locationData[ip] = {
                 country: node.country,
                 country_code: node.country_code,
-                city: 'Unknown',
+                city: '', // Empty - mainnet geo data doesn't have city
                 region: '',
                 provider: node.provider || 'Unknown',
                 ip,

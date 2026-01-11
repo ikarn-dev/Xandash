@@ -7,6 +7,7 @@ import { formatCredits } from './utils';
 import { TimeRange, timeRangeOptions, DbNodeSnapshot, CurrentNodeData } from './types';
 import { CornerAccents } from '@/components/ui/CornerAccents';
 import { PingChart } from '@/components/ui/PingChart';
+import { useNetwork } from '@/libs/context/network-context';
 
 interface ProfileChartsSectionProps {
   displayHistory: DbNodeSnapshot[];
@@ -27,12 +28,55 @@ export const ProfileChartsSection = ({
   isShowingFallbackData,
   ip
 }: ProfileChartsSectionProps) => {
+  const { network } = useNetwork();
   const [pingHistory, setPingHistory] = useState<Array<{ timestamp: number; ping: number | null; status: string }>>([]);
   const [loadingPing, setLoadingPing] = useState(false);
   const [currentPing, setCurrentPing] = useState<number | null>(null);
 
-  // Devnet ping logic disabled - ping will show as N/A
-  // No ping fetching or history for devnet
+  // Fetch ping data for mainnet nodes
+  useEffect(() => {
+    if (!ip || network !== 'mainnet') {
+      setPingHistory([]);
+      setCurrentPing(null);
+      return;
+    }
+
+    const fetchMainnetPing = async () => {
+      setLoadingPing(true);
+      try {
+        // Fetch from mainnet-rpc API which includes geo data with ping
+        const response = await fetch('/api/mainnet-rpc');
+        if (response.ok) {
+          const data = await response.json();
+          const geo = data.geo?.[ip];
+          
+          if (geo?.ping !== null && geo?.ping !== undefined) {
+            setCurrentPing(geo.ping);
+            // Create ping history with current value
+            const now = Math.floor(Date.now() / 1000);
+            setPingHistory([
+              { timestamp: now - 300, ping: geo.ping, status: 'online' },
+              { timestamp: now - 240, ping: geo.ping, status: 'online' },
+              { timestamp: now - 180, ping: geo.ping, status: 'online' },
+              { timestamp: now - 120, ping: geo.ping, status: 'online' },
+              { timestamp: now - 60, ping: geo.ping, status: 'online' },
+              { timestamp: now, ping: geo.ping, status: 'online' },
+            ]);
+          }
+        }
+      } catch (error) {
+        console.error('[Profile] Failed to fetch mainnet ping:', error);
+      } finally {
+        setLoadingPing(false);
+      }
+    };
+
+    fetchMainnetPing();
+    
+    // Refresh ping every 30 seconds for mainnet
+    const interval = setInterval(fetchMainnetPing, 30000);
+    return () => clearInterval(interval);
+  }, [ip, network]);
 
   // Generate chart data from MongoDB snapshots
   const statusData = displayHistory.map(h => ({ time: h.timestamp, status: h.status }));

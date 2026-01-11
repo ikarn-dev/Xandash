@@ -436,8 +436,8 @@ function mergeNodeData(
  * Main function to get mainnet data
  * 
  * Logic:
- * 1. Try Source A first (if cooldown allows)
- * 2. If Source A fails or returns no data, immediately try Source B
+ * 1. On initial load (no cache), call BOTH Source A and Source B in parallel
+ * 2. After initial load, follow the staggered cycle (A at 0s/30s, B at 15s)
  * 3. Always fetch geo data for enrichment (location, credits, ping)
  * 4. Merge data from both sources when both have data
  * 5. Return cached data if both sources fail
@@ -456,9 +456,18 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
   let sourceAFailed = false;
   let nodesForGeo: MainnetNodeData[] = [];
 
-  // Try Source A first if allowed
-  if (canFetchA || forceRefresh) {
-    const freshA = await fetchFromSourceA();
+  // Check if this is initial load (no cached data at all)
+  const isInitialLoad = !cachedA && !cachedB && !cachedMerged;
+
+  // On initial load, call BOTH sources in parallel for fastest data
+  if (isInitialLoad || forceRefresh) {
+    console.log('[Mainnet] Initial load - fetching from both sources in parallel...');
+    
+    const [freshA, freshB] = await Promise.all([
+      fetchFromSourceA(),
+      fetchFromSourceB()
+    ]);
+    
     if (freshA && freshA.length > 0) {
       cachedA = freshA;
       nodesForGeo = freshA;
@@ -467,19 +476,8 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
       sourceUsed = 'A';
       freshFetch = true;
       console.log(`[Mainnet] Cached ${freshA.length} nodes from source A`);
-    } else {
-      sourceAFailed = true;
-      console.log('[Mainnet] Source A failed or returned no data, trying Source B...');
     }
-  }
-
-  // Try Source B if:
-  // 1. Source A failed (immediate fallback)
-  // 2. Mid-cycle timing allows it
-  // 3. Force refresh and no fresh data yet
-  const canFetchB = await canCallSourceB();
-  if (sourceAFailed || canFetchB || (forceRefresh && !freshFetch)) {
-    const freshB = await fetchFromSourceB();
+    
     if (freshB && freshB.length > 0) {
       // Fetch geo data for source B nodes
       const items = freshB.map(pod => ({
@@ -492,13 +490,60 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
       
       cachedB = enrichedB;
       cachedGeo = geoData;
-      nodesForGeo = freshB; // Use for geo if A didn't provide nodes
+      if (!nodesForGeo.length) nodesForGeo = freshB;
       await cache.set(CACHE_KEY_SOURCE_B, enrichedB, CYCLE_MS * 2);
       await cache.set(CACHE_KEY_GEO, geoData, CYCLE_MS * 2);
       await cache.set(CACHE_KEY_LAST_B, Date.now(), CYCLE_MS * 2);
       sourceUsed = freshFetch ? 'A+B' : 'B';
       freshFetch = true;
       console.log(`[Mainnet] Cached ${enrichedB.length} nodes from source B with geo data`);
+    }
+  } else {
+    // Normal staggered cycle after initial load
+    
+    // Try Source A first if allowed
+    if (canFetchA) {
+      const freshA = await fetchFromSourceA();
+      if (freshA && freshA.length > 0) {
+        cachedA = freshA;
+        nodesForGeo = freshA;
+        await cache.set(CACHE_KEY_SOURCE_A, freshA, CYCLE_MS * 2);
+        await cache.set(CACHE_KEY_LAST_A, Date.now(), CYCLE_MS * 2);
+        sourceUsed = 'A';
+        freshFetch = true;
+        console.log(`[Mainnet] Cached ${freshA.length} nodes from source A`);
+      } else {
+        sourceAFailed = true;
+        console.log('[Mainnet] Source A failed or returned no data, trying Source B...');
+      }
+    }
+
+    // Try Source B if:
+    // 1. Source A failed (immediate fallback)
+    // 2. Mid-cycle timing allows it
+    const canFetchB = await canCallSourceB();
+    if (sourceAFailed || canFetchB) {
+      const freshB = await fetchFromSourceB();
+      if (freshB && freshB.length > 0) {
+        // Fetch geo data for source B nodes
+        const items = freshB.map(pod => ({
+          ip: pod.address?.split(':')[0] || '',
+          pubkey: pod.pubkey || '',
+        })).filter(item => item.ip && item.pubkey);
+        
+        const geoData = await fetchGeoData(items);
+        const enrichedB = enrichNodesWithGeo(freshB, geoData);
+        
+        cachedB = enrichedB;
+        cachedGeo = geoData;
+        nodesForGeo = freshB;
+        await cache.set(CACHE_KEY_SOURCE_B, enrichedB, CYCLE_MS * 2);
+        await cache.set(CACHE_KEY_GEO, geoData, CYCLE_MS * 2);
+        await cache.set(CACHE_KEY_LAST_B, Date.now(), CYCLE_MS * 2);
+        sourceUsed = freshFetch ? 'A+B' : 'B';
+        freshFetch = true;
+        console.log(`[Mainnet] Cached ${enrichedB.length} nodes from source B with geo data`);
+      }
     }
   }
 
@@ -652,4 +697,35 @@ export async function getMainnetCreditsMap(): Promise<Map<string, number>> {
   }
   
   return creditsMap;
+}
+
+/**
+ * Get ping for a specific IP from mainnet geo data
+ */
+export async function getMainnetPingForIp(ip: string): Promise<number | null> {
+  const data = await getMainnetData();
+  
+  // First check geo data
+  const geo = data.geo[ip];
+  if (geo?.ping !== null && geo?.ping !== undefined) {
+    return geo.ping;
+  }
+  
+  // Then check node data
+  const node = data.nodes.find(n => n.address?.split(':')[0] === ip);
+  if (node?.ping !== null && node?.ping !== undefined) {
+    return node.ping;
+  }
+  
+  // Check cached ping
+  const cachedPing = await getCachedPingData();
+  return cachedPing[ip] ?? null;
+}
+
+/**
+ * Get geo data for a specific IP
+ */
+export async function getMainnetGeoForIp(ip: string): Promise<MainnetGeoData | null> {
+  const data = await getMainnetData();
+  return data.geo[ip] || null;
 }

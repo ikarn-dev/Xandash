@@ -134,7 +134,11 @@ export function extractIPFromAddress(address: string): string {
 export function formatLocation(location: LocationData | null): string {
   if (!location) return 'Unknown Location';
   
-  const parts = [location.city, location.region, location.country].filter(Boolean);
+  // Filter out empty strings and "Unknown" values
+  const parts = [location.city, location.region, location.country]
+    .filter(part => part && part !== 'Unknown');
+  
+  if (parts.length === 0) return 'Unknown Location';
   return parts.join(', ');
 }
 

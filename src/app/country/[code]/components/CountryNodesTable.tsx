@@ -197,7 +197,7 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
                       )}
                     </td>
                     <td className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
-                      {loc?.city || 'Unknown'}
+                      {loc?.city && loc.city !== 'Unknown' ? loc.city : '—'}
                     </td>
                     <td className="px-3 sm:px-4 py-2 sm:py-3 text-white font-mono text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
                       {formatUptime(node.uptime)}

@@ -85,20 +85,47 @@ export function NodesPageClientRefactored({
   const { credits } = useNodesCredits(allValidators, network);
   const { pings } = useNodesPing(network === 'devnet' ? allValidators : [], network); // Only fetch native pings for devnet
 
-  // For mainnet, use external geo data; for devnet use native locations
+  // For mainnet, merge external geo data with ip-api.com location data for city info
+  // For devnet, use native locations from ip-api.com
   const mergedLocations = React.useMemo(() => {
-    if (network === 'mainnet' && Object.keys(geoData).length > 0) {
+    if (network === 'mainnet') {
       const merged: Record<string, any> = {};
-      for (const [ip, data] of Object.entries(geoData)) {
-        merged[ip] = {
-          country: data.country,
-          country_code: data.country_code,
-          city: 'Unknown',
-          region: '',
-          provider: data.provider || 'Unknown',
-          ip,
-        };
+      
+      // First, add all locations from ip-api.com (has city data)
+      for (const [ip, loc] of Object.entries(locations)) {
+        if (loc) {
+          merged[ip] = { ...loc };
+        }
       }
+      
+      // Then, enrich with geo data from Source B (has node name, provider)
+      if (Object.keys(geoData).length > 0) {
+        for (const [ip, data] of Object.entries(geoData)) {
+          if (merged[ip]) {
+            // Merge: keep city from ip-api, add name from geo
+            merged[ip] = {
+              ...merged[ip],
+              name: data.name,
+              provider: data.provider || merged[ip].provider,
+              // If ip-api didn't have country, use geo data
+              country: merged[ip].country || data.country,
+              country_code: merged[ip].country_code || data.country_code,
+            };
+          } else {
+            // No ip-api data, use geo data only
+            merged[ip] = {
+              country: data.country,
+              country_code: data.country_code,
+              city: '', // No city from geo data
+              region: '',
+              provider: data.provider || 'Unknown',
+              ip,
+              name: data.name,
+            };
+          }
+        }
+      }
+      
       return merged;
     }
     return locations;

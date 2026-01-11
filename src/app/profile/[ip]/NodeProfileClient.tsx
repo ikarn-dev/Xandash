@@ -1,10 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { CaptchaGate } from '@/components/ui/CaptchaGate';
 import { AISummary } from '@/components/ui/AISummary';
 import { useNodeProfile } from './hooks';
+import { useNetwork } from '@/libs/context/network-context';
 import {
   NodeProfileData,
   ProfileHeader,
@@ -23,6 +24,9 @@ interface NodeProfileClientProps {
 
 export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
   const router = useRouter();
+  const { network } = useNetwork();
+  const [currentPing, setCurrentPing] = useState<number | null>(null);
+  
   const {
     loading,
     error,
@@ -38,6 +42,33 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
     hasAnyData,
     fetchData
   } = useNodeProfile({ ip, initialData });
+
+  // Fetch ping data for mainnet nodes
+  useEffect(() => {
+    if (network !== 'mainnet' || !ip) {
+      setCurrentPing(null);
+      return;
+    }
+
+    const fetchMainnetPing = async () => {
+      try {
+        const response = await fetch('/api/mainnet-rpc');
+        if (response.ok) {
+          const data = await response.json();
+          const geo = data.geo?.[ip];
+          if (geo?.ping !== null && geo?.ping !== undefined) {
+            setCurrentPing(geo.ping);
+          }
+        }
+      } catch (error) {
+        console.error('[Profile] Failed to fetch mainnet ping:', error);
+      }
+    };
+
+    fetchMainnetPing();
+    const interval = setInterval(fetchMainnetPing, 30000);
+    return () => clearInterval(interval);
+  }, [ip, network]);
 
   // Generate AI summary prompt - includes node details + feedback with proper units
   const aiSummaryPrompt = useMemo(() => {
@@ -98,7 +129,7 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
         <ProfileLocationSection location={location || null} node={node || null} />
 
         {/* Stats Cards */}
-        <ProfileStatsCards node={node || null} />
+        <ProfileStatsCards node={node || null} ping={currentPing} />
 
         {/* Charts */}
         {(hasAnyData || node) && (

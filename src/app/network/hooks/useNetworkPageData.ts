@@ -183,7 +183,7 @@ export function useNetworkPageData(network: string) {
         location = {
           country: node.country,
           country_code: node.country_code,
-          city: 'Unknown',
+          city: '', // Empty - mainnet geo data doesn't have city
           region: '',
           provider: node.provider || 'Unknown',
           ip,
