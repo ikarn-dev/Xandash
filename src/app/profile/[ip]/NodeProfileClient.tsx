@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState, useEffect } from 'react';
 import { CaptchaGate } from '@/components/ui/CaptchaGate';
 import { AISummary } from '@/components/ui/AISummary';
+import { NodeNotFound } from '@/components/ui/NodeNotFound';
 import { useNodeProfile } from './hooks';
 import { useNetwork } from '@/libs/context/network-context';
 import {
@@ -97,17 +98,7 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
   }
 
   if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <div className="text-red-400 text-lg">{error}</div>
-        <button 
-          onClick={() => router.back()} 
-          className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white"
-        >
-          Go Back
-        </button>
-      </div>
-    );
+    return <NodeNotFound ip={ip} onRetry={fetchData} />;
   }
 
   return (

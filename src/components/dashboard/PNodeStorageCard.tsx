@@ -91,12 +91,15 @@ export const PNodeStorageCard: React.FC<PNodeStorageCardProps> = ({ className = 
     return () => clearInterval(interval);
   }, [network]);
 
+  // Format bytes with full precision (no rounding)
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
+    const value = bytes / Math.pow(k, i);
+    // Show 2 decimal places for better precision
+    return value.toFixed(2) + sizes[i];
   };
 
   if (loading) {

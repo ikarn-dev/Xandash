@@ -13,6 +13,7 @@
     "clear-all-win": "rmdir /s /q .next && rmdir /s /q node_modules && del package-lock.json && npm install && npm run dev"
   },
   "dependencies": {
+    "@lottiefiles/dotlottie-react": "^0.17.12",
     "@radix-ui/react-slot": "^1.2.4",
     "@tanstack/react-query": "^5.90.12",
     "@tanstack/react-query-devtools": "^5.91.1",

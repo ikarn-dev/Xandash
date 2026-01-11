@@ -177,7 +177,7 @@ export function NodesPageClientRefactored({
     handleVersionFilterChange,
     handleSort,
     handlePageChange,
-  } = useNodesFilters(allValidators, dataFetchTime);
+  } = useNodesFilters(allValidators, dataFetchTime, network);
 
   const { prefetchProfile, navigateToProfile } = usePrefetchProfile();
 
@@ -267,7 +267,8 @@ export function NodesPageClientRefactored({
         onlySyncing: selectedFilters.onlySyncing,
         versionFilter: versionFilter,
       },
-      { field: sortBy, direction: 'desc' }
+      { field: sortBy, direction: 'desc' },
+      network
     );
 
     const headers = ['Location', 'IP', 'Country', 'City', 'Pubkey', 'Public', 'Storage (GB)', 'Usage %', 'Version', 'Uptime', 'Last Seen', 'Credits', 'Status'];

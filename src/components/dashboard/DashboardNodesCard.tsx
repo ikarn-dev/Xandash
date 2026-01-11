@@ -134,13 +134,9 @@ export const DashboardNodesCard: React.FC = () => {
         if (data.serverTimestamp) setDataFetchTime(data.serverTimestamp);
         
         const allNodes = data.nodes || [];
-        // Sort: named nodes first, then by last_seen_timestamp
+        // Devnet: sort by most recent (last_seen_timestamp)
         const sortedNodes = allNodes
           .sort((a: ValidatorData, b: ValidatorData) => {
-            const aHasName = hasNodeName(a.pubkey);
-            const bHasName = hasNodeName(b.pubkey);
-            if (aHasName && !bHasName) return -1;
-            if (!aHasName && bHasName) return 1;
             return b.last_seen_timestamp - a.last_seen_timestamp;
           })
           .slice(0, 20);

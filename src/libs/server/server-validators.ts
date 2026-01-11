@@ -232,8 +232,10 @@ export function filterAndSortValidators(
   sort: {
     field: 'address' | 'location' | 'pubkey' | 'public' | 'storage_committed' | 'storage_used' | 'usage_percent' | 'rpc_port' | 'version' | 'uptime' | 'last_seen' | 'status' | 'score' | 'storage';
     direction: 'asc' | 'desc';
-  }
+  },
+  network: string = 'devnet'
 ): ValidatorData[] {
+  const isMainnet = network === 'mainnet';
   let filtered = [...validators];
 
   // Apply search filter
@@ -295,16 +297,18 @@ export function filterAndSortValidators(
     filtered = filtered.filter(v => v.version === filters.versionFilter);
   }
 
-  // Apply sorting with named nodes always at top
+  // Apply sorting - named nodes first only for mainnet
   filtered.sort((a, b) => {
-    // Named nodes always come first
-    const aHasName = hasNodeName(a.pubkey);
-    const bHasName = hasNodeName(b.pubkey);
+    // Named nodes always come first (mainnet only)
+    if (isMainnet) {
+      const aHasName = hasNodeName(a.pubkey);
+      const bHasName = hasNodeName(b.pubkey);
+      
+      if (aHasName && !bHasName) return -1;
+      if (!aHasName && bHasName) return 1;
+    }
     
-    if (aHasName && !bHasName) return -1;
-    if (!aHasName && bHasName) return 1;
-    
-    // If both have names or both don't, sort by the selected field
+    // If both have names or both don't (or devnet), sort by the selected field
     let aVal: any, bVal: any;
     
     switch (sort.field) {

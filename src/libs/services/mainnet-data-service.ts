@@ -160,7 +160,7 @@ async function fetchFromSourceA(): Promise<MainnetNodeData[] | null> {
         'Accept': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       },
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(30000),
     });
 
     if (!response.ok) {
@@ -232,7 +232,7 @@ async function fetchFromSourceB(): Promise<MainnetNodeData[] | null> {
         method: 'get-pods-with-stats',
         params: {},
       }),
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(30000),
     });
 
     if (!response.ok) {
@@ -271,7 +271,7 @@ async function fetchGeoData(items: Array<{ ip: string; pubkey: string }>): Promi
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       },
       body: JSON.stringify({ items }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
     });
 
     if (!response.ok) {

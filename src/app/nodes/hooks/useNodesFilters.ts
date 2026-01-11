@@ -12,7 +12,7 @@ interface FilterState {
   onlySyncing: boolean;
 }
 
-export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: number) {
+export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: number, network: string = 'devnet') {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(25);
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,7 +43,8 @@ export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: n
         onlySyncing: selectedFilters.onlySyncing,
         versionFilter: versionFilter,
       },
-      { field: sortBy, direction: 'desc' }
+      { field: sortBy, direction: 'desc' },
+      network
     );
 
     const paginated = paginateValidators(filtered, currentPage, pageSize);
@@ -110,7 +111,7 @@ export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: n
       quickStats: { ...calculatedStats, duplicates: duplicateCount, syncing: calculatedStats.syncing || 0 },
       availableVersions: uniqueVersions
     };
-  }, [allValidators, searchQuery, selectedFilters, sortBy, currentPage, pageSize, hasActiveFilters, dataFetchTime]);
+  }, [allValidators, searchQuery, selectedFilters, sortBy, currentPage, pageSize, hasActiveFilters, dataFetchTime, network]);
 
   const handleFilterChange = (filterKey: keyof FilterState) => {
     startTransition(() => {
