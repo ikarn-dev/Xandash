@@ -438,7 +438,10 @@ export const DashboardNodesCard: React.FC = () => {
                 <th className="w-[4%] px-2 py-3 text-center text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
                   <CompareIcon className="w-3.5 h-3.5 mx-auto text-white/50" />
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Name</th>
+                {/* Name column - Mainnet only */}
+                {isMainnet && (
+                  <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Name</th>
+                )}
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Location</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">IP Address</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Pubkey</th>
@@ -458,7 +461,7 @@ export const DashboardNodesCard: React.FC = () => {
             <tbody>
               {nodes.length === 0 ? (
                 <tr>
-                  <td colSpan={isMainnet ? 13 : 12} className="px-6 py-12 text-center text-white/60 text-sm">
+                  <td colSpan={isMainnet ? 14 : 11} className="px-6 py-12 text-center text-white/60 text-sm">
                     No nodes found for {isMainnet ? 'mainnet' : 'devnet'}
                   </td>
                 </tr>
@@ -544,12 +547,14 @@ export const DashboardNodesCard: React.FC = () => {
                         )}
                       </button>
                     </td>
-                    {/* Name */}
-                    <td className="px-3 py-3 text-xs">
-                      <span className={`${getNodeName(node.pubkey) !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
-                        {getNodeName(node.pubkey)}
-                      </span>
-                    </td>
+                    {/* Name - Mainnet only */}
+                    {isMainnet && (
+                      <td className="px-3 py-3 text-xs">
+                        <span className={`${getNodeName(node.pubkey) !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
+                          {getNodeName(node.pubkey)}
+                        </span>
+                      </td>
+                    )}
                     <td className="px-3 py-3 text-xs">
                       <div className="flex items-center space-x-2 min-w-0">
                         {displayLocation?.country_code ? (

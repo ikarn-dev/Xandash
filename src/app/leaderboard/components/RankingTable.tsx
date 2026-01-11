@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
 import { Star } from 'lucide-react';
 import { CopyBtn } from '@/components/ui/CopyBtn';
 import { toast } from 'sonner';
 import { LeaderboardType } from './LeaderboardTabs';
 import { getNodeName } from '@/libs/utils/node-names';
+import { useNetwork } from '@/libs/context/network-context';
 
 export interface NodeData {
   pod_id: string;
@@ -14,6 +14,7 @@ export interface NodeData {
   storage_used: number;
   storage_committed: number;
   address?: string;
+  globalRank?: number; // Global rank from sorted data
 }
 
 interface RankingTableProps {
@@ -31,22 +32,10 @@ export function RankingTable({
   onToggleBookmark,
   isLoading = false 
 }: RankingTableProps) {
-  // Sort and rank data based on type
-  const rankedData = useMemo(() => {
-    const sorted = [...data].sort((a, b) => {
-      switch (type) {
-        case 'credits':
-          return b.credits - a.credits;
-        case 'uptime':
-          return b.uptime - a.uptime;
-        case 'storage':
-          return b.storage_committed - a.storage_committed;
-        default:
-          return 0;
-      }
-    });
-    return sorted.map((node, index) => ({ ...node, rank: index + 1 }));
-  }, [data, type]);
+  const { network } = useNetwork();
+  const isMainnet = network === 'mainnet';
+  // Data already comes sorted with globalRank from parent
+  const rankedData = data;
 
   const getTier = (credits: number) => {
     if (credits >= 50000) return { name: 'Diamond', color: '#60a5fa', bgColor: 'rgba(96, 165, 250, 0.15)' };
@@ -108,7 +97,9 @@ export function RankingTable({
         <thead>
           <tr className="border-b border-gray-800 bg-black/50">
             <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[10%]">Rank</th>
-            <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[10%]">Name</th>
+            {isMainnet && (
+              <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[10%]">Name</th>
+            )}
             <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[28%]">Pod ID</th>
             <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[20%]">IP Address</th>
             {type === 'credits' && (
@@ -122,7 +113,7 @@ export function RankingTable({
             Array.from({ length: 10 }).map((_, i) => (
               <tr key={i} className="border-b border-gray-800/50">
                 <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>
-                <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>
+                {isMainnet && <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>}
                 <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>
                 <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>
                 {type === 'credits' && <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>}
@@ -131,7 +122,7 @@ export function RankingTable({
             ))
           ) : rankedData.length === 0 ? (
             <tr>
-              <td colSpan={type === 'credits' ? 6 : 5} className="py-8 text-center text-white/40">
+              <td colSpan={type === 'credits' ? (isMainnet ? 6 : 5) : (isMainnet ? 5 : 4)} className="py-8 text-center text-white/40">
                 No data available
               </td>
             </tr>
@@ -146,7 +137,7 @@ export function RankingTable({
                 <tr key={node.pod_id} className="group hover:bg-gray-900/50 transition-all duration-200 border-b border-gray-800/50">
                   <td className="py-2 sm:py-3 px-2 sm:px-3">
                     <div className="flex items-center space-x-1">
-                      <span className="text-white text-xs sm:text-sm font-medium">#{node.rank}</span>
+                      <span className="text-white text-xs sm:text-sm font-medium">#{node.globalRank}</span>
                       <button 
                         onClick={() => onToggleBookmark(node.pod_id)} 
                         className="text-gray-500 hover:text-yellow-400 transition-colors duration-200 cursor-pointer" 
@@ -156,11 +147,13 @@ export function RankingTable({
                       </button>
                     </div>
                   </td>
-                  <td className="py-2 sm:py-3 px-2 sm:px-3">
-                    <span className={`text-[10px] sm:text-sm ${nodeName !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
-                      {nodeName}
-                    </span>
-                  </td>
+                  {isMainnet && (
+                    <td className="py-2 sm:py-3 px-2 sm:px-3">
+                      <span className={`text-[10px] sm:text-sm ${nodeName !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
+                        {nodeName}
+                      </span>
+                    </td>
+                  )}
                   <td className="py-2 sm:py-3 px-2 sm:px-3">
                     <div className="flex items-center space-x-1 sm:space-x-2">
                       <div className="font-mono text-white text-[10px] sm:text-sm group-hover:text-blue-300 transition-colors duration-300 truncate max-w-[100px] sm:max-w-[180px]">

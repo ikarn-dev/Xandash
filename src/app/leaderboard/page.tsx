@@ -109,30 +109,56 @@ function LeaderboardPageContent() {
     return map;
   }, [nodesData]);
 
-  // Merge credits data with nodes data
+  // Merge credits data with nodes data and deduplicate by pod_id
   const mergedData: NodeData[] = useMemo(() => {
     if (!creditsData?.data) return [];
     
-    return creditsData.data.map((pod) => {
+    // Use a Map to deduplicate by pod_id
+    const uniquePods = new Map<string, NodeData>();
+    
+    creditsData.data.forEach((pod) => {
+      // Skip if we already have this pod_id (keep first occurrence which has higher credits)
+      if (uniquePods.has(pod.pod_id)) return;
+      
       const nodeInfo = nodesMap.get(pod.pod_id);
-      return {
+      uniquePods.set(pod.pod_id, {
         pod_id: pod.pod_id,
         credits: pod.credits,
         uptime: nodeInfo?.uptime || 0,
         storage_used: nodeInfo?.storage_used || 0,
         storage_committed: nodeInfo?.storage_committed || 0,
         address: nodeInfo?.address,
-      };
+      });
     });
+    
+    return Array.from(uniquePods.values());
   }, [creditsData, nodesMap]);
+
+  // Sort all data first based on active tab, then filter and paginate
+  const sortedData = useMemo(() => {
+    const sorted = [...mergedData].sort((a, b) => {
+      switch (activeTab) {
+        case 'credits':
+          return b.credits - a.credits;
+        case 'uptime':
+          return b.uptime - a.uptime;
+        case 'storage':
+          return b.storage_committed - a.storage_committed;
+        default:
+          return 0;
+      }
+    });
+    // Assign global ranks
+    return sorted.map((node, index) => ({ ...node, globalRank: index + 1 }));
+  }, [mergedData, activeTab]);
 
   // Filter by search query
   const filteredData = useMemo(() => {
-    if (!searchQuery.trim()) return mergedData;
-    return mergedData.filter(pod => 
+    if (!searchQuery.trim()) return sortedData;
+    return sortedData.filter(pod => 
       pod.pod_id.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [mergedData, searchQuery]);
+  }, [sortedData, searchQuery]);
 
   // Paginate data
   const { paginatedData, totalPages } = useMemo(() => {

@@ -86,9 +86,12 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                   <CompareIcon className="w-3.5 h-3.5 mx-auto text-white/50" />
                 </th>
               )}
-              <th className="w-[6%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
-                Name
-              </th>
+              {/* Name column - Mainnet only */}
+              {isMainnet && (
+                <th className="w-[6%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
+                  Name
+                </th>
+              )}
               <th 
                 className="w-[12%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
                 onClick={() => handleSort('address')}
@@ -220,12 +223,14 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                     </td>
                   )}
 
-                  {/* Name */}
-                  <td className="px-3 py-3 text-xs">
-                    <span className={`${getNodeName(validator.pubkey) !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
-                      {getNodeName(validator.pubkey)}
-                    </span>
-                  </td>
+                  {/* Name - Mainnet only */}
+                  {isMainnet && (
+                    <td className="px-3 py-3 text-xs">
+                      <span className={`${getNodeName(validator.pubkey) !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
+                        {getNodeName(validator.pubkey)}
+                      </span>
+                    </td>
+                  )}
 
                   {/* Location */}
                   <td className="px-3 py-3 text-xs">
