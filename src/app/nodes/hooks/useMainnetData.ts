@@ -142,8 +142,7 @@ export function useMainnetData(
                 prev.uptime === updated.uptime &&
                 prev.last_seen_timestamp === updated.last_seen_timestamp &&
                 prev.storage_used === updated.storage_used &&
-                prev.storage_usage_percent === updated.storage_usage_percent &&
-                prev.credits === updated.credits
+                prev.storage_usage_percent === updated.storage_usage_percent
               ) {
                 return prev; // No changes, keep same reference
               }

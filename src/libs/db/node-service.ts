@@ -2,6 +2,7 @@ import {
   connectToDatabase, 
   NodeSnapshot, 
   NodeEventLog, 
+  NodePingRecord,
   getCollectionNames 
 } from './mongodb';
 
@@ -466,16 +467,6 @@ export async function createIndexes(network?: NetworkType): Promise<void> {
 }
 
 // ============== PING DATA FUNCTIONS ==============
-
-export interface NodePingRecord {
-  ip: string;
-  pubkey?: string;
-  ping: number | null;
-  status: 'online' | 'timeout' | 'offline';
-  port: number;
-  timestamp: number;
-  created_at: Date;
-}
 
 // Save a single ping record
 export async function savePingRecord(
