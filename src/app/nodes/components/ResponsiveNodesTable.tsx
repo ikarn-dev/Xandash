@@ -41,6 +41,8 @@ interface ResponsiveNodesTableProps {
   // Compare props
   selectedForCompare?: string[];
   onToggleCompare?: (pubkey: string) => void;
+  // Network prop to conditionally show ping column
+  network?: string;
 }
 
 // Compare icon component
@@ -68,7 +70,10 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
   handleSort,
   selectedForCompare = [],
   onToggleCompare,
+  network = 'devnet',
 }) => {
+  const isMainnet = network === 'mainnet';
+  
   return (
     <div className="w-full bg-black border border-white/10 rounded-lg overflow-hidden">
       <div className="overflow-x-auto scrollbar-hide">
@@ -141,9 +146,12 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
               >
                 Status {getSortIcon('status')}
               </th>
-              <th className="w-[6%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
-                Ping
-              </th>
+              {/* Ping column - Mainnet only */}
+              {isMainnet && (
+                <th className="w-[6%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
+                  Ping
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -315,24 +323,26 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                     </div>
                   </td>
 
-                  {/* Ping */}
-                  <td className="px-3 py-3 text-xs">
-                    {nodePing ? (
-                      <span className={`font-mono ${
-                        nodePing.status === 'online' 
-                          ? nodePing.ping! < 200 
-                            ? 'text-green-400' 
-                            : nodePing.ping! < 500 
-                              ? 'text-yellow-400' 
-                              : 'text-orange-400'
-                          : 'text-red-400'
-                      }`}>
-                        {nodePing.status === 'online' ? `${nodePing.ping}ms` : 'N/A'}
-                      </span>
-                    ) : (
-                      <span className="text-white/30">—</span>
-                    )}
-                  </td>
+                  {/* Ping - Mainnet only */}
+                  {isMainnet && (
+                    <td className="px-3 py-3 text-xs">
+                      {nodePing ? (
+                        <span className={`font-mono ${
+                          nodePing.status === 'online' 
+                            ? nodePing.ping! < 200 
+                              ? 'text-green-400' 
+                              : nodePing.ping! < 500 
+                                ? 'text-yellow-400' 
+                                : 'text-orange-400'
+                            : 'text-red-400'
+                        }`}>
+                          {nodePing.status === 'online' ? `${nodePing.ping}ms` : 'N/A'}
+                        </span>
+                      ) : (
+                        <span className="text-white/30">—</span>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}

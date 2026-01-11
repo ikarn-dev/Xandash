@@ -449,13 +449,16 @@ export const DashboardNodesCard: React.FC = () => {
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Last Seen</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Credits</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Status</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Ping</th>
+                {/* Ping column - Mainnet only */}
+                {isMainnet && (
+                  <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Ping</th>
+                )}
               </tr>
             </thead>
             <tbody>
               {nodes.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="px-6 py-12 text-center text-white/60 text-sm">
+                  <td colSpan={isMainnet ? 13 : 12} className="px-6 py-12 text-center text-white/60 text-sm">
                     No nodes found for {isMainnet ? 'mainnet' : 'devnet'}
                   </td>
                 </tr>
@@ -604,23 +607,26 @@ export const DashboardNodesCard: React.FC = () => {
                         </span>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-xs">
-                      {nodePing ? (
-                        <span className={`font-mono ${
-                          nodePing.status === 'online' 
-                            ? nodePing.ping! < 200 
-                              ? 'text-green-400' 
-                              : nodePing.ping! < 500 
-                                ? 'text-yellow-400' 
-                                : 'text-orange-400'
-                            : 'text-red-400'
-                        }`}>
-                          {nodePing.status === 'online' ? `${nodePing.ping}ms` : 'N/A'}
-                        </span>
-                      ) : (
-                        <span className="text-white/30">—</span>
-                      )}
-                    </td>
+                    {/* Ping cell - Mainnet only */}
+                    {isMainnet && (
+                      <td className="px-3 py-3 text-xs">
+                        {nodePing ? (
+                          <span className={`font-mono ${
+                            nodePing.status === 'online' 
+                              ? nodePing.ping! < 200 
+                                ? 'text-green-400' 
+                                : nodePing.ping! < 500 
+                                  ? 'text-yellow-400' 
+                                  : 'text-orange-400'
+                              : 'text-red-400'
+                          }`}>
+                            {nodePing.status === 'online' ? `${nodePing.ping}ms` : 'N/A'}
+                          </span>
+                        ) : (
+                          <span className="text-white/30">—</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })}

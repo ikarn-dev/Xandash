@@ -129,7 +129,7 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
         <ProfileLocationSection location={location || null} node={node || null} />
 
         {/* Stats Cards */}
-        <ProfileStatsCards node={node || null} ping={currentPing} />
+        <ProfileStatsCards node={node || null} ping={currentPing} network={network} />
 
         {/* Charts */}
         {(hasAnyData || node) && (

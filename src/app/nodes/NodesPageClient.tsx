@@ -417,6 +417,7 @@ export function NodesPageClientRefactored({
               sortBy={sortBy}
               selectedForCompare={selectedForCompare}
               onToggleCompare={handleToggleCompare}
+              network={network}
             />
           </div>
 
