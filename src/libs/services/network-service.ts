@@ -17,6 +17,7 @@ export interface NetworkConfig {
 
 /**
  * Network configurations
+ * All URLs from environment variables - no hardcoding
  */
 export const NETWORK_CONFIGS: Record<NetworkType, NetworkConfig> = {
   devnet: {
@@ -25,7 +26,7 @@ export const NETWORK_CONFIGS: Record<NetworkType, NetworkConfig> = {
     color: 'green',
     glowColor: 'rgba(74,222,128,0.8)',
     badgeColor: 'bg-green-500/20 text-green-400 border-green-500/30',
-    creditsApiUrl: process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits',
+    creditsApiUrl: process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || '',
     apiUrl: process.env.DEVNET_API_URL || '',
   },
   mainnet: {
@@ -34,7 +35,7 @@ export const NETWORK_CONFIGS: Record<NetworkType, NetworkConfig> = {
     color: 'blue',
     glowColor: 'rgba(59,130,246,0.8)',
     badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    creditsApiUrl: '', // Mainnet credits come from external data sources
+    creditsApiUrl: process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL || '',
     apiUrl: '', // Mainnet uses external data sources only
   },
 };

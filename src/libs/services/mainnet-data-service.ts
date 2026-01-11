@@ -3,11 +3,12 @@
  * Handles fetching mainnet node data from external sources
  * 
  * Data Flow:
- * - Source A: Called at 0s and 30s (start of cycle)
- * - Source B: Called at 15s (mid-cycle)
- * - Merge: Larger source provides base node count, smaller source updates matching pubkeys
+ * - Source A: Called at 0s and 30s (start of cycle) - provides node data
+ * - Source B: Called at 15s (mid-cycle) - provides node data + geo/ping data
+ * - Geo/Ping data is cached for 30 seconds until next Source B request
+ * - Credits are fetched from dedicated credits API
  * 
- * MongoDB methods remain unchanged for historical data
+ * All URLs from environment variables - no hardcoding
  */
 
 import { cache } from '@/libs/cache/LocalCache';
@@ -22,12 +23,14 @@ const SOURCE_B_GEO = process.env.MAINNET_EXTERNAL_GEO_URL || '';
 const CACHE_KEY_SOURCE_A = 'mainnet:sourceA:nodes';
 const CACHE_KEY_SOURCE_B = 'mainnet:sourceB:nodes';
 const CACHE_KEY_GEO = 'mainnet:geo';
+const CACHE_KEY_PING = 'mainnet:ping'; // Separate ping cache
 const CACHE_KEY_MERGED = 'mainnet:merged';
 const CACHE_KEY_LAST_A = 'mainnet:lastFetchA';
 const CACHE_KEY_LAST_B = 'mainnet:lastFetchB';
 
 const CYCLE_MS = 30 * 1000; // 30 second full cycle
 const MID_CYCLE_MS = 15 * 1000; // 15 seconds for mid-cycle
+const PING_CACHE_MS = 30 * 1000; // Ping cached for 30 seconds
 
 export interface MainnetGeoData {
   country: string;
@@ -251,6 +254,8 @@ async function fetchFromSourceB(): Promise<MainnetNodeData[] | null> {
 
 /**
  * Fetch geo data from source B geo endpoint
+ * Geo data includes location, ping, and provider info
+ * Ping is cached for 30 seconds until next Source B request
  */
 async function fetchGeoData(items: Array<{ ip: string; pubkey: string }>): Promise<Record<string, MainnetGeoData>> {
   if (!SOURCE_B_GEO || items.length === 0) {
@@ -273,7 +278,21 @@ async function fetchGeoData(items: Array<{ ip: string; pubkey: string }>): Promi
       throw new Error(`Geo fetch error: ${response.status}`);
     }
 
-    return await response.json();
+    const geoData = await response.json();
+    
+    // Cache ping data separately for 30 seconds
+    const pingData: Record<string, number | null> = {};
+    for (const [ip, data] of Object.entries(geoData as Record<string, MainnetGeoData>)) {
+      if (data.ping !== undefined) {
+        pingData[ip] = data.ping;
+      }
+    }
+    if (Object.keys(pingData).length > 0) {
+      await cache.set(CACHE_KEY_PING, pingData, PING_CACHE_MS);
+      console.log(`[Mainnet] Cached ping data for ${Object.keys(pingData).length} nodes (30s TTL)`);
+    }
+    
+    return geoData;
   } catch (error) {
     console.error('[Mainnet] Geo fetch failed:', error);
     return {};
@@ -281,8 +300,55 @@ async function fetchGeoData(items: Array<{ ip: string; pubkey: string }>): Promi
 }
 
 /**
- * Enrich nodes with geo data
+ * Get cached ping data
  */
+async function getCachedPingData(): Promise<Record<string, number | null>> {
+  const cached = await cache.get(CACHE_KEY_PING);
+  return (cached as Record<string, number | null>) || {};
+}
+
+/**
+ * Enrich nodes with geo data and cached ping
+ * Ping data is cached for 30 seconds from Source B
+ */
+async function enrichNodesWithGeoAndPing(
+  nodes: MainnetNodeData[],
+  geoData: Record<string, MainnetGeoData>
+): Promise<MainnetNodeData[]> {
+  // Get cached ping data (valid for 30 seconds)
+  const cachedPing = await getCachedPingData();
+  
+  return nodes.map(node => {
+    const ip = node.address?.split(':')[0] || '';
+    const geo = geoData[ip];
+    const ping = cachedPing[ip];
+    
+    if (geo) {
+      return {
+        ...node,
+        // Use cached ping if available, otherwise use geo ping
+        ping: node.ping ?? ping ?? geo.ping,
+        // Credits will be fetched from dedicated API, but keep geo credits as fallback
+        credits: node.credits ?? geo.credits,
+        country: node.country || geo.country,
+        country_code: node.country_code || geo.country_code,
+        provider: node.provider || geo.provider,
+      };
+    }
+    
+    // Even without geo data, try to use cached ping
+    if (ping !== undefined) {
+      return {
+        ...node,
+        ping: node.ping ?? ping,
+      };
+    }
+    
+    return node;
+  });
+}
+
+// Keep sync version for backward compatibility
 function enrichNodesWithGeo(
   nodes: MainnetNodeData[],
   geoData: Record<string, MainnetGeoData>
@@ -372,8 +438,9 @@ function mergeNodeData(
  * Logic:
  * 1. Try Source A first (if cooldown allows)
  * 2. If Source A fails or returns no data, immediately try Source B
- * 3. Merge data from both sources when both have data
- * 4. Return cached data if both sources fail
+ * 3. Always fetch geo data for enrichment (location, credits, ping)
+ * 4. Merge data from both sources when both have data
+ * 5. Return cached data if both sources fail
  */
 export async function getMainnetData(forceRefresh: boolean = false): Promise<MainnetExternalData> {
   const canFetchA = await canCallSourceA();
@@ -387,12 +454,14 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
   let sourceUsed = 'cached';
   let freshFetch = false;
   let sourceAFailed = false;
+  let nodesForGeo: MainnetNodeData[] = [];
 
   // Try Source A first if allowed
   if (canFetchA || forceRefresh) {
     const freshA = await fetchFromSourceA();
     if (freshA && freshA.length > 0) {
       cachedA = freshA;
+      nodesForGeo = freshA;
       await cache.set(CACHE_KEY_SOURCE_A, freshA, CYCLE_MS * 2);
       await cache.set(CACHE_KEY_LAST_A, Date.now(), CYCLE_MS * 2);
       sourceUsed = 'A';
@@ -423,17 +492,52 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
       
       cachedB = enrichedB;
       cachedGeo = geoData;
+      nodesForGeo = freshB; // Use for geo if A didn't provide nodes
       await cache.set(CACHE_KEY_SOURCE_B, enrichedB, CYCLE_MS * 2);
       await cache.set(CACHE_KEY_GEO, geoData, CYCLE_MS * 2);
       await cache.set(CACHE_KEY_LAST_B, Date.now(), CYCLE_MS * 2);
       sourceUsed = freshFetch ? 'A+B' : 'B';
       freshFetch = true;
-      console.log(`[Mainnet] Cached ${enrichedB.length} nodes from source B`);
+      console.log(`[Mainnet] Cached ${enrichedB.length} nodes from source B with geo data`);
+    }
+  }
+
+  // If we got nodes from Source A but no geo data yet, fetch geo data now
+  if (nodesForGeo.length > 0 && (!cachedGeo || Object.keys(cachedGeo).length === 0)) {
+    console.log('[Mainnet] Fetching geo data for Source A nodes...');
+    const items = nodesForGeo.map(pod => ({
+      ip: pod.address?.split(':')[0] || '',
+      pubkey: pod.pubkey || '',
+    })).filter(item => item.ip && item.pubkey);
+    
+    const geoData = await fetchGeoData(items);
+    if (Object.keys(geoData).length > 0) {
+      cachedGeo = geoData;
+      await cache.set(CACHE_KEY_GEO, geoData, CYCLE_MS * 2);
+      console.log(`[Mainnet] Fetched geo data for ${Object.keys(geoData).length} nodes`);
     }
   }
 
   // Merge data from both sources
-  const mergedNodes = mergeNodeData(cachedA, cachedB);
+  let mergedNodes = mergeNodeData(cachedA, cachedB);
+  
+  // Enrich merged nodes with geo data and cached ping
+  if (cachedGeo && Object.keys(cachedGeo).length > 0) {
+    mergedNodes = await enrichNodesWithGeoAndPing(mergedNodes, cachedGeo);
+  } else {
+    // Even without geo, try to apply cached ping
+    const cachedPing = await getCachedPingData();
+    if (Object.keys(cachedPing).length > 0) {
+      mergedNodes = mergedNodes.map(node => {
+        const ip = node.address?.split(':')[0] || '';
+        const ping = cachedPing[ip];
+        if (ping !== undefined) {
+          return { ...node, ping: node.ping ?? ping };
+        }
+        return node;
+      });
+    }
+  }
   
   // If we have fresh data, update merged cache
   if (freshFetch && mergedNodes.length > 0) {
@@ -452,8 +556,28 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
 
   // Return cached merged data if available
   if (cachedMerged && cachedMerged.nodes.length > 0) {
+    // Re-enrich with latest geo data and cached ping
+    let nodes = cachedMerged.nodes;
+    if (cachedGeo && Object.keys(cachedGeo).length > 0) {
+      nodes = await enrichNodesWithGeoAndPing(nodes, cachedGeo);
+    } else {
+      // Apply cached ping even without geo
+      const cachedPing = await getCachedPingData();
+      if (Object.keys(cachedPing).length > 0) {
+        nodes = nodes.map(node => {
+          const ip = node.address?.split(':')[0] || '';
+          const ping = cachedPing[ip];
+          if (ping !== undefined) {
+            return { ...node, ping: node.ping ?? ping };
+          }
+          return node;
+        });
+      }
+    }
     return {
       ...cachedMerged,
+      nodes,
+      geo: cachedGeo || cachedMerged.geo,
       cached: true,
     };
   }

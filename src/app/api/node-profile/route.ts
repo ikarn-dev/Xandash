@@ -31,8 +31,8 @@ interface PingResult {
   status: 'online' | 'offline' | 'timeout';
 }
 
-// Credits endpoint for devnet only
-const DEVNET_CREDITS_URL = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
+// Credits endpoint for devnet only - from env vars
+const DEVNET_CREDITS_URL = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || '';
 
 export async function GET(request: NextRequest) {
   try {

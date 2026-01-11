@@ -226,10 +226,11 @@ export const DashboardNodesCard: React.FC = () => {
 
         if (response.ok) {
           const data = await response.json();
+          const geoMap = data.geo || {};
           
           // Store geo data by IP
-          if (data.geo && typeof data.geo === 'object') {
-            setMainnetGeoData(data.geo);
+          if (Object.keys(geoMap).length > 0) {
+            setMainnetGeoData(geoMap);
           }
           
           // Transform and set mainnet nodes
@@ -238,6 +239,7 @@ export const DashboardNodesCard: React.FC = () => {
             // Transform all nodes first
             const allTransformedNodes: ValidatorData[] = data.nodes.map((pod: any, index: number) => {
               const ip = pod.address?.split(':')[0] || '';
+              const geo = geoMap[ip];
               const timeDiff = serverTime - (pod.last_seen_timestamp || 0);
               
               let status = 'offline';
@@ -274,13 +276,15 @@ export const DashboardNodesCard: React.FC = () => {
             setNodes(transformedNodes);
             setDataFetchTime(serverTime);
             
-            // Also set credits from geo data
+            // Set credits from enriched pod data or geo data
             const creditsMap: { [pubkey: string]: number } = {};
             transformedNodes.forEach((node) => {
               const ip = node.address?.split(':')[0] || '';
-              const geo = data.geo?.[ip];
-              if (geo && node.pubkey) {
-                creditsMap[node.pubkey] = geo.credits ?? 0;
+              const pod = data.nodes.find((p: any) => p.address?.split(':')[0] === ip);
+              const geo = geoMap[ip];
+              if (node.pubkey) {
+                // Prefer pod.credits (enriched), then geo.credits
+                creditsMap[node.pubkey] = pod?.credits ?? geo?.credits ?? 0;
               }
             });
             setCredits(prev => ({ ...prev, ...creditsMap }));

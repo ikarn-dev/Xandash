@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import https from 'https';
+import http from 'http';
 import { getCreditsApiUrl, type NetworkType } from '@/libs/services/network-service';
-import { getMainnetCreditsMap } from '@/libs/services/mainnet-data-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,36 +9,22 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const network = (searchParams.get('network') || 'devnet') as NetworkType;
     
-    // For mainnet, get credits from external data sources
-    if (network === 'mainnet') {
-      const creditsMap = await getMainnetCreditsMap();
-      const pods_credits = Array.from(creditsMap.entries()).map(([pod_id, credits]) => ({
-        pod_id,
-        credits,
-      }));
-      
-      return NextResponse.json({
-        pods_credits,
-        total: pods_credits.length,
-        network: 'mainnet',
-        source: 'external',
-      });
-    }
-    
-    // For devnet, use the credits API
+    // Get credits API URL for the network
     const externalUrl = getCreditsApiUrl(network);
     if (!externalUrl) {
       throw new Error(`${network} pod credits URL not configured`);
     }
     
     const url = new URL(externalUrl);
+    const isHttps = url.protocol === 'https:';
+    const httpModule = isHttps ? https : http;
     
-    // Use HTTPS module for external API call
+    // Fetch from external credits API
     const result = await new Promise<any>((resolve, reject) => {
       const options = {
         hostname: url.hostname,
-        port: url.port || 443,
-        path: url.pathname,
+        port: url.port || (isHttps ? 443 : 80),
+        path: url.pathname + url.search,
         method: 'GET',
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -46,7 +32,7 @@ export async function GET(request: NextRequest) {
         },
       };
 
-      const req = https.request(options, (res) => {
+      const req = httpModule.request(options, (res) => {
         let data = '';
         res.on('data', (chunk) => {
           data += chunk;
@@ -75,7 +61,11 @@ export async function GET(request: NextRequest) {
       req.end();
     });
     
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ...result,
+      network,
+      source: 'credits-api',
+    });
     
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';

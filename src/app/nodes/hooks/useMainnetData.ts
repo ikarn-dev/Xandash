@@ -94,15 +94,18 @@ export function useMainnetData(
 
       if (data.nodes && Array.isArray(data.nodes)) {
         const serverTime = Math.floor(Date.now() / 1000);
+        const geoMap = data.geo || {};
+        
         const transformedNodes: ValidatorData[] = data.nodes.map((pod: MainnetPod, index: number) => {
           const ip = pod.address?.split(':')[0] || '';
-          const geo = data.geo?.[ip] as MainnetGeoData | undefined;
+          const geo = geoMap[ip] as MainnetGeoData | undefined;
           const timeDiff = serverTime - (pod.last_seen_timestamp || 0);
           
           let status: 'online' | 'syncing' | 'offline' = 'offline';
           if (timeDiff < 1800) status = 'online';
           else if (timeDiff < 3600) status = 'syncing';
 
+          // Prefer pod data, fallback to geo data for location/credits/ping
           return {
             address: pod.address || '',
             pubkey: pod.pubkey || `node-${index}`,
@@ -120,8 +123,12 @@ export function useMainnetData(
             rank: index + 1,
             duplicateCount: 0,
             isDuplicate: false,
+            // Use pod enriched data first, then geo data as fallback
             ping: pod.ping ?? geo?.ping ?? null,
             credits: pod.credits ?? geo?.credits ?? 0,
+            country: pod.country || geo?.country || '',
+            country_code: pod.country_code || geo?.country_code || '',
+            provider: pod.provider || geo?.provider || '',
           } as ValidatorData;
         });
 
