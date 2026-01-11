@@ -21,6 +21,13 @@ export function PingChart({ data, height = 100, showStats = true }: PingChartPro
   const rafRef = useRef<number | null>(null);
   const lastInteractionRef = useRef<number>(0);
 
+  // Format ping with decimals for values < 10ms
+  const formatPing = (ping: number): string => {
+    if (ping < 10) return ping.toFixed(2);
+    if (ping < 100) return ping.toFixed(1);
+    return Math.round(ping).toString();
+  };
+
   useEffect(() => {
     setIsAnimating(true);
     const timer = setTimeout(() => setIsAnimating(false), 800);
@@ -40,18 +47,16 @@ export function PingChart({ data, height = 100, showStats = true }: PingChartPro
       return { chartData: [], stats: null, minValue: 0, maxValue: 100, timeRange: { min: 0, max: 1 }, validPoints: [] };
     }
 
-    // Filter for valid ping values (ping is a number, not null)
-    // Don't strictly require status === 'online' since ping data is valid if we have a number
-    const validPings = data.filter(d => d.ping !== null && d.ping !== undefined && typeof d.ping === 'number');
-    const pingValues = validPings.map(d => d.ping as number);
+    // Use all data points that have a ping value (treat null as 0 for display)
+    const allPings = data.map(d => ({
+      ...d,
+      ping: d.ping ?? 0 // Default null to 0
+    }));
+    const pingValues = allPings.map(d => d.ping as number);
     
     const min = pingValues.length > 0 ? Math.min(...pingValues) : 0;
     const max = pingValues.length > 0 ? Math.max(...pingValues) : 100;
-    const avg = pingValues.length > 0 ? Math.round(pingValues.reduce((a, b) => a + b, 0) / pingValues.length) : 0;
-    
-    // Success rate based on having valid ping data
-    const successCount = validPings.length;
-    const successRate = data.length > 0 ? (successCount / data.length) * 100 : 0;
+    const avg = pingValues.length > 0 ? pingValues.reduce((a, b) => a + b, 0) / pingValues.length : 0;
     
     const padding = (max - min) * 0.1 || 10;
     
@@ -63,7 +68,7 @@ export function PingChart({ data, height = 100, showStats = true }: PingChartPro
     const minVal = Math.max(0, min - padding);
     const maxVal = max + padding;
     
-    const points = validPings.map((point, i) => {
+    const points = allPings.map((point, i) => {
       const x = ((point.timestamp - tMin) / timeSpan) * 100;
       const y = 100 - (((point.ping as number) - minVal) / range) * 100;
       return { x, y, ping: point.ping as number, timestamp: point.timestamp, index: i };
@@ -71,7 +76,7 @@ export function PingChart({ data, height = 100, showStats = true }: PingChartPro
 
     return {
       chartData: data,
-      stats: { min, max, avg, successRate, total: data.length },
+      stats: { min, max, avg, total: data.length },
       minValue: minVal,
       maxValue: maxVal,
       timeRange: { min: tMin, max: tMax },
@@ -167,23 +172,17 @@ export function PingChart({ data, height = 100, showStats = true }: PingChartPro
           <div className="flex items-center gap-1.5">
             <span className="text-white/40">Avg:</span>
             <span className={`font-mono ${stats.avg < 100 ? 'text-emerald-400' : stats.avg < 300 ? 'text-amber-400' : 'text-red-400'}`}>
-              {stats.avg}ms
+              {formatPing(stats.avg)}ms
             </span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-white/40">Min:</span>
-            <span className="font-mono text-emerald-400">{stats.min}ms</span>
+            <span className="font-mono text-emerald-400">{formatPing(stats.min)}ms</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-white/40">Max:</span>
             <span className={`font-mono ${stats.max < 100 ? 'text-emerald-400' : stats.max < 300 ? 'text-amber-400' : 'text-red-400'}`}>
-              {stats.max}ms
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-white/40">Success:</span>
-            <span className={`font-mono ${stats.successRate > 90 ? 'text-emerald-400' : stats.successRate > 70 ? 'text-amber-400' : 'text-red-400'}`}>
-              {stats.successRate.toFixed(1)}%
+              {formatPing(stats.max)}ms
             </span>
           </div>
         </div>
@@ -191,9 +190,9 @@ export function PingChart({ data, height = 100, showStats = true }: PingChartPro
 
       <div className="relative touch-none" style={{ height }}>
         <div className="absolute left-0 top-0 bottom-0 w-10 flex flex-col justify-between text-[9px] text-white/40 font-mono pointer-events-none">
-          <span>{Math.round(maxValue)}ms</span>
-          <span>{Math.round((maxValue + minValue) / 2)}ms</span>
-          <span>{Math.round(minValue)}ms</span>
+          <span>{formatPing(maxValue)}ms</span>
+          <span>{formatPing((maxValue + minValue) / 2)}ms</span>
+          <span>{formatPing(minValue)}ms</span>
         </div>
 
         <div className="ml-12 h-full relative">
@@ -282,7 +281,7 @@ export function PingChart({ data, height = 100, showStats = true }: PingChartPro
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getPingColor(hoveredPoint.ping) }}></div>
                 <span className="font-mono font-bold text-sm" style={{ color: getPingColor(hoveredPoint.ping) }}>
-                  {hoveredPoint.ping}ms
+                  {formatPing(hoveredPoint.ping)}ms
                 </span>
               </div>
               <div className="text-white/50 text-[10px] font-mono mt-0.5">
