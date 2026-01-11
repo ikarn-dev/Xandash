@@ -5,6 +5,7 @@ import { Star } from 'lucide-react';
 import { CopyBtn } from '@/components/ui/CopyBtn';
 import { toast } from 'sonner';
 import { LeaderboardType } from './LeaderboardTabs';
+import { getNodeName } from '@/libs/utils/node-names';
 
 export interface NodeData {
   pod_id: string;
@@ -106,11 +107,12 @@ export function RankingTable({
       <table className="w-full min-w-[500px]">
         <thead>
           <tr className="border-b border-gray-800 bg-black/50">
-            <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[12%]">Rank</th>
-            <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[35%]">Pod ID</th>
-            <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[25%]">IP Address</th>
+            <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[10%]">Rank</th>
+            <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[10%]">Name</th>
+            <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[28%]">Pod ID</th>
+            <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[20%]">IP Address</th>
             {type === 'credits' && (
-              <th className="text-center py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[13%]">Tier</th>
+              <th className="text-center py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider w-[12%]">Tier</th>
             )}
             <th className={`text-right py-2 sm:py-3 px-2 sm:px-3 text-gray-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider ${type === 'credits' ? 'w-[15%]' : 'w-[28%]'}`}>{getColumnHeader()}</th>
           </tr>
@@ -122,13 +124,14 @@ export function RankingTable({
                 <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>
                 <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>
                 <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>
+                <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>
                 {type === 'credits' && <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>}
                 <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>
               </tr>
             ))
           ) : rankedData.length === 0 ? (
             <tr>
-              <td colSpan={type === 'credits' ? 5 : 4} className="py-8 text-center text-white/40">
+              <td colSpan={type === 'credits' ? 6 : 5} className="py-8 text-center text-white/40">
                 No data available
               </td>
             </tr>
@@ -137,6 +140,7 @@ export function RankingTable({
               const isBookmarked = bookmarkedPods.has(node.pod_id);
               const tier = getTier(node.credits);
               const ipAddress = extractIP(node.address);
+              const nodeName = getNodeName(node.pod_id);
               
               return (
                 <tr key={node.pod_id} className="group hover:bg-gray-900/50 transition-all duration-200 border-b border-gray-800/50">
@@ -151,6 +155,11 @@ export function RankingTable({
                         <Star className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${isBookmarked ? 'fill-yellow-400 text-yellow-400' : 'text-gray-500'}`} />
                       </button>
                     </div>
+                  </td>
+                  <td className="py-2 sm:py-3 px-2 sm:px-3">
+                    <span className={`text-[10px] sm:text-sm ${nodeName !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
+                      {nodeName}
+                    </span>
                   </td>
                   <td className="py-2 sm:py-3 px-2 sm:px-3">
                     <div className="flex items-center space-x-1 sm:space-x-2">

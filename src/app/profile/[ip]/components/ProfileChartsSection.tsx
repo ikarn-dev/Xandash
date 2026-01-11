@@ -1,10 +1,12 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { ChartIcon } from './ProfileIcons';
 import { LineChart, StatusChart } from './ProfileCharts';
 import { formatCredits } from './utils';
 import { TimeRange, timeRangeOptions, DbNodeSnapshot, CurrentNodeData } from './types';
 import { CornerAccents } from '@/components/ui/CornerAccents';
+import { PingChart } from '@/components/ui/PingChart';
 
 interface ProfileChartsSectionProps {
   displayHistory: DbNodeSnapshot[];
@@ -13,6 +15,7 @@ interface ProfileChartsSectionProps {
   setTimeRange: (range: TimeRange) => void;
   filteredDbHistoryLength: number;
   isShowingFallbackData: boolean;
+  ip?: string;
 }
 
 export const ProfileChartsSection = ({
@@ -21,8 +24,16 @@ export const ProfileChartsSection = ({
   timeRange,
   setTimeRange,
   filteredDbHistoryLength,
-  isShowingFallbackData
+  isShowingFallbackData,
+  ip
 }: ProfileChartsSectionProps) => {
+  const [pingHistory, setPingHistory] = useState<Array<{ timestamp: number; ping: number | null; status: string }>>([]);
+  const [loadingPing, setLoadingPing] = useState(false);
+  const [currentPing, setCurrentPing] = useState<number | null>(null);
+
+  // Devnet ping logic disabled - ping will show as N/A
+  // No ping fetching or history for devnet
+
   // Generate chart data from MongoDB snapshots
   const statusData = displayHistory.map(h => ({ time: h.timestamp, status: h.status }));
   const uptimeData = displayHistory.map(h => ({ time: h.timestamp, value: h.uptime / 3600 }));
@@ -105,6 +116,19 @@ export const ProfileChartsSection = ({
           <StatusChart data={statusData} height={60} />
         </div>
         
+        {/* Ping Latency */}
+        <div className="bg-black p-3 sm:p-4 overflow-visible">
+          <h3 className="text-xs font-medium text-white/60 mb-3 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-cyan-500"></span>
+            Ping Latency
+          </h3>
+          {loadingPing ? (
+            <div className="flex items-center justify-center h-[100px] text-white/30 text-xs">Loading...</div>
+          ) : (
+            <PingChart data={pingHistory} height={100} showStats={true} />
+          )}
+        </div>
+        
         {/* Uptime */}
         <div className="bg-black p-3 sm:p-4 overflow-visible">
           <h3 className="text-xs font-medium text-white/60 mb-3 flex items-center gap-2">
@@ -124,7 +148,7 @@ export const ProfileChartsSection = ({
         </div>
         
         {/* Storage */}
-        <div className="bg-black p-3 sm:p-4 overflow-visible">
+        <div className="bg-black p-3 sm:p-4 overflow-visible col-span-1 sm:col-span-2">
           <h3 className="text-xs font-medium text-white/60 mb-3 flex items-center gap-2">
             <span className="w-1.5 h-1.5 bg-amber-500"></span>
             Storage

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
-import { connectToDatabase, COLLECTIONS, NodeSnapshot, NodeEventLog } from '@/libs/db/mongodb';
-import { callDirectRPC } from '@/libs/server';
+import { connectToDatabase, getCollectionNames, NodeSnapshot, NodeEventLog } from '@/libs/db/mongodb';
+import { getMainnetData } from '@/libs/services/mainnet-data-service';
+import { getDevnetData } from '@/libs/services/devnet-data-service';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
@@ -15,7 +16,7 @@ async function fetchTokenData() {
   try {
     const url = process.env.NEXT_PUBLIC_COINGECKO_API_URL || 'https://api.coingecko.com/api/v3/coins/xandeum';
     const apiKey = process.env.NEXT_PUBLIC_COINGECKO_API_KEY;
-    const headers: Record<string, string> = { 'User-Agent': 'XanDash/1.0' };
+    const headers: Record<string, string> = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
     if (apiKey) headers['x-cg-demo-api-key'] = apiKey;
     
     const res = await fetch(url, { headers });
@@ -47,20 +48,60 @@ async function fetchTokenData() {
   }
 }
 
-// Fetch specific node by IP or pubkey
+// Fetch specific node by IP or pubkey (tries both mainnet external API and native RPC)
 async function fetchNodeByIdentifier(identifier: string) {
   try {
-    const rpcResponse = await callDirectRPC('get-pods-with-stats');
-    if (!rpcResponse.success || !rpcResponse.data) return null;
+    let node = null;
+    let isMainnet = false;
     
-    const nodes = (rpcResponse.data as any)?.pods || [];
-    const node = nodes.find((n: any) => {
-      const nodeIp = n.address?.split(':')[0];
-      return nodeIp === identifier || 
-             n.pubkey === identifier || 
-             n.pubkey?.startsWith(identifier) ||
-             n.address === identifier;
-    });
+    // First try mainnet external API
+    try {
+      const mainnetRes = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000'}/api/mainnet-rpc`, {
+        method: 'GET',
+        cache: 'no-store',
+      });
+      
+      if (mainnetRes.ok) {
+        const mainnetData = await mainnetRes.json();
+        const mainnetNodes = mainnetData.nodes || [];
+        
+        node = mainnetNodes.find((n: any) => {
+          const nodeIp = n.address?.split(':')[0];
+          return nodeIp === identifier || 
+                 n.pubkey === identifier || 
+                 n.pubkey?.startsWith(identifier) ||
+                 n.address === identifier;
+        });
+        
+        if (node) {
+          isMainnet = true;
+          // Enrich with geo data if available
+          const ip = node.address?.split(':')[0];
+          const geo = mainnetData.geo?.[ip];
+          if (geo) {
+            node.credits = geo.credits;
+            node.ping = geo.ping;
+            node.country = geo.country;
+          }
+        }
+      }
+    } catch (e) {
+      console.log('[AI Chat] Mainnet API not available, trying native RPC');
+    }
+    
+    // If not found in mainnet, try devnet API
+    if (!node) {
+      const devnetData = await getDevnetData();
+      if (devnetData.nodes.length > 0) {
+        node = devnetData.nodes.find((n: any) => {
+          const nodeIp = n.address?.split(':')[0];
+          return nodeIp === identifier || 
+                 n.pubkey === identifier || 
+                 n.pubkey?.startsWith(identifier) ||
+                 n.address === identifier;
+        });
+      }
+    }
     
     if (!node) return null;
     
@@ -68,34 +109,58 @@ async function fetchNodeByIdentifier(identifier: string) {
     const timeDiff = Math.floor(Date.now() / 1000) - (node.last_seen_timestamp || 0);
     const status = timeDiff < 300 ? 'online' : timeDiff < 3600 ? 'syncing' : 'offline';
     
-    // Get credits for this node
-    let credits = 0;
-    try {
-      const creditsUrl = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
-      const creditsRes = await fetch(creditsUrl, { headers: { 'User-Agent': 'XanDash/1.0' } });
-      if (creditsRes.ok) {
-        const creditsData = await creditsRes.json();
-        const creditEntry = creditsData.pods_credits?.find((c: any) => c.pod_id === node.pubkey);
-        credits = creditEntry?.credits || 0;
-      }
-    } catch {}
+    // Get credits for this node (use existing credits from mainnet or fetch from devnet)
+    let credits = node.credits || 0;
+    if (!isMainnet && !credits) {
+      try {
+        const creditsUrl = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
+        const creditsRes = await fetch(creditsUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
+        if (creditsRes.ok) {
+          const creditsData = await creditsRes.json();
+          const creditEntry = creditsData.pods_credits?.find((c: any) => c.pod_id === node.pubkey);
+          credits = creditEntry?.credits || 0;
+        }
+      } catch {}
+    }
     
     // Get historical data from MongoDB
     let history = null;
     let events = null;
+    let pingStats = null;
     try {
       const db = await connectToDatabase();
-      const snapshots = await db.collection<NodeSnapshot>(COLLECTIONS.NODE_SNAPSHOTS)
+      const collections = getCollectionNames(isMainnet ? 'mainnet' : 'devnet');
+      const snapshots = await db.collection<NodeSnapshot>(collections.NODE_SNAPSHOTS)
         .find({ ip })
         .sort({ timestamp: -1 })
         .limit(10)
         .toArray();
       
-      const nodeEvents = await db.collection<NodeEventLog>(COLLECTIONS.NODE_EVENTS)
+      const nodeEvents = await db.collection<NodeEventLog>(collections.NODE_EVENTS)
         .find({ ip })
         .sort({ timestamp: -1 })
         .limit(5)
         .toArray();
+      
+      // Get ping history
+      const pingRecords = await db.collection(collections.NODE_PINGS)
+        .find({ ip })
+        .sort({ timestamp: -1 })
+        .limit(20)
+        .toArray();
+      
+      if (pingRecords.length > 0) {
+        const successfulPings = pingRecords.filter((p: any) => p.ping !== null && p.status === 'online');
+        const pingValues = successfulPings.map((p: any) => p.ping as number);
+        pingStats = {
+          latestPing: pingRecords[0]?.ping || null,
+          avgPing: pingValues.length > 0 ? Math.round(pingValues.reduce((a: number, b: number) => a + b, 0) / pingValues.length) : null,
+          minPing: pingValues.length > 0 ? Math.min(...pingValues) : null,
+          maxPing: pingValues.length > 0 ? Math.max(...pingValues) : null,
+          successRate: ((successfulPings.length / pingRecords.length) * 100).toFixed(1) + '%',
+          totalPings: pingRecords.length,
+        };
+      }
       
       if (snapshots.length > 1) {
         const oldest = snapshots[snapshots.length - 1];
@@ -120,6 +185,7 @@ async function fetchNodeByIdentifier(identifier: string) {
       pubkey: node.pubkey,
       address: node.address,
       status,
+      network: isMainnet ? 'mainnet' : 'devnet',
       uptimeHours: (node.uptime / 3600).toFixed(1),
       uptimeDays: (node.uptime / 86400).toFixed(1),
       storageCommittedGB: (node.storage_committed / (1024**3)).toFixed(2),
@@ -129,6 +195,9 @@ async function fetchNodeByIdentifier(identifier: string) {
       isPublic: node.is_public,
       rpcPort: node.rpc_port,
       credits,
+      ping: node.ping || null,
+      pingStats,
+      country: node.country || null,
       activeStreams: node.active_streams || 0,
       lastSeen: new Date(node.last_seen_timestamp * 1000).toLocaleString(),
       history,
@@ -143,10 +212,17 @@ async function fetchNodeByIdentifier(identifier: string) {
 // Fetch country data
 async function fetchCountryData(countryCode: string) {
   try {
-    const rpcResponse = await callDirectRPC('get-pods-with-stats');
-    if (!rpcResponse.success || !rpcResponse.data) return null;
+    // Try mainnet first, then devnet
+    let nodes: any[] = [];
+    const mainnetData = await getMainnetData();
+    if (mainnetData.nodes.length > 0) {
+      nodes = mainnetData.nodes;
+    } else {
+      const devnetData = await getDevnetData();
+      nodes = devnetData.nodes;
+    }
     
-    const nodes = (rpcResponse.data as any)?.pods || [];
+    if (nodes.length === 0) return null;
     
     // Get geolocation for nodes
     const ips = nodes.map((n: any) => n.address?.split(':')[0]).filter(Boolean).slice(0, 100);
@@ -199,44 +275,114 @@ async function fetchCountryData(countryCode: string) {
   }
 }
 
-// Fetch network summary (compact)
-async function fetchNetworkSummary() {
+// Fetch network summary (compact) - supports both mainnet and devnet
+async function fetchNetworkSummary(networkType?: 'mainnet' | 'devnet') {
   try {
-    const rpcResponse = await callDirectRPC('get-pods-with-stats');
-    if (!rpcResponse.success || !rpcResponse.data) return null;
+    let nodes: any[] = [];
+    let network = networkType || 'devnet';
     
-    const nodes = (rpcResponse.data as any)?.pods || [];
+    // Try mainnet external API first if mainnet requested or not specified
+    if (!networkType || networkType === 'mainnet') {
+      try {
+        const mainnetRes = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000'}/api/mainnet-rpc`, {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        
+        if (mainnetRes.ok) {
+          const mainnetData = await mainnetRes.json();
+          if (mainnetData.nodes && mainnetData.nodes.length > 0) {
+            nodes = mainnetData.nodes;
+            network = 'mainnet';
+          }
+        }
+      } catch {}
+    }
+    
+    // Fallback to devnet API
+    if (nodes.length === 0) {
+      const devnetData = await getDevnetData();
+      nodes = devnetData.nodes;
+      network = 'devnet';
+    }
+    
     const totalNodes = nodes.length;
+    const now = Math.floor(Date.now() / 1000);
     const onlineNodes = nodes.filter((n: any) => {
-      const timeDiff = Math.floor(Date.now() / 1000) - (n.last_seen_timestamp || 0);
+      const timeDiff = now - (n.last_seen_timestamp || 0);
       return timeDiff < 300;
+    }).length;
+    const syncingNodes = nodes.filter((n: any) => {
+      const timeDiff = now - (n.last_seen_timestamp || 0);
+      return timeDiff >= 300 && timeDiff < 3600;
     }).length;
     
     const totalStorage = nodes.reduce((s: number, n: any) => s + (n.storage_committed || 0), 0);
     const usedStorage = nodes.reduce((s: number, n: any) => s + (n.storage_used || 0), 0);
-    const avgUptime = nodes.reduce((s: number, n: any) => s + (n.uptime || 0), 0) / nodes.length;
+    const avgUptime = totalNodes > 0 ? nodes.reduce((s: number, n: any) => s + (n.uptime || 0), 0) / totalNodes : 0;
     
     const versions: Record<string, number> = {};
     nodes.forEach((n: any) => { versions[n.version || 'unknown'] = (versions[n.version || 'unknown'] || 0) + 1; });
     
     return {
+      network,
       totalNodes,
       onlineNodes,
-      offlineNodes: totalNodes - onlineNodes,
-      onlinePercent: ((onlineNodes / totalNodes) * 100).toFixed(1),
+      syncingNodes,
+      offlineNodes: totalNodes - onlineNodes - syncingNodes,
+      onlinePercent: totalNodes > 0 ? ((onlineNodes / totalNodes) * 100).toFixed(1) : '0',
       totalStorageTB: (totalStorage / (1024**4)).toFixed(2),
       usedStorageTB: (usedStorage / (1024**4)).toFixed(2),
+      storageEfficiency: totalStorage > 0 ? ((usedStorage / totalStorage) * 100).toFixed(1) : '0',
       avgUptimeDays: (avgUptime / 86400).toFixed(1),
       versions,
     };
   } catch { return null; }
 }
 
-// Fetch credits summary
-async function fetchCreditsSummary() {
+// Fetch credits summary - supports both mainnet and devnet
+async function fetchCreditsSummary(networkType?: 'mainnet' | 'devnet') {
   try {
+    const isMainnet = networkType === 'mainnet';
+    
+    // For mainnet, get credits from external data sources
+    if (isMainnet) {
+      try {
+        const mainnetRes = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000'}/api/mainnet-rpc`, {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        
+        if (mainnetRes.ok) {
+          const mainnetData = await mainnetRes.json();
+          const nodes = mainnetData.nodes || [];
+          
+          // Extract credits from nodes
+          const creditsData = nodes
+            .filter((n: any) => n.pubkey && (n.credits !== null && n.credits !== undefined))
+            .map((n: any) => ({ pod_id: n.pubkey, credits: n.credits || 0 }));
+          
+          const total = creditsData.reduce((s: number, c: any) => s + (c.credits || 0), 0);
+          const sorted = [...creditsData].sort((a: any, b: any) => (b.credits || 0) - (a.credits || 0));
+          
+          return {
+            network: 'mainnet',
+            totalCredits: total,
+            avgCredits: creditsData.length > 0 ? Math.round(total / creditsData.length) : 0,
+            totalPods: creditsData.length,
+            topEarners: sorted.slice(0, 5).map((c: any) => ({
+              pubkey: c.pod_id?.slice(0, 8) + '...',
+              credits: c.credits,
+            })),
+          };
+        }
+      } catch {}
+      return null;
+    }
+    
+    // For devnet, use credits API
     const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
-    const res = await fetch(url, { headers: { 'User-Agent': 'XanDash/1.0' } });
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
     if (!res.ok) return null;
     
     const data = await res.json();
@@ -245,8 +391,9 @@ async function fetchCreditsSummary() {
     const sorted = [...credits].sort((a: any, b: any) => (b.credits || 0) - (a.credits || 0));
     
     return {
+      network: 'devnet',
       totalCredits: total,
-      avgCredits: Math.round(total / credits.length),
+      avgCredits: credits.length > 0 ? Math.round(total / credits.length) : 0,
       totalPods: credits.length,
       topEarners: sorted.slice(0, 5).map((c: any) => ({
         pubkey: c.pod_id?.slice(0, 8) + '...',
@@ -261,6 +408,11 @@ async function buildContext(msg: string) {
   const lower = msg.toLowerCase();
   let ctx = '';
   let hints = '';
+  
+  // Detect network type from message
+  const isMainnetQuery = /mainnet|main\s*net|production/.test(lower);
+  const isDevnetQuery = /devnet|dev\s*net|testnet|test\s*net/.test(lower);
+  const networkType: 'mainnet' | 'devnet' | undefined = isMainnetQuery ? 'mainnet' : isDevnetQuery ? 'devnet' : undefined;
   
   // Token/XAND queries
   if (/xand|token|price|market|coin|crypto|supply|volume/.test(lower)) {
@@ -330,21 +482,21 @@ async function buildContext(msg: string) {
   
   // Network overview
   if (/network|overview|nodes|status|total|how many|stats|all/.test(lower)) {
-    const data = await fetchNetworkSummary();
-    if (data) ctx += `\nNETWORK: ${JSON.stringify(data)}`;
+    const data = await fetchNetworkSummary(networkType);
+    if (data) ctx += `\nNETWORK (${data.network?.toUpperCase() || 'DEVNET'}): ${JSON.stringify(data)}`;
   }
   
   // Credits queries
   if (/credit|earn|reward|top|leader|rank/.test(lower)) {
-    const data = await fetchCreditsSummary();
-    if (data) ctx += `\nCREDITS: ${JSON.stringify(data)}`;
+    const data = await fetchCreditsSummary(networkType);
+    if (data) ctx += `\nCREDITS (${data.network?.toUpperCase() || 'DEVNET'}): ${JSON.stringify(data)}`;
   }
   
   // Health/analysis queries - get network data
   if (/health|analyze|analysis|performance|issue|problem|offline/.test(lower)) {
     if (!fullIpMatch && !pubkeyMatch) {
-      const data = await fetchNetworkSummary();
-      if (data) ctx += `\nNETWORK: ${JSON.stringify(data)}`;
+      const data = await fetchNetworkSummary(networkType);
+      if (data) ctx += `\nNETWORK (${data.network?.toUpperCase() || 'DEVNET'}): ${JSON.stringify(data)}`;
     }
   }
   

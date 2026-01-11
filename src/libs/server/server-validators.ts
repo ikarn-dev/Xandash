@@ -1,4 +1,5 @@
-import { callDirectRPC } from './server-rpc';
+import { getMainnetData } from '../services/mainnet-data-service';
+import { hasNodeName } from '../utils/node-names';
 
 export interface ValidatorData {
   pubkey: string;
@@ -25,16 +26,16 @@ export interface ValidatorStats {
   averageScore: number;
 }
 
-// Server-side function to fetch validators data
+// Server-side function to fetch validators data (mainnet)
 export async function getValidatorsData(): Promise<{
   validators: ValidatorData[];
   stats: ValidatorStats;
   error?: string;
 }> {
   try {
-    const response = await callDirectRPC('get-pods-with-stats');
+    const mainnetData = await getMainnetData();
     
-    if (!response.success || !response.data) {
+    if (mainnetData.nodes.length === 0) {
       return {
         validators: [],
         stats: {
@@ -43,12 +44,11 @@ export async function getValidatorsData(): Promise<{
           publicValidators: 0,
           averageScore: 0,
         },
-        error: response.error || 'Failed to fetch validators'
+        error: 'No mainnet data available'
       };
     }
 
-    const responseData = response.data as any;
-    const allValidators = Array.isArray(responseData?.pods) ? responseData.pods : [];
+    const allValidators = mainnetData.nodes;
     
     // Process and enrich validator data
     const now = Math.floor(Date.now() / 1000);
@@ -295,8 +295,16 @@ export function filterAndSortValidators(
     filtered = filtered.filter(v => v.version === filters.versionFilter);
   }
 
-  // Apply sorting
+  // Apply sorting with named nodes always at top
   filtered.sort((a, b) => {
+    // Named nodes always come first
+    const aHasName = hasNodeName(a.pubkey);
+    const bHasName = hasNodeName(b.pubkey);
+    
+    if (aHasName && !bHasName) return -1;
+    if (!aHasName && bHasName) return 1;
+    
+    // If both have names or both don't, sort by the selected field
     let aVal: any, bVal: any;
     
     switch (sort.field) {

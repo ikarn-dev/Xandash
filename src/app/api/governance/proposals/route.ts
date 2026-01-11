@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const HELIUS_API_KEY = process.env.HELIUS_API_KEY || '4909adac-3775-44c1-afe0-28728c40f23c';
+const HELIUS_API_KEY = process.env.HELIUS_API_KEY || '';
 const HELIUS_RPC_URL = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
 
 const DAO_ADDRESS = '5JpYydB2VFcxbPGr8xmpefmJw86GQELCk7cB132wRXCa';

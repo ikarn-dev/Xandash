@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Globe, Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CopyBtn } from '@/components/ui/CopyBtn';
@@ -8,6 +9,8 @@ import { getLocationsForIPs, extractIPFromAddress, getCountryFlagUrl } from '@/l
 import { usePrefetchProfile } from '@/libs/hooks/usePrefetchProfile';
 import { toast } from 'sonner';
 import { useNetwork } from '@/libs/context/network-context';
+import { getNodeName, hasNodeName } from '@/libs/utils/node-names';
+import { formatStorage } from '@/libs/utils';
 
 // Compare icon
 const CompareIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -45,15 +48,39 @@ interface PodCredit {
   credits: number;
 }
 
+interface PingResult {
+  ping: number | null;
+  status: 'online' | 'offline' | 'timeout';
+}
+
+interface MainnetGeoData {
+  country: string;
+  country_code: string;
+  credits: number | null;
+  geo_sort: string;
+  ip: string;
+  name: string;
+  nfts: string[];
+  ping: number | null;
+  provider: string;
+  stake: number;
+}
+
+const MAINNET_COOLDOWN = 30 * 1000; // 30 seconds (matches data fetch cycle)
+const NATIVE_REFRESH_INTERVAL = 30 * 1000; // 30 seconds
+
 export const DashboardNodesCard: React.FC = () => {
   const { network, isMainnet } = useNetwork();
   const [nodes, setNodes] = useState<ValidatorData[]>([]);
   const [locations, setLocations] = useState<{ [ip: string]: LocationData | null }>({});
   const [credits, setCredits] = useState<{ [pubkey: string]: number | null }>({});
+  const [pings, setPings] = useState<{ [ip: string]: PingResult }>({});
+  const [mainnetGeoData, setMainnetGeoData] = useState<{ [ip: string]: MainnetGeoData }>({});
   const [loading, setLoading] = useState(true);
   const [dataFetchTime, setDataFetchTime] = useState<number>(Math.floor(Date.now() / 1000));
   const [clickedNodeId, setClickedNodeId] = useState<string | null>(null);
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
+  const lastMainnetCallRef = useRef(0);
   const router = useRouter();
   const { prefetchProfile, navigateToProfile } = usePrefetchProfile();
 
@@ -83,8 +110,14 @@ export const DashboardNodesCard: React.FC = () => {
     setSelectedForCompare([]);
   }, []);
 
-  // Fetch nodes data
+  // Fetch nodes data (devnet only - mainnet uses external API)
   useEffect(() => {
+    // Skip native fetch for mainnet - external API will provide data
+    if (isMainnet) {
+      setLoading(false);
+      return;
+    }
+    
     const fetchNodes = async () => {
       try {
         setLoading(true);
@@ -101,8 +134,15 @@ export const DashboardNodesCard: React.FC = () => {
         if (data.serverTimestamp) setDataFetchTime(data.serverTimestamp);
         
         const allNodes = data.nodes || [];
+        // Sort: named nodes first, then by last_seen_timestamp
         const sortedNodes = allNodes
-          .sort((a: ValidatorData, b: ValidatorData) => b.last_seen_timestamp - a.last_seen_timestamp)
+          .sort((a: ValidatorData, b: ValidatorData) => {
+            const aHasName = hasNodeName(a.pubkey);
+            const bHasName = hasNodeName(b.pubkey);
+            if (aHasName && !bHasName) return -1;
+            if (!aHasName && bHasName) return 1;
+            return b.last_seen_timestamp - a.last_seen_timestamp;
+          })
           .slice(0, 20);
         
         setNodes(sortedNodes);
@@ -115,13 +155,13 @@ export const DashboardNodesCard: React.FC = () => {
     };
 
     fetchNodes();
-  }, [network]);
+  }, [network, isMainnet]);
 
-  // Load geolocation data
+  // Load geolocation data (devnet only - mainnet uses external geo)
   useEffect(() => {
+    if (isMainnet || nodes.length === 0) return;
+    
     const loadGeolocationData = async () => {
-      if (nodes.length === 0) return;
-      
       try {
         const uniqueIPs = Array.from(new Set(
           nodes.map(node => extractIPFromAddress(node.address || '')).filter(ip => ip && !locations[ip])
@@ -137,13 +177,13 @@ export const DashboardNodesCard: React.FC = () => {
     };
 
     loadGeolocationData();
-  }, [nodes]);
+  }, [nodes, isMainnet]);
 
-  // Fetch credits
+  // Fetch credits (devnet only - mainnet uses external credits)
   useEffect(() => {
+    if (isMainnet || nodes.length === 0) return;
+    
     const fetchCredits = async () => {
-      if (nodes.length === 0) return;
-      
       try {
         const response = await fetch(`/api/pod-credits?network=${network}`);
         if (response.ok) {
@@ -162,7 +202,106 @@ export const DashboardNodesCard: React.FC = () => {
     };
     
     fetchCredits();
-  }, [nodes, network]);
+  }, [nodes, network, isMainnet]);
+
+  // Ping data - devnet ping disabled, mainnet uses external ping
+  // Devnet ping logic removed - will show N/A
+
+  // Fetch from external source for mainnet (30s cycle)
+  useEffect(() => {
+    if (!isMainnet) return;
+
+    const fetchMainnetData = async () => {
+      const timeSinceLastCall = Date.now() - lastMainnetCallRef.current;
+      if (timeSinceLastCall < MAINNET_COOLDOWN && nodes.length > 0) return;
+
+      setLoading(true);
+      
+      try {
+        // Use GET endpoint to fetch full mainnet data
+        const response = await fetch('/api/mainnet-rpc', {
+          method: 'GET',
+          cache: 'no-store',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Store geo data by IP
+          if (data.geo && typeof data.geo === 'object') {
+            setMainnetGeoData(data.geo);
+          }
+          
+          // Transform and set mainnet nodes
+          if (data.nodes && Array.isArray(data.nodes)) {
+            const serverTime = Math.floor(Date.now() / 1000);
+            // Transform all nodes first
+            const allTransformedNodes: ValidatorData[] = data.nodes.map((pod: any, index: number) => {
+              const ip = pod.address?.split(':')[0] || '';
+              const timeDiff = serverTime - (pod.last_seen_timestamp || 0);
+              
+              let status = 'offline';
+              if (timeDiff < 1800) status = 'online';
+              else if (timeDiff < 3600) status = 'syncing';
+
+              return {
+                address: pod.address || '',
+                pubkey: pod.pubkey || `node-${index}`,
+                is_public: pod.is_public || false,
+                storage_committed: pod.storage_committed || 0,
+                storage_used: pod.storage_used || 0,
+                storage_usage_percent: pod.storage_usage_percent || 0,
+                rpc_port: pod.rpc_port || 0,
+                version: pod.version || '',
+                uptime: pod.uptime || 0,
+                last_seen_timestamp: pod.last_seen_timestamp || 0,
+                status,
+                duplicateCount: 0,
+              };
+            });
+            
+            // Sort: named nodes first, then by last_seen_timestamp, then slice to 20
+            const transformedNodes = allTransformedNodes
+              .sort((a, b) => {
+                const aHasName = hasNodeName(a.pubkey);
+                const bHasName = hasNodeName(b.pubkey);
+                if (aHasName && !bHasName) return -1;
+                if (!aHasName && bHasName) return 1;
+                return b.last_seen_timestamp - a.last_seen_timestamp;
+              })
+              .slice(0, 20);
+            
+            setNodes(transformedNodes);
+            setDataFetchTime(serverTime);
+            
+            // Also set credits from geo data
+            const creditsMap: { [pubkey: string]: number } = {};
+            transformedNodes.forEach((node) => {
+              const ip = node.address?.split(':')[0] || '';
+              const geo = data.geo?.[ip];
+              if (geo && node.pubkey) {
+                creditsMap[node.pubkey] = geo.credits ?? 0;
+              }
+            });
+            setCredits(prev => ({ ...prev, ...creditsMap }));
+          }
+          
+          lastMainnetCallRef.current = Date.now();
+        }
+      } catch (error) {
+        console.error('[DashboardNodes] Mainnet fetch error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Initial fetch for mainnet
+    fetchMainnetData();
+
+    // Setup interval for mainnet refresh
+    const intervalId = setInterval(fetchMainnetData, MAINNET_COOLDOWN);
+    return () => clearInterval(intervalId);
+  }, [isMainnet]);
 
   // Prefetch visible nodes
   useEffect(() => {
@@ -187,7 +326,7 @@ export const DashboardNodesCard: React.FC = () => {
       const nodeCredits = node.pubkey ? credits[node.pubkey] : null;
       const timeDiff = dataFetchTime - node.last_seen_timestamp;
       
-      const storageGB = node.storage_committed ? (node.storage_committed / (1024**3)).toFixed(1) : '0';
+      const storageDisplay = formatStorage(node.storage_committed || 0);
       const uptimeHours = Math.floor(node.uptime / 3600);
       const uptimeDays = Math.floor(uptimeHours / 24);
       const uptimeDisplay = uptimeDays > 0 ? `${uptimeDays}d` : `${uptimeHours}h`;
@@ -205,7 +344,7 @@ export const DashboardNodesCard: React.FC = () => {
         ip || 'Unknown',
         node.pubkey || 'Unknown',
         node.is_public ? 'YES' : 'NO',
-        storageGB,
+        storageDisplay,
         node.version || 'Unknown',
         uptimeDisplay,
         lastSeenDisplay,
@@ -288,12 +427,13 @@ export const DashboardNodesCard: React.FC = () => {
       {/* Table with horizontal scroll */}
       <div className="bg-black border border-white/10 rounded-lg overflow-hidden">
         <div className="overflow-x-auto scrollbar-hide">
-          <table className="w-full min-w-[950px]">
+          <table className="w-full min-w-[1020px]">
             <thead className="bg-white/5 border-b border-white/10">
               <tr>
                 <th className="w-[4%] px-2 py-3 text-center text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
                   <CompareIcon className="w-3.5 h-3.5 mx-auto text-white/50" />
                 </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Name</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Location</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">IP Address</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Pubkey</th>
@@ -304,12 +444,13 @@ export const DashboardNodesCard: React.FC = () => {
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Last Seen</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Credits</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Ping</th>
               </tr>
             </thead>
             <tbody>
               {nodes.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-6 py-12 text-center text-white/60 text-sm">
+                  <td colSpan={13} className="px-6 py-12 text-center text-white/60 text-sm">
                     No nodes found for {isMainnet ? 'mainnet' : 'devnet'}
                   </td>
                 </tr>
@@ -317,6 +458,15 @@ export const DashboardNodesCard: React.FC = () => {
                 const ip = extractIPFromAddress(node.address || '');
                 const location = locations[ip];
                 const nodeCredits = node.pubkey ? credits[node.pubkey] : null;
+                // Use external data for mainnet (geo + ping)
+                const mainnetGeo = mainnetGeoData[ip];
+                const displayLocation = isMainnet && mainnetGeo && mainnetGeo.country
+                  ? { country: mainnetGeo.country, country_code: mainnetGeo.country_code, city: 'Unknown', region: '', provider: mainnetGeo.provider || 'Unknown', ip }
+                  : location;
+                // Use external ping for mainnet, native ping for devnet
+                const nodePing = isMainnet && mainnetGeo
+                  ? { ping: mainnetGeo.ping, status: (mainnetGeo.ping !== null && mainnetGeo.ping > 0 ? 'online' : 'offline') as 'online' | 'offline' | 'timeout' }
+                  : pings[ip];
                 const nodeId = `${node.pubkey}-${index}`;
                 const isSelected = selectedForCompare.includes(node.pubkey);
                 const canSelect = selectedForCompare.length < 4 || isSelected;
@@ -331,7 +481,7 @@ export const DashboardNodesCard: React.FC = () => {
                 else if (timeDiff < 86400) lastSeenDisplay = `${Math.floor(timeDiff / 3600)}h`;
                 else lastSeenDisplay = `${Math.floor(timeDiff / 86400)}d`;
                 
-                const storageGB = node.storage_committed ? (node.storage_committed / (1024**3)).toFixed(1) : '0';
+                const storageDisplay = formatStorage(node.storage_committed || 0);
                 const uptimeHours = Math.floor(node.uptime / 3600);
                 const uptimeDays = Math.floor(uptimeHours / 24);
                 const uptimeDisplay = uptimeDays > 0 ? `${uptimeDays}d` : `${uptimeHours}h`;
@@ -366,19 +516,25 @@ export const DashboardNodesCard: React.FC = () => {
                         )}
                       </button>
                     </td>
+                    {/* Name */}
+                    <td className="px-3 py-3 text-xs">
+                      <span className={`${getNodeName(node.pubkey) !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
+                        {getNodeName(node.pubkey)}
+                      </span>
+                    </td>
                     <td className="px-3 py-3 text-xs">
                       <div className="flex items-center space-x-2 min-w-0">
-                        {location?.country_code ? (
+                        {displayLocation?.country_code ? (
                           <img
-                            src={getCountryFlagUrl(location.country_code)}
-                            alt={location.country}
+                            src={getCountryFlagUrl(displayLocation.country_code)}
+                            alt={displayLocation.country}
                             className="w-4 h-3 object-cover rounded-sm flex-shrink-0"
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
                         ) : (
                           <Globe className="w-4 h-3 text-white/40 flex-shrink-0" />
                         )}
-                        <span className="text-white/80 truncate max-w-[120px]">{formatLocation(location)}</span>
+                        <span className="text-white/80 truncate max-w-[120px]">{formatLocation(displayLocation)}</span>
                       </div>
                     </td>
                     <td className="px-3 py-3 text-xs">
@@ -399,7 +555,7 @@ export const DashboardNodesCard: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-3 py-3 text-xs">
-                      <span className="text-white/80 font-mono whitespace-nowrap">{storageGB} GB</span>
+                      <span className="text-white/80 font-mono whitespace-nowrap">{storageDisplay}</span>
                     </td>
                     <td className="px-3 py-3 text-xs">
                       <span className="text-white/70 font-mono truncate block max-w-[70px]">{node.version || 'Unknown'}</span>
@@ -423,6 +579,23 @@ export const DashboardNodesCard: React.FC = () => {
                         </span>
                       </div>
                     </td>
+                    <td className="px-3 py-3 text-xs">
+                      {nodePing ? (
+                        <span className={`font-mono ${
+                          nodePing.status === 'online' 
+                            ? nodePing.ping! < 200 
+                              ? 'text-green-400' 
+                              : nodePing.ping! < 500 
+                                ? 'text-yellow-400' 
+                                : 'text-orange-400'
+                            : 'text-red-400'
+                        }`}>
+                          {nodePing.status === 'online' ? `${nodePing.ping}ms` : 'N/A'}
+                        </span>
+                      ) : (
+                        <span className="text-white/30">—</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -431,42 +604,43 @@ export const DashboardNodesCard: React.FC = () => {
         </div>
       </div>
 
-      {/* Floating Compare Button */}
-      {selectedForCompare.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-black/95 border border-emerald-500/30 rounded-full px-4 py-2 shadow-lg shadow-emerald-500/20 backdrop-blur-xl animate-blur-reveal">
+      {/* Floating Compare Button - rendered via portal to escape overflow:hidden */}
+      {selectedForCompare.length > 0 && typeof document !== 'undefined' && createPortal(
+        <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2 bg-black/95 border border-emerald-500/30 rounded-full px-3 sm:px-4 py-2 shadow-lg shadow-emerald-500/20 backdrop-blur-xl animate-blur-reveal safe-area-bottom">
           <div className="flex items-center gap-2">
             <div className="flex -space-x-1">
               {selectedForCompare.slice(0, 4).map((_, i) => (
                 <div 
                   key={i} 
-                  className="w-6 h-6 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-[10px] text-emerald-400 font-bold"
+                  className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-[9px] sm:text-[10px] text-emerald-400 font-bold"
                 >
                   {i + 1}
                 </div>
               ))}
             </div>
-            <span className="text-white/60 text-sm">{selectedForCompare.length} selected</span>
+            <span className="text-white/60 text-xs sm:text-sm">{selectedForCompare.length} selected</span>
           </div>
-          <div className="w-px h-6 bg-white/10" />
+          <div className="w-px h-5 sm:h-6 bg-white/10" />
           <button
             onClick={handleClearCompare}
-            className="px-3 py-1.5 text-xs text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+            className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-colors"
           >
             Clear
           </button>
           <button
             onClick={handleCompareSelected}
             disabled={selectedForCompare.length < 2}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+            className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
               selectedForCompare.length >= 2
                 ? 'bg-emerald-500 text-white hover:bg-emerald-400'
                 : 'bg-white/10 text-white/40 cursor-not-allowed'
             }`}
           >
-            <CompareIcon className="w-4 h-4" />
+            <CompareIcon className="w-3 h-3 sm:w-4 sm:h-4" />
             Compare
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

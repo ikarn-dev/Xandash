@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callDirectRPC } from '@/libs/server';
+import { getMainnetNodeByIp } from '@/libs/services/mainnet-data-service';
+import { getDevnetNodeByIp } from '@/libs/services/devnet-data-service';
+
+/**
+ * Minimal Node Profile API (for fast prefetching)
+ * 
+ * For mainnet: Uses dual-source staggered fetch with 30s cycle
+ * For devnet: Uses devnet API
+ */
 
 // Minimal profile data for fast prefetching
 export async function GET(request: NextRequest) {
   try {
     const ip = request.nextUrl.searchParams.get('ip');
+    const network = request.nextUrl.searchParams.get('network') || 'devnet';
+    
     if (!ip) {
       return NextResponse.json({ error: 'IP parameter required' }, { status: 400 });
     }
@@ -12,7 +22,7 @@ export async function GET(request: NextRequest) {
     // Only fetch essential data for prefetch
     const [locationData, currentNodeData] = await Promise.allSettled([
       fetchLocationData(ip),
-      fetchCurrentNodeData(ip),
+      fetchCurrentNodeData(ip, network),
     ]);
 
     const location = locationData.status === 'fulfilled' ? locationData.value : null;
@@ -27,6 +37,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       ip,
+      network,
       location,
       currentNode: node ? {
         pubkey: node.pubkey || '',
@@ -80,18 +91,21 @@ async function fetchLocationData(ip: string) {
   }
 }
 
-async function fetchCurrentNodeData(ip: string) {
+async function fetchCurrentNodeData(ip: string, network: string) {
+  // For mainnet, use external data sources
+  if (network === 'mainnet') {
+    try {
+      const externalNode = await getMainnetNodeByIp(ip);
+      if (externalNode) return externalNode;
+    } catch {
+      return null;
+    }
+  }
+
+  // For devnet, use devnet API
   try {
-    const rpcResponse = await callDirectRPC('get-pods-with-stats');
-    if (!rpcResponse.success || !rpcResponse.data) return null;
-
-    const nodes = (rpcResponse.data as any)?.pods || [];
-    const node = nodes.find((n: any) => {
-      const nodeIp = n.address?.split(':')[0];
-      return nodeIp === ip;
-    });
-
-    return node || null;
+    const devnetNode = await getDevnetNodeByIp(ip);
+    return devnetNode;
   } catch {
     return null;
   }

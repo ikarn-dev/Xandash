@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import type { ValidatorData } from '@/libs/server';
 
@@ -22,6 +22,9 @@ export function useNodesData(network: string): UseNodesDataResult {
   const [stats, setStats] = useState({ total: 0, online: 0, public: 0 });
   const [isLoadingNetwork, setIsLoadingNetwork] = useState(false);
   const [lastNetwork, setLastNetwork] = useState<string | null>(null);
+  
+  // Track if this is the initial load
+  const isInitialLoad = useRef(true);
 
   const fetchData = useCallback(async (showToast = false) => {
     try {
@@ -159,7 +162,51 @@ export function useNodesData(network: string): UseNodesDataResult {
         
         const duplicateCount = uniqueValidators.reduce((total, v) => total + (v.duplicateCount || 0), 0);
         
-        setAllValidators(uniqueValidators);
+        // Update data in place to avoid full re-render on refresh
+        // Only do full replacement on initial load or network change
+        setAllValidators(prevValidators => {
+          if (isInitialLoad.current || prevValidators.length === 0) {
+            isInitialLoad.current = false;
+            return uniqueValidators;
+          }
+          
+          // Update existing validators in place by matching pubkey
+          const updatedValidators = prevValidators.map(prev => {
+            const updated = uniqueValidators.find(v => v.pubkey === prev.pubkey);
+            if (updated) {
+              // Update properties without creating new object reference if values are same
+              if (
+                prev.status === updated.status &&
+                prev.uptime === updated.uptime &&
+                prev.last_seen_timestamp === updated.last_seen_timestamp &&
+                prev.storage_used === updated.storage_used &&
+                prev.storage_usage_percent === updated.storage_usage_percent &&
+                prev.score === updated.score &&
+                prev.rank === updated.rank
+              ) {
+                return prev; // No changes, keep same reference
+              }
+              // Return updated object
+              return { ...prev, ...updated };
+            }
+            return prev;
+          });
+          
+          // Add any new validators
+          const existingPubkeys = new Set(prevValidators.map(v => v.pubkey));
+          const newValidators = uniqueValidators.filter(v => !existingPubkeys.has(v.pubkey));
+          
+          // Remove validators that no longer exist
+          const currentPubkeys = new Set(uniqueValidators.map(v => v.pubkey));
+          const filteredValidators = updatedValidators.filter(v => currentPubkeys.has(v.pubkey));
+          
+          if (newValidators.length > 0) {
+            return [...filteredValidators, ...newValidators];
+          }
+          
+          return filteredValidators;
+        });
+        
         setDataFetchTime(serverTime);
         
         const newStats = {
@@ -181,6 +228,7 @@ export function useNodesData(network: string): UseNodesDataResult {
   // Refetch data when network changes
   useEffect(() => {
     if (lastNetwork === null || network !== lastNetwork) {
+      isInitialLoad.current = true; // Reset for network change
       setIsLoadingNetwork(true);
       setLastNetwork(network);
       if (lastNetwork !== null) {

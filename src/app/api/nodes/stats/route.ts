@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { cache } from '@/libs/cache/LocalCache';
-import { callDirectRPC } from '@/libs/server';
+import { getMainnetData } from '@/libs/services/mainnet-data-service';
+import { getDevnetData } from '@/libs/services/devnet-data-service';
 
 export interface NodeStatsResponse {
   totalNodes: number;
@@ -8,11 +9,14 @@ export interface NodeStatsResponse {
   totalConnections: number;
   avgCpu: number;
   avgMemory: number;
+  network?: string;
+  source?: string;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const cacheKey = cache.keys.nodeStats();
+    const network = request.nextUrl.searchParams.get('network') || 'devnet';
+    const cacheKey = `${cache.keys.nodeStats()}:${network}`;
 
     // Try to get from cache first
     const cachedStats = await cache.get<NodeStatsResponse>(cacheKey);
@@ -20,24 +24,36 @@ export async function GET() {
       return NextResponse.json(cachedStats);
     }
 
-    // Fetch from RPC
-    const response = await callDirectRPC('get-pods-with-stats');
-    
-    if (!response.success || !response.data) {
-      return NextResponse.json(
-        { error: response.error || 'Failed to fetch nodes' },
-        { status: 500 }
-      );
-    }
+    let allNodes: any[] = [];
+    let dataSource = 'api';
 
-    // Handle the actual response structure: { pods: [], total_count: number }
-    const responseData = response.data as any;
-    const allNodes = Array.isArray(responseData?.pods) ? responseData.pods : [];
+    if (network === 'mainnet') {
+      try {
+        const externalData = await getMainnetData();
+        if (externalData.nodes.length > 0) {
+          allNodes = externalData.nodes;
+          dataSource = externalData.source;
+        }
+      } catch {
+        // Mainnet fetch failed
+      }
+    } else {
+      // For devnet, use devnet API
+      try {
+        const devnetData = await getDevnetData();
+        if (devnetData.nodes.length > 0) {
+          allNodes = devnetData.nodes;
+          dataSource = devnetData.source;
+        }
+      } catch {
+        // Devnet fetch failed
+      }
+    }
     
     // Calculate stats based on actual node data structure
     const now = Math.floor(Date.now() / 1000);
     const onlineNodes = allNodes.filter((n: any) => {
-      const timeDiff = now - n.last_seen_timestamp;
+      const timeDiff = now - (n.last_seen_timestamp || 0);
       return timeDiff < 300; // Less than 5 minutes = online
     });
     
@@ -53,6 +69,8 @@ export async function GET() {
       totalConnections,
       avgCpu,
       avgMemory,
+      network,
+      source: dataSource,
     };
 
     // Cache the result for 60 seconds

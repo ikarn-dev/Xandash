@@ -38,7 +38,7 @@ const CountryProfileSkeleton = () => (
 );
 
 export function CountryProfileClient({ countryCode }: CountryProfileClientProps) {
-  const { loading, nodes, locations, countryName, stats, mapNodes } = useCountryData(countryCode);
+  const { loading, nodes, locations, countryName, stats, mapNodes, network } = useCountryData(countryCode);
 
   if (loading) {
     return <CountryProfileSkeleton />;
@@ -111,6 +111,7 @@ export function CountryProfileClient({ countryCode }: CountryProfileClientProps)
         nodes={nodes}
         locations={locations}
         countryName={countryName}
+        network={network}
       />
     </div>
   );

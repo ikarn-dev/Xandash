@@ -1,9 +1,33 @@
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import { AlertCircle, ArrowUp, ArrowDown } from 'lucide-react';
 import { NetworkStatsCardSkeleton } from './NetworkStatsCardSkeleton';
-import { getNetworkStatsData, type NetworkStatsData } from '@/libs/server';
+import { useNetwork } from '@/libs/context/network-context';
 
-// Helper functions for formatting
+interface NetworkStatsData {
+  packets_received: number;
+  packets_sent: number;
+  total_bytes: number;
+  storage_committed: number;
+  storage_used: number;
+  avg_storage_per_pod: number;
+  total_pods: number;
+}
+
+const formatStorage = (bytes: number) => {
+  if (bytes === 0) return { value: '0', unit: 'B' };
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return {
+    value: (bytes / Math.pow(k, i)).toFixed(2),
+    unit: sizes[i]
+  };
+};
+
+const formatNumber = (num: number) => num.toLocaleString();
+
 const formatBytes = (bytes: number) => {
   if (bytes === 0) return '0 B';
   const k = 1024;
@@ -12,63 +36,79 @@ const formatBytes = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-const formatUptime = (seconds: number) => {
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-};
 
-const formatNumber = (num: number) => {
-  return num.toLocaleString();
-};
+const CornerEdges: React.FC = () => (
+  <>
+    <div className="absolute top-0 left-0 w-6 h-6">
+      <div className="absolute top-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
+      <div className="absolute top-0 left-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
+    </div>
+    <div className="absolute top-0 right-0 w-6 h-6">
+      <div className="absolute top-0 right-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
+      <div className="absolute top-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
+    </div>
+    <div className="absolute bottom-0 left-0 w-6 h-6">
+      <div className="absolute bottom-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
+      <div className="absolute bottom-0 left-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
+    </div>
+    <div className="absolute bottom-0 right-0 w-6 h-6">
+      <div className="absolute bottom-0 right-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
+      <div className="absolute bottom-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
+    </div>
+  </>
+);
 
-const formatPercentage = (used: number, total: number) => {
-  return ((used / total) * 100).toFixed(1);
-};
 
-const formatSlotTime = (index: number) => {
-  // Assuming each slot is ~0.4 seconds based on the image
-  return (index * 0.4).toFixed(2);
-};
+export const NetworkStatsCardSSR: React.FC = () => {
+  const { network, isMainnet } = useNetwork();
+  const [stats, setStats] = useState<NetworkStatsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-// Server Component
-async function NetworkStatsCardContent() {
-  const { stats, error } = await getNetworkStatsData();
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Use dedicated stats endpoints for accurate data directly from source APIs
+        const statsEndpoint = isMainnet ? '/api/mainnet-stats' : '/api/devnet-stats';
+        const statsRes = await fetch(statsEndpoint);
+        
+        if (!statsRes.ok) {
+          throw new Error(`Failed to fetch ${network} stats`);
+        }
+        
+        const statsData = await statsRes.json();
+        
+        setStats({
+          packets_received: statsData.packets_received || 0,
+          packets_sent: statsData.packets_sent || 0,
+          total_bytes: statsData.total_bytes || 0,
+          storage_committed: statsData.storage_committed || 0,
+          storage_used: statsData.storage_used || 0,
+          avg_storage_per_pod: statsData.avg_storage_per_pod || 0,
+          total_pods: statsData.total_pods || 0,
+        });
+      } catch (err) {
+        console.error('Failed to fetch network stats:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load stats');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (error) {
+    fetchStats();
+  }, [network, isMainnet]);
+
+  if (loading) {
+    return <NetworkStatsCardSkeleton />;
+  }
+
+  if (error || !stats) {
     return (
       <div className="relative bg-black border border-white/10 p-6 h-full flex items-center justify-center group hover:border-white/20 transition-all duration-300">
-        {/* All four corner edges with white glow on hover */}
-        {/* Top-left corner */}
-        <div className="absolute top-0 left-0 w-6 h-6">
-          <div className="absolute top-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-          <div className="absolute top-0 left-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        </div>
-        
-        {/* Top-right corner */}
-        <div className="absolute top-0 right-0 w-6 h-6">
-          <div className="absolute top-0 right-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-          <div className="absolute top-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        </div>
-        
-        {/* Bottom-left corner */}
-        <div className="absolute bottom-0 left-0 w-6 h-6">
-          <div className="absolute bottom-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-          <div className="absolute bottom-0 left-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        </div>
-        
-        {/* Bottom-right corner */}
-        <div className="absolute bottom-0 right-0 w-6 h-6">
-          <div className="absolute bottom-0 right-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-          <div className="absolute bottom-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        </div>
-
-
-
+        <CornerEdges />
         <div className="flex items-center space-x-2 text-red-400">
           <AlertCircle className="w-5 h-5" />
           <span>Failed to load network stats</span>
@@ -77,69 +117,29 @@ async function NetworkStatsCardContent() {
     );
   }
 
-  if (!stats) {
-    return <NetworkStatsCardSkeleton />;
-  }
+  const storageCommitted = formatStorage(stats.storage_committed);
+  const storageUsed = formatStorage(stats.storage_used);
+  const avgPerPod = formatStorage(stats.avg_storage_per_pod);
 
-  const ramUsagePercent = formatPercentage(stats.ram_used, stats.ram_total);
-  const cpuPercent = stats.cpu_percent.toFixed(1);
 
   return (
     <div className="relative bg-black border border-white/10 p-6 h-full group hover:border-white/20 transition-all duration-300 overflow-hidden">
-      {/* All four corner edges with white glow on hover */}
-      {/* Top-left corner */}
-      <div className="absolute top-0 left-0 w-6 h-6">
-        <div className="absolute top-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        <div className="absolute top-0 left-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-      </div>
-      
-      {/* Top-right corner */}
-      <div className="absolute top-0 right-0 w-6 h-6">
-        <div className="absolute top-0 right-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        <div className="absolute top-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-      </div>
-      
-      {/* Bottom-left corner */}
-      <div className="absolute bottom-0 left-0 w-6 h-6">
-        <div className="absolute bottom-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        <div className="absolute bottom-0 left-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-      </div>
-      
-      {/* Bottom-right corner */}
-      <div className="absolute bottom-0 right-0 w-6 h-6">
-        <div className="absolute bottom-0 right-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        <div className="absolute bottom-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-      </div>
+      <CornerEdges />
 
-
-
-      {/* Titles Row - Hidden on small screens, shown on lg+ */}
       <div className="hidden lg:grid lg:grid-cols-4 gap-6 mb-4">
-        <div className="text-white/80 text-sm font-medium animate-blur-reveal-item-1 text-center">
-          Block Index
-        </div>
-        <div className="text-white/80 text-sm font-medium animate-blur-reveal-item-2 text-center">
-          Network Traffic
-        </div>
-        <div className="flex items-center justify-center space-x-1 text-white/80 text-sm font-medium animate-blur-reveal-item-3">
-          <span>Memory Usage</span>
-        </div>
-        <div className="text-white/80 text-sm font-medium animate-blur-reveal-item-4 text-center">
-          System Status
-        </div>
+        <div className="text-white/80 text-sm font-medium animate-blur-reveal-item-1 text-center">Storage Committed</div>
+        <div className="text-white/80 text-sm font-medium animate-blur-reveal-item-2 text-center">Storage Used</div>
+        <div className="text-white/80 text-sm font-medium animate-blur-reveal-item-3 text-center">Avg Committed per Pod</div>
+        <div className="text-white/80 text-sm font-medium animate-blur-reveal-item-4 text-center">Network Traffic</div>
       </div>
 
-      {/* Animated Separator Lines - Hidden on small screens */}
       <div className="relative mb-6 overflow-hidden hidden lg:block">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-beam shadow-[0_0_10px_rgba(255,255,255,0.5)]"></div>
         </div>
       </div>
 
-      {/* Stats Content */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 relative">
-        
-        {/* Vertical Separators - Only Animated Beams (hidden on small screens) */}
         <div className="absolute inset-0 hidden lg:grid lg:grid-cols-4 gap-6 pointer-events-none">
           <div></div>
           <div className="relative">
@@ -153,100 +153,41 @@ async function NetworkStatsCardContent() {
           </div>
         </div>
 
-        {/* Block Index */}
         <div className="flex flex-col justify-center items-center animate-blur-reveal-item-1 relative z-10 text-center">
-          {/* Mobile heading */}
-          <div className="text-white/80 text-xs sm:text-sm font-medium mb-2 lg:hidden">
-            Block Index
-          </div>
-          <div className="text-white text-xl sm:text-2xl lg:text-3xl font-bold font-mono mb-1">
-            {formatNumber(stats.current_index)}
-          </div>
-          <div className="text-white/60 text-xs">
-            {stats.total_pages} pages • {formatBytes(stats.file_size)} total
-          </div>
+          <div className="text-white/80 text-xs sm:text-sm font-medium mb-2 lg:hidden">Storage Committed</div>
+          <div className="text-white text-xl sm:text-2xl lg:text-3xl font-bold font-mono mb-1">{storageCommitted.value}</div>
+          <div className="text-white/60 text-sm">{storageCommitted.unit}</div>
         </div>
 
-        {/* Network Traffic */}
-        <div className="flex flex-col justify-center items-center animate-blur-reveal-item-2 relative z-10">
-          {/* Mobile heading */}
-          <div className="text-white/80 text-xs sm:text-sm font-medium mb-2 lg:hidden">
-            Network Traffic
-          </div>
+        <div className="flex flex-col justify-center items-center animate-blur-reveal-item-2 relative z-10 text-center">
+          <div className="text-white/80 text-xs sm:text-sm font-medium mb-2 lg:hidden">Storage Used</div>
+          <div className="text-white text-xl sm:text-2xl lg:text-3xl font-bold font-mono mb-1">{storageUsed.value}</div>
+          <div className="text-white/60 text-sm">{storageUsed.unit}</div>
+        </div>
+
+        <div className="flex flex-col justify-center items-center animate-blur-reveal-item-3 relative z-10 text-center">
+          <div className="text-white/80 text-xs sm:text-sm font-medium mb-2 lg:hidden">Avg Committed per Pod</div>
+          <div className="text-white text-xl sm:text-2xl lg:text-3xl font-bold font-mono mb-1">{avgPerPod.value}</div>
+          <div className="text-white/60 text-sm">{avgPerPod.unit}</div>
+        </div>
+
+        <div className="flex flex-col justify-center items-center animate-blur-reveal-item-4 relative z-10">
+          <div className="text-white/80 text-xs sm:text-sm font-medium mb-2 lg:hidden">Network Traffic</div>
           <div className="space-y-1 sm:space-y-2 w-full">
             <div className="flex items-center justify-center">
               <ArrowUp className="w-3 h-3 sm:w-4 sm:h-4 text-white mr-1 sm:mr-2 flex-shrink-0" />
-              <span className="text-white text-sm sm:text-lg font-bold font-mono">
-                {formatNumber(stats.packets_sent)}
-              </span>
+              <span className="text-white text-sm sm:text-lg font-bold font-mono">{formatNumber(stats.packets_sent)}</span>
               <span className="text-white/70 text-xs sm:text-sm font-normal ml-1 sm:ml-2">sent</span>
             </div>
             <div className="flex items-center justify-center">
               <ArrowDown className="w-3 h-3 sm:w-4 sm:h-4 text-white mr-1 sm:mr-2 flex-shrink-0" />
-              <span className="text-white text-sm sm:text-lg font-bold font-mono">
-                {formatNumber(stats.packets_received)}
-              </span>
-              <span className="text-white/70 text-xs sm:text-sm font-normal ml-1 sm:ml-2">received</span>
+              <span className="text-white text-sm sm:text-lg font-bold font-mono">{formatNumber(stats.packets_received)}</span>
+              <span className="text-white/70 text-xs sm:text-sm font-normal ml-1 sm:ml-2">recv</span>
             </div>
           </div>
-          <div className="text-white/60 text-xs mt-2 sm:mt-3 text-center">
-            packets • {formatBytes(stats.total_bytes)} data
-          </div>
+          <div className="text-white/60 text-xs mt-2 sm:mt-3 text-center">{formatBytes(stats.total_bytes)} total</div>
         </div>
-
-        {/* Memory Usage */}
-        <div className="flex flex-col justify-center items-center animate-blur-reveal-item-3 relative z-10">
-          {/* Mobile heading */}
-          <div className="text-white/80 text-xs sm:text-sm font-medium mb-2 lg:hidden">
-            Memory Usage
-          </div>
-          <div className="flex items-center justify-center space-x-2 mb-2 w-full">
-            <div className="text-white text-xl sm:text-2xl lg:text-3xl font-bold font-mono">
-              {ramUsagePercent}%
-            </div>
-            <div className="w-12 sm:w-16 bg-black/30 border border-white/20 rounded-full h-2">
-              <div 
-                className="bg-white h-2 rounded-full transition-all duration-300" 
-                style={{ width: `${ramUsagePercent}%` }}
-              ></div>
-            </div>
-          </div>
-          <div className="text-white/60 text-xs text-center">
-            {formatBytes(stats.ram_used)} / {formatBytes(stats.ram_total)}
-          </div>
-        </div>
-
-        {/* System Status */}
-        <div className="flex flex-col justify-center items-center animate-blur-reveal-item-4 relative z-10 text-center">
-          {/* Mobile heading */}
-          <div className="text-white/80 text-xs sm:text-sm font-medium mb-2 lg:hidden">
-            System Status
-          </div>
-          <div className="space-y-1">
-            <div className="text-white text-sm sm:text-lg font-bold font-mono">
-              CPU: {cpuPercent}%
-            </div>
-            <div className="text-white/80 text-xs sm:text-sm">
-              Uptime: {formatUptime(stats.uptime)}
-            </div>
-            <div className="text-white/70 text-xs">
-              {stats.active_streams} active streams
-            </div>
-            <div className="text-white/60 text-xs">
-              Last updated: {new Date(stats.last_updated * 1000).toLocaleTimeString()}
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>
-  );
-}
-
-export const NetworkStatsCardSSR: React.FC = () => {
-  return (
-    <React.Suspense fallback={<NetworkStatsCardSkeleton />}>
-      <NetworkStatsCardContent />
-    </React.Suspense>
   );
 };

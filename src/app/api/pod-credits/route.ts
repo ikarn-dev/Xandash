@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import https from 'https';
 import { getCreditsApiUrl, type NetworkType } from '@/libs/services/network-service';
+import { getMainnetCreditsMap } from '@/libs/services/mainnet-data-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,7 +9,23 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const network = (searchParams.get('network') || 'devnet') as NetworkType;
     
-    // Get URL from network service
+    // For mainnet, get credits from external data sources
+    if (network === 'mainnet') {
+      const creditsMap = await getMainnetCreditsMap();
+      const pods_credits = Array.from(creditsMap.entries()).map(([pod_id, credits]) => ({
+        pod_id,
+        credits,
+      }));
+      
+      return NextResponse.json({
+        pods_credits,
+        total: pods_credits.length,
+        network: 'mainnet',
+        source: 'external',
+      });
+    }
+    
+    // For devnet, use the credits API
     const externalUrl = getCreditsApiUrl(network);
     if (!externalUrl) {
       throw new Error(`${network} pod credits URL not configured`);
@@ -24,7 +41,7 @@ export async function GET(request: NextRequest) {
         path: url.pathname,
         method: 'GET',
         headers: {
-          'User-Agent': 'XanDash/1.0',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Accept': 'application/json',
         },
       };

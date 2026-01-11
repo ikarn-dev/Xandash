@@ -3,6 +3,7 @@
 import { X } from 'lucide-react';
 import { CopyBtn } from '@/components/ui/CopyBtn';
 import { toast } from 'sonner';
+import { getNodeName } from '@/libs/utils/node-names';
 
 interface BookmarkNode {
   rank: number;
@@ -38,17 +39,19 @@ export function BookmarksTable({ data, onRemoveBookmark }: BookmarksTableProps) 
       <table className="w-full min-w-[650px]">
         <thead>
           <tr className="border-b border-yellow-500/20 bg-black/50">
-            <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase w-[10%]">Rank</th>
-            <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase w-[30%]">Pod ID</th>
-            <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase w-[20%]">IP Address</th>
-            <th className="text-center py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase w-[15%]">Tier</th>
-            <th className="text-right py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase w-[25%]">Credits</th>
+            <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase w-[8%]">Rank</th>
+            <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase w-[10%]">Name</th>
+            <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase w-[27%]">Pod ID</th>
+            <th className="text-left py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase w-[18%]">IP Address</th>
+            <th className="text-center py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase w-[12%]">Tier</th>
+            <th className="text-right py-2 sm:py-3 px-2 sm:px-3 text-yellow-400/70 text-[10px] sm:text-xs font-medium uppercase w-[20%]">Credits</th>
           </tr>
         </thead>
         <tbody>
           {data.map((node) => {
             const tier = getTier(node.credits);
             const ipAddress = extractIP(node.address);
+            const nodeName = getNodeName(node.pod_id);
             return (
               <tr key={node.pod_id} className="group hover:bg-yellow-500/5 transition-all border-b border-yellow-500/10">
                 <td className="py-2 sm:py-3 px-2 sm:px-3">
@@ -58,6 +61,11 @@ export function BookmarksTable({ data, onRemoveBookmark }: BookmarksTableProps) 
                       <X className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                     </button>
                   </div>
+                </td>
+                <td className="py-2 sm:py-3 px-2 sm:px-3">
+                  <span className={`text-[10px] sm:text-sm ${nodeName !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
+                    {nodeName}
+                  </span>
                 </td>
                 <td className="py-2 sm:py-3 px-2 sm:px-3">
                   <div className="flex items-center space-x-1 sm:space-x-2">

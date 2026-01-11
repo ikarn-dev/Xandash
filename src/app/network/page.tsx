@@ -1,14 +1,63 @@
 'use client';
 
+import { useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout';
 import { NetworkTitleCard, NetworkCountriesCard, NetworkNodesCard, NetworkRegionsCard } from '@/components/dashboard';
 import { useNetwork } from '@/libs/context/network-context';
 import { useNetworkPageData } from './hooks';
 import { CountryCard, CountryCardSkeleton, NetworkMap } from './components';
+import { AISummary } from '@/components/ui/AISummary';
 
 function NetworkPageContent() {
   const { network, isMainnet } = useNetwork();
   const { mapValidators, countryStats, countryDetailedStats, totalNodes, locatedNodes, loading, error } = useNetworkPageData(network);
+
+  // Calculate network-wide stats for AI summary
+  const networkStats = useMemo(() => {
+    if (loading || countryDetailedStats.length === 0) return null;
+
+    const totalOnline = countryDetailedStats.reduce((sum, c) => sum + c.onlineNodes, 0);
+    const totalSyncing = countryDetailedStats.reduce((sum, c) => sum + c.syncingNodes, 0);
+    const totalOffline = countryDetailedStats.reduce((sum, c) => sum + c.offlineNodes, 0);
+    const totalStorage = countryDetailedStats.reduce((sum, c) => sum + c.totalStorage, 0);
+    const totalStorageUsed = countryDetailedStats.reduce((sum, c) => sum + c.totalStorageUsed, 0);
+    const avgUptime = countryDetailedStats.reduce((sum, c) => sum + c.avgUptime, 0) / countryDetailedStats.length;
+    
+    const topCountries = countryDetailedStats.slice(0, 5).map(c => `${c.country} (${c.totalNodes})`).join(', ');
+    const onlinePercent = totalNodes > 0 ? ((totalOnline / totalNodes) * 100).toFixed(1) : '0';
+    const storageEfficiency = totalStorage > 0 ? ((totalStorageUsed / totalStorage) * 100).toFixed(1) : '0';
+
+    return {
+      totalNodes,
+      totalOnline,
+      totalSyncing,
+      totalOffline,
+      onlinePercent,
+      totalStorage,
+      totalStorageUsed,
+      storageEfficiency,
+      avgUptime,
+      countriesCount: countryDetailedStats.length,
+      topCountries,
+      locatedNodes
+    };
+  }, [countryDetailedStats, totalNodes, locatedNodes, loading]);
+
+  // Generate AI summary prompt for network overview
+  const aiNetworkPrompt = useMemo(() => {
+    if (!networkStats) return '';
+
+    const formatStorage = (bytes: number) => {
+      if (bytes >= 1024 * 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024 * 1024)).toFixed(2)}TB`;
+      if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)}GB`;
+      return `${(bytes / (1024 * 1024)).toFixed(2)}MB`;
+    };
+
+    const uptimeDays = (networkStats.avgUptime / 86400).toFixed(1);
+    const networkName = isMainnet ? 'Mainnet' : 'Devnet';
+
+    return `Provide a brief network health summary for Xandeum ${networkName} in 2-3 sentences. Data: Total Nodes=${networkStats.totalNodes}, Online=${networkStats.totalOnline} (${networkStats.onlinePercent}%), Syncing=${networkStats.totalSyncing}, Offline=${networkStats.totalOffline}, Countries=${networkStats.countriesCount}, Top Countries=${networkStats.topCountries}, Total Storage=${formatStorage(networkStats.totalStorage)}, Used Storage=${formatStorage(networkStats.totalStorageUsed)} (${networkStats.storageEfficiency}% efficiency), Avg Uptime=${uptimeDays}d. Include: overall health assessment, geographic distribution insight, and one recommendation.`;
+  }, [networkStats, isMainnet]);
 
   return (
     <div className="space-y-6 overflow-x-hidden">
@@ -20,6 +69,15 @@ function NetworkPageContent() {
         <NetworkCountriesCard countryStats={countryStats} isLoading={loading} error={error} />
         <NetworkRegionsCard countryStats={countryStats} isLoading={loading} error={error} />
       </div>
+
+      {/* AI Network Summary */}
+      {!loading && networkStats && aiNetworkPrompt && (
+        <AISummary 
+          prompt={aiNetworkPrompt}
+          title={`${isMainnet ? 'Mainnet' : 'Devnet'} Network Analysis`}
+          autoLoad={true}
+        />
+      )}
 
       {/* World Map */}
       <NetworkMap 

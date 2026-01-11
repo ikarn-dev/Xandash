@@ -4,127 +4,95 @@ import { NextRequest, NextResponse } from 'next/server';
 const responseTimeCache = new Map<string, { time: number; responseTime: number | null; status: string; error?: string }>();
 const CACHE_TTL = 60 * 1000; // 1 minute
 
-const getRpcUrl = () => {
-  if (process.env.RPC_BASE_URL) {
-    return process.env.RPC_BASE_URL;
-  }
-  const rpcEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'http://161.97.97.41:6000/rpc';
-  return rpcEndpoint.replace(/\/rpc$/, '');
-};
-
-// Get the Geo History API URL
+// Get the Geo History API URL from environment
 const getGeoHistoryUrl = () => {
-  if (process.env.GEO_HISTORY_API_URL) {
-    return process.env.GEO_HISTORY_API_URL;
-  }
-  return getRpcUrl();
+  return process.env.MAINNET_EXTERNAL_GEO_URL?.replace('/geo/batch', '') || '';
 };
-
-// Active public node endpoints (is_public: true, status: ACTIVE) as backups
-const PUBLIC_NODE_ENDPOINTS = [
-  'http://161.97.97.41:6000',
-  'http://173.212.203.145:6000',
-  'http://173.212.220.65:6000',
-  'http://62.171.138.27:6000',
-  'http://84.21.171.111:6000',
-  'http://173.212.207.32:6000',
-  'http://62.171.135.107:6000',
-  'http://173.249.3.118:6000',
-  'http://144.126.137.111:6000',
-];
 
 // Fetch response time from geo/history endpoint
 async function fetchResponseTimeFromHistory(ip: string): Promise<{ responseTime: number | null; status: string; error?: string }> {
   const primaryUrl = getGeoHistoryUrl();
   
-  const urls = [
-    `${primaryUrl}/geo/history?ip=${encodeURIComponent(ip)}`,
-    ...PUBLIC_NODE_ENDPOINTS
-      .filter(url => url !== primaryUrl)
-      .slice(0, 2)
-      .map(url => `${url}/geo/history?ip=${encodeURIComponent(ip)}`)
-  ];
+  if (!primaryUrl) {
+    return { responseTime: null, status: 'unknown', error: 'Geo API not configured' };
+  }
 
-  for (const fetchUrl of urls) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      
-      const response = await fetch(fetchUrl, {
-        method: 'GET',
-        cache: 'no-store',
-        headers: { 
-          'User-Agent': 'XanDash/1.0',
-          'Accept': 'application/json',
-        },
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeout);
+  const fetchUrl = `${primaryUrl}/geo/history?ip=${encodeURIComponent(ip)}`;
 
-      if (!response.ok) {
-        continue;
-      }
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(fetchUrl, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json',
+      },
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeout);
 
-      const data = await response.json();
-      let responseTime: number | null = null;
-      let status = 'offline';
+    if (!response.ok) {
+      return { responseTime: null, status: 'unknown', error: 'Geo API error' };
+    }
 
-      if (data && typeof data === 'object') {
-        // Check for direct response time value
-        if (typeof data.response_time === 'number') {
-          responseTime = data.response_time;
-          status = 'online';
-        } else if (typeof data.ping === 'number') {
-          responseTime = data.ping;
-          status = 'online';
-        } else if (typeof data.latency === 'number') {
-          responseTime = data.latency;
-          status = 'online';
-        } else {
-          // Try CSV parsing
-          const possibleKeys = ['csv_data', 'data', 'history', 'csv', 'result'];
-          let csvData = '';
-          
-          for (const key of possibleKeys) {
-            if (data[key] && typeof data[key] === 'string' && data[key].includes(',')) {
+    const data = await response.json();
+    let responseTime: number | null = null;
+    let status = 'offline';
+
+    if (data && typeof data === 'object') {
+      // Check for direct response time value
+      if (typeof data.response_time === 'number') {
+        responseTime = data.response_time;
+        status = 'online';
+      } else if (typeof data.ping === 'number') {
+        responseTime = data.ping;
+        status = 'online';
+      } else if (typeof data.latency === 'number') {
+        responseTime = data.latency;
+        status = 'online';
+      } else {
+        // Try CSV parsing
+        const possibleKeys = ['csv_data', 'data', 'history', 'csv', 'result'];
+        let csvData = '';
+        
+        for (const key of possibleKeys) {
+          if (data[key] && typeof data[key] === 'string' && data[key].includes(',')) {
+            csvData = data[key];
+            break;
+          }
+        }
+        
+        if (!csvData) {
+          for (const key of Object.keys(data)) {
+            if (key !== 'meta' && typeof data[key] === 'string' && data[key].includes(',')) {
               csvData = data[key];
               break;
             }
           }
-          
-          if (!csvData) {
-            for (const key of Object.keys(data)) {
-              if (key !== 'meta' && typeof data[key] === 'string' && data[key].includes(',')) {
-                csvData = data[key];
-                break;
-              }
-            }
-          }
-          
-          if (csvData) {
-            const lines = csvData.split('\n').filter((line: string) => line.trim());
-            if (lines.length > 0) {
-              const lastLine = lines[lines.length - 1];
-              const parts = lastLine.split(',');
-              if (parts.length >= 2) {
-                responseTime = parseFloat(parts[1]) || null;
-                status = responseTime && responseTime > 0 ? 'online' : 'offline';
-              }
+        }
+        
+        if (csvData) {
+          const lines = csvData.split('\n').filter((line: string) => line.trim());
+          if (lines.length > 0) {
+            const lastLine = lines[lines.length - 1];
+            const parts = lastLine.split(',');
+            if (parts.length >= 2) {
+              responseTime = parseFloat(parts[1]) || null;
+              status = responseTime && responseTime > 0 ? 'online' : 'offline';
             }
           }
         }
       }
-
-      if (responseTime !== null) {
-        return { responseTime, status };
-      }
-    } catch (error: any) {
-      // Silently handle geo/history fetch errors
     }
-  }
 
-  return { responseTime: null, status: 'unknown', error: 'No ping data available' };
+    return { responseTime, status };
+  } catch (error: any) {
+    return { responseTime: null, status: 'unknown', error: 'Fetch failed' };
+  }
 }
 
 // Fetch response time with caching

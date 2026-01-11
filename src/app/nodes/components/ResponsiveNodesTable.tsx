@@ -3,6 +3,8 @@
 import React from 'react';
 import { Globe } from 'lucide-react';
 import { CopyBtn } from '@/components/ui/CopyBtn';
+import { getNodeName } from '@/libs/utils/node-names';
+import { formatStorage } from '@/libs/utils';
 import type { ValidatorData } from '@/libs/server';
 
 interface LocationData {
@@ -14,10 +16,16 @@ interface LocationData {
   ip: string;
 }
 
+interface PingResult {
+  ping: number | null;
+  status: 'online' | 'offline' | 'timeout';
+}
+
 interface ResponsiveNodesTableProps {
   validators: ValidatorData[];
   locations: Record<string, LocationData | null>;
   credits: Record<string, number | null>;
+  pings?: Record<string, PingResult>;
   dataFetchTime: number;
   clickedNodeId: string | null;
   shouldAnimate: (index: number) => boolean;
@@ -46,6 +54,7 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
   validators,
   locations,
   credits,
+  pings = {},
   dataFetchTime,
   clickedNodeId,
   shouldAnimate,
@@ -63,7 +72,7 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
   return (
     <div className="w-full bg-black border border-white/10 rounded-lg overflow-hidden">
       <div className="overflow-x-auto scrollbar-hide">
-        <table className="w-full min-w-[950px]">
+        <table className="w-full min-w-[1020px]">
           <thead className="bg-white/5 border-b border-white/10">
             <tr>
               {/* Compare column */}
@@ -72,20 +81,23 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                   <CompareIcon className="w-3.5 h-3.5 mx-auto text-white/50" />
                 </th>
               )}
+              <th className="w-[6%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
+                Name
+              </th>
               <th 
-                className="w-[14%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
+                className="w-[12%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
                 onClick={() => handleSort('address')}
               >
                 Location {getSortIcon('address')}
               </th>
               <th 
-                className="w-[11%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
+                className="w-[10%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
                 onClick={() => handleSort('address')}
               >
                 IP Address {getSortIcon('address')}
               </th>
               <th 
-                className="w-[17%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
+                className="w-[15%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
                 onClick={() => handleSort('pubkey')}
               >
                 Pubkey {getSortIcon('pubkey')}
@@ -129,6 +141,9 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
               >
                 Status {getSortIcon('status')}
               </th>
+              <th className="w-[6%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
+                Ping
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -136,11 +151,13 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
               const ip = extractIP(validator.address || '');
               const location = locations[ip];
               const nodeCredits = validator.pubkey ? credits[validator.pubkey] : null;
+              const nodePing = pings[ip];
               const nodeId = `${validator.pubkey}-${validator.address}`;
               const animate = shouldAnimate(index);
               const isSelected = selectedForCompare.includes(validator.pubkey);
               const canSelect = selectedForCompare.length < 4 || isSelected;
               
+
               const timeDiff = dataFetchTime - validator.last_seen_timestamp;
               const isOnline = timeDiff < 1800;
               const isSyncing = timeDiff >= 1800 && timeDiff < 3600;
@@ -151,7 +168,7 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
               else if (timeDiff < 86400) lastSeenDisplay = `${Math.floor(timeDiff / 3600)}h`;
               else lastSeenDisplay = `${Math.floor(timeDiff / 86400)}d`;
               
-              const storageGB = validator.storage_committed ? (validator.storage_committed / (1024**3)).toFixed(1) : '0';
+              const storageDisplay = formatStorage(validator.storage_committed || 0);
               const usagePercent = validator.storage_usage_percent ? (validator.storage_usage_percent * 100).toFixed(2) : '0.00';
               
               const uptimeHours = Math.floor(validator.uptime / 3600);
@@ -194,6 +211,13 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                       </button>
                     </td>
                   )}
+
+                  {/* Name */}
+                  <td className="px-3 py-3 text-xs">
+                    <span className={`${getNodeName(validator.pubkey) !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
+                      {getNodeName(validator.pubkey)}
+                    </span>
+                  </td>
 
                   {/* Location */}
                   <td className="px-3 py-3 text-xs">
@@ -248,7 +272,7 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                   {/* Storage */}
                   <td className="px-3 py-3 text-xs">
                     <div className="text-white/80 font-mono">
-                      <div>{storageGB} GB</div>
+                      <div>{storageDisplay}</div>
                       <div className="text-[10px] text-white/40">{usagePercent}%</div>
                     </div>
                   </td>
@@ -289,6 +313,25 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                         {isOnline ? 'Active' : isSyncing ? 'Syncing' : 'Offline'}
                       </span>
                     </div>
+                  </td>
+
+                  {/* Ping */}
+                  <td className="px-3 py-3 text-xs">
+                    {nodePing ? (
+                      <span className={`font-mono ${
+                        nodePing.status === 'online' 
+                          ? nodePing.ping! < 200 
+                            ? 'text-green-400' 
+                            : nodePing.ping! < 500 
+                              ? 'text-yellow-400' 
+                              : 'text-orange-400'
+                          : 'text-red-400'
+                      }`}>
+                        {nodePing.status === 'online' ? `${nodePing.ping}ms` : 'N/A'}
+                      </span>
+                    ) : (
+                      <span className="text-white/30">—</span>
+                    )}
                   </td>
                 </tr>
               );

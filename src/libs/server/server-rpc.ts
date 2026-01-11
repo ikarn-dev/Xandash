@@ -23,7 +23,7 @@ async function makeRPCCall<T>(endpoint: string, method: string, params?: any): P
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(postData),
-          'User-Agent': 'XanDash/1.0',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
       };
 
@@ -90,42 +90,22 @@ async function makeRPCCall<T>(endpoint: string, method: string, params?: any): P
   });
 }
 
-// Direct RPC call function with failover logic
+// Direct RPC call function - uses mainnet RPC endpoint from env
 export async function callDirectRPC<T>(method: string, params?: any, customEndpoint?: string): Promise<RPCResponse<T>> {
-  // If custom endpoint provided, use it directly without fallback
+  // If custom endpoint provided, use it directly
   if (customEndpoint) {
     return makeRPCCall<T>(customEndpoint, method, params);
   }
   
-  const primaryEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'http://161.97.97.41:6000/rpc';
+  // Use mainnet RPC endpoint from environment
+  const rpcEndpoint = process.env.MAINNET_EXTERNAL_RPC_URL;
   
-  // Active public nodes from the network
-  const fallbackEndpoints = [
-    'http://173.212.203.145:6000/rpc',
-    'http://173.212.220.65:6000/rpc',
-    'http://62.171.138.27:6000/rpc',
-    'http://173.212.207.32:6000/rpc',
-    'http://62.171.135.107:6000/rpc',
-    'http://173.249.3.118:6000/rpc',
-  ];
-  
-  // Try primary endpoint first
-  const primaryResult = await makeRPCCall<T>(primaryEndpoint, method, params);
-  
-  if (primaryResult.success) {
-    return primaryResult;
+  if (!rpcEndpoint) {
+    return {
+      success: false,
+      error: 'RPC endpoint not configured'
+    };
   }
   
-  // Try fallback endpoints
-  for (const fallbackEndpoint of fallbackEndpoints) {
-    const fallbackResult = await makeRPCCall<T>(fallbackEndpoint, method, params);
-    if (fallbackResult.success) {
-      return fallbackResult;
-    }
-  }
-  
-  return {
-    success: false,
-    error: `RPC call failed - all endpoints unavailable`
-  };
+  return makeRPCCall<T>(rpcEndpoint, method, params);
 }

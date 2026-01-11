@@ -1,9 +1,10 @@
 import { DashboardLayout } from '@/components/layout';
 import { NodeProfileClient } from './NodeProfileClient';
 import { ToastDismisser } from '@/components/ui/ToastDismisser';
-import { callDirectRPC } from '@/libs/server';
 import { getNodeStatsHistory, getNodeEvents, getLatestNodeSnapshot } from '@/libs/db/node-service';
 import { ProfileCacheService } from '@/libs/services/profile-cache';
+import { getMainnetNodeByIp } from '@/libs/services/mainnet-data-service';
+import { getDevnetNodeByIp } from '@/libs/services/devnet-data-service';
 
 interface PageProps {
   params: Promise<{ ip: string }>;
@@ -182,16 +183,13 @@ async function fetchLocationData(ip: string) {
 
 async function fetchCurrentNodeData(ip: string) {
   try {
-    const rpcResponse = await callDirectRPC('get-pods-with-stats');
-    if (!rpcResponse.success || !rpcResponse.data) return null;
-
-    const nodes = (rpcResponse.data as any)?.pods || [];
-    const node = nodes.find((n: any) => {
-      const nodeIp = n.address?.split(':')[0];
-      return nodeIp === ip;
-    });
-
-    return node || null;
+    // Try mainnet first
+    const mainnetNode = await getMainnetNodeByIp(ip);
+    if (mainnetNode) return mainnetNode;
+    
+    // Fallback to devnet
+    const devnetNode = await getDevnetNodeByIp(ip);
+    return devnetNode;
   } catch {
     return null;
   }
@@ -205,7 +203,7 @@ async function fetchCreditsData() {
     const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'XanDash/1.0' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
     });
     clearTimeout(timeout);
     

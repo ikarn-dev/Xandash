@@ -5,6 +5,7 @@ import { CopyBtn as CopyButton } from '@/components/ui/CopyBtn';
 import { ArrowLeftIcon } from './ProfileIcons';
 import { getStatusColor, getStatusBgColor } from './utils';
 import { CurrentNodeData } from './types';
+import { getNodeName } from '@/libs/utils/node-names';
 
 interface ProfileHeaderProps {
   ip: string;
@@ -15,6 +16,7 @@ interface ProfileHeaderProps {
 
 export const ProfileHeader = ({ ip, node, lastUpdate, onRefresh }: ProfileHeaderProps) => {
   const router = useRouter();
+  const nodeName = getNodeName(node?.pubkey);
 
   return (
     <div className="relative bg-black border border-white/10 p-3 sm:p-4 group hover:border-white/20 transition-all">
@@ -39,7 +41,14 @@ export const ProfileHeader = ({ ip, node, lastUpdate, onRefresh }: ProfileHeader
         <div className="space-y-2">
           {/* Title and badges */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <h1 className="text-lg sm:text-xl font-bold text-white font-mono break-all">Node {ip}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-bold text-white font-mono break-all">Node {ip}</h1>
+              {nodeName !== 'N/A' && (
+                <span className="px-2 py-0.5 rounded-full text-xs bg-cyan-500/20 border border-cyan-500/50 text-cyan-400 font-medium flex-shrink-0">
+                  {nodeName}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusBgColor(node?.status || 'offline')} flex-shrink-0`}>
                 <span className={getStatusColor(node?.status || 'offline')}>

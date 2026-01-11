@@ -5,7 +5,9 @@
 
 // Network services
 export * from './network-service';
-export * from './mainnet-filter-service';
+
+// Mainnet data service
+export * from './mainnet-data-service';
 
 // Geolocation services (existing)
 export * from './geolocation';

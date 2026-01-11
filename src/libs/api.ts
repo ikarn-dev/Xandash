@@ -5,8 +5,8 @@ const getEndpoint = () => {
     // Client-side: use the proxy endpoint
     return '/api/rpc';
   } else {
-    // Server-side: use direct endpoint
-    return process.env.RPC_ENDPOINT_PRIMARY || 'http://161.97.97.41:6000/rpc';
+    // Server-side: use mainnet RPC endpoint from env
+    return process.env.MAINNET_EXTERNAL_RPC_URL || '';
   }
 };
 

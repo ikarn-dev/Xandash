@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callDirectRPC } from '@/libs/server';
 import { ProfileCacheService } from '@/libs/services/profile-cache';
+import { getMainnetData } from '@/libs/services/mainnet-data-service';
+import { getDevnetData } from '@/libs/services/devnet-data-service';
 
 // Server-side function to get profile data for caching
 async function getProfileDataForCache(ip: string) {
@@ -20,6 +21,7 @@ export async function POST(request: NextRequest) {
     const cronSecret = process.env.CRON_SECRET;
     const authFromHeader = request.headers.get('authorization');
     const authFromQuery = request.nextUrl.searchParams.get('auth');
+    const network = request.nextUrl.searchParams.get('network') || 'devnet';
     
     let authFromBody = null;
     try {
@@ -42,13 +44,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fetch all nodes from RPC
-    const rpcResponse = await callDirectRPC('get-pods-with-stats');
-    if (!rpcResponse.success || !rpcResponse.data) {
-      throw new Error('Failed to fetch nodes from RPC');
+    // Fetch all nodes from appropriate API
+    let nodes: any[] = [];
+    if (network === 'mainnet') {
+      const mainnetData = await getMainnetData();
+      nodes = mainnetData.nodes;
+    } else {
+      const devnetData = await getDevnetData();
+      nodes = devnetData.nodes;
+    }
+    
+    if (nodes.length === 0) {
+      throw new Error(`No nodes available from ${network} API`);
     }
 
-    const nodes = (rpcResponse.data as any)?.pods || [];
     const ips = nodes
       .map((node: any) => node.address?.split(':')[0])
       .filter((ip: string) => ip && ip !== '127.0.0.1')
@@ -62,6 +71,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Profile pre-loading completed',
+      network,
       nodesProcessed: ips.length,
       duration: `${duration}ms`,
       timestamp: new Date().toISOString(),

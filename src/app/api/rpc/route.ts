@@ -16,7 +16,7 @@ async function makeRPCProxyCall(endpoint: string, body: any): Promise<any> {
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(postData),
-        'User-Agent': 'XanDash/1.0',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       },
     };
 
@@ -56,46 +56,20 @@ async function makeRPCProxyCall(endpoint: string, body: any): Promise<any> {
   });
 }
 
-// Public node RPC endpoints as backups
-const PUBLIC_RPC_ENDPOINTS = [
-  'http://161.97.97.41:6000/rpc',
-  'http://173.212.207.32:6000/rpc',
-  'http://62.171.135.107:6000/rpc',
-  'http://173.249.3.118:6000/rpc',
-  'http://84.21.171.111:6000/rpc',
-];
-
 export async function POST(request: NextRequest) {
   let body: any;
   
   try {
     body = await request.json();
-    const primaryEndpoint = process.env.RPC_ENDPOINT_PRIMARY || 'http://161.97.97.41:6000/rpc';
     
-    // Build list of endpoints to try
-    const endpoints = [
-      primaryEndpoint,
-      ...PUBLIC_RPC_ENDPOINTS.filter(e => e !== primaryEndpoint).slice(0, 2)
-    ];
+    // Use mainnet RPC endpoint from env
+    const mainnetRpcUrl = process.env.MAINNET_EXTERNAL_RPC_URL;
     
-    let result: any;
-    let lastError: any;
-    
-    for (const endpoint of endpoints) {
-      try {
-        result = await makeRPCProxyCall(endpoint, body);
-        break; // Success, exit loop
-      } catch (error) {
-        lastError = error;
-        // Continue to next endpoint
-      }
+    if (!mainnetRpcUrl) {
+      throw new Error('RPC endpoint not configured');
     }
     
-    if (!result) {
-      console.error('RPC Proxy: All endpoints failed');
-      throw lastError || new Error('All RPC endpoints failed');
-    }
-    
+    const result = await makeRPCProxyCall(mainnetRpcUrl, body);
     return NextResponse.json(result);
     
   } catch (error) {

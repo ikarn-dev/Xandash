@@ -109,6 +109,7 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
             setTimeRange={setTimeRange}
             filteredDbHistoryLength={filteredDbHistoryLength}
             isShowingFallbackData={isShowingFallbackData}
+            ip={ip}
           />
         )}
 

@@ -1,5 +1,3 @@
-import { callDirectRPC } from './server-rpc';
-
 export interface VersionData {
   version: string;
   build?: string;
@@ -19,79 +17,162 @@ export interface NetworkStatsData {
   total_bytes: number;
   total_pages: number;
   uptime: number;
+  // Storage stats from pods
+  storage_committed: number;
+  storage_used: number;
+  avg_storage_per_pod: number;
+  total_pods: number;
 }
 
-// Server-side function to fetch version data
+// Server-side function to fetch version data from mainnet API
 export async function getVersionData(): Promise<{
   version: VersionData | null;
   error?: string;
 }> {
   try {
-    const response = await callDirectRPC('get-version');
+    const apiUrl = process.env.NEW_MAINNET_API_URL?.replace('/pods-with-stats', '/version');
+    const apiKey = process.env.NEW_API_KEY;
     
-    if (!response.success || !response.data) {
+    if (!apiUrl || !apiKey) {
       return {
-        version: null,
-        error: response.error || 'Failed to fetch version'
+        version: { version: '0.7.3' }, // Default version
+        error: 'API not configured'
       };
     }
 
-    const versionData = response.data as any;
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'X-API-Key': apiKey,
+        'Accept': 'application/json',
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+    
+    if (!response.ok) {
+      return {
+        version: { version: '0.7.3' },
+        error: `API error: ${response.status}`
+      };
+    }
+
+    const data = await response.json();
     
     return {
       version: {
-        version: versionData.version || '0.7.3',
-        build: versionData.build,
-        commit: versionData.commit,
+        version: data.version || data.data?.version || '0.7.3',
+        build: data.build || data.data?.build,
+        commit: data.commit || data.data?.commit,
       }
     };
   } catch (error) {
     console.error('Server-side version fetch error:', error);
     return {
-      version: null,
+      version: { version: '0.7.3' },
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 }
 
-// Server-side function to fetch network stats data
+// Server-side function to fetch network stats data from mainnet API
 export async function getNetworkStatsData(): Promise<{
   stats: NetworkStatsData | null;
   error?: string;
 }> {
   try {
-    const response = await callDirectRPC('get-stats');
+    const baseUrl = process.env.NEW_MAINNET_API_URL?.replace('/pods-with-stats', '');
+    const apiKey = process.env.NEW_API_KEY;
     
-    if (!response.success || !response.data) {
+    if (!baseUrl || !apiKey) {
+      console.warn('[NetworkStats] API not configured - missing NEW_MAINNET_API_URL or NEW_API_KEY');
       return {
         stats: null,
-        error: response.error || 'Failed to fetch network stats'
+        error: 'API not configured'
       };
     }
 
-    const statsData = response.data as any;
+    const statsUrl = `${baseUrl}/stats`;
+    const podsUrl = `${baseUrl}/pods-with-stats`;
+
+    // Fetch both stats and pods data in parallel
+    const [statsResponse, podsResponse] = await Promise.all([
+      fetch(statsUrl, {
+        method: 'GET',
+        headers: {
+          'X-API-Key': apiKey,
+          'Accept': 'application/json',
+        },
+        cache: 'no-store',
+        signal: AbortSignal.timeout(10000),
+      }),
+      fetch(podsUrl, {
+        method: 'GET',
+        headers: {
+          'X-API-Key': apiKey,
+          'Accept': 'application/json',
+        },
+        cache: 'no-store',
+        signal: AbortSignal.timeout(10000),
+      })
+    ]);
+    
+    if (!statsResponse.ok) {
+      console.error('[NetworkStats] Stats API error:', statsResponse.status, statsResponse.statusText);
+      return {
+        stats: null,
+        error: `Stats API error: ${statsResponse.status}`
+      };
+    }
+
+    const statsData = await statsResponse.json();
+    const stats = statsData.stats || statsData.data || statsData;
+    
+    // Calculate storage stats from pods
+    let storageCommitted = 0;
+    let storageUsed = 0;
+    let totalPods = 0;
+
+    if (podsResponse.ok) {
+      const podsData = await podsResponse.json();
+      const pods = podsData.pods || podsData.data?.pods || podsData.data || [];
+      
+      if (Array.isArray(pods)) {
+        totalPods = pods.length;
+        pods.forEach((pod: any) => {
+          storageCommitted += pod.storage_committed || 0;
+          storageUsed += pod.storage_used || 0;
+        });
+      }
+    }
+
+    const avgStoragePerPod = totalPods > 0 ? storageCommitted / totalPods : 0;
     
     // Process and normalize the stats data
     const processedStats: NetworkStatsData = {
-      active_streams: statsData.active_streams || 0,
-      cpu_percent: statsData.cpu_percent || 0,
-      current_index: statsData.current_index || 0,
-      file_size: statsData.file_size || 0,
-      last_updated: statsData.last_updated || Date.now(),
-      packets_received: statsData.packets_received || 0,
-      packets_sent: statsData.packets_sent || 0,
-      ram_total: statsData.ram_total || 8589934592, // Default 8GB
-      ram_used: statsData.ram_used || 0,
-      total_bytes: statsData.total_bytes || 0,
-      total_pages: statsData.total_pages || 0,
-      uptime: statsData.uptime || 0,
+      active_streams: stats.active_streams ?? 0,
+      cpu_percent: stats.cpu_percent ?? stats.cpu ?? 0,
+      current_index: stats.current_index ?? stats.index ?? 0,
+      file_size: stats.file_size ?? stats.fileSize ?? 0,
+      last_updated: stats.last_updated ?? stats.lastUpdated ?? Math.floor(Date.now() / 1000),
+      packets_received: stats.packets_received ?? stats.packetsReceived ?? stats.packets_recv ?? 0,
+      packets_sent: stats.packets_sent ?? stats.packetsSent ?? 0,
+      ram_total: stats.ram_total ?? stats.ramTotal ?? stats.memory_total ?? 8589934592,
+      ram_used: stats.ram_used ?? stats.ramUsed ?? stats.memory_used ?? 0,
+      total_bytes: stats.total_bytes ?? stats.totalBytes ?? stats.bytes_total ?? 0,
+      total_pages: stats.total_pages ?? stats.totalPages ?? 0,
+      uptime: stats.uptime ?? 0,
+      // Storage stats
+      storage_committed: storageCommitted,
+      storage_used: storageUsed,
+      avg_storage_per_pod: avgStoragePerPod,
+      total_pods: totalPods,
     };
 
     return {
       stats: processedStats
     };
   } catch (error) {
-    console.error('Server-side network stats fetch error:', error);
+    console.error('[NetworkStats] Server-side fetch error:', error);
     return {
       stats: null,
       error: error instanceof Error ? error.message : 'Unknown error'

@@ -314,6 +314,13 @@
     background-color: #000 !important;
   }
 }
+
+/* Safe area insets for mobile devices with notches/home indicators */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* Beam Animation Keyframes */
 @keyframes beam {
   0% {

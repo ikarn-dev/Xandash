@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { getNodeName } from '@/libs/utils/node-names';
 
 interface Node {
   pubkey: string;
@@ -76,6 +77,7 @@ export function NodeSelector({
         <div className="flex flex-wrap gap-2">
           {selectedNodes.map((pubkey, index) => {
             const node = nodes.find(n => n.pubkey === pubkey);
+            const nodeName = getNodeName(pubkey);
             return (
               <div 
                 key={pubkey}
@@ -88,7 +90,7 @@ export function NodeSelector({
                 }}
               >
                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colors[index % colors.length] }} />
-                <span className="font-mono">{node ? extractIP(node.address) : pubkey.slice(0, 8)}</span>
+                <span className="font-mono">{nodeName !== 'N/A' ? nodeName : (node ? extractIP(node.address) : pubkey.slice(0, 8))}</span>
                 <button 
                   onClick={() => onToggle(pubkey)}
                   className="ml-1 hover:opacity-70 transition-opacity"
@@ -152,7 +154,12 @@ export function NodeSelector({
                     </div>
                     
                     <div className="text-left">
-                      <div className="font-mono text-sm text-white">{ip}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm text-white">{ip}</span>
+                        {getNodeName(node.pubkey) !== 'N/A' && (
+                          <span className="text-[10px] text-cyan-400 font-medium">{getNodeName(node.pubkey)}</span>
+                        )}
+                      </div>
                       <div className="font-mono text-[10px] text-white/30 truncate max-w-[180px] sm:max-w-[280px]">
                         {node.pubkey}
                       </div>

@@ -120,7 +120,7 @@ class EndpointTesterWorker {
         method: httpMethod,
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': 'XanDash/1.0'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
       };
       
@@ -182,7 +182,7 @@ class EndpointTesterWorker {
       const fetchOptions = {
         method: httpMethod,
         headers: {
-          'User-Agent': 'XanDash/1.0',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Accept': 'application/json',
           ...headers
         }

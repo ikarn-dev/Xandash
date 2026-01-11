@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callDirectRPC } from '@/libs/server';
 import { saveAllNodeSnapshots, createIndexes } from '@/libs/db/node-service';
-import { fetchMainnetPubkeys, filterMainnetNodes } from '@/libs/services/mainnet-filter-service';
+import { getMainnetData, getMainnetCreditsMap } from '@/libs/services/mainnet-data-service';
+import { getDevnetData } from '@/libs/services/devnet-data-service';
 
 /**
  * SYNC NODES API
@@ -9,48 +9,71 @@ import { fetchMainnetPubkeys, filterMainnetNodes } from '@/libs/services/mainnet
  * Syncs all node data and pod credits to MongoDB.
  * Supports both devnet and mainnet networks.
  * 
- * For mainnet: filters nodes by pubkeys from mainnet credits API
+ * For mainnet: Uses dual-source staggered fetch (30s cycle) - external sources only
+ * For devnet: Uses devnet API
+ * MongoDB methods remain unchanged for historical data storage
  */
 
 type NetworkType = 'devnet' | 'mainnet';
 
-// Credits endpoints for each network
-const CREDITS_ENDPOINTS = {
-  devnet: process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits',
-  mainnet: process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL || 'https://podcredits.xandeum.network/api/mainnet-pod-credits',
-};
+// Credits endpoint for devnet only
+const DEVNET_CREDITS_URL = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
 
-async function syncAllNodes(network: NetworkType = 'devnet') {
-  // Always use the same RPC endpoint (devnet RPC has all nodes)
-  const rpcResponse = await callDirectRPC('get-pods-with-stats');
+/**
+ * Sync mainnet nodes using external data sources only
+ */
+async function syncMainnetNodes(): Promise<{
+  total: number;
+  newNodes: number;
+  statusChanges: number;
+  versionChanges: number;
+  storageChanges: number;
+  creditsChanges: number;
+  source: string;
+}> {
+  console.log('[SYNC] Syncing mainnet nodes from external sources...');
   
-  if (!rpcResponse.success || !rpcResponse.data) {
-    throw new Error(`RPC failed for ${network}`);
-  }
-
-  let nodes = (rpcResponse.data as any)?.pods || [];
-  
-  // For mainnet, filter nodes by mainnet pubkeys
-  if (network === 'mainnet') {
-    const mainnetPubkeys = await fetchMainnetPubkeys();
-    if (mainnetPubkeys.size === 0) {
-      console.warn('[SYNC] No mainnet pubkeys found, skipping mainnet sync');
-      return { total: 0, newNodes: 0, statusChanges: 0, versionChanges: 0, storageChanges: 0, creditsChanges: 0 };
+  try {
+    const externalData = await getMainnetData(true);
+    
+    if (externalData.nodes.length > 0) {
+      const creditsMap = await getMainnetCreditsMap();
+      const result = await saveAllNodeSnapshots(externalData.nodes, creditsMap, 'mainnet');
+      
+      console.log(`[SYNC] Synced ${result.total} mainnet nodes (source: ${externalData.source})`);
+      return { ...result, source: externalData.source };
     }
-    nodes = filterMainnetNodes(nodes, mainnetPubkeys);
-    console.log(`[SYNC] Filtered to ${nodes.length} mainnet nodes`);
+    
+    console.warn('[SYNC] No mainnet data available from external sources');
+    return { total: 0, newNodes: 0, statusChanges: 0, versionChanges: 0, storageChanges: 0, creditsChanges: 0, source: 'none' };
+  } catch (error) {
+    console.error('[SYNC] External sources failed:', error);
+    return { total: 0, newNodes: 0, statusChanges: 0, versionChanges: 0, storageChanges: 0, creditsChanges: 0, source: 'error' };
   }
+}
+
+/**
+ * Sync devnet nodes using devnet API
+ */
+async function syncDevnetNodes(): Promise<{
+  total: number;
+  newNodes: number;
+  statusChanges: number;
+  versionChanges: number;
+  storageChanges: number;
+  creditsChanges: number;
+}> {
+  const devnetData = await getDevnetData(true);
   
-  if (nodes.length === 0) {
+  if (devnetData.nodes.length === 0) {
+    console.warn('[SYNC] No devnet data available');
     return { total: 0, newNodes: 0, statusChanges: 0, versionChanges: 0, storageChanges: 0, creditsChanges: 0 };
   }
 
-  // Fetch credits from network-specific endpoint
   const creditsMap = new Map<string, number>();
   try {
-    const creditsUrl = CREDITS_ENDPOINTS[network];
-    const res = await fetch(creditsUrl, { 
-      headers: { 'User-Agent': 'XanDash/1.0' },
+    const res = await fetch(DEVNET_CREDITS_URL, { 
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
       signal: AbortSignal.timeout(10000),
     });
     if (res.ok) {
@@ -58,14 +81,19 @@ async function syncAllNodes(network: NetworkType = 'devnet') {
       data.pods_credits?.forEach((c: any) => creditsMap.set(c.pod_id, c.credits));
     }
   } catch (err) {
-    console.warn(`[SYNC] Failed to fetch credits for ${network}:`, err);
+    console.warn('[SYNC] Failed to fetch credits for devnet:', err);
   }
 
-  // Save to network-specific collections
-  return await saveAllNodeSnapshots(nodes, creditsMap, network);
+  return await saveAllNodeSnapshots(devnetData.nodes, creditsMap, 'devnet');
 }
 
-// Verify request authenticity
+async function syncAllNodes(network: NetworkType = 'devnet') {
+  if (network === 'mainnet') {
+    return syncMainnetNodes();
+  }
+  return syncDevnetNodes();
+}
+
 function verifyAuth(request: NextRequest): boolean {
   const upstashSignature = request.headers.get('upstash-signature');
   if (upstashSignature) return true;
@@ -79,7 +107,6 @@ function verifyAuth(request: NextRequest): boolean {
   return auth === `Bearer ${secret}` || auth === secret || queryAuth === secret;
 }
 
-// POST - Main sync endpoint (for cron services)
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   
@@ -111,7 +138,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET - For manual sync and setup
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');
@@ -148,7 +174,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       message: 'XanDash Sync API',
       networks: ['devnet', 'mainnet'],
-      note: 'Mainnet nodes are filtered from devnet RPC by pubkeys in mainnet credits API',
+      note: 'Mainnet uses dual-source staggered fetch with 30s cycle',
       setup: {
         step1: 'Initialize indexes: GET /api/sync-nodes?action=init',
         step2_devnet: 'Test devnet sync: GET /api/sync-nodes?action=sync&network=devnet',

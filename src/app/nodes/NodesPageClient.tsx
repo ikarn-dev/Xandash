@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Pagination, ValidatorTableSkeleton, SearchBox } from '@/components/ui';
@@ -23,7 +24,9 @@ import {
   useNodesData, 
   useNodesFilters, 
   useNodesLocation, 
-  useNodesCredits 
+  useNodesCredits,
+  useNodesPing,
+  useMainnetData
 } from './hooks';
 import { CustomDropdown, CaptchaGate } from '@/components/ui';
 
@@ -62,9 +65,76 @@ export function NodesPageClientRefactored({
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
 
   // Custom hooks for data management
-  const { allValidators, dataFetchTime, stats, isLoadingNetwork, fetchData } = useNodesData(network);
+  const { allValidators: devnetValidators, dataFetchTime: devnetFetchTime, stats: devnetStats, isLoadingNetwork, fetchData } = useNodesData(network);
+  const { mainnetNodes, geoData, isLoading: isLoadingMainnet, lastFetchTime: mainnetFetchTime } = useMainnetData(network);
+  
+  // Use external data for mainnet, devnet RPC for devnet
+  const allValidators = network === 'mainnet' ? mainnetNodes : devnetValidators;
+  const dataFetchTime = network === 'mainnet' 
+    ? (mainnetFetchTime > 0 ? Math.floor(mainnetFetchTime / 1000) : Math.floor(Date.now() / 1000))
+    : devnetFetchTime;
+  const stats = network === 'mainnet' 
+    ? {
+        total: mainnetNodes.length,
+        online: mainnetNodes.filter(v => v.status === 'online').length,
+        public: mainnetNodes.filter(v => v.is_public).length,
+      }
+    : devnetStats;
+
   const { locations } = useNodesLocation(allValidators);
   const { credits } = useNodesCredits(allValidators, network);
+  const { pings } = useNodesPing(network === 'devnet' ? allValidators : [], network); // Only fetch native pings for devnet
+
+  // For mainnet, use external geo data; for devnet use native locations
+  const mergedLocations = React.useMemo(() => {
+    if (network === 'mainnet' && Object.keys(geoData).length > 0) {
+      const merged: Record<string, any> = {};
+      for (const [ip, data] of Object.entries(geoData)) {
+        merged[ip] = {
+          country: data.country,
+          country_code: data.country_code,
+          city: 'Unknown',
+          region: '',
+          provider: data.provider || 'Unknown',
+          ip,
+        };
+      }
+      return merged;
+    }
+    return locations;
+  }, [network, geoData, locations]);
+
+  // For mainnet, use external ping data; for devnet use native ping
+  const mergedPings = React.useMemo(() => {
+    if (network === 'mainnet' && Object.keys(geoData).length > 0) {
+      const merged: Record<string, { ping: number | null; status: 'online' | 'offline' | 'timeout' }> = {};
+      for (const [ip, data] of Object.entries(geoData)) {
+        merged[ip] = {
+          ping: data.ping,
+          status: data.ping !== null && data.ping > 0 ? 'online' : 'offline',
+        };
+      }
+      return merged;
+    }
+    return pings;
+  }, [network, geoData, pings]);
+
+  // For mainnet, use external credits; for devnet use native credits
+  const mergedCredits = React.useMemo(() => {
+    if (network === 'mainnet' && Object.keys(geoData).length > 0) {
+      const merged: Record<string, number | null> = {};
+      // Map IP to pubkey for credit lookup
+      for (const node of allValidators) {
+        const ip = node.address?.split(':')[0] || '';
+        const geo = geoData[ip];
+        if (geo && node.pubkey) {
+          merged[node.pubkey] = geo.credits;
+        }
+      }
+      return merged;
+    }
+    return credits;
+  }, [network, geoData, allValidators, credits]);
   
   // Filters and pagination
   const {
@@ -297,7 +367,7 @@ export function NodesPageClientRefactored({
       </div>
 
       {/* Loading state for network switch */}
-      {isLoadingNetwork ? (
+      {(isLoadingNetwork || (network === 'mainnet' && isLoadingMainnet && mainnetNodes.length === 0)) ? (
         <ValidatorTableSkeleton count={10} />
       ) : (
         <>
@@ -305,8 +375,9 @@ export function NodesPageClientRefactored({
           <div className="animate-blur-reveal-2">
             <ResponsiveNodesTable
               validators={validators}
-              locations={locations}
-              credits={credits}
+              locations={mergedLocations}
+              credits={mergedCredits}
+              pings={mergedPings}
               dataFetchTime={dataFetchTime}
               clickedNodeId={clickedNodeId}
               shouldAnimate={shouldAnimate}
@@ -324,42 +395,43 @@ export function NodesPageClientRefactored({
             />
           </div>
 
-          {/* Floating Compare Button */}
-          {selectedForCompare.length > 0 && (
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-black/95 border border-emerald-500/30 rounded-full px-4 py-2 shadow-lg shadow-emerald-500/20 backdrop-blur-xl animate-blur-reveal">
+          {/* Floating Compare Button - rendered via portal to escape overflow:hidden */}
+          {selectedForCompare.length > 0 && typeof document !== 'undefined' && createPortal(
+            <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2 bg-black/95 border border-emerald-500/30 rounded-full px-3 sm:px-4 py-2 shadow-lg shadow-emerald-500/20 backdrop-blur-xl animate-blur-reveal safe-area-bottom">
               <div className="flex items-center gap-2">
                 <div className="flex -space-x-1">
                   {selectedForCompare.slice(0, 4).map((_, i) => (
                     <div 
                       key={i} 
-                      className="w-6 h-6 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-[10px] text-emerald-400 font-bold"
+                      className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-[9px] sm:text-[10px] text-emerald-400 font-bold"
                     >
                       {i + 1}
                     </div>
                   ))}
                 </div>
-                <span className="text-white/60 text-sm">{selectedForCompare.length} selected</span>
+                <span className="text-white/60 text-xs sm:text-sm">{selectedForCompare.length} selected</span>
               </div>
-              <div className="w-px h-6 bg-white/10" />
+              <div className="w-px h-5 sm:h-6 bg-white/10" />
               <button
                 onClick={handleClearCompare}
-                className="px-3 py-1.5 text-xs text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-colors"
               >
                 Clear
               </button>
               <button
                 onClick={handleCompareSelected}
                 disabled={selectedForCompare.length < 2}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
                   selectedForCompare.length >= 2
                     ? 'bg-emerald-500 text-white hover:bg-emerald-400'
                     : 'bg-white/10 text-white/40 cursor-not-allowed'
                 }`}
               >
-                <CompareIcon className="w-4 h-4" />
+                <CompareIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                 Compare
               </button>
-            </div>
+            </div>,
+            document.body
           )}
 
           {/* Pagination */}

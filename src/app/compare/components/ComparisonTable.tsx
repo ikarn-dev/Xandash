@@ -1,5 +1,7 @@
 'use client';
 
+import { getNodeName } from '@/libs/utils/node-names';
+
 interface NodeProfile {
   ip: string;
   pubkey: string;
@@ -54,9 +56,10 @@ export function ComparisonTable({ nodes }: ComparisonTableProps) {
   const rows: Array<{
     label: string;
     key: string;
-    format: (v: any) => string;
+    format: (v: any, node?: NodeProfile) => string;
     isBest: (v: any) => boolean;
   }> = [
+    { label: 'Name', key: 'pubkey', format: (v) => getNodeName(v), isBest: () => false },
     { label: 'Status', key: 'status', format: (v) => String(v).toUpperCase(), isBest: () => false },
     { label: 'Uptime', key: 'uptime', format: formatUptime, isBest: (v) => v === getBestValue('uptime') },
     { label: 'Credits', key: 'credits', format: (v) => `+${Number(v).toLocaleString()}`, isBest: (v) => v === getBestValue('credits') },
@@ -97,14 +100,18 @@ export function ComparisonTable({ nodes }: ComparisonTableProps) {
               <td className="py-3 px-4 text-white/60 text-sm">{row.label}</td>
               {nodes.map(node => {
                 const value = (node as any)[row.key];
-                const formatted = row.format(value);
+                const formatted = row.format(value, node);
                 const isBest = row.isBest(value);
                 const isStatus = row.key === 'status';
+                const isName = row.key === 'pubkey';
+                const hasName = isName && getNodeName(value) !== 'N/A';
                 
                 return (
                   <td key={node.pubkey} className="py-3 px-4 text-center">
                     <span className={`font-mono text-sm ${
                       isStatus ? getStatusColor(value as string) : 
+                      hasName ? 'text-cyan-400 font-medium' :
+                      isName ? 'text-white/30' :
                       isBest ? 'text-emerald-400 font-medium' : 'text-white'
                     }`}>
                       {formatted}

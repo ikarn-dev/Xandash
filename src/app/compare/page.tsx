@@ -303,7 +303,7 @@ function ComparePageContent() {
           </div>
         </>
       ) : (
-        <ResultsView nodes={nodeProfiles} onReset={handleReset} />
+        <ResultsView nodes={nodeProfiles} onReset={handleReset} network={network} />
       )}
     </div>
   );

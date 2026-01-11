@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callDirectRPC } from '@/libs/server';
-import { fetchMainnetPubkeys, filterMainnetNodes } from '@/libs/services/mainnet-filter-service';
+import { getMainnetData } from '@/libs/services/mainnet-data-service';
+import { getDevnetData } from '@/libs/services/devnet-data-service';
+
+/**
+ * Nodes API
+ * 
+ * For mainnet: Uses dual-source staggered fetch with 30s cycle
+ * For devnet: Uses devnet API
+ */
 
 // Force dynamic - no caching
 export const dynamic = 'force-dynamic';
@@ -30,24 +37,38 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid pagination parameters' }, { status: 400 });
     }
 
-    const rpcResponse = await callDirectRPC('get-pods-with-stats');
-    
-    if (!rpcResponse.success || !rpcResponse.data) {
-      throw new Error(rpcResponse.error || 'Failed to fetch nodes');
-    }
+    let allNodes: any[] = [];
+    let dataSource = 'api';
 
-    const responseData = rpcResponse.data as any;
-    let allNodes = Array.isArray(responseData?.pods) ? responseData.pods : [];
-    
-    // Filter for mainnet if requested
     if (network === 'mainnet') {
-      const mainnetPubkeys = await fetchMainnetPubkeys();
-      allNodes = filterMainnetNodes(allNodes, mainnetPubkeys);
+      // For mainnet, use external data sources
+      try {
+        const externalData = await getMainnetData();
+        if (externalData.nodes.length > 0) {
+          allNodes = externalData.nodes;
+          dataSource = externalData.source;
+        } else {
+          console.warn('[Nodes API] No mainnet data available from external sources');
+        }
+      } catch (error) {
+        console.error('[Nodes API] Mainnet sources failed:', error);
+      }
+    } else {
+      // For devnet, use devnet API
+      try {
+        const devnetData = await getDevnetData();
+        if (devnetData.nodes.length > 0) {
+          allNodes = devnetData.nodes;
+          dataSource = devnetData.source;
+        } else {
+          console.warn('[Nodes API] No devnet data available');
+        }
+      } catch (error) {
+        console.error('[Nodes API] Devnet API failed:', error);
+      }
     }
     
     let result;
-    
-    // Include server timestamp for accurate client-side time diff calculation
     const serverTimestamp = Math.floor(Date.now() / 1000);
     
     if (includeAll) {
@@ -56,7 +77,8 @@ export async function GET(request: NextRequest) {
         total: allNodes.length,
         timestamp: Date.now(),
         serverTimestamp: serverTimestamp,
-        network: network
+        network: network,
+        source: dataSource
       };
     } else {
       const total = allNodes.length;
@@ -68,7 +90,8 @@ export async function GET(request: NextRequest) {
         nodes: paginatedNodes,
         pagination: { page, limit, total, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
         serverTimestamp: serverTimestamp,
-        network: network
+        network: network,
+        source: dataSource
       };
     }
 

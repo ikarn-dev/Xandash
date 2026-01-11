@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CopyBtn as CopyButton } from '@/components/ui/CopyBtn';
 import { extractIPFromAddress } from '@/libs/services/geolocation';
 import { getNodeStatus } from '@/libs/utils/node-status';
+import { getNodeName, hasNodeName } from '@/libs/utils/node-names';
 import { NodesIcon, SearchIcon } from './CountryIcons';
 import { formatBytes, formatUptime, formatCredits } from './utils';
 
@@ -16,6 +17,7 @@ interface NodeData {
   is_public: boolean;
   last_seen_timestamp: number;
   credits?: number;
+  ping?: number | null;
 }
 
 interface LocationData {
@@ -26,21 +28,63 @@ interface CountryNodesTableProps {
   nodes: NodeData[];
   locations: { [ip: string]: LocationData | null };
   countryName: string;
+  network?: string;
 }
 
-export const CountryNodesTable = ({ nodes, locations, countryName }: CountryNodesTableProps) => {
+export const CountryNodesTable = ({ nodes, locations, countryName, network = 'devnet' }: CountryNodesTableProps) => {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [pingData, setPingData] = useState<Record<string, { ping: number | null; status: string }>>({});
+  const [loadingPings, setLoadingPings] = useState(false);
+  const isMainnet = network === 'mainnet';
+
+  // Fetch pings - only for mainnet, devnet ping disabled
+  useEffect(() => {
+    if (nodes.length === 0 || !isMainnet) return;
+    
+    const fetchPings = async () => {
+      setLoadingPings(true);
+      try {
+        const ips = nodes.map(n => extractIPFromAddress(n.address || '')).filter(Boolean);
+        const uniqueIps = [...new Set(ips)].slice(0, 50);
+        
+        if (uniqueIps.length === 0) return;
+        
+        const res = await fetch('/api/ping', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            items: uniqueIps.map(ip => ({ ip })),
+            save: true,
+            network
+          }),
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setPingData(data.results || {});
+        }
+      } catch (e) {
+        console.error('Failed to fetch pings:', e);
+      } finally {
+        setLoadingPings(false);
+      }
+    };
+    
+    fetchPings();
+  }, [nodes, isMainnet, network]);
 
   const filteredNodes = useMemo(() => {
     if (!searchQuery) return nodes;
     const query = searchQuery.toLowerCase();
     return nodes.filter(node => {
       const ip = extractIPFromAddress(node.address || '');
+      const name = getNodeName(node.pubkey);
       return (
         ip.includes(query) ||
         node.pubkey?.toLowerCase().includes(query) ||
-        locations[ip]?.city?.toLowerCase().includes(query)
+        locations[ip]?.city?.toLowerCase().includes(query) ||
+        name.toLowerCase().includes(query)
       );
     });
   }, [nodes, searchQuery, locations]);
@@ -50,6 +94,13 @@ export const CountryNodesTable = ({ nodes, locations, countryName }: CountryNode
     if (ip) {
       router.push(`/profile/${encodeURIComponent(ip)}`);
     }
+  };
+
+  const formatPing = (ping: number | null | undefined) => {
+    if (ping === null || ping === undefined) return '—';
+    if (ping < 100) return <span className="text-emerald-400">{ping}ms</span>;
+    if (ping < 300) return <span className="text-amber-400">{ping}ms</span>;
+    return <span className="text-red-400">{ping}ms</span>;
   };
 
   return (
@@ -77,12 +128,13 @@ export const CountryNodesTable = ({ nodes, locations, countryName }: CountryNode
       </div>
 
       <div className="overflow-x-auto scrollbar-hide">
-        <table className="w-full min-w-[800px]">
+        <table className="w-full min-w-[900px]">
           <thead>
             <tr className="border-b border-white/10 text-left">
+              <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Name</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">IP Address</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Status</th>
-              <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Public Key</th>
+              <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Ping</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">City</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Uptime</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Storage</th>
@@ -93,7 +145,7 @@ export const CountryNodesTable = ({ nodes, locations, countryName }: CountryNode
           <tbody>
             {filteredNodes.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 sm:px-4 py-6 sm:py-8 text-center text-white/40 text-xs sm:text-sm">
+                <td colSpan={9} className="px-3 sm:px-4 py-6 sm:py-8 text-center text-white/40 text-xs sm:text-sm">
                   {searchQuery ? 'No nodes match your search' : 'No nodes found in this country'}
                 </td>
               </tr>
@@ -103,6 +155,9 @@ export const CountryNodesTable = ({ nodes, locations, countryName }: CountryNode
                 const loc = locations[ip];
                 const now = Math.floor(Date.now() / 1000);
                 const status = getNodeStatus(node.last_seen_timestamp || 0, now);
+                const nodeName = getNodeName(node.pubkey);
+                const hasName = hasNodeName(node.pubkey);
+                const nodePing = pingData[ip] || { ping: node.ping, status: 'unknown' };
 
                 return (
                   <tr 
@@ -110,6 +165,13 @@ export const CountryNodesTable = ({ nodes, locations, countryName }: CountryNode
                     onClick={() => handleNodeClick(node)}
                     className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
                   >
+                    <td className="px-3 sm:px-4 py-2 sm:py-3">
+                      {hasName ? (
+                        <span className="text-cyan-400 font-medium text-[10px] sm:text-xs md:text-sm">{nodeName}</span>
+                      ) : (
+                        <span className="text-white/30 text-[10px] sm:text-xs">—</span>
+                      )}
+                    </td>
                     <td className="px-3 sm:px-4 py-2 sm:py-3">
                       <div className="flex items-center gap-1.5 sm:gap-2">
                         <span className="text-white font-mono text-[10px] sm:text-xs md:text-sm">{ip}</span>
@@ -127,13 +189,12 @@ export const CountryNodesTable = ({ nodes, locations, countryName }: CountryNode
                         {status === 'online' ? 'ACTIVE' : status === 'syncing' ? 'SYNCING' : 'OFFLINE'}
                       </span>
                     </td>
-                    <td className="px-3 sm:px-4 py-2 sm:py-3">
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <span className="text-white/60 font-mono text-[10px] sm:text-xs truncate max-w-[80px] sm:max-w-[120px]">
-                          {node.pubkey?.slice(0, 8)}...{node.pubkey?.slice(-6)}
-                        </span>
-                        <CopyButton text={node.pubkey} />
-                      </div>
+                    <td className="px-3 sm:px-4 py-2 sm:py-3 font-mono text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
+                      {loadingPings ? (
+                        <span className="text-white/30">...</span>
+                      ) : (
+                        formatPing(nodePing.ping)
+                      )}
                     </td>
                     <td className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
                       {loc?.city || 'Unknown'}

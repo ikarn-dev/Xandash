@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cache } from '@/libs/cache/LocalCache';
-import { callDirectRPC } from '@/libs/server';
 import { getNodeEvents, getLatestNodeSnapshot, getNodeStatsHistory, saveNodeSnapshot } from '@/libs/db/node-service';
-import { fetchMainnetPubkeys } from '@/libs/services/mainnet-filter-service';
+import { getMainnetNodeByIp } from '@/libs/services/mainnet-data-service';
+import { getDevnetNodeByIp } from '@/libs/services/devnet-data-service';
+import net from 'net';
+
+/**
+ * Node Profile API
+ * 
+ * For mainnet: Uses dual-source staggered fetch with 30s cycle - external sources only
+ * For devnet: Uses devnet API
+ * MongoDB methods remain unchanged for historical data
+ */
 
 type NetworkType = 'devnet' | 'mainnet';
 
@@ -17,11 +26,13 @@ interface LocationData {
   lon?: number;
 }
 
-// Credits endpoints for each network
-const CREDITS_ENDPOINTS = {
-  devnet: process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits',
-  mainnet: process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL || 'https://podcredits.xandeum.network/api/mainnet-pod-credits',
-};
+interface PingResult {
+  ping: number | null;
+  status: 'online' | 'offline' | 'timeout';
+}
+
+// Credits endpoint for devnet only
+const DEVNET_CREDITS_URL = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits';
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,24 +51,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid network' }, { status: 400 });
     }
 
-    // For mainnet, we need to check if the node is a mainnet node
-    let mainnetPubkeys: Map<string, number> | null = null;
-    if (network === 'mainnet') {
-      mainnetPubkeys = await fetchMainnetPubkeys().catch(() => new Map());
-    }
-
-    const [locationData, currentNodeData, creditsData, dbHistory, dbEvents, dbSnapshot] = await Promise.all([
+    const [locationData, currentNodeData, creditsData, dbHistory, dbEvents, dbSnapshot, pingData] = await Promise.all([
       fetchLocationData(ip).catch(() => null),
-      fetchCurrentNodeData(ip, network, mainnetPubkeys).catch(() => null),
-      quick ? Promise.resolve(null) : fetchCreditsData(network).catch(() => null),
+      fetchCurrentNodeData(ip, network).catch(() => null),
+      quick ? Promise.resolve(null) : (network === 'devnet' ? fetchCreditsData().catch(() => null) : Promise.resolve(null)),
       getNodeStatsHistory(ip, hours, network).catch(() => []),
       getNodeEvents(ip, 100, network).catch(() => []),
       getLatestNodeSnapshot(ip, network).catch(() => null),
+      pingNode(ip).catch(() => ({ ping: null, status: 'offline' as const })),
     ]);
 
     // Save node snapshot on visit (if we have live data)
     if (currentNodeData) {
-      const credits = creditsData?.find((c: any) => c.pod_id === currentNodeData.pubkey)?.credits || 0;
+      // For mainnet, credits come from external source data
+      // For devnet, credits come from credits API
+      const credits = network === 'mainnet' 
+        ? (currentNodeData.credits || 0)
+        : (creditsData?.find((c: any) => c.pod_id === currentNodeData.pubkey)?.credits || 0);
       saveNodeSnapshotOnVisit(ip, currentNodeData, credits, network).catch(err => {
         console.error('[NODE-PROFILE] Failed to save snapshot on visit:', err);
       });
@@ -74,7 +84,11 @@ export async function GET(request: NextRequest) {
     let currentCredits = 0;
     const pubkey = currentNodeData?.pubkey || dbSnapshot?.pubkey;
     
-    if (pubkey && creditsData) {
+    // For mainnet, credits come from external source data
+    // For devnet, credits come from credits API
+    if (network === 'mainnet') {
+      currentCredits = currentNodeData?.credits || dbSnapshot?.credits || 0;
+    } else if (pubkey && creditsData) {
       const entry = creditsData.find((c: any) => c.pod_id === pubkey);
       if (entry) currentCredits = entry.credits;
     }
@@ -105,6 +119,7 @@ export async function GET(request: NextRequest) {
       ip,
       network,
       location: locationData,
+      ping: pingData,
       currentNode: nodeData ? {
         pubkey: nodeData.pubkey || '',
         address: nodeData.address || `${ip}:9001`,
@@ -206,44 +221,44 @@ async function fetchLocationData(ip: string): Promise<LocationData | null> {
   }
 }
 
-async function fetchCurrentNodeData(ip: string, network: NetworkType, mainnetPubkeys: Map<string, number> | null): Promise<any | null> {
+async function fetchCurrentNodeData(ip: string, network: NetworkType): Promise<any | null> {
   const cacheKey = `node:${network}:${ip}`;
   const cached = await cache.get(cacheKey);
   if (cached) return cached;
 
-  try {
-    // Always use the same RPC endpoint (devnet RPC has all nodes)
-    const rpcResponse = await callDirectRPC('get-pods-with-stats');
-    if (!rpcResponse.success || !rpcResponse.data) return null;
-
-    const nodes = (rpcResponse.data as any)?.pods || [];
-    const node = nodes.find((n: any) => {
-      const nodeIp = n.address?.split(':')[0];
-      return nodeIp === ip;
-    });
-
-    if (!node) return null;
-
-    // For mainnet, verify the node is a mainnet node
-    if (network === 'mainnet' && mainnetPubkeys) {
-      if (!mainnetPubkeys.has(node.pubkey)) {
-        // Node exists but is not a mainnet node
-        console.log(`[NODE-PROFILE] Node ${ip} is not a mainnet node`);
-        return null;
+  // For mainnet, use external data sources only
+  if (network === 'mainnet') {
+    try {
+      const externalNode = await getMainnetNodeByIp(ip);
+      if (externalNode) {
+        console.log(`[NODE-PROFILE] Found mainnet node ${ip} from external source`);
+        await cache.set(cacheKey, externalNode, 30);
+        return externalNode;
       }
-      // Add mainnet credits to the node data
-      node.mainnet_credits = mainnetPubkeys.get(node.pubkey) || 0;
+      // No fallback for mainnet - external sources only
+      return null;
+    } catch (error) {
+      console.warn(`[NODE-PROFILE] External sources failed for ${ip}:`, error);
+      return null;
     }
+  }
 
-    await cache.set(cacheKey, node, 30);
-    return node;
+  // For devnet, use devnet API
+  try {
+    const devnetNode = await getDevnetNodeByIp(ip);
+    if (devnetNode) {
+      console.log(`[NODE-PROFILE] Found devnet node ${ip}`);
+      await cache.set(cacheKey, devnetNode, 30);
+      return devnetNode;
+    }
+    return null;
   } catch {
     return null;
   }
 }
 
-async function fetchCreditsData(network: NetworkType): Promise<any[] | null> {
-  const cacheKey = `credits:${network}:all`;
+async function fetchCreditsData(): Promise<any[] | null> {
+  const cacheKey = `credits:devnet:all`;
   const cached = await cache.get(cacheKey);
   if (cached) return cached as any[];
 
@@ -251,10 +266,9 @@ async function fetchCreditsData(network: NetworkType): Promise<any[] | null> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     
-    const url = CREDITS_ENDPOINTS[network];
-    const res = await fetch(url, {
+    const res = await fetch(DEVNET_CREDITS_URL, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'XanDash/1.0' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
     });
     clearTimeout(timeout);
     
@@ -267,4 +281,52 @@ async function fetchCreditsData(network: NetworkType): Promise<any[] | null> {
   } catch {
     return null;
   }
+}
+
+// TCP ping to measure latency
+async function pingNode(ip: string, port: number = 6000): Promise<PingResult> {
+  const cacheKey = `ping:${ip}`;
+  const cached = await cache.get(cacheKey);
+  if (cached) return cached as PingResult;
+
+  const result = await tcpPing(ip, port);
+  
+  // If port 6000 fails, try port 9001
+  if (result.status !== 'online') {
+    const result9001 = await tcpPing(ip, 9001);
+    if (result9001.status === 'online') {
+      await cache.set(cacheKey, result9001, 30);
+      return result9001;
+    }
+  }
+  
+  await cache.set(cacheKey, result, 30);
+  return result;
+}
+
+function tcpPing(ip: string, port: number, timeout: number = 3000): Promise<PingResult> {
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    const socket = new net.Socket();
+    
+    socket.setTimeout(timeout);
+    
+    socket.on('connect', () => {
+      const ping = Date.now() - startTime;
+      socket.destroy();
+      resolve({ ping, status: 'online' });
+    });
+    
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve({ ping: null, status: 'timeout' });
+    });
+    
+    socket.on('error', () => {
+      socket.destroy();
+      resolve({ ping: null, status: 'offline' });
+    });
+    
+    socket.connect(port, ip);
+  });
 }

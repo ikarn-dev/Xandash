@@ -12,7 +12,7 @@ export interface NetworkConfig {
   glowColor: string;
   badgeColor: string;
   creditsApiUrl: string;
-  rpcEndpoint: string;
+  apiUrl: string;
 }
 
 /**
@@ -26,7 +26,7 @@ export const NETWORK_CONFIGS: Record<NetworkType, NetworkConfig> = {
     glowColor: 'rgba(74,222,128,0.8)',
     badgeColor: 'bg-green-500/20 text-green-400 border-green-500/30',
     creditsApiUrl: process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || 'https://podcredits.xandeum.network/api/pods-credits',
-    rpcEndpoint: process.env.RPC_ENDPOINT_PRIMARY || 'http://161.97.97.41:6000/rpc',
+    apiUrl: process.env.DEVNET_API_URL || '',
   },
   mainnet: {
     name: 'mainnet',
@@ -34,8 +34,8 @@ export const NETWORK_CONFIGS: Record<NetworkType, NetworkConfig> = {
     color: 'blue',
     glowColor: 'rgba(59,130,246,0.8)',
     badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    creditsApiUrl: process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL || 'https://podcredits.xandeum.network/api/mainnet-pod-credits',
-    rpcEndpoint: process.env.RPC_ENDPOINT_PRIMARY || 'http://161.97.97.41:6000/rpc',
+    creditsApiUrl: '', // Mainnet credits come from external data sources
+    apiUrl: '', // Mainnet uses external data sources only
   },
 };
 
@@ -54,10 +54,10 @@ export function getCreditsApiUrl(network: NetworkType): string {
 }
 
 /**
- * Get RPC endpoint for network
+ * Get API URL for network
  */
-export function getRpcEndpoint(network: NetworkType): string {
-  return NETWORK_CONFIGS[network].rpcEndpoint;
+export function getApiUrl(network: NetworkType): string {
+  return NETWORK_CONFIGS[network].apiUrl;
 }
 
 /**
