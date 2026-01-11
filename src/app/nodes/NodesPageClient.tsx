@@ -98,14 +98,13 @@ export function NodesPageClientRefactored({
         }
       }
       
-      // Then, enrich with geo data from Source B (has node name, provider)
+      // Then, enrich with geo data from Source B (has provider info)
       if (Object.keys(geoData).length > 0) {
         for (const [ip, data] of Object.entries(geoData)) {
           if (merged[ip]) {
-            // Merge: keep city from ip-api, add name from geo
+            // Merge: keep city from ip-api, use provider from geo if better
             merged[ip] = {
               ...merged[ip],
-              name: data.name,
               provider: data.provider || merged[ip].provider,
               // If ip-api didn't have country, use geo data
               country: merged[ip].country || data.country,
@@ -120,7 +119,6 @@ export function NodesPageClientRefactored({
               region: '',
               provider: data.provider || 'Unknown',
               ip,
-              name: data.name,
             };
           }
         }

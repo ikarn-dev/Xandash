@@ -14,7 +14,6 @@ interface LocationData {
   region: string;
   provider: string;
   ip: string;
-  name?: string; // Node name from geo data (mainnet)
 }
 
 interface PingResult {
@@ -215,17 +214,9 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
 
                   {/* Name */}
                   <td className="px-3 py-3 text-xs">
-                    {(() => {
-                      // Prefer geo data name (mainnet), fallback to hardcoded names
-                      const geoName = location?.name;
-                      const hardcodedName = getNodeName(validator.pubkey);
-                      const displayName = geoName || (hardcodedName !== 'N/A' ? hardcodedName : null);
-                      return (
-                        <span className={`${displayName ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
-                          {displayName || 'N/A'}
-                        </span>
-                      );
-                    })()}
+                    <span className={`${getNodeName(validator.pubkey) !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
+                      {getNodeName(validator.pubkey)}
+                    </span>
                   </td>
 
                   {/* Location */}

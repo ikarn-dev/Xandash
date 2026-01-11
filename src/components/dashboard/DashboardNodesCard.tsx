@@ -26,7 +26,6 @@ interface LocationData {
   region: string;
   provider: string;
   ip: string;
-  name?: string; // Node name from mainnet geo data
 }
 
 interface ValidatorData {
@@ -467,14 +466,13 @@ export const DashboardNodesCard: React.FC = () => {
                 // Use external data for mainnet (geo + ping)
                 const mainnetGeo = mainnetGeoData[ip];
                 
-                // Merge location data: prefer ip-api.com (has city), enrich with mainnet geo (has name)
+                // Merge location data: prefer ip-api.com (has city), enrich with mainnet geo (has provider)
                 let displayLocation = location;
                 if (isMainnet) {
                   if (location && mainnetGeo) {
-                    // Merge: ip-api city + mainnet geo name
+                    // Merge: ip-api city + mainnet geo provider
                     displayLocation = {
                       ...location,
-                      name: mainnetGeo.name,
                       provider: mainnetGeo.provider || location.provider,
                     };
                   } else if (mainnetGeo && mainnetGeo.country) {
@@ -486,7 +484,6 @@ export const DashboardNodesCard: React.FC = () => {
                       region: '', 
                       provider: mainnetGeo.provider || 'Unknown', 
                       ip,
-                      name: mainnetGeo.name,
                     };
                   }
                 }
@@ -546,17 +543,9 @@ export const DashboardNodesCard: React.FC = () => {
                     </td>
                     {/* Name */}
                     <td className="px-3 py-3 text-xs">
-                      {(() => {
-                        // For mainnet, prefer geo data name, fallback to hardcoded names
-                        const geoName = isMainnet && mainnetGeo?.name;
-                        const hardcodedName = getNodeName(node.pubkey);
-                        const displayName = geoName || (hardcodedName !== 'N/A' ? hardcodedName : null);
-                        return (
-                          <span className={`${displayName ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
-                            {displayName || 'N/A'}
-                          </span>
-                        );
-                      })()}
+                      <span className={`${getNodeName(node.pubkey) !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
+                        {getNodeName(node.pubkey)}
+                      </span>
                     </td>
                     <td className="px-3 py-3 text-xs">
                       <div className="flex items-center space-x-2 min-w-0">
