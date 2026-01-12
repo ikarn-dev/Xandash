@@ -175,9 +175,9 @@ export const DashboardNodesCard: React.FC = () => {
     loadGeolocationData();
   }, [nodes]);
 
-  // Fetch credits (devnet only - mainnet uses external credits)
+  // Fetch credits (for both networks - uses dedicated credits API)
   useEffect(() => {
-    if (isMainnet || nodes.length === 0) return;
+    if (nodes.length === 0) return;
     
     const fetchCredits = async () => {
       try {
@@ -198,7 +198,7 @@ export const DashboardNodesCard: React.FC = () => {
     };
     
     fetchCredits();
-  }, [nodes, network, isMainnet]);
+  }, [nodes, network]);
 
   // Ping data - devnet ping disabled, mainnet uses external ping
   // Devnet ping logic removed - will show N/A
@@ -271,19 +271,7 @@ export const DashboardNodesCard: React.FC = () => {
             
             setNodes(transformedNodes);
             setDataFetchTime(serverTime);
-            
-            // Set credits from enriched pod data or geo data
-            const creditsMap: { [pubkey: string]: number } = {};
-            transformedNodes.forEach((node) => {
-              const ip = node.address?.split(':')[0] || '';
-              const pod = data.nodes.find((p: any) => p.address?.split(':')[0] === ip);
-              const geo = geoMap[ip];
-              if (node.pubkey) {
-                // Prefer pod.credits (enriched), then geo.credits
-                creditsMap[node.pubkey] = pod?.credits ?? geo?.credits ?? 0;
-              }
-            });
-            setCredits(prev => ({ ...prev, ...creditsMap }));
+            // Credits are fetched separately via the pod-credits API
           }
           
           lastMainnetCallRef.current = Date.now();

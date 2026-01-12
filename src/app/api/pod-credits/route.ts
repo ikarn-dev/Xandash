@@ -11,7 +11,10 @@ export async function GET(request: NextRequest) {
     
     // Get credits API URL for the network
     const externalUrl = getCreditsApiUrl(network);
+    console.log(`[Pod Credits] Network: ${network}, URL: ${externalUrl}`);
+    
     if (!externalUrl) {
+      console.error(`[Pod Credits] ${network} pod credits URL not configured`);
       throw new Error(`${network} pod credits URL not configured`);
     }
     

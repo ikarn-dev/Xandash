@@ -144,22 +144,9 @@ export function NodesPageClientRefactored({
     return pings;
   }, [network, geoData, pings]);
 
-  // For mainnet, use external credits; for devnet use native credits
-  const mergedCredits = React.useMemo(() => {
-    if (network === 'mainnet' && Object.keys(geoData).length > 0) {
-      const merged: Record<string, number | null> = {};
-      // Map IP to pubkey for credit lookup
-      for (const node of allValidators) {
-        const ip = node.address?.split(':')[0] || '';
-        const geo = geoData[ip];
-        if (geo && node.pubkey) {
-          merged[node.pubkey] = geo.credits;
-        }
-      }
-      return merged;
-    }
-    return credits;
-  }, [network, geoData, allValidators, credits]);
+  // For both mainnet and devnet, use credits from useNodesCredits hook (fetches from pod-credits API)
+  // The credits hook already handles network-specific API endpoints
+  const mergedCredits = credits;
   
   // Filters and pagination
   const {

@@ -24,46 +24,63 @@ export interface NetworkStatsData {
   total_pods: number;
 }
 
+/**
+ * Make RPC call to Gossip Direct API
+ */
+async function makeRpcCall<T>(method: string): Promise<T | null> {
+  const rpcUrl = process.env.MAINNET_RPC_DIRECT_URL;
+  const apiKey = process.env.MAINNET_RPC_API_KEY;
+  
+  if (!rpcUrl || !apiKey) {
+    console.warn('[Dashboard] RPC API not configured');
+    return null;
+  }
+
+  try {
+    const response = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: {
+        'X-API-Key': apiKey,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ method }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`RPC error: ${response.status}`);
+    }
+
+    return await response.json() as T;
+  } catch (error) {
+    console.error(`[Dashboard] RPC call failed (${method}):`, error);
+    return null;
+  }
+}
+
 // Server-side function to fetch version data from mainnet API
 export async function getVersionData(): Promise<{
   version: VersionData | null;
   error?: string;
 }> {
   try {
-    const apiUrl = process.env.NEW_MAINNET_API_URL?.replace('/pods-with-stats', '/version');
-    const apiKey = process.env.NEW_API_KEY;
+    const data = await makeRpcCall<any>('get-version');
     
-    if (!apiUrl || !apiKey) {
-      return {
-        version: { version: '0.7.3' }, // Default version
-        error: 'API not configured'
-      };
-    }
-
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'X-API-Key': apiKey,
-        'Accept': 'application/json',
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-    
-    if (!response.ok) {
+    if (!data) {
       return {
         version: { version: '0.7.3' },
-        error: `API error: ${response.status}`
+        error: 'API not configured or failed'
       };
     }
 
-    const data = await response.json();
+    // Handle different response formats
+    const version = data.version || data.result?.version || data.data?.version || '0.7.3';
+    const build = data.build || data.result?.build || data.data?.build;
+    const commit = data.commit || data.result?.commit || data.data?.commit;
     
     return {
-      version: {
-        version: data.version || data.data?.version || '0.7.3',
-        build: data.build || data.data?.build,
-        commit: data.commit || data.data?.commit,
-      }
+      version: { version, build, commit }
     };
   } catch (error) {
     console.error('Server-side version fetch error:', error);
@@ -80,61 +97,33 @@ export async function getNetworkStatsData(): Promise<{
   error?: string;
 }> {
   try {
-    const baseUrl = process.env.NEW_MAINNET_API_URL?.replace('/pods-with-stats', '');
-    const apiKey = process.env.NEW_API_KEY;
-    
-    if (!baseUrl || !apiKey) {
-      console.warn('[NetworkStats] API not configured - missing NEW_MAINNET_API_URL or NEW_API_KEY');
-      return {
-        stats: null,
-        error: 'API not configured'
-      };
-    }
-
-    const statsUrl = `${baseUrl}/stats`;
-    const podsUrl = `${baseUrl}/pods-with-stats`;
-
     // Fetch both stats and pods data in parallel
-    const [statsResponse, podsResponse] = await Promise.all([
-      fetch(statsUrl, {
-        method: 'GET',
-        headers: {
-          'X-API-Key': apiKey,
-          'Accept': 'application/json',
-        },
-        cache: 'no-store',
-        signal: AbortSignal.timeout(10000),
-      }),
-      fetch(podsUrl, {
-        method: 'GET',
-        headers: {
-          'X-API-Key': apiKey,
-          'Accept': 'application/json',
-        },
-        cache: 'no-store',
-        signal: AbortSignal.timeout(10000),
-      })
+    const [statsData, podsData] = await Promise.all([
+      makeRpcCall<any>('get-stats'),
+      makeRpcCall<any>('get-pods-with-stats')
     ]);
     
-    if (!statsResponse.ok) {
-      console.error('[NetworkStats] Stats API error:', statsResponse.status, statsResponse.statusText);
+    if (!statsData) {
+      console.error('[NetworkStats] Stats API returned no data');
       return {
         stats: null,
-        error: `Stats API error: ${statsResponse.status}`
+        error: 'Stats API error'
       };
     }
 
-    const statsData = await statsResponse.json();
-    const stats = statsData.stats || statsData.data || statsData;
+    // Extract stats from response
+    const stats = statsData.stats || statsData.result?.stats || statsData.data?.stats || statsData.result || statsData.data || statsData;
     
     // Calculate storage stats from pods
     let storageCommitted = 0;
     let storageUsed = 0;
     let totalPods = 0;
 
-    if (podsResponse.ok) {
-      const podsData = await podsResponse.json();
-      const pods = podsData.pods || podsData.data?.pods || podsData.data || [];
+    if (podsData) {
+      const pods = podsData.pods || podsData.result?.pods || podsData.data?.pods || 
+                   (Array.isArray(podsData.result) ? podsData.result : []) ||
+                   (Array.isArray(podsData.data) ? podsData.data : []) ||
+                   (Array.isArray(podsData) ? podsData : []);
       
       if (Array.isArray(pods)) {
         totalPods = pods.length;
@@ -147,7 +136,6 @@ export async function getNetworkStatsData(): Promise<{
 
     const avgStoragePerPod = totalPods > 0 ? storageCommitted / totalPods : 0;
     
-    // Process and normalize the stats data
     const processedStats: NetworkStatsData = {
       active_streams: stats.active_streams ?? 0,
       cpu_percent: stats.cpu_percent ?? stats.cpu ?? 0,
@@ -161,16 +149,13 @@ export async function getNetworkStatsData(): Promise<{
       total_bytes: stats.total_bytes ?? stats.totalBytes ?? stats.bytes_total ?? 0,
       total_pages: stats.total_pages ?? stats.totalPages ?? 0,
       uptime: stats.uptime ?? 0,
-      // Storage stats
       storage_committed: storageCommitted,
       storage_used: storageUsed,
       avg_storage_per_pod: avgStoragePerPod,
       total_pods: totalPods,
     };
 
-    return {
-      stats: processedStats
-    };
+    return { stats: processedStats };
   } catch (error) {
     console.error('[NetworkStats] Server-side fetch error:', error);
     return {

@@ -3,41 +3,70 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET() {
-  try {
-    const podsUrl = process.env.NEW_MAINNET_API_URL;
-    const apiKey = process.env.NEW_API_KEY;
-    
-    if (!podsUrl || !apiKey) {
-      return NextResponse.json({ error: 'API not configured' }, { status: 500 });
-    }
+/**
+ * Make RPC call to Gossip Direct API
+ */
+async function makeRpcCall<T>(method: string): Promise<T | null> {
+  const rpcUrl = process.env.MAINNET_RPC_DIRECT_URL;
+  const apiKey = process.env.MAINNET_RPC_API_KEY;
+  
+  if (!rpcUrl || !apiKey) {
+    return null;
+  }
 
-    // Fetch pods data to calculate storage stats
-    const podsResponse = await fetch(podsUrl, {
-      method: 'GET',
+  try {
+    const response = await fetch(rpcUrl, {
+      method: 'POST',
       headers: {
         'X-API-Key': apiKey,
+        'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
+      body: JSON.stringify({ method }),
       cache: 'no-store',
       signal: AbortSignal.timeout(15000),
     });
-    
-    if (!podsResponse.ok) {
-      return NextResponse.json({ error: `API error: ${podsResponse.status}` }, { status: podsResponse.status });
+
+    if (!response.ok) {
+      throw new Error(`RPC error: ${response.status}`);
     }
 
-    const podsData = await podsResponse.json();
+    return await response.json();
+  } catch (error) {
+    console.error(`[Mainnet Stats] RPC call failed (${method}):`, error);
+    return null;
+  }
+}
+
+export async function GET() {
+  try {
+    // Fetch pods and stats data in parallel
+    const [podsData, statsData] = await Promise.all([
+      makeRpcCall<any>('get-pods-with-stats'),
+      makeRpcCall<any>('get-stats')
+    ]);
     
-    // Handle response format: {pods: [...], total_count: N}
+    if (!podsData) {
+      return NextResponse.json({ error: 'API not configured or failed' }, { status: 500 });
+    }
+
+    // Extract pods from response
     let pods: any[] = [];
     if (Array.isArray(podsData)) {
       pods = podsData;
     } else if (podsData.pods && Array.isArray(podsData.pods)) {
       pods = podsData.pods;
+    } else if (podsData.result?.pods && Array.isArray(podsData.result.pods)) {
+      pods = podsData.result.pods;
+    } else if (podsData.data?.pods && Array.isArray(podsData.data.pods)) {
+      pods = podsData.data.pods;
+    } else if (Array.isArray(podsData.result)) {
+      pods = podsData.result;
+    } else if (Array.isArray(podsData.data)) {
+      pods = podsData.data;
     }
 
-    // Calculate totals from all pods
+    // Calculate totals from pods
     let storageCommitted = 0;
     let storageUsed = 0;
     let packetsReceived = 0;
@@ -55,37 +84,20 @@ export async function GET() {
     const totalPods = pods.length;
     const avgStoragePerPod = totalPods > 0 ? storageCommitted / totalPods : 0;
 
-    // Also try to fetch network-level stats if available
-    try {
-      const baseUrl = podsUrl.replace('/pods-with-stats', '');
-      const statsUrl = `${baseUrl}/stats`;
+    // Use network-level stats if available
+    if (statsData) {
+      const stats = statsData.stats || statsData.result?.stats || statsData.data?.stats || 
+                    statsData.result || statsData.data || statsData;
       
-      const statsResponse = await fetch(statsUrl, {
-        method: 'GET',
-        headers: {
-          'X-API-Key': apiKey,
-          'Accept': 'application/json',
-        },
-        cache: 'no-store',
-        signal: AbortSignal.timeout(5000),
-      });
-      
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        const stats = statsData.stats || statsData.data || statsData;
-        // Use network-level stats if available (they're more accurate)
-        if (stats.packets_received || stats.packetsReceived) {
-          packetsReceived = stats.packets_received ?? stats.packetsReceived ?? packetsReceived;
-        }
-        if (stats.packets_sent || stats.packetsSent) {
-          packetsSent = stats.packets_sent ?? stats.packetsSent ?? packetsSent;
-        }
-        if (stats.total_bytes || stats.totalBytes) {
-          totalBytes = stats.total_bytes ?? stats.totalBytes ?? totalBytes;
-        }
+      if (stats.packets_received || stats.packetsReceived) {
+        packetsReceived = stats.packets_received ?? stats.packetsReceived ?? packetsReceived;
       }
-    } catch (e) {
-      console.warn('[Mainnet Stats] Could not fetch network stats:', e);
+      if (stats.packets_sent || stats.packetsSent) {
+        packetsSent = stats.packets_sent ?? stats.packetsSent ?? packetsSent;
+      }
+      if (stats.total_bytes || stats.totalBytes) {
+        totalBytes = stats.total_bytes ?? stats.totalBytes ?? totalBytes;
+      }
     }
     
     return NextResponse.json({

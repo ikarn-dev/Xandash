@@ -5,9 +5,13 @@ const getEndpoint = () => {
     // Client-side: use the proxy endpoint
     return '/api/rpc';
   } else {
-    // Server-side: use mainnet RPC endpoint from env
-    return process.env.MAINNET_EXTERNAL_RPC_URL || '';
+    // Server-side: use mainnet RPC direct endpoint from env
+    return process.env.MAINNET_RPC_DIRECT_URL || '';
   }
+};
+
+const getApiKey = () => {
+  return process.env.MAINNET_RPC_API_KEY || '';
 };
 
 // JSON-RPC 2.0 response structure
@@ -87,39 +91,47 @@ export interface ValidatorLocations {
 }
 
 // Generic RPC call function
-export async function callRPC<T>(method: string, params?: any): Promise<RPCResponse<T>> {
+export async function callRPC<T>(method: string): Promise<RPCResponse<T>> {
   try {
     const endpoint = getEndpoint();
+    const isServerSide = typeof window === 'undefined';
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Add API key for server-side direct calls
+    if (isServerSide) {
+      const apiKey = getApiKey();
+      if (apiKey) {
+        headers['X-API-Key'] = apiKey;
+      }
+    }
+    
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method,
-        params: params || {},
-        id: Date.now(),
-      }),
+      headers,
+      body: JSON.stringify({ method }),
     });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const result: JSONRPCResponse<T> = await response.json();
+    const result = await response.json();
     
-    // Handle JSON-RPC error response
+    // Handle different response formats
     if (result.error) {
       return { 
         success: false, 
-        error: result.error.message || 'RPC Error' 
+        error: result.error.message || result.error || 'RPC Error' 
       };
     }
 
-    // Handle successful response
-    if (result.result !== undefined) {
-      return { success: true, data: result.result };
+    // Handle successful response - check various formats
+    const data = result.result ?? result.data ?? result;
+    if (data !== undefined) {
+      return { success: true, data };
     }
 
     return { success: false, error: 'No result in response' };

@@ -4,94 +4,43 @@ import { NextRequest, NextResponse } from 'next/server';
 const responseTimeCache = new Map<string, { time: number; responseTime: number | null; status: string; error?: string }>();
 const CACHE_TTL = 60 * 1000; // 1 minute
 
-// Get the Geo History API URL from environment
-const getGeoHistoryUrl = () => {
-  return process.env.MAINNET_EXTERNAL_GEO_URL?.replace('/geo/batch', '') || '';
-};
-
-// Fetch response time from geo/history endpoint
-async function fetchResponseTimeFromHistory(ip: string): Promise<{ responseTime: number | null; status: string; error?: string }> {
-  const primaryUrl = getGeoHistoryUrl();
+/**
+ * Measure response time by pinging the node directly
+ */
+async function measureResponseTime(ip: string, port: number = 8899): Promise<{ responseTime: number | null; status: string; error?: string }> {
+  const startTime = Date.now();
   
-  if (!primaryUrl) {
-    return { responseTime: null, status: 'unknown', error: 'Geo API not configured' };
-  }
-
-  const fetchUrl = `${primaryUrl}/geo/history?ip=${encodeURIComponent(ip)}`;
-
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     
-    const response = await fetch(fetchUrl, {
-      method: 'GET',
-      cache: 'no-store',
-      headers: { 
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
+    // Try to connect to the node's RPC port
+    const response = await fetch(`http://${ip}:${port}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'getHealth',
+      }),
       signal: controller.signal,
     });
     
     clearTimeout(timeout);
-
-    if (!response.ok) {
-      return { responseTime: null, status: 'unknown', error: 'Geo API error' };
+    const responseTime = Date.now() - startTime;
+    
+    if (response.ok) {
+      return { responseTime, status: 'online' };
     }
-
-    const data = await response.json();
-    let responseTime: number | null = null;
-    let status = 'offline';
-
-    if (data && typeof data === 'object') {
-      // Check for direct response time value
-      if (typeof data.response_time === 'number') {
-        responseTime = data.response_time;
-        status = 'online';
-      } else if (typeof data.ping === 'number') {
-        responseTime = data.ping;
-        status = 'online';
-      } else if (typeof data.latency === 'number') {
-        responseTime = data.latency;
-        status = 'online';
-      } else {
-        // Try CSV parsing
-        const possibleKeys = ['csv_data', 'data', 'history', 'csv', 'result'];
-        let csvData = '';
-        
-        for (const key of possibleKeys) {
-          if (data[key] && typeof data[key] === 'string' && data[key].includes(',')) {
-            csvData = data[key];
-            break;
-          }
-        }
-        
-        if (!csvData) {
-          for (const key of Object.keys(data)) {
-            if (key !== 'meta' && typeof data[key] === 'string' && data[key].includes(',')) {
-              csvData = data[key];
-              break;
-            }
-          }
-        }
-        
-        if (csvData) {
-          const lines = csvData.split('\n').filter((line: string) => line.trim());
-          if (lines.length > 0) {
-            const lastLine = lines[lines.length - 1];
-            const parts = lastLine.split(',');
-            if (parts.length >= 2) {
-              responseTime = parseFloat(parts[1]) || null;
-              status = responseTime && responseTime > 0 ? 'online' : 'offline';
-            }
-          }
-        }
-      }
-    }
-
-    return { responseTime, status };
+    
+    return { responseTime, status: 'degraded' };
   } catch (error: any) {
-    return { responseTime: null, status: 'unknown', error: 'Fetch failed' };
+    if (error.name === 'AbortError') {
+      return { responseTime: null, status: 'timeout', error: 'Request timeout' };
+    }
+    return { responseTime: null, status: 'offline', error: 'Connection failed' };
   }
 }
 
@@ -102,7 +51,7 @@ async function fetchResponseTime(ip: string): Promise<{ responseTime: number | n
     return { responseTime: cached.responseTime, status: cached.status, error: cached.error };
   }
 
-  const result = await fetchResponseTimeFromHistory(ip);
+  const result = await measureResponseTime(ip);
   responseTimeCache.set(ip, { time: Date.now(), ...result });
   return result;
 }

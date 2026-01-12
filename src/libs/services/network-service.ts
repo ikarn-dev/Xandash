@@ -18,6 +18,7 @@ export interface NetworkConfig {
 /**
  * Network configurations
  * All URLs from environment variables - no hardcoding
+ * Note: These are evaluated at module load time
  */
 export const NETWORK_CONFIGS: Record<NetworkType, NetworkConfig> = {
   devnet: {
@@ -49,9 +50,13 @@ export function getNetworkConfig(network: NetworkType): NetworkConfig {
 
 /**
  * Get credits API URL for network
+ * Reads directly from env to ensure fresh value
  */
 export function getCreditsApiUrl(network: NetworkType): string {
-  return NETWORK_CONFIGS[network].creditsApiUrl;
+  if (network === 'mainnet') {
+    return process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL || '';
+  }
+  return process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || '';
 }
 
 /**
