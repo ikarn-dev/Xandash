@@ -51,10 +51,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid network' }, { status: 400 });
     }
 
-    const [locationData, currentNodeData, creditsData, dbHistory, dbEvents, dbSnapshot, pingData, pingHistory, pingStats] = await Promise.all([
+    const [locationData, currentNodeData, liveCreditsData, dbHistory, dbEvents, dbSnapshot, pingData, pingHistory, pingStats] = await Promise.all([
       fetchLocationData(ip).catch(() => null),
       fetchCurrentNodeData(ip, network).catch(() => null),
-      quick ? Promise.resolve(null) : (network === 'devnet' ? fetchCreditsData().catch(() => null) : Promise.resolve(null)),
+      quick ? Promise.resolve(null) : fetchLiveCreditsData(network).catch(() => null),
       getNodeStatsHistory(ip, hours, network).catch(() => []),
       getNodeEvents(ip, 100, network).catch(() => []),
       getLatestNodeSnapshot(ip, network).catch(() => null),
@@ -65,12 +65,14 @@ export async function GET(request: NextRequest) {
 
     // Save node snapshot on visit (if we have live data)
     if (currentNodeData) {
-      // For mainnet, credits come from external source data
-      // For devnet, credits come from credits API
-      const credits = network === 'mainnet' 
-        ? (currentNodeData.credits || 0)
-        : (creditsData?.find((c: any) => c.pod_id === currentNodeData.pubkey)?.credits || 0);
-      saveNodeSnapshotOnVisit(ip, currentNodeData, credits, network).catch(() => {});
+      // Get live credits for the node's pubkey
+      let liveCredits = 0;
+      if (liveCreditsData && currentNodeData.pubkey) {
+        const creditsEntry = liveCreditsData.find((c: any) => c.pod_id === currentNodeData.pubkey);
+        liveCredits = creditsEntry?.credits || 0;
+      }
+      
+      saveNodeSnapshotOnVisit(ip, currentNodeData, liveCredits, network).catch(() => {});
     }
 
     let status = 'unknown';
@@ -81,36 +83,35 @@ export async function GET(request: NextRequest) {
       status = dbSnapshot.status;
     }
 
+    // Get live credits from credits API
     let currentCredits = 0;
+    let previousCredits = 0;
     const pubkey = currentNodeData?.pubkey || dbSnapshot?.pubkey;
     
-    // For mainnet, credits come from external source data
-    // For devnet, credits come from credits API
-    if (network === 'mainnet') {
-      currentCredits = currentNodeData?.credits || dbSnapshot?.credits || 0;
-    } else if (pubkey && creditsData) {
-      const entry = creditsData.find((c: any) => c.pod_id === pubkey);
-      if (entry) currentCredits = entry.credits;
+    if (pubkey && liveCreditsData) {
+      const creditsEntry = liveCreditsData.find((c: any) => c.pod_id === pubkey);
+      currentCredits = creditsEntry?.credits || 0;
     }
 
-    let previousCredits = 0;
+    // Calculate previous credits from historical data
     if (dbHistory.length > 0) {
-      const maxHistoricalCredits = Math.max(...dbHistory.map(h => h.credits || 0));
-      if (maxHistoricalCredits > currentCredits) {
-        previousCredits = maxHistoricalCredits;
+      const historicalCredits = dbHistory.map(h => h.credits || 0);
+      const maxHistoricalCredits = Math.max(...historicalCredits);
+      
+      // If we have current credits, previous is the difference
+      if (currentCredits > 0) {
+        // Find the most recent historical value that's different from current
+        const recentHistorical = historicalCredits.find(c => c !== currentCredits && c > 0);
+        previousCredits = recentHistorical || 0;
+      } else {
+        // If no current credits, use the latest historical value
+        currentCredits = maxHistoricalCredits;
       }
     }
 
+    // Fallback to database snapshot if no live credits
     if (currentCredits === 0 && dbSnapshot?.credits) {
       currentCredits = dbSnapshot.credits;
-      if (dbHistory.length > 0) {
-        const maxHistoricalCredits = Math.max(...dbHistory.map(h => h.credits || 0));
-        if (maxHistoricalCredits > currentCredits) {
-          previousCredits = maxHistoricalCredits - currentCredits;
-        } else {
-          previousCredits = 0;
-        }
-      }
     }
 
     const nodeData = currentNodeData || dbSnapshot;
@@ -122,6 +123,7 @@ export async function GET(request: NextRequest) {
       ping: pingData,
       pingHistory: pingHistory.length > 0 ? pingHistory : undefined,
       pingStats,
+      liveCredits: liveCreditsData,
       currentNode: nodeData ? {
         pubkey: nodeData.pubkey || '',
         address: nodeData.address || `${ip}:9001`,
@@ -326,4 +328,40 @@ function tcpPing(ip: string, port: number, timeout: number = 3000): Promise<Ping
     
     socket.connect(port, ip);
   });
+}
+
+async function fetchLiveCreditsData(network: NetworkType): Promise<any[] | null> {
+  const cacheKey = `credits:${network}:live`;
+  const cached = await cache.get(cacheKey);
+  if (cached) return cached as any[];
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    
+    // Use network-specific credits API URL
+    const url = network === 'mainnet' 
+      ? process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL
+      : process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL;
+    
+    if (!url) {
+      console.warn(`[Profile] ${network} credits URL not configured`);
+      return null;
+    }
+    
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+    });
+    clearTimeout(timeout);
+    
+    if (!res.ok) return null;
+    const data = await res.json();
+    const credits = data.pods_credits || [];
+    
+    await cache.set(cacheKey, credits, 60); // Cache for 1 minute
+    return credits;
+  } catch {
+    return null;
+  }
 }

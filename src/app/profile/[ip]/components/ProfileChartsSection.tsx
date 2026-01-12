@@ -17,6 +17,7 @@ interface ProfileChartsSectionProps {
   isShowingFallbackData: boolean;
   ip?: string;
   pingHistory?: PingRecord[];
+  liveCredits?: any[];
 }
 
 export const ProfileChartsSection = ({
@@ -27,15 +28,43 @@ export const ProfileChartsSection = ({
   filteredDbHistoryLength,
   isShowingFallbackData,
   ip,
-  pingHistory
+  pingHistory,
+  liveCredits
 }: ProfileChartsSectionProps) => {
   const { network, isMainnet } = useNetwork();
 
   // Generate chart data from MongoDB snapshots
   const statusData = displayHistory.map(h => ({ time: h.timestamp, status: h.status }));
   const uptimeData = displayHistory.map(h => ({ time: h.timestamp, value: h.uptime / 3600 }));
-  const creditsData = displayHistory.map(h => ({ time: h.timestamp, value: h.credits || 0 }));
   const storageData = displayHistory.map(h => ({ time: h.timestamp, value: h.storage_committed / (1024**3) }));
+
+  // Generate credits data combining historical and live data
+  const creditsData = useMemo(() => {
+    const historicalCredits = displayHistory.map(h => ({ time: h.timestamp, value: h.credits || 0 }));
+    
+    // Get live credits for this node
+    let liveCreditsValue = node?.credits || 0;
+    if (liveCredits && node?.pubkey) {
+      const liveEntry = liveCredits.find((c: any) => c.pod_id === node.pubkey);
+      if (liveEntry) {
+        liveCreditsValue = liveEntry.credits || 0;
+      }
+    }
+    
+    // Add current live data point if we have it
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const allCreditsData = [...historicalCredits];
+    
+    if (liveCreditsValue > 0) {
+      // Only add live data if it's different from the most recent historical data
+      const mostRecent = historicalCredits[historicalCredits.length - 1];
+      if (!mostRecent || mostRecent.value !== liveCreditsValue) {
+        allCreditsData.push({ time: currentTimestamp, value: liveCreditsValue });
+      }
+    }
+    
+    return allCreditsData;
+  }, [displayHistory, node, liveCredits]);
 
   // Generate ping data from ping history
   const pingData = useMemo(() => {
@@ -54,22 +83,26 @@ export const ProfileChartsSection = ({
 
   const hasPingData = pingData.length > 0;
 
-  // Add current live data point
-  const currentCredits = node?.credits || 0;
+  // Add current live data point for other metrics
   const currentTimestamp = Math.floor(Date.now() / 1000);
   
   if (node) {
     statusData.push({ time: currentTimestamp, status: node.status });
     uptimeData.push({ time: currentTimestamp, value: node.uptime / 3600 });
-    creditsData.push({ time: currentTimestamp, value: currentCredits });
     storageData.push({ time: currentTimestamp, value: node.storage_committed / (1024**3) });
     
+    // Add fallback data points if we have very little historical data
     if (displayHistory.length < 2) {
       const oneHourAgo = currentTimestamp - 3600;
       statusData.unshift({ time: oneHourAgo, status: node.status });
       uptimeData.unshift({ time: oneHourAgo, value: Math.max(0, (node.uptime - 3600) / 3600) });
-      creditsData.unshift({ time: oneHourAgo, value: Math.max(0, currentCredits - 10) });
       storageData.unshift({ time: oneHourAgo, value: node.storage_committed / (1024**3) });
+      
+      // For credits, use a small increment from current value
+      const currentCreditsValue = creditsData[creditsData.length - 1]?.value || 0;
+      if (currentCreditsValue > 0) {
+        creditsData.unshift({ time: oneHourAgo, value: Math.max(0, currentCreditsValue - 10) });
+      }
     }
   }
 

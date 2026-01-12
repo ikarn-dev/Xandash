@@ -87,6 +87,7 @@ export interface NodeProfileData {
   ping?: PingResult;
   pingHistory?: PingRecord[];
   pingStats?: PingStats;
+  liveCredits?: any[];
   currentNode: CurrentNodeData | null;
   dbHistory?: DbNodeSnapshot[];
   dbEvents?: NodeEventLog[];

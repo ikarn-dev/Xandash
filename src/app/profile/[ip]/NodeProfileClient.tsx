@@ -90,8 +90,22 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
       pingInfo = `, Avg Ping=${avgPing}ms (${pingQuality}, ${Math.round(pingStats.successRate)}% success rate)`;
     }
     
-    return `Summarize this node in format: "Node [IP] is [status] with [uptime]d uptime, [credits] credits earned, [storage] committed ([used] used, [efficiency]% utilized)${pingInfo ? ', [ping] latency' : ''}. [One sentence assessment and recommendation]." Data: IP=${ip}, Status=${node.status}, Uptime=${uptimeDays}d (${uptimeHours}h), Credits=${node.credits?.toLocaleString() || 0}, Storage Committed=${storageCommitted}, Storage Used=${storageUsed} (${efficiency}% efficiency), Version=${node.version || 'N/A'}${location ? `, Location=${location.city}, ${location.country}` : ''}${pingInfo}.`;
-  }, [node, ip, location, isMainnet, mainnetPings, data?.ping, data?.pingStats]);
+    // Include live credits information
+    let creditsInfo = '';
+    const liveCredits = data?.liveCredits;
+    const nodeCredits = node.credits || 0;
+    
+    if (liveCredits && node.pubkey) {
+      const liveEntry = liveCredits.find((c: any) => c.pod_id === node.pubkey);
+      const liveCreditsValue = liveEntry?.credits || 0;
+      
+      if (liveCreditsValue > 0 && liveCreditsValue !== nodeCredits) {
+        creditsInfo = ` (Live: ${liveCreditsValue.toLocaleString()}, Historical: ${nodeCredits.toLocaleString()})`;
+      }
+    }
+    
+    return `Summarize this node in format: "Node [IP] is [status] with [uptime]d uptime, [credits] credits earned${creditsInfo ? ' [live/historical info]' : ''}, [storage] committed ([used] used, [efficiency]% utilized)${pingInfo ? ', [ping] latency' : ''}. [One sentence assessment and recommendation]." Data: IP=${ip}, Status=${node.status}, Uptime=${uptimeDays}d (${uptimeHours}h), Credits=${nodeCredits.toLocaleString()}${creditsInfo}, Storage Committed=${storageCommitted}, Storage Used=${storageUsed} (${efficiency}% efficiency), Version=${node.version || 'N/A'}${location ? `, Location=${location.city}, ${location.country}` : ''}${pingInfo}.`;
+  }, [node, ip, location, isMainnet, mainnetPings, data?.ping, data?.pingStats, data?.liveCredits]);
 
   if (loading) {
     return <ProfileSkeleton />;
@@ -140,6 +154,7 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
             isShowingFallbackData={isShowingFallbackData}
             ip={ip}
             pingHistory={data?.pingHistory}
+            liveCredits={data?.liveCredits}
           />
         )}
 
