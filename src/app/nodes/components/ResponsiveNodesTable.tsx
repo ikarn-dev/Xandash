@@ -5,6 +5,7 @@ import { Globe } from 'lucide-react';
 import { CopyBtn } from '@/components/ui/CopyBtn';
 import { getNodeName } from '@/libs/utils/node-names';
 import { formatStorage } from '@/libs/utils';
+import { PingValue } from '@/components/ui/PingLoadingIcon';
 import type { ValidatorData } from '@/libs/server';
 
 interface LocationData {
@@ -16,16 +17,12 @@ interface LocationData {
   ip: string;
 }
 
-interface PingResult {
-  ping: number | null;
-  status: 'online' | 'offline' | 'timeout';
-}
-
 interface ResponsiveNodesTableProps {
   validators: ValidatorData[];
   locations: Record<string, LocationData | null>;
   credits: Record<string, number | null>;
-  pings?: Record<string, PingResult>;
+  pings?: Record<string, number | null>;
+  isPingLoading?: boolean;
   dataFetchTime: number;
   clickedNodeId: string | null;
   shouldAnimate: (index: number) => boolean;
@@ -41,7 +38,7 @@ interface ResponsiveNodesTableProps {
   // Compare props
   selectedForCompare?: string[];
   onToggleCompare?: (pubkey: string) => void;
-  // Network prop to conditionally show ping column
+  // Network prop
   network?: string;
 }
 
@@ -57,6 +54,7 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
   locations,
   credits,
   pings = {},
+  isPingLoading = false,
   dataFetchTime,
   clickedNodeId,
   shouldAnimate,
@@ -149,7 +147,7 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
               >
                 Status {getSortIcon('status')}
               </th>
-              {/* Ping column - Mainnet only */}
+              {/* Ping column - Mainnet only, always shows N/A */}
               {isMainnet && (
                 <th className="w-[6%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
                   Ping
@@ -162,7 +160,6 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
               const ip = extractIP(validator.address || '');
               const location = locations[ip];
               const nodeCredits = validator.pubkey ? credits[validator.pubkey] : null;
-              const nodePing = pings[ip];
               const nodeId = `${validator.pubkey}-${validator.address}`;
               const animate = shouldAnimate(index);
               const isSelected = selectedForCompare.includes(validator.pubkey);
@@ -328,23 +325,16 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                     </div>
                   </td>
 
-                  {/* Ping - Mainnet only */}
+                  {/* Ping - Mainnet only, only show for online nodes */}
                   {isMainnet && (
                     <td className="px-3 py-3 text-xs">
-                      {nodePing ? (
-                        <span className={`font-mono ${
-                          nodePing.status === 'online' 
-                            ? nodePing.ping! < 200 
-                              ? 'text-green-400' 
-                              : nodePing.ping! < 500 
-                                ? 'text-yellow-400' 
-                                : 'text-orange-400'
-                            : 'text-red-400'
-                        }`}>
-                          {nodePing.status === 'online' ? `${nodePing.ping}ms` : 'N/A'}
-                        </span>
+                      {isOnline ? (
+                        <PingValue 
+                          ping={pings[ip]} 
+                          isLoading={isPingLoading} 
+                        />
                       ) : (
-                        <span className="text-white/30">—</span>
+                        <span className="text-white/30">-</span>
                       )}
                     </td>
                   )}

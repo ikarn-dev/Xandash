@@ -183,11 +183,10 @@ function parseProposal(pubkey: string, data: Buffer) {
     // SPL Governance V3 Proposal structure
     const state = data[65];
     const stateName = PROPOSAL_STATES[state] || 'Unknown';
+    const dataStr = data.toString('utf8');
     
     // Find the proposal name by searching for readable text
-    // The name is stored as a length-prefixed string
     let name = '';
-    const dataStr = data.toString('utf8');
     
     // Look for common proposal title patterns
     const patterns = [
@@ -241,7 +240,6 @@ function parseProposal(pubkey: string, data: Buffer) {
 
 // Fetch proposals from blockchain
 async function fetchProposals() {
-  console.log(`[Proposals] Fetching proposals from blockchain...`);
   
   const proposals: Array<{ pubkey: string; name: string; state: string; stateNum?: number }> = [];
   
@@ -258,7 +256,6 @@ async function fetchProposals() {
     ]);
 
     if (result && result.length > 0) {
-      console.log(`[Proposals] Found ${result.length} potential proposals on-chain`);
       
       for (const acc of result) {
         try {
@@ -276,7 +273,6 @@ async function fetchProposals() {
         }
       }
       
-      console.log(`[Proposals] Filtered to ${proposals.length} proposals for our DAO`);
     }
   } catch (error) {
     console.error(`[Proposals] Error fetching from blockchain:`, error);
@@ -284,7 +280,6 @@ async function fetchProposals() {
 
   // Fallback to hardcoded if blockchain fetch failed or returned nothing
   if (proposals.length === 0) {
-    console.log(`[Proposals] Using fallback data`);
     const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const types = ['DevNet vNode payouts', 'DevNet pNode payments'];
     const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -317,7 +312,6 @@ async function fetchProposals() {
   const stateOrder: Record<string, number> = { 'Executable': 0, 'Voting': 1, 'Succeeded': 2, 'Completed': 3, 'Cancelled': 4 };
   proposals.sort((a, b) => (stateOrder[a.state] ?? 99) - (stateOrder[b.state] ?? 99));
 
-  console.log(`[Proposals] Total: ${proposals.length}`);
   return proposals;
 }
 
@@ -558,7 +552,6 @@ async function fetchTreasuryBalances(): Promise<TreasuryBalances> {
 }
 
 export async function GET() {
-  console.log('\n========== GOVERNANCE API START ==========');
   
   try {
     // Phase 1: Fetch treasury balances first (makes ~12 RPC calls with batching)
@@ -730,8 +723,6 @@ export async function GET() {
       })),
       fetchedAt: Date.now(),
     };
-
-    console.log('========== GOVERNANCE API END ==========\n');
 
     return NextResponse.json(response, {
       headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },

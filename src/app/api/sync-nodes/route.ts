@@ -31,8 +31,6 @@ async function syncMainnetNodes(): Promise<{
   creditsChanges: number;
   source: string;
 }> {
-  console.log('[SYNC] Syncing mainnet nodes from external sources...');
-  
   try {
     const externalData = await getMainnetData(true);
     
@@ -40,14 +38,11 @@ async function syncMainnetNodes(): Promise<{
       const creditsMap = await getMainnetCreditsMap();
       const result = await saveAllNodeSnapshots(externalData.nodes, creditsMap, 'mainnet');
       
-      console.log(`[SYNC] Synced ${result.total} mainnet nodes (source: ${externalData.source})`);
       return { ...result, source: externalData.source };
     }
     
-    console.warn('[SYNC] No mainnet data available from external sources');
     return { total: 0, newNodes: 0, statusChanges: 0, versionChanges: 0, storageChanges: 0, creditsChanges: 0, source: 'none' };
-  } catch (error) {
-    console.error('[SYNC] External sources failed:', error);
+  } catch {
     return { total: 0, newNodes: 0, statusChanges: 0, versionChanges: 0, storageChanges: 0, creditsChanges: 0, source: 'error' };
   }
 }
@@ -66,7 +61,6 @@ async function syncDevnetNodes(): Promise<{
   const devnetData = await getDevnetData(true);
   
   if (devnetData.nodes.length === 0) {
-    console.warn('[SYNC] No devnet data available');
     return { total: 0, newNodes: 0, statusChanges: 0, versionChanges: 0, storageChanges: 0, creditsChanges: 0 };
   }
 
@@ -80,8 +74,8 @@ async function syncDevnetNodes(): Promise<{
       const data = await res.json();
       data.pods_credits?.forEach((c: any) => creditsMap.set(c.pod_id, c.credits));
     }
-  } catch (err) {
-    console.warn('[SYNC] Failed to fetch credits for devnet:', err);
+  } catch {
+    // Credits fetch failed silently
   }
 
   return await saveAllNodeSnapshots(devnetData.nodes, creditsMap, 'devnet');
@@ -133,7 +127,6 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error(`[SYNC] Error for ${network}:`, error);
     return NextResponse.json({ error: error.message || 'Sync failed', network }, { status: 500 });
   }
 }

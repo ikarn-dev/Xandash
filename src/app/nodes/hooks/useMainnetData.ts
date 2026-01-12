@@ -76,7 +76,6 @@ export function useMainnetData(
 
   // Fetch mainnet nodes
   const fetchMainnetData = useCallback(async () => {
-    console.log('[Mainnet Hook] Fetching mainnet data...');
     setIsLoading(true);
     
     try {
@@ -90,7 +89,6 @@ export function useMainnetData(
       }
 
       const data = await response.json();
-      console.log(`[Mainnet Hook] Received ${data.nodes?.length} nodes (source: ${data.source})`);
 
       if (data.nodes && Array.isArray(data.nodes)) {
         const serverTime = Math.floor(Date.now() / 1000);
@@ -179,11 +177,9 @@ export function useMainnetData(
         setLastFetchTime(Date.now());
         setCanRefresh(false);
         setTimeUntilRefresh(CYCLE_MS);
-        
-        console.log(`[Mainnet Hook] Transformed ${transformedNodes.length} nodes`);
       }
-    } catch (error) {
-      console.error('[Mainnet Hook] Fetch error:', error);
+    } catch {
+      // Fetch error handled silently
     } finally {
       setIsLoading(false);
     }

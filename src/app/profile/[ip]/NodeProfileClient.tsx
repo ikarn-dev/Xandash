@@ -1,12 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useEffect } from 'react';
 import { CaptchaGate } from '@/components/ui/CaptchaGate';
 import { AISummary } from '@/components/ui/AISummary';
 import { NodeNotFound } from '@/components/ui/NodeNotFound';
 import { useNodeProfile } from './hooks';
 import { useNetwork } from '@/libs/context/network-context';
+import { useMainnetPing } from '@/libs/hooks/useMainnetPing';
 import {
   NodeProfileData,
   ProfileHeader,
@@ -25,8 +26,20 @@ interface NodeProfileClientProps {
 
 export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
   const router = useRouter();
-  const { network } = useNetwork();
-  const [currentPing, setCurrentPing] = useState<number | null>(null);
+  const { network, isMainnet } = useNetwork();
+  
+  // Mainnet ping data - client-side worker-based ping
+  const { pings: mainnetPings, isLoading: isPingLoading, pingNodes } = useMainnetPing({ 
+    enabled: isMainnet,
+    refreshInterval: 60000,
+  });
+
+  // Trigger ping for this specific node
+  useEffect(() => {
+    if (isMainnet && ip) {
+      pingNodes([{ ip, rpc_port: 8899 }]);
+    }
+  }, [isMainnet, ip]); // Don't include pingNodes
   
   const {
     loading,
@@ -43,33 +56,6 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
     hasAnyData,
     fetchData
   } = useNodeProfile({ ip, initialData });
-
-  // Fetch ping data for mainnet nodes
-  useEffect(() => {
-    if (network !== 'mainnet' || !ip) {
-      setCurrentPing(null);
-      return;
-    }
-
-    const fetchMainnetPing = async () => {
-      try {
-        const response = await fetch('/api/mainnet-rpc');
-        if (response.ok) {
-          const data = await response.json();
-          const geo = data.geo?.[ip];
-          if (geo?.ping !== null && geo?.ping !== undefined) {
-            setCurrentPing(geo.ping);
-          }
-        }
-      } catch (error) {
-        console.error('[Profile] Failed to fetch mainnet ping:', error);
-      }
-    };
-
-    fetchMainnetPing();
-    const interval = setInterval(fetchMainnetPing, 30000);
-    return () => clearInterval(interval);
-  }, [ip, network]);
 
   // Generate AI summary prompt - includes node details + feedback with proper units
   const aiSummaryPrompt = useMemo(() => {
@@ -120,7 +106,12 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
         <ProfileLocationSection location={location || null} node={node || null} />
 
         {/* Stats Cards */}
-        <ProfileStatsCards node={node || null} ping={currentPing} network={network} />
+        <ProfileStatsCards 
+          node={node || null} 
+          ping={mainnetPings[ip]} 
+          isPingLoading={isPingLoading}
+          network={network} 
+        />
 
         {/* Charts */}
         {(hasAnyData || node) && (

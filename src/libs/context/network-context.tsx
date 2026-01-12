@@ -66,7 +66,12 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
 export const useNetwork = () => {
   const context = useContext(NetworkContext);
   if (!context) {
-    throw new Error('useNetwork must be used within NetworkProvider');
+    // Return default values if context is not available (e.g., during SSR or outside provider)
+    return {
+      network: 'devnet' as NetworkType,
+      setNetwork: () => {},
+      isMainnet: false,
+    };
   }
   return context;
 };

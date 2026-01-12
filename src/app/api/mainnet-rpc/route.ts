@@ -50,8 +50,6 @@ export async function GET(request: NextRequest) {
       timestamp: Date.now(),
     };
 
-    console.log(`[Mainnet API] Returning ${mainnetData.nodes.length} nodes (source: ${mainnetData.source})`);
-
     return NextResponse.json({
       nodes: mainnetData.nodes,
       geo: mainnetData.geo,
@@ -63,8 +61,7 @@ export async function GET(request: NextRequest) {
     }, {
       headers: { 'Cache-Control': 'no-store' },
     });
-  } catch (error) {
-    console.error('[Mainnet API] Error:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Failed to fetch mainnet nodes' },
       { status: 500 }
@@ -79,8 +76,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(mainnetData.geo, {
       headers: { 'Cache-Control': 'no-store' },
     });
-  } catch (error) {
-    console.error('[Mainnet API] Error:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Failed to fetch geo data' },
       { status: 500 }

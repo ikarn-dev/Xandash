@@ -32,7 +32,6 @@ async function makeRpcCall<T>(method: string): Promise<T | null> {
   const apiKey = process.env.MAINNET_RPC_API_KEY;
   
   if (!rpcUrl || !apiKey) {
-    console.warn('[Dashboard] RPC API not configured');
     return null;
   }
 
@@ -54,7 +53,6 @@ async function makeRpcCall<T>(method: string): Promise<T | null> {
 
     return await response.json() as T;
   } catch (error) {
-    console.error(`[Dashboard] RPC call failed (${method}):`, error);
     return null;
   }
 }
@@ -104,7 +102,6 @@ export async function getNetworkStatsData(): Promise<{
     ]);
     
     if (!statsData) {
-      console.error('[NetworkStats] Stats API returned no data');
       return {
         stats: null,
         error: 'Stats API error'
@@ -157,7 +154,6 @@ export async function getNetworkStatsData(): Promise<{
 
     return { stats: processedStats };
   } catch (error) {
-    console.error('[NetworkStats] Server-side fetch error:', error);
     return {
       stats: null,
       error: error instanceof Error ? error.message : 'Unknown error'

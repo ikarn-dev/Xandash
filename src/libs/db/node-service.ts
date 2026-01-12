@@ -2,7 +2,6 @@ import {
   connectToDatabase, 
   NodeSnapshot, 
   NodeEventLog, 
-  NodePingRecord,
   getCollectionNames 
 } from './mongodb';
 
@@ -38,7 +37,6 @@ export async function saveNodeSnapshot(nodeData: {
   const now = Date.now();
   const timestamp = Math.floor(now / 1000);
   
-  // Get the latest snapshot for this node
   const lastSnapshot = await snapshotsCol.findOne(
     { ip: nodeData.ip },
     { sort: { timestamp: -1 } }
@@ -50,13 +48,11 @@ export async function saveNodeSnapshot(nodeData: {
   let storageChanged = false;
   let creditsChanged = false;
   
-  // Determine node status
   const timeDiff = timestamp - (nodeData.last_seen_timestamp || 0);
   let status: 'online' | 'offline' | 'syncing' = 'offline';
   if (timeDiff < 300) status = 'online';
   else if (timeDiff < 3600) status = 'syncing';
   
-  // Check if this is a new node
   if (!lastSnapshot) {
     isNew = true;
     await eventsCol.insertOne({
@@ -76,7 +72,6 @@ export async function saveNodeSnapshot(nodeData: {
       created_at: new Date(),
     });
   } else {
-    // Check for status change
     if (lastSnapshot.status !== status) {
       statusChanged = true;
       await eventsCol.insertOne({
@@ -96,7 +91,6 @@ export async function saveNodeSnapshot(nodeData: {
       });
     }
     
-    // Check for version change
     if (lastSnapshot.version !== nodeData.version && nodeData.version) {
       versionChanged = true;
       await eventsCol.insertOne({
@@ -112,7 +106,6 @@ export async function saveNodeSnapshot(nodeData: {
       });
     }
     
-    // Check for significant storage change (more than 5%)
     const prevStorage = lastSnapshot.storage_usage_percent || 0;
     const newStorage = nodeData.storage_usage_percent || 0;
     const storageDiff = Math.abs(newStorage - prevStorage);
@@ -136,7 +129,6 @@ export async function saveNodeSnapshot(nodeData: {
       });
     }
     
-    // Check for significant credits change
     const prevCredits = lastSnapshot.credits || 0;
     const newCredits = nodeData.credits || 0;
     const creditsDiff = Math.abs(newCredits - prevCredits);
@@ -155,7 +147,6 @@ export async function saveNodeSnapshot(nodeData: {
     }
   }
   
-  // Save the new snapshot
   const snapshot: NodeSnapshot = {
     ip: nodeData.ip,
     pubkey: nodeData.pubkey,
@@ -180,7 +171,7 @@ export async function saveNodeSnapshot(nodeData: {
   return { isNew, statusChanged, versionChanged, storageChanged, creditsChanged };
 }
 
-// Save multiple node snapshots (batch) - OPTIMIZED
+// Save multiple node snapshots (batch)
 export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string, number>, network: NetworkType = 'devnet'): Promise<{
   total: number;
   newNodes: number;
@@ -197,7 +188,6 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
   const now = Date.now();
   const timestamp = Math.floor(now / 1000);
   
-  // Filter valid nodes
   const validNodes = nodes.filter(node => {
     const ip = node.address?.split(':')[0] || '';
     return ip && ip !== '127.0.0.1';
@@ -207,19 +197,16 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
     return { total: 0, newNodes: 0, statusChanges: 0, versionChanges: 0, storageChanges: 0, creditsChanges: 0 };
   }
   
-  // Get all IPs
   const ips = validNodes.map(n => n.address?.split(':')[0]);
   
-  // Batch fetch latest snapshots for all nodes
   const latestSnapshots = await snapshotsCol.aggregate([
     { $match: { ip: { $in: ips } } },
     { $sort: { timestamp: -1 } },
-    { $group: { _id: '$ip', doc: { $first: '$$ROOT' } } }
+    { $group: { _id: '$ip', doc: { $first: '$ROOT' } } }
   ]).toArray();
   
   const snapshotMap = new Map(latestSnapshots.map(s => [s._id, s.doc]));
   
-  // Prepare batch inserts
   const snapshotsToInsert: NodeSnapshot[] = [];
   const eventsToInsert: NodeEventLog[] = [];
   
@@ -234,13 +221,11 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
     const credits = creditsMap?.get(node.pubkey) || 0;
     const lastSnapshot = snapshotMap.get(ip);
     
-    // Determine node status
     const timeDiff = timestamp - (node.last_seen_timestamp || 0);
     let status: 'online' | 'offline' | 'syncing' = 'offline';
     if (timeDiff < 300) status = 'online';
     else if (timeDiff < 3600) status = 'syncing';
     
-    // Check for changes and create events
     if (!lastSnapshot) {
       newNodes++;
       eventsToInsert.push({
@@ -249,16 +234,11 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
         event_type: 'node_new',
         new_status: status,
         new_value: node.version || '',
-        details: {
-          version: node.version,
-          storage_committed: node.storage_committed,
-          credits,
-        },
+        details: { version: node.version, storage_committed: node.storage_committed, credits },
         timestamp,
         created_at: new Date(),
       });
     } else {
-      // Status change
       if (lastSnapshot.status !== status) {
         statusChanges++;
         eventsToInsert.push({
@@ -275,7 +255,6 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
         });
       }
       
-      // Version change
       if (lastSnapshot.version !== node.version && node.version) {
         versionChanges++;
         eventsToInsert.push({
@@ -291,7 +270,6 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
         });
       }
       
-      // Storage change (>5%)
       const prevStorage = lastSnapshot.storage_usage_percent || 0;
       const newStorage = node.storage_usage_percent || 0;
       if (Math.abs(newStorage - prevStorage) > STORAGE_CHANGE_THRESHOLD) {
@@ -307,7 +285,6 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
         });
       }
       
-      // Credits change (>100)
       const prevCredits = lastSnapshot.credits || 0;
       if (Math.abs(credits - prevCredits) >= CREDITS_CHANGE_THRESHOLD) {
         creditsChanges++;
@@ -323,7 +300,6 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
       }
     }
     
-    // Add snapshot
     snapshotsToInsert.push({
       ip,
       pubkey: node.pubkey || '',
@@ -344,7 +320,6 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
     });
   }
   
-  // Batch insert all snapshots and events
   if (snapshotsToInsert.length > 0) {
     await snapshotsCol.insertMany(snapshotsToInsert, { ordered: false });
   }
@@ -361,11 +336,7 @@ export async function getNodeHistory(ip: string, limit: number = 100, network: N
   const collections = getCollectionNames(network);
   const col = db.collection<NodeSnapshot>(collections.NODE_SNAPSHOTS);
   
-  return col
-    .find({ ip })
-    .sort({ timestamp: -1 })
-    .limit(limit)
-    .toArray();
+  return col.find({ ip }).sort({ timestamp: -1 }).limit(limit).toArray();
 }
 
 // Get node events/logs
@@ -374,11 +345,7 @@ export async function getNodeEvents(ip: string, limit: number = 50, network: Net
   const collections = getCollectionNames(network);
   const col = db.collection<NodeEventLog>(collections.NODE_EVENTS);
   
-  return col
-    .find({ ip })
-    .sort({ timestamp: -1 })
-    .limit(limit)
-    .toArray();
+  return col.find({ ip }).sort({ timestamp: -1 }).limit(limit).toArray();
 }
 
 // Get latest snapshot for a node
@@ -396,11 +363,7 @@ export async function getAllRecentEvents(limit: number = 100, network: NetworkTy
   const collections = getCollectionNames(network);
   const col = db.collection<NodeEventLog>(collections.NODE_EVENTS);
   
-  return col
-    .find({})
-    .sort({ timestamp: -1 })
-    .limit(limit)
-    .toArray();
+  return col.find({}).sort({ timestamp: -1 }).limit(limit).toArray();
 }
 
 // Get node stats over time for charts
@@ -409,20 +372,13 @@ export async function getNodeStatsHistory(ip: string, hours: number = 24, networ
   const collections = getCollectionNames(network);
   const col = db.collection<NodeSnapshot>(collections.NODE_SNAPSHOTS);
   
-  // If hours is 0, fetch all data (no time filter)
   if (hours === 0) {
-    return col
-      .find({ ip })
-      .sort({ timestamp: 1 })
-      .toArray();
+    return col.find({ ip }).sort({ timestamp: 1 }).toArray();
   }
   
   const cutoffTime = Math.floor(Date.now() / 1000) - (hours * 3600);
   
-  return col
-    .find({ ip, timestamp: { $gte: cutoffTime } })
-    .sort({ timestamp: 1 })
-    .toArray();
+  return col.find({ ip, timestamp: { $gte: cutoffTime } }).sort({ timestamp: 1 }).toArray();
 }
 
 // Cleanup old snapshots (keep last 7 days)
@@ -441,197 +397,19 @@ export async function cleanupOldSnapshots(daysToKeep: number = 7, network: Netwo
 export async function createIndexes(network?: NetworkType): Promise<void> {
   const db = await connectToDatabase();
   
-  // Create indexes for specified network or both
   const networks: NetworkType[] = network ? [network] : ['devnet', 'mainnet'];
   
   for (const net of networks) {
     const collections = getCollectionNames(net);
     
-    // Node snapshots indexes
     const snapshotsCol = db.collection(collections.NODE_SNAPSHOTS);
     await snapshotsCol.createIndex({ ip: 1, timestamp: -1 });
     await snapshotsCol.createIndex({ pubkey: 1 });
     await snapshotsCol.createIndex({ timestamp: -1 });
     
-    // Node events indexes
     const eventsCol = db.collection(collections.NODE_EVENTS);
     await eventsCol.createIndex({ ip: 1, timestamp: -1 });
     await eventsCol.createIndex({ event_type: 1, timestamp: -1 });
     await eventsCol.createIndex({ timestamp: -1 });
-    
-    // Node pings indexes
-    const pingsCol = db.collection(collections.NODE_PINGS);
-    await pingsCol.createIndex({ ip: 1, timestamp: -1 });
-    await pingsCol.createIndex({ timestamp: -1 });
   }
-}
-
-// ============== PING DATA FUNCTIONS ==============
-
-// Save a single ping record
-export async function savePingRecord(
-  ip: string,
-  ping: number | null,
-  status: 'online' | 'timeout' | 'offline',
-  port: number = 6000,
-  pubkey?: string,
-  network: NetworkType = 'devnet'
-): Promise<void> {
-  const db = await connectToDatabase();
-  const collections = getCollectionNames(network);
-  const col = db.collection(collections.NODE_PINGS);
-  
-  const timestamp = Math.floor(Date.now() / 1000);
-  
-  await col.insertOne({
-    ip,
-    pubkey,
-    ping,
-    status,
-    port,
-    timestamp,
-    created_at: new Date(),
-  });
-}
-
-// Save multiple ping records (batch)
-export async function savePingRecordsBatch(
-  records: Array<{
-    ip: string;
-    ping: number | null;
-    status: 'online' | 'timeout' | 'offline';
-    port?: number;
-    pubkey?: string;
-  }>,
-  network: NetworkType = 'devnet'
-): Promise<number> {
-  if (records.length === 0) return 0;
-  
-  const db = await connectToDatabase();
-  const collections = getCollectionNames(network);
-  const col = db.collection(collections.NODE_PINGS);
-  
-  const timestamp = Math.floor(Date.now() / 1000);
-  const now = new Date();
-  
-  const documents = records.map(r => ({
-    ip: r.ip,
-    pubkey: r.pubkey,
-    ping: r.ping,
-    status: r.status,
-    port: r.port || 6000,
-    timestamp,
-    created_at: now,
-  }));
-  
-  const result = await col.insertMany(documents, { ordered: false });
-  return result.insertedCount;
-}
-
-// Get ping history for a node
-export async function getNodePingHistory(
-  ip: string,
-  hours: number = 24,
-  network: NetworkType = 'devnet'
-): Promise<NodePingRecord[]> {
-  const db = await connectToDatabase();
-  const collections = getCollectionNames(network);
-  const col = db.collection<NodePingRecord>(collections.NODE_PINGS);
-  
-  if (hours === 0) {
-    return col.find({ ip }).sort({ timestamp: 1 }).toArray();
-  }
-  
-  const cutoffTime = Math.floor(Date.now() / 1000) - (hours * 3600);
-  
-  return col
-    .find({ ip, timestamp: { $gte: cutoffTime } })
-    .sort({ timestamp: 1 })
-    .toArray();
-}
-
-// Get latest ping for a node
-export async function getLatestPing(
-  ip: string,
-  network: NetworkType = 'devnet'
-): Promise<NodePingRecord | null> {
-  const db = await connectToDatabase();
-  const collections = getCollectionNames(network);
-  const col = db.collection<NodePingRecord>(collections.NODE_PINGS);
-  
-  return col.findOne({ ip }, { sort: { timestamp: -1 } });
-}
-
-// Get latest pings for multiple nodes
-export async function getLatestPingsForNodes(
-  ips: string[],
-  network: NetworkType = 'devnet'
-): Promise<Map<string, NodePingRecord>> {
-  if (ips.length === 0) return new Map();
-  
-  const db = await connectToDatabase();
-  const collections = getCollectionNames(network);
-  const col = db.collection<NodePingRecord>(collections.NODE_PINGS);
-  
-  // Get latest ping for each IP using aggregation
-  const results = await col.aggregate([
-    { $match: { ip: { $in: ips } } },
-    { $sort: { timestamp: -1 } },
-    { $group: { _id: '$ip', doc: { $first: '$$ROOT' } } }
-  ]).toArray();
-  
-  const map = new Map<string, NodePingRecord>();
-  results.forEach(r => {
-    if (r.doc) map.set(r._id, r.doc);
-  });
-  
-  return map;
-}
-
-// Get ping statistics for a node
-export async function getNodePingStats(
-  ip: string,
-  hours: number = 24,
-  network: NetworkType = 'devnet'
-): Promise<{
-  avgPing: number | null;
-  minPing: number | null;
-  maxPing: number | null;
-  successRate: number;
-  totalPings: number;
-} | null> {
-  const db = await connectToDatabase();
-  const collections = getCollectionNames(network);
-  const col = db.collection<NodePingRecord>(collections.NODE_PINGS);
-  
-  const cutoffTime = Math.floor(Date.now() / 1000) - (hours * 3600);
-  
-  const pings = await col
-    .find({ ip, timestamp: { $gte: cutoffTime } })
-    .toArray();
-  
-  if (pings.length === 0) return null;
-  
-  const successfulPings = pings.filter(p => p.ping !== null && p.status === 'online');
-  const pingValues = successfulPings.map(p => p.ping as number);
-  
-  return {
-    avgPing: pingValues.length > 0 ? Math.round(pingValues.reduce((a, b) => a + b, 0) / pingValues.length) : null,
-    minPing: pingValues.length > 0 ? Math.min(...pingValues) : null,
-    maxPing: pingValues.length > 0 ? Math.max(...pingValues) : null,
-    successRate: (successfulPings.length / pings.length) * 100,
-    totalPings: pings.length,
-  };
-}
-
-// Cleanup old ping records (keep last 7 days by default)
-export async function cleanupOldPings(daysToKeep: number = 7, network: NetworkType = 'devnet'): Promise<number> {
-  const db = await connectToDatabase();
-  const collections = getCollectionNames(network);
-  const col = db.collection(collections.NODE_PINGS);
-  
-  const cutoffTime = Math.floor(Date.now() / 1000) - (daysToKeep * 24 * 3600);
-  
-  const result = await col.deleteMany({ timestamp: { $lt: cutoffTime } });
-  return result.deletedCount;
 }

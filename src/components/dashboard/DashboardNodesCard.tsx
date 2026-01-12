@@ -1,16 +1,19 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Globe, Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CopyBtn } from '@/components/ui/CopyBtn';
 import { getLocationsForIPs, extractIPFromAddress, getCountryFlagUrl } from '@/libs/services/geolocation';
 import { usePrefetchProfile } from '@/libs/hooks/usePrefetchProfile';
+import { useMainnetPing } from '@/libs/hooks/useMainnetPing';
 import { toast } from 'sonner';
 import { useNetwork } from '@/libs/context/network-context';
+import { useNodesData } from '@/libs/context/nodes-data-context';
 import { getNodeName, hasNodeName } from '@/libs/utils/node-names';
 import { formatStorage } from '@/libs/utils';
+import { PingValue } from '@/components/ui/PingLoadingIcon';
 
 // Compare icon
 const CompareIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -48,11 +51,6 @@ interface PodCredit {
   credits: number;
 }
 
-interface PingResult {
-  ping: number | null;
-  status: 'online' | 'offline' | 'timeout';
-}
-
 interface MainnetGeoData {
   country: string;
   country_code: string;
@@ -61,7 +59,6 @@ interface MainnetGeoData {
   ip: string;
   name: string;
   nfts: string[];
-  ping: number | null;
   provider: string;
   stake: number;
 }
@@ -72,9 +69,9 @@ const NATIVE_REFRESH_INTERVAL = 30 * 1000; // 30 seconds
 export const DashboardNodesCard: React.FC = () => {
   const { network, isMainnet } = useNetwork();
   const [nodes, setNodes] = useState<ValidatorData[]>([]);
+  const [allNodes, setAllNodes] = useState<ValidatorData[]>([]);
   const [locations, setLocations] = useState<{ [ip: string]: LocationData | null }>({});
   const [credits, setCredits] = useState<{ [pubkey: string]: number | null }>({});
-  const [pings, setPings] = useState<{ [ip: string]: PingResult }>({});
   const [mainnetGeoData, setMainnetGeoData] = useState<{ [ip: string]: MainnetGeoData }>({});
   const [loading, setLoading] = useState(true);
   const [dataFetchTime, setDataFetchTime] = useState<number>(Math.floor(Date.now() / 1000));
@@ -83,6 +80,26 @@ export const DashboardNodesCard: React.FC = () => {
   const lastMainnetCallRef = useRef(0);
   const router = useRouter();
   const { prefetchProfile, navigateToProfile } = usePrefetchProfile();
+  
+  // Mainnet ping data - client-side worker-based ping
+  const { pings: mainnetPings, isLoading: isPingLoading, pingNodes } = useMainnetPing({ 
+    enabled: isMainnet,
+    refreshInterval: 60000,
+  });
+
+  // Trigger ping when mainnet nodes are loaded
+  useEffect(() => {
+    if (isMainnet && nodes.length > 0 && !loading) {
+      const nodesToPing = nodes.map(node => ({
+        ip: extractIPFromAddress(node.address || ''),
+        rpc_port: node.rpc_port || 8899,
+      })).filter(n => n.ip);
+      
+      if (nodesToPing.length > 0) {
+        pingNodes(nodesToPing);
+      }
+    }
+  }, [isMainnet, nodes.length, loading]); // Don't include pingNodes to avoid infinite loop
 
   // Toggle node for comparison
   const handleToggleCompare = useCallback((pubkey: string, e: React.MouseEvent) => {
@@ -133,9 +150,11 @@ export const DashboardNodesCard: React.FC = () => {
         
         if (data.serverTimestamp) setDataFetchTime(data.serverTimestamp);
         
-        const allNodes = data.nodes || [];
+        const fetchedNodes = data.nodes || [];
+        // Store all nodes for new node detection
+        setAllNodes(fetchedNodes);
         // Devnet: sort by most recent (last_seen_timestamp)
-        const sortedNodes = allNodes
+        const sortedNodes = fetchedNodes
           .sort((a: ValidatorData, b: ValidatorData) => {
             return b.last_seen_timestamp - a.last_seen_timestamp;
           })
@@ -143,7 +162,6 @@ export const DashboardNodesCard: React.FC = () => {
         
         setNodes(sortedNodes);
       } catch (error) {
-        console.error('Failed to fetch nodes:', error);
         toast.error('Failed to load pNodes data');
       } finally {
         setLoading(false);
@@ -200,9 +218,6 @@ export const DashboardNodesCard: React.FC = () => {
     fetchCredits();
   }, [nodes, network]);
 
-  // Ping data - devnet ping disabled, mainnet uses external ping
-  // Devnet ping logic removed - will show N/A
-
   // Fetch from external source for mainnet (30s cycle)
   useEffect(() => {
     if (!isMainnet) return;
@@ -258,6 +273,9 @@ export const DashboardNodesCard: React.FC = () => {
               };
             });
             
+            // Store all nodes for new node detection
+            setAllNodes(allTransformedNodes);
+            
             // Sort: named nodes first, then by last_seen_timestamp, then slice to 20
             const transformedNodes = allTransformedNodes
               .sort((a, b) => {
@@ -276,8 +294,8 @@ export const DashboardNodesCard: React.FC = () => {
           
           lastMainnetCallRef.current = Date.now();
         }
-      } catch (error) {
-        console.error('[DashboardNodes] Mainnet fetch error:', error);
+      } catch {
+        // Error handled silently
       } finally {
         setLoading(false);
       }
@@ -445,7 +463,7 @@ export const DashboardNodesCard: React.FC = () => {
             <tbody>
               {nodes.length === 0 ? (
                 <tr>
-                  <td colSpan={isMainnet ? 14 : 11} className="px-6 py-12 text-center text-white/60 text-sm">
+                  <td colSpan={isMainnet ? 13 : 12} className="px-6 py-12 text-center text-white/60 text-sm">
                     No nodes found for {isMainnet ? 'mainnet' : 'devnet'}
                   </td>
                 </tr>
@@ -453,7 +471,7 @@ export const DashboardNodesCard: React.FC = () => {
                 const ip = extractIPFromAddress(node.address || '');
                 const location = locations[ip];
                 const nodeCredits = node.pubkey ? credits[node.pubkey] : null;
-                // Use external data for mainnet (geo + ping)
+                // Use external data for mainnet geo
                 const mainnetGeo = mainnetGeoData[ip];
                 
                 // Merge location data: prefer ip-api.com (has city), enrich with mainnet geo (has provider)
@@ -478,10 +496,6 @@ export const DashboardNodesCard: React.FC = () => {
                   }
                 }
                 
-                // Use external ping for mainnet, native ping for devnet
-                const nodePing = isMainnet && mainnetGeo
-                  ? { ping: mainnetGeo.ping, status: (mainnetGeo.ping !== null && mainnetGeo.ping > 0 ? 'online' : 'offline') as 'online' | 'offline' | 'timeout' }
-                  : pings[ip];
                 const nodeId = `${node.pubkey}-${index}`;
                 const isSelected = selectedForCompare.includes(node.pubkey);
                 const canSelect = selectedForCompare.length < 4 || isSelected;
@@ -599,21 +613,10 @@ export const DashboardNodesCard: React.FC = () => {
                     {/* Ping cell - Mainnet only */}
                     {isMainnet && (
                       <td className="px-3 py-3 text-xs">
-                        {nodePing ? (
-                          <span className={`font-mono ${
-                            nodePing.status === 'online' 
-                              ? nodePing.ping! < 200 
-                                ? 'text-green-400' 
-                                : nodePing.ping! < 500 
-                                  ? 'text-yellow-400' 
-                                  : 'text-orange-400'
-                              : 'text-red-400'
-                          }`}>
-                            {nodePing.status === 'online' ? `${nodePing.ping}ms` : 'N/A'}
-                          </span>
-                        ) : (
-                          <span className="text-white/30">—</span>
-                        )}
+                        <PingValue 
+                          ping={mainnetPings[ip]} 
+                          isLoading={isPingLoading} 
+                        />
                       </td>
                     )}
                   </tr>

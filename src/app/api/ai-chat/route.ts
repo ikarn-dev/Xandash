@@ -43,7 +43,6 @@ async function fetchTokenData() {
       },
     };
   } catch (e) {
-    console.error('Token fetch error:', e);
     return null;
   }
 }
@@ -80,13 +79,12 @@ async function fetchNodeByIdentifier(identifier: string) {
           const geo = mainnetData.geo?.[ip];
           if (geo) {
             node.credits = geo.credits;
-            node.ping = geo.ping;
             node.country = geo.country;
           }
         }
       }
-    } catch (e) {
-      console.log('[AI Chat] Mainnet API not available, trying native RPC');
+    } catch {
+      // Mainnet API not available, trying devnet
     }
     
     // If not found in mainnet, try devnet API
@@ -128,7 +126,6 @@ async function fetchNodeByIdentifier(identifier: string) {
     // Get historical data from MongoDB
     let history = null;
     let events = null;
-    let pingStats = null;
     try {
       const db = await connectToDatabase();
       const collections = getCollectionNames(isMainnet ? 'mainnet' : 'devnet');
@@ -143,26 +140,6 @@ async function fetchNodeByIdentifier(identifier: string) {
         .sort({ timestamp: -1 })
         .limit(5)
         .toArray();
-      
-      // Get ping history
-      const pingRecords = await db.collection(collections.NODE_PINGS)
-        .find({ ip })
-        .sort({ timestamp: -1 })
-        .limit(20)
-        .toArray();
-      
-      if (pingRecords.length > 0) {
-        const successfulPings = pingRecords.filter((p: any) => p.ping !== null && p.status === 'online');
-        const pingValues = successfulPings.map((p: any) => p.ping as number);
-        pingStats = {
-          latestPing: pingRecords[0]?.ping || null,
-          avgPing: pingValues.length > 0 ? Math.round(pingValues.reduce((a: number, b: number) => a + b, 0) / pingValues.length) : null,
-          minPing: pingValues.length > 0 ? Math.min(...pingValues) : null,
-          maxPing: pingValues.length > 0 ? Math.max(...pingValues) : null,
-          successRate: ((successfulPings.length / pingRecords.length) * 100).toFixed(1) + '%',
-          totalPings: pingRecords.length,
-        };
-      }
       
       if (snapshots.length > 1) {
         const oldest = snapshots[snapshots.length - 1];
@@ -197,8 +174,6 @@ async function fetchNodeByIdentifier(identifier: string) {
       isPublic: node.is_public,
       rpcPort: node.rpc_port,
       credits,
-      ping: node.ping || null,
-      pingStats,
       country: node.country || null,
       activeStreams: node.active_streams || 0,
       lastSeen: new Date(node.last_seen_timestamp * 1000).toLocaleString(),
@@ -206,7 +181,6 @@ async function fetchNodeByIdentifier(identifier: string) {
       recentEvents: events,
     };
   } catch (e) {
-    console.error('Node fetch error:', e);
     return null;
   }
 }
@@ -272,7 +246,6 @@ async function fetchCountryData(countryCode: string) {
       cities: [...new Set(countryNodes.map((n: any) => geoData[n.address?.split(':')[0]]?.city).filter(Boolean))],
     };
   } catch (e) {
-    console.error('Country fetch error:', e);
     return null;
   }
 }
@@ -662,7 +635,6 @@ export async function POST(req: NextRequest) {
     
     return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' } });
   } catch (e) {
-    console.error('AI error:', e);
     return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
   }
 }

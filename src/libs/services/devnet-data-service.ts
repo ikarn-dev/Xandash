@@ -27,7 +27,6 @@ export interface DevnetNodeData {
   storage_used: number;
   uptime: number;
   version: string;
-  ping?: number | null;
   credits?: number | null;
   country?: string;
   country_code?: string;
@@ -64,12 +63,10 @@ export async function getCachedDevnetData(): Promise<DevnetExternalData | null> 
  */
 async function fetchFromDevnetApi(): Promise<DevnetNodeData[] | null> {
   if (!DEVNET_API_URL) {
-    console.warn('[Devnet] API URL not configured');
     return null;
   }
 
   try {
-    console.log('[Devnet] Fetching from API...');
     const response = await fetch(DEVNET_API_URL, {
       method: 'GET',
       headers: {
@@ -102,10 +99,8 @@ async function fetchFromDevnetApi(): Promise<DevnetNodeData[] | null> {
       pods = data.result;
     }
 
-    console.log(`[Devnet] API returned ${pods.length} nodes`);
     return pods;
-  } catch (error) {
-    console.error('[Devnet] API fetch failed:', error);
+  } catch {
     return null;
   }
 }
@@ -135,7 +130,6 @@ export async function getDevnetData(forceRefresh: boolean = false): Promise<Devn
       await cache.set(CACHE_KEY_DEVNET, result, CACHE_TTL * 2);
       await cache.set(CACHE_KEY_LAST_FETCH, Date.now(), CACHE_TTL * 2);
       
-      console.log(`[Devnet] Cached ${freshNodes.length} nodes`);
       return result;
     }
   }
@@ -149,7 +143,6 @@ export async function getDevnetData(forceRefresh: boolean = false): Promise<Devn
   }
 
   // No data available
-  console.warn('[Devnet] No data available');
   return {
     nodes: [],
     total: 0,

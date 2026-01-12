@@ -68,9 +68,7 @@ export async function GET(request: NextRequest) {
       const credits = network === 'mainnet' 
         ? (currentNodeData.credits || 0)
         : (creditsData?.find((c: any) => c.pod_id === currentNodeData.pubkey)?.credits || 0);
-      saveNodeSnapshotOnVisit(ip, currentNodeData, credits, network).catch(err => {
-        console.error('[NODE-PROFILE] Failed to save snapshot on visit:', err);
-      });
+      saveNodeSnapshotOnVisit(ip, currentNodeData, credits, network).catch(() => {});
     }
 
     let status = 'unknown';
@@ -147,8 +145,7 @@ export async function GET(request: NextRequest) {
         'X-Network': network,
       },
     });
-  } catch (error) {
-    console.error('[NODE-PROFILE] API error:', error);
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch node profile' }, { status: 500 });
   }
 }
@@ -178,9 +175,8 @@ async function saveNodeSnapshotOnVisit(ip: string, nodeData: any, credits: numbe
     }, network);
     
     await cache.set(cacheKey, true, 60);
-    console.log(`[NODE-PROFILE] Saved snapshot for ${ip} on ${network}`);
-  } catch (err) {
-    console.error(`[NODE-PROFILE] Failed to save snapshot for ${ip}:`, err);
+  } catch {
+    // Failed to save snapshot silently
   }
 }
 
@@ -231,14 +227,12 @@ async function fetchCurrentNodeData(ip: string, network: NetworkType): Promise<a
     try {
       const externalNode = await getMainnetNodeByIp(ip);
       if (externalNode) {
-        console.log(`[NODE-PROFILE] Found mainnet node ${ip} from external source`);
         await cache.set(cacheKey, externalNode, 30);
         return externalNode;
       }
       // No fallback for mainnet - external sources only
       return null;
-    } catch (error) {
-      console.warn(`[NODE-PROFILE] External sources failed for ${ip}:`, error);
+    } catch {
       return null;
     }
   }
@@ -247,7 +241,6 @@ async function fetchCurrentNodeData(ip: string, network: NetworkType): Promise<a
   try {
     const devnetNode = await getDevnetNodeByIp(ip);
     if (devnetNode) {
-      console.log(`[NODE-PROFILE] Found devnet node ${ip}`);
       await cache.set(cacheKey, devnetNode, 30);
       return devnetNode;
     }

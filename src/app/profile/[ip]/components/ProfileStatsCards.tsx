@@ -1,14 +1,16 @@
 import { ClockIcon, ServerIcon, ActivityIcon, WifiIcon } from './ProfileIcons';
 import { formatBytes, formatUptime } from './utils';
 import { CurrentNodeData } from './types';
+import { PingValue, PingLoadingIcon } from '@/components/ui/PingLoadingIcon';
 
 interface ProfileStatsCardsProps {
   node: CurrentNodeData | null;
   ping?: number | null;
+  isPingLoading?: boolean;
   network?: string;
 }
 
-export const ProfileStatsCards = ({ node, ping, network }: ProfileStatsCardsProps) => {
+export const ProfileStatsCards = ({ node, ping, isPingLoading = false, network }: ProfileStatsCardsProps) => {
   const isMainnet = network === 'mainnet';
   
   return (
@@ -67,13 +69,20 @@ export const ProfileStatsCards = ({ node, ping, network }: ProfileStatsCardsProp
             <WifiIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             <span>Ping</span>
           </div>
-          <div className={`text-base sm:text-xl lg:text-2xl font-bold font-mono ${
-            ping !== null && ping !== undefined
-              ? ping < 100 ? 'text-green-400' : ping < 300 ? 'text-yellow-400' : 'text-orange-400'
-              : 'text-white/30'
-          }`}>
-            {ping !== null && ping !== undefined ? `${ping}ms` : '—'}
-          </div>
+          {isPingLoading ? (
+            <div className="flex items-center gap-2">
+              <PingLoadingIcon size="lg" />
+              <span className="text-white/30 text-base sm:text-xl lg:text-2xl font-mono animate-pulse">...</span>
+            </div>
+          ) : (
+            <div className={`text-base sm:text-xl lg:text-2xl font-bold font-mono ${
+              ping !== null && ping !== undefined
+                ? ping < 100 ? 'text-green-400' : ping < 300 ? 'text-yellow-400' : 'text-orange-400'
+                : 'text-white/30'
+            }`}>
+              {ping !== null && ping !== undefined ? `${ping}ms` : '—'}
+            </div>
+          )}
         </div>
       )}
     </div>

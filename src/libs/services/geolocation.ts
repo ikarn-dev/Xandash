@@ -66,7 +66,6 @@ export async function getLocationForIP(ip: string): Promise<LocationData | null>
       
       // Handle API errors
       if (data.error || data.status === 'fail') {
-        console.warn(`${service.name} API error for ${ip}:`, data.message || data.reason);
         continue; // Try next service
       }
 
@@ -76,13 +75,11 @@ export async function getLocationForIP(ip: string): Promise<LocationData | null>
       geoCache[ip] = locationData;
       return locationData;
     } catch (error) {
-      console.warn(`Failed to get location from ${service.name} for IP ${ip}:`, error);
       continue; // Try next service
     }
   }
 
   // If all services failed
-  console.error(`All geolocation services failed for IP ${ip}`);
   geoCache[ip] = null;
   return null;
 }
@@ -115,7 +112,6 @@ export async function getLocationsForIPs(ips: string[]): Promise<{ [ip: string]:
     
     return results;
   } catch (error) {
-    console.error('Failed to fetch batch geolocation data:', error);
     
     // Fallback: return empty results for all IPs
     const fallbackResults: { [ip: string]: LocationData | null } = {};

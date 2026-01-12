@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -8,8 +8,10 @@ import { Pagination, ValidatorTableSkeleton, SearchBox } from '@/components/ui';
 import { extractIPFromAddress, formatLocation, getCountryFlagUrl } from '@/libs/services/geolocation';
 import { useStaggeredScrollAnimation } from '@/libs/hooks/useScrollAnimation';
 import { usePrefetchProfile } from '@/libs/hooks/usePrefetchProfile';
+import { useMainnetPing } from '@/libs/hooks/useMainnetPing';
 import { toast } from 'sonner';
 import { useNetwork } from '@/libs/context/network-context';
+import { useNodesData as useSharedNodesData } from '@/libs/context/nodes-data-context';
 import { filterAndSortValidators } from '@/libs/server';
 import type { ValidatorData } from '@/libs/server';
 
@@ -21,12 +23,9 @@ import {
   ResponsiveNodesTable 
 } from './components';
 import { 
-  useNodesData, 
   useNodesFilters, 
   useNodesLocation, 
   useNodesCredits,
-  useNodesPing,
-  useMainnetData
 } from './hooks';
 import { CustomDropdown, CaptchaGate } from '@/components/ui';
 
@@ -59,39 +58,55 @@ export function NodesPageClientRefactored({
   initialStats
 }: NodesPageClientProps) {
   const router = useRouter();
-  const { network } = useNetwork();
+  const { network, isMainnet } = useNetwork();
   const [mounted, setMounted] = useState(false);
   const [clickedNodeId, setClickedNodeId] = useState<string | null>(null);
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
 
-  // Custom hooks for data management
-  const { allValidators: devnetValidators, dataFetchTime: devnetFetchTime, stats: devnetStats, isLoadingNetwork, fetchData } = useNodesData(network);
-  const { mainnetNodes, geoData, isLoading: isLoadingMainnet, lastFetchTime: mainnetFetchTime } = useMainnetData(network);
+  // Use shared nodes data context - single source of truth for all components
+  const { nodes: sharedNodes, geoData, stats: sharedStats, isLoading: isLoadingShared, dataFetchTime: sharedDataFetchTime } = useSharedNodesData();
   
-  // Use external data for mainnet, devnet RPC for devnet
-  const allValidators = network === 'mainnet' ? mainnetNodes : devnetValidators;
-  const dataFetchTime = network === 'mainnet' 
-    ? (mainnetFetchTime > 0 ? Math.floor(mainnetFetchTime / 1000) : Math.floor(Date.now() / 1000))
-    : devnetFetchTime;
-  const stats = network === 'mainnet' 
-    ? {
-        total: mainnetNodes.length,
-        online: mainnetNodes.filter(v => v.status === 'online').length,
-        public: mainnetNodes.filter(v => v.is_public).length,
-      }
-    : devnetStats;
+  // Transform shared nodes to ValidatorData format
+  const allValidators = useMemo((): ValidatorData[] => {
+    return sharedNodes.map((node, index) => ({
+      address: node.address || '',
+      pubkey: node.pubkey || `node-${index}`,
+      is_public: node.is_public || false,
+      storage_committed: node.storage_committed || 0,
+      storage_used: node.storage_used || 0,
+      usage_percent: node.storage_usage_percent || 0,
+      storage_usage_percent: node.storage_usage_percent || 0,
+      rpc_port: node.rpc_port || 0,
+      version: node.version || '',
+      uptime: node.uptime || 0,
+      last_seen_timestamp: node.last_seen_timestamp || 0,
+      status: node.status,
+      score: 0,
+      rank: index + 1,
+      duplicateCount: 0,
+      isDuplicate: false,
+      credits: node.credits,
+      country: node.country,
+      country_code: node.country_code,
+      provider: node.provider,
+    }));
+  }, [sharedNodes]);
+
+  const dataFetchTime = sharedDataFetchTime;
+  const stats = {
+    total: sharedStats.total,
+    online: sharedStats.online,
+    public: sharedStats.public,
+  };
 
   const { locations } = useNodesLocation(allValidators);
   const { credits } = useNodesCredits(allValidators, network);
-  const { pings } = useNodesPing(network === 'devnet' ? allValidators : [], network); // Only fetch native pings for devnet
 
   // For mainnet, merge external geo data with ip-api.com location data for city info
-  // For devnet, use native locations from ip-api.com
-  const mergedLocations = React.useMemo(() => {
-    if (network === 'mainnet') {
+  const mergedLocations = useMemo(() => {
+    if (isMainnet) {
       const merged: Record<string, any> = {};
       
-      // First, add all locations from ip-api.com (has city data)
       for (const [ip, loc] of Object.entries(locations)) {
         if (loc) {
           merged[ip] = { ...loc };
@@ -127,22 +142,27 @@ export function NodesPageClientRefactored({
       return merged;
     }
     return locations;
-  }, [network, geoData, locations]);
+  }, [isMainnet, geoData, locations]);
 
-  // For mainnet, use external ping data; for devnet use native ping
-  const mergedPings = React.useMemo(() => {
-    if (network === 'mainnet' && Object.keys(geoData).length > 0) {
-      const merged: Record<string, { ping: number | null; status: 'online' | 'offline' | 'timeout' }> = {};
-      for (const [ip, data] of Object.entries(geoData)) {
-        merged[ip] = {
-          ping: data.ping,
-          status: data.ping !== null && data.ping > 0 ? 'online' : 'offline',
-        };
+  // Mainnet ping data - client-side worker-based ping
+  const { pings: mainnetPings, isLoading: isPingLoading, pingNodes } = useMainnetPing({ 
+    enabled: isMainnet,
+    refreshInterval: 60000,
+  });
+
+  // Trigger ping when mainnet nodes are loaded
+  useEffect(() => {
+    if (isMainnet && allValidators.length > 0 && !isLoadingShared) {
+      const nodesToPing = allValidators.map(node => ({
+        ip: extractIPFromAddress(node.address || ''),
+        rpc_port: node.rpc_port || 8899,
+      })).filter(n => n.ip);
+      
+      if (nodesToPing.length > 0) {
+        pingNodes(nodesToPing);
       }
-      return merged;
     }
-    return pings;
-  }, [network, geoData, pings]);
+  }, [isMainnet, allValidators.length, isLoadingShared]); // Don't include pingNodes
 
   // For both mainnet and devnet, use credits from useNodesCredits hook (fetches from pod-credits API)
   // The credits hook already handles network-specific API endpoints
@@ -380,7 +400,7 @@ export function NodesPageClientRefactored({
       </div>
 
       {/* Loading state for network switch */}
-      {(isLoadingNetwork || (network === 'mainnet' && isLoadingMainnet && mainnetNodes.length === 0)) ? (
+      {(isLoadingShared && allValidators.length === 0) ? (
         <ValidatorTableSkeleton count={10} />
       ) : (
         <>
@@ -390,7 +410,8 @@ export function NodesPageClientRefactored({
               validators={validators}
               locations={mergedLocations}
               credits={mergedCredits}
-              pings={mergedPings}
+              pings={mainnetPings}
+              isPingLoading={isPingLoading}
               dataFetchTime={dataFetchTime}
               clickedNodeId={clickedNodeId}
               shouldAnimate={shouldAnimate}

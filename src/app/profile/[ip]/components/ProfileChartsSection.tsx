@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ChartIcon } from './ProfileIcons';
 import { LineChart, StatusChart } from './ProfileCharts';
 import { formatCredits } from './utils';
 import { TimeRange, timeRangeOptions, DbNodeSnapshot, CurrentNodeData } from './types';
 import { CornerAccents } from '@/components/ui/CornerAccents';
-import { PingChart } from '@/components/ui/PingChart';
 import { useNetwork } from '@/libs/context/network-context';
 
 interface ProfileChartsSectionProps {
@@ -28,52 +27,7 @@ export const ProfileChartsSection = ({
   isShowingFallbackData,
   ip
 }: ProfileChartsSectionProps) => {
-  const { network } = useNetwork();
-  const [pingHistory, setPingHistory] = useState<Array<{ timestamp: number; ping: number | null; status: string }>>([]);
-  const [loadingPing, setLoadingPing] = useState(false);
-
-  // Fetch ping history from MongoDB for mainnet only
-  useEffect(() => {
-    if (!ip || network !== 'mainnet') {
-      setPingHistory([]);
-      return;
-    }
-
-    const fetchPingHistory = async () => {
-      setLoadingPing(true);
-      try {
-        // Get hours based on time range
-        const hours = timeRangeOptions.find(r => r.value === timeRange)?.hours || 24;
-        
-        const response = await fetch(`/api/ping-history?ip=${ip}&hours=${hours}&network=mainnet`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.history && data.history.length > 0) {
-            setPingHistory(data.history);
-          } else {
-            // No history in DB, try to get current ping from mainnet-rpc
-            const rpcResponse = await fetch('/api/mainnet-rpc');
-            if (rpcResponse.ok) {
-              const rpcData = await rpcResponse.json();
-              const geo = rpcData.geo?.[ip];
-              if (geo?.ping !== null && geo?.ping !== undefined) {
-                const now = Math.floor(Date.now() / 1000);
-                setPingHistory([
-                  { timestamp: now, ping: geo.ping, status: 'online' },
-                ]);
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('[Profile] Failed to fetch ping history:', error);
-      } finally {
-        setLoadingPing(false);
-      }
-    };
-
-    fetchPingHistory();
-  }, [ip, network, timeRange]);
+  const { network, isMainnet } = useNetwork();
 
   // Generate chart data from MongoDB snapshots
   const statusData = displayHistory.map(h => ({ time: h.timestamp, status: h.status }));
@@ -157,26 +111,16 @@ export const ProfileChartsSection = ({
           <StatusChart data={statusData} height={60} />
         </div>
         
-        {/* Ping Latency - Mainnet only */}
+        {/* Ping Latency - Disabled, always shows N/A */}
         <div className="bg-black p-3 sm:p-4 overflow-visible">
           <h3 className="text-xs font-medium text-white/60 mb-3 flex items-center gap-2">
             <span className="w-1.5 h-1.5 bg-cyan-500"></span>
             Ping Latency
-            {network === 'devnet' && <span className="text-white/30 text-[10px]">(N/A)</span>}
+            <span className="text-white/30 text-[10px]">(N/A)</span>
           </h3>
-          {network === 'devnet' ? (
-            <div className="flex items-center justify-center h-[100px] text-white/30 text-xs">
-              Ping data not available for Devnet
-            </div>
-          ) : loadingPing ? (
-            <div className="flex items-center justify-center h-[100px] text-white/30 text-xs">Loading...</div>
-          ) : pingHistory.length === 0 ? (
-            <div className="flex items-center justify-center h-[100px] text-white/30 text-xs">
-              No ping history available
-            </div>
-          ) : (
-            <PingChart data={pingHistory} height={100} showStats={true} />
-          )}
+          <div className="flex items-center justify-center h-[100px] text-white/30 text-xs">
+            Ping data not available
+          </div>
         </div>
         
         {/* Uptime */}

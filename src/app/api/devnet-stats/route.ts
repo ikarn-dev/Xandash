@@ -15,8 +15,6 @@ export async function GET() {
     if (!DEVNET_API_URL) {
       return NextResponse.json({ error: 'Devnet API URL not configured' }, { status: 500 });
     }
-
-    console.log('[Devnet Stats] Fetching from:', DEVNET_API_URL);
     
     const response = await fetch(DEVNET_API_URL, {
       method: 'GET',
@@ -45,8 +43,6 @@ export async function GET() {
       pods = data.data.pods;
     }
 
-    console.log(`[Devnet Stats] API returned ${pods.length} pods`);
-
     // Calculate totals from all pods
     let storageCommitted = 0;
     let storageUsed = 0;
@@ -58,8 +54,6 @@ export async function GET() {
 
     const totalPods = pods.length;
     const avgStoragePerPod = totalPods > 0 ? storageCommitted / totalPods : 0;
-
-    console.log(`[Devnet Stats] Total pods: ${totalPods}, Storage committed: ${storageCommitted}, Storage used: ${storageUsed}`);
 
     const result = {
       storage_committed: storageCommitted,
@@ -75,8 +69,7 @@ export async function GET() {
     const res = NextResponse.json(result);
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return res;
-  } catch (error) {
-    console.error('[Devnet Stats] Error:', error);
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch devnet stats' }, { status: 500 });
   }
 }

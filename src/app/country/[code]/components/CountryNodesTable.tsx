@@ -6,6 +6,8 @@ import { CopyBtn as CopyButton } from '@/components/ui/CopyBtn';
 import { extractIPFromAddress } from '@/libs/services/geolocation';
 import { getNodeStatus } from '@/libs/utils/node-status';
 import { getNodeName, hasNodeName } from '@/libs/utils/node-names';
+import { useMainnetPing } from '@/libs/hooks/useMainnetPing';
+import { PingValue } from '@/components/ui/PingLoadingIcon';
 import { NodesIcon, SearchIcon } from './CountryIcons';
 import { formatBytes, formatUptime, formatCredits } from './utils';
 
@@ -17,7 +19,7 @@ interface NodeData {
   is_public: boolean;
   last_seen_timestamp: number;
   credits?: number;
-  ping?: number | null;
+  rpc_port?: number;
 }
 
 interface LocationData {
@@ -34,45 +36,27 @@ interface CountryNodesTableProps {
 export const CountryNodesTable = ({ nodes, locations, countryName, network = 'devnet' }: CountryNodesTableProps) => {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [pingData, setPingData] = useState<Record<string, { ping: number | null; status: string }>>({});
-  const [loadingPings, setLoadingPings] = useState(false);
   const isMainnet = network === 'mainnet';
+  
+  // Mainnet ping data - client-side worker-based ping
+  const { pings: mainnetPings, isLoading: isPingLoading, pingNodes } = useMainnetPing({ 
+    enabled: isMainnet,
+    refreshInterval: 60000,
+  });
 
-  // Fetch pings - only for mainnet, devnet ping disabled
+  // Trigger ping when nodes are loaded
   useEffect(() => {
-    if (nodes.length === 0 || !isMainnet) return;
-    
-    const fetchPings = async () => {
-      setLoadingPings(true);
-      try {
-        const ips = nodes.map(n => extractIPFromAddress(n.address || '')).filter(Boolean);
-        const uniqueIps = [...new Set(ips)].slice(0, 50);
-        
-        if (uniqueIps.length === 0) return;
-        
-        const res = await fetch('/api/ping', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            items: uniqueIps.map(ip => ({ ip })),
-            save: true,
-            network
-          }),
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          setPingData(data.results || {});
-        }
-      } catch (e) {
-        console.error('Failed to fetch pings:', e);
-      } finally {
-        setLoadingPings(false);
+    if (isMainnet && nodes.length > 0) {
+      const nodesToPing = nodes.map(node => ({
+        ip: extractIPFromAddress(node.address || ''),
+        rpc_port: node.rpc_port || 8899,
+      })).filter(n => n.ip);
+      
+      if (nodesToPing.length > 0) {
+        pingNodes(nodesToPing);
       }
-    };
-    
-    fetchPings();
-  }, [nodes, isMainnet, network]);
+    }
+  }, [isMainnet, nodes.length]); // Don't include pingNodes
 
   const filteredNodes = useMemo(() => {
     if (!searchQuery) return nodes;
@@ -94,13 +78,6 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
     if (ip) {
       router.push(`/profile/${encodeURIComponent(ip)}`);
     }
-  };
-
-  const formatPing = (ping: number | null | undefined) => {
-    if (ping === null || ping === undefined) return '—';
-    if (ping < 100) return <span className="text-emerald-400">{ping}ms</span>;
-    if (ping < 300) return <span className="text-amber-400">{ping}ms</span>;
-    return <span className="text-red-400">{ping}ms</span>;
   };
 
   return (
@@ -134,7 +111,9 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Name</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">IP Address</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Status</th>
-              <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Ping</th>
+              {isMainnet && (
+                <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Ping</th>
+              )}
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">City</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Uptime</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Storage</th>
@@ -145,7 +124,7 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
           <tbody>
             {filteredNodes.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-3 sm:px-4 py-6 sm:py-8 text-center text-white/40 text-xs sm:text-sm">
+                <td colSpan={isMainnet ? 9 : 8} className="px-3 sm:px-4 py-6 sm:py-8 text-center text-white/40 text-xs sm:text-sm">
                   {searchQuery ? 'No nodes match your search' : 'No nodes found in this country'}
                 </td>
               </tr>
@@ -157,7 +136,6 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
                 const status = getNodeStatus(node.last_seen_timestamp || 0, now);
                 const nodeName = getNodeName(node.pubkey);
                 const hasName = hasNodeName(node.pubkey);
-                const nodePing = pingData[ip] || { ping: node.ping, status: 'unknown' };
 
                 return (
                   <tr 
@@ -189,13 +167,14 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
                         {status === 'online' ? 'ACTIVE' : status === 'syncing' ? 'SYNCING' : 'OFFLINE'}
                       </span>
                     </td>
-                    <td className="px-3 sm:px-4 py-2 sm:py-3 font-mono text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
-                      {loadingPings ? (
-                        <span className="text-white/30">...</span>
-                      ) : (
-                        formatPing(nodePing.ping)
-                      )}
-                    </td>
+                    {isMainnet && (
+                      <td className="px-3 sm:px-4 py-2 sm:py-3 font-mono text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
+                        <PingValue 
+                          ping={mainnetPings[ip]} 
+                          isLoading={isPingLoading} 
+                        />
+                      </td>
+                    )}
                     <td className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
                       {loc?.city && loc.city !== 'Unknown' ? loc.city : '—'}
                     </td>

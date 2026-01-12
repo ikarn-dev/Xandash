@@ -442,3 +442,17 @@
   animation: blur-reveal-subtle 0.4s ease-out forwards;
   opacity: 0;
 }
+
+/* New Node Notification Animation */
+@keyframes shrink-width {
+  0% {
+    width: 100%;
+  }
+  100% {
+    width: 0%;
+  }
+}
+
+.animate-shrink-width {
+  animation: shrink-width linear forwards;
+}

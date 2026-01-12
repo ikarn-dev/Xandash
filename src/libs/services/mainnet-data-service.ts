@@ -7,6 +7,7 @@
  * - Methods: get-pods-with-stats, get-stats, get-version
  * - Geo data fetched separately for enrichment
  * - Credits fetched from dedicated credits API
+ * - MERGE strategy: Never reduce node count, only update existing + add new
  * 
  * All URLs from environment variables - no hardcoding
  */
@@ -20,7 +21,6 @@ const MAINNET_RPC_KEY = process.env.MAINNET_RPC_API_KEY || '';
 // Cache keys
 const CACHE_KEY_NODES = 'mainnet:nodes';
 const CACHE_KEY_GEO = 'mainnet:geo';
-const CACHE_KEY_PING = 'mainnet:ping';
 const CACHE_KEY_MERGED = 'mainnet:merged';
 const CACHE_KEY_LAST_FETCH = 'mainnet:lastFetch';
 
@@ -34,7 +34,6 @@ export interface MainnetGeoData {
   ip: string;
   name: string;
   nfts: string[];
-  ping: number | null;
   provider: string;
   stake: number;
 }
@@ -50,7 +49,6 @@ export interface MainnetNodeData {
   storage_used: number;
   uptime: number;
   version: string;
-  ping?: number | null;
   credits?: number | null;
   country?: string;
   country_code?: string;
@@ -104,12 +102,10 @@ export async function getCachedExternalData(): Promise<MainnetExternalData | nul
  */
 async function makeRpcCall<T>(method: string): Promise<T | null> {
   if (!MAINNET_RPC_URL || !MAINNET_RPC_KEY) {
-    console.warn('[Mainnet] RPC API not configured');
     return null;
   }
 
   try {
-    console.log(`[Mainnet] Calling RPC method: ${method}`);
     const response = await fetch(MAINNET_RPC_URL, {
       method: 'POST',
       headers: {
@@ -128,8 +124,7 @@ async function makeRpcCall<T>(method: string): Promise<T | null> {
 
     const data = await response.json();
     return data;
-  } catch (error) {
-    console.error(`[Mainnet] RPC call failed (${method}):`, error);
+  } catch (err) {
     return null;
   }
 }
@@ -160,11 +155,9 @@ async function fetchPodsWithStats(): Promise<MainnetNodeData[] | null> {
   }
   
   if (pods.length === 0) {
-    console.warn('[Mainnet] get-pods-with-stats returned empty or unrecognized format:', Object.keys(data));
     return null;
   }
 
-  console.log(`[Mainnet] Fetched ${pods.length} pods`);
   return pods;
 }
 
@@ -176,13 +169,11 @@ async function fetchGeoData(items: Array<{ ip: string; pubkey: string }>): Promi
     return {};
   }
 
-  // Use public IP geolocation API as fallback
   const geoData: Record<string, MainnetGeoData> = {};
   
   try {
-    // Batch fetch geo data using ip-api.com (free tier)
     const ips = items.map(item => item.ip).filter(ip => ip);
-    const uniqueIps = [...new Set(ips)].slice(0, 100); // Limit to 100 IPs
+    const uniqueIps = [...new Set(ips)].slice(0, 100);
     
     if (uniqueIps.length === 0) return {};
     
@@ -196,7 +187,6 @@ async function fetchGeoData(items: Array<{ ip: string; pubkey: string }>): Promi
     });
 
     if (!response.ok) {
-      console.warn('[Mainnet] Geo batch fetch failed:', response.status);
       return {};
     }
 
@@ -212,56 +202,37 @@ async function fetchGeoData(items: Array<{ ip: string; pubkey: string }>): Promi
           ip: result.query,
           name: '',
           nfts: [],
-          ping: null,
           provider: result.isp || result.org || '',
           stake: 0,
         };
       }
     }
     
-    console.log(`[Mainnet] Fetched geo data for ${Object.keys(geoData).length} IPs`);
-  } catch (error) {
-    console.error('[Mainnet] Geo fetch failed:', error);
+  } catch (err) {
   }
   
   return geoData;
 }
 
 /**
- * Get cached ping data
+ * Enrich nodes with geo data
  */
-async function getCachedPingData(): Promise<Record<string, number | null>> {
-  const cached = await cache.get(CACHE_KEY_PING);
-  return (cached as Record<string, number | null>) || {};
-}
-
-/**
- * Enrich nodes with geo data and cached ping
- */
-async function enrichNodesWithGeoAndPing(
+function enrichNodesWithGeo(
   nodes: MainnetNodeData[],
   geoData: Record<string, MainnetGeoData>
-): Promise<MainnetNodeData[]> {
-  const cachedPing = await getCachedPingData();
-  
+): MainnetNodeData[] {
   return nodes.map(node => {
     const ip = node.address?.split(':')[0] || '';
     const geo = geoData[ip];
-    const ping = cachedPing[ip];
     
     if (geo) {
       return {
         ...node,
-        ping: node.ping ?? ping ?? geo.ping,
         credits: node.credits ?? geo.credits,
         country: node.country || geo.country,
         country_code: node.country_code || geo.country_code,
         provider: node.provider || geo.provider,
       };
-    }
-    
-    if (ping !== undefined) {
-      return { ...node, ping: node.ping ?? ping };
     }
     
     return node;
@@ -282,46 +253,40 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
 
   // Fetch fresh data if allowed or forced
   if (canFetch || forceRefresh || !currentNodes) {
-    console.log('[Mainnet] Fetching fresh data from Gossip RPC...');
-    
     const freshNodes = await fetchPodsWithStats();
     
     if (freshNodes && freshNodes.length > 0) {
+      // Use fresh data directly - always reflect current API state
       currentNodes = freshNodes;
-      await cache.set(CACHE_KEY_NODES, freshNodes, CACHE_TTL_MS * 2);
+      
+      await cache.set(CACHE_KEY_NODES, currentNodes, CACHE_TTL_MS * 10);
       await cache.set(CACHE_KEY_LAST_FETCH, Date.now(), CACHE_TTL_MS * 2);
       freshFetch = true;
       
-      // Fetch geo data for enrichment
-      const items = freshNodes.map(pod => ({
+      // Fetch geo data for new IPs only (geo data can be cached longer)
+      const items = currentNodes.map(pod => ({
         ip: pod.address?.split(':')[0] || '',
         pubkey: pod.pubkey || '',
       })).filter(item => item.ip && item.pubkey);
       
-      const geoData = await fetchGeoData(items);
-      if (Object.keys(geoData).length > 0) {
-        cachedGeo = geoData;
-        await cache.set(CACHE_KEY_GEO, geoData, CACHE_TTL_MS * 2);
+      // Only fetch geo for IPs we don't have
+      const newItems = cachedGeo 
+        ? items.filter(item => !(cachedGeo as Record<string, MainnetGeoData>)[item.ip])
+        : items;
+      
+      if (newItems.length > 0) {
+        const newGeoData = await fetchGeoData(newItems);
+        cachedGeo = { ...(cachedGeo || {}), ...newGeoData };
+        await cache.set(CACHE_KEY_GEO, cachedGeo, CACHE_TTL_MS * 10);
       }
+    } else {
     }
   }
 
   // Enrich nodes with geo data
   let enrichedNodes = currentNodes || [];
   if (cachedGeo && Object.keys(cachedGeo).length > 0) {
-    enrichedNodes = await enrichNodesWithGeoAndPing(enrichedNodes, cachedGeo);
-  } else {
-    const cachedPing = await getCachedPingData();
-    if (Object.keys(cachedPing).length > 0) {
-      enrichedNodes = enrichedNodes.map(node => {
-        const ip = node.address?.split(':')[0] || '';
-        const ping = cachedPing[ip];
-        if (ping !== undefined) {
-          return { ...node, ping: node.ping ?? ping };
-        }
-        return node;
-      });
-    }
+    enrichedNodes = enrichNodesWithGeo(enrichedNodes, cachedGeo);
   }
   
   // Update merged cache if fresh data
@@ -343,7 +308,7 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
   if (cachedMerged && cachedMerged.nodes.length > 0) {
     let nodes = cachedMerged.nodes;
     if (cachedGeo && Object.keys(cachedGeo).length > 0) {
-      nodes = await enrichNodesWithGeoAndPing(nodes, cachedGeo);
+      nodes = enrichNodesWithGeo(nodes, cachedGeo);
     }
     return {
       ...cachedMerged,
@@ -365,7 +330,6 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
     };
   }
 
-  console.warn('[Mainnet] No data available');
   return {
     nodes: [],
     geo: {},
@@ -416,26 +380,6 @@ export async function getMainnetCreditsMap(): Promise<Map<string, number>> {
   }
   
   return creditsMap;
-}
-
-/**
- * Get ping for a specific IP
- */
-export async function getMainnetPingForIp(ip: string): Promise<number | null> {
-  const data = await getMainnetData();
-  
-  const geo = data.geo[ip];
-  if (geo?.ping !== null && geo?.ping !== undefined) {
-    return geo.ping;
-  }
-  
-  const node = data.nodes.find(n => n.address?.split(':')[0] === ip);
-  if (node?.ping !== null && node?.ping !== undefined) {
-    return node.ping;
-  }
-  
-  const cachedPing = await getCachedPingData();
-  return cachedPing[ip] ?? null;
 }
 
 /**

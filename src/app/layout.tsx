@@ -7,6 +7,7 @@ import { Toaster } from "sonner";
 import { AIAssistant } from "@/components/ui/AIAssistant";
 import { AppCaptchaGate } from "@/components/ui/AppCaptchaGate";
 import { NetworkProvider } from "@/libs/context/network-context";
+import { NodesDataProvider } from "@/libs/context/nodes-data-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,6 +23,15 @@ export const metadata: Metadata = {
   title: "XanDash - Xandeum Network Dashboard",
   description: "Real-time monitoring dashboard for Xandeum network validators and nodes with offline support",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icon.png", sizes: "any" },
+      { url: "/favicon.ico", sizes: "any" }
+    ],
+    apple: [
+      { url: "/icon.png", sizes: "180x180", type: "image/png" }
+    ]
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -61,7 +71,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="XanDash" />
-        <link rel="apple-touch-icon" href="/icon.png" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <style dangerouslySetInnerHTML={{ __html: `html,body{background:#000!important}` }} />
       </head>
@@ -71,10 +80,12 @@ export default function RootLayout({
         <QueryProvider>
           <RPCProvider>
             <NetworkProvider>
-              <AppCaptchaGate>
-                {children}
-                <AIAssistant />
-              </AppCaptchaGate>
+              <NodesDataProvider>
+                <AppCaptchaGate>
+                  {children}
+                  <AIAssistant />
+                </AppCaptchaGate>
+              </NodesDataProvider>
             </NetworkProvider>
           </RPCProvider>
         </QueryProvider>

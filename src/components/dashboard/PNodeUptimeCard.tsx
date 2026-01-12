@@ -1,137 +1,56 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
-import { AlertCircle } from 'lucide-react';
-import { useNetwork } from '@/libs/context/network-context';
+import React, { useMemo } from 'react';
+import { useNodesData } from '@/libs/context/nodes-data-context';
 import { AnimatedValue } from '@/components/ui/SlotNumber';
-
-interface UptimeStats {
-  averageUptime: number;
-  uniqueVersions: number;
-  maxUptime: number;
-  totalNodes: number;
-  onlineNodes: number;
-  uptimePercentage: number;
-  uptimeBars: number[]; // Array of percentages for each bar
-}
 
 interface PNodeUptimeCardProps {
   className?: string;
 }
 
 export const PNodeUptimeCard: React.FC<PNodeUptimeCardProps> = ({ className = "" }) => {
-  const { network } = useNetwork();
-  const [stats, setStats] = useState<UptimeStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
-  
-  // Use ref to track if data has been loaded
-  const hasLoadedRef = useRef(false);
-  const prevNetworkRef = useRef(network);
+  // Use shared nodes data context - single source of truth
+  const { nodes, stats, isLoading } = useNodesData();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Check if network changed - if so, show loading skeleton
-        const networkChanged = prevNetworkRef.current !== network;
-        if (networkChanged) {
-          prevNetworkRef.current = network;
-          hasLoadedRef.current = false;
-        }
-        
-        // Show loading spinner only on initial load or network change
-        if (!hasLoadedRef.current) {
-          setLoading(true);
-        } else {
-          // For auto-refresh, just show subtle updating state
-          setIsUpdating(true);
-        }
-        
-        const response = await fetch(`/api/nodes?includeAll=true&network=${network}`);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch nodes: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data.error) {
-          throw new Error(data.error);
-        }
-        
-        const nodes = data.nodes || [];
-        const now = Math.floor(Date.now() / 1000);
-        
-        const uptimes = nodes.map((node: any) => node.uptime || 0);
-        const totalUptime = uptimes.reduce((sum: number, uptime: number) => sum + uptime, 0);
-        const averageUptime = nodes.length > 0 ? totalUptime / nodes.length : 0;
-        
-        const uniqueVersions = new Set(
-          nodes.map((node: any) => node.version).filter(Boolean)
-        ).size;
-        
-        const maxUptime = Math.max(...uptimes, 0);
-        
-        // Calculate online nodes
-        const onlineNodes = nodes.filter((node: any) => {
-          const timeDiff = now - (node.last_seen_timestamp || now);
-          // Simplified status logic - only last seen matters
-          return timeDiff < 1800; // Less than 30 minutes = online
-        }).length;
-        
-        const uptimePercentage = nodes.length > 0 ? (onlineNodes / nodes.length) * 100 : 0;
-        
-        // Generate uptime bars (simulating historical data based on current uptime distribution)
-        // Group nodes by uptime ranges and create visual representation
-        const barCount = 30;
-        const uptimeBars: number[] = [];
-        
-        // Sort nodes by uptime and create bars showing uptime health
-        const sortedUptimes = [...uptimes].sort((a, b) => a - b);
-        const chunkSize = Math.ceil(sortedUptimes.length / barCount);
-        
-        for (let i = 0; i < barCount; i++) {
-          const startIdx = i * chunkSize;
-          const endIdx = Math.min(startIdx + chunkSize, sortedUptimes.length);
-          const chunk = sortedUptimes.slice(startIdx, endIdx);
-          
-          if (chunk.length > 0) {
-            // Calculate average uptime for this chunk as percentage of max
-            const chunkAvg = chunk.reduce((a, b) => a + b, 0) / chunk.length;
-            const barHeight = maxUptime > 0 ? (chunkAvg / maxUptime) * 100 : 0;
-            // Ensure minimum visibility and cap at 100
-            uptimeBars.push(Math.min(100, Math.max(20, barHeight)));
-          } else {
-            uptimeBars.push(20);
-          }
-        }
-        
-        setStats({
-          averageUptime,
-          uniqueVersions,
-          maxUptime,
-          totalNodes: nodes.length,
-          onlineNodes,
-          uptimePercentage,
-          uptimeBars
-        });
-        
-      } catch (err) {
-        console.error('Failed to fetch uptime stats:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load data');
-      } finally {
-        setLoading(false);
-        hasLoadedRef.current = true;
-        // Delay removing updating state for smooth animation
-        setTimeout(() => setIsUpdating(false), 300);
+  // Calculate uptime stats from shared nodes data
+  const uptimeStats = useMemo(() => {
+    if (nodes.length === 0) {
+      return {
+        averageUptime: 0,
+        maxUptime: 0,
+        uptimePercentage: 0,
+        uptimeBars: Array(30).fill(20),
+      };
+    }
+
+    const uptimes = nodes.map(node => node.uptime || 0);
+    const totalUptime = uptimes.reduce((sum, uptime) => sum + uptime, 0);
+    const averageUptime = totalUptime / nodes.length;
+    const maxUptime = Math.max(...uptimes, 0);
+    const uptimePercentage = stats.onlinePercentage;
+
+    // Generate uptime bars based on uptime distribution
+    const barCount = 30;
+    const uptimeBars: number[] = [];
+    const sortedUptimes = [...uptimes].sort((a, b) => a - b);
+    const chunkSize = Math.ceil(sortedUptimes.length / barCount);
+
+    for (let i = 0; i < barCount; i++) {
+      const startIdx = i * chunkSize;
+      const endIdx = Math.min(startIdx + chunkSize, sortedUptimes.length);
+      const chunk = sortedUptimes.slice(startIdx, endIdx);
+
+      if (chunk.length > 0) {
+        const chunkAvg = chunk.reduce((a, b) => a + b, 0) / chunk.length;
+        const barHeight = maxUptime > 0 ? (chunkAvg / maxUptime) * 100 : 0;
+        uptimeBars.push(Math.min(100, Math.max(20, barHeight)));
+      } else {
+        uptimeBars.push(20);
       }
-    };
+    }
 
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, [network]);
+    return { averageUptime, maxUptime, uptimePercentage, uptimeBars };
+  }, [nodes, stats.onlinePercentage]);
 
   const formatUptime = (seconds: number) => {
     const days = Math.floor(seconds / 86400);
@@ -161,7 +80,7 @@ export const PNodeUptimeCard: React.FC<PNodeUptimeCardProps> = ({ className = ""
     </>
   );
 
-  if (loading) {
+  if (isLoading && nodes.length === 0) {
     return (
       <div className={`relative bg-black border border-white/10 p-6 h-full group hover:border-white/20 transition-all duration-300 overflow-hidden ${className}`}>
         <CornerAccents />
@@ -173,45 +92,32 @@ export const PNodeUptimeCard: React.FC<PNodeUptimeCardProps> = ({ className = ""
     );
   }
 
-  if (error) {
-    return (
-      <div className={`relative bg-black border border-white/10 p-6 h-full group hover:border-white/20 transition-all duration-300 overflow-hidden ${className}`}>
-        <CornerAccents />
-        <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
-          <AlertCircle className="w-6 h-6 text-red-400 mb-2" />
-          <div className="text-red-400 text-xs">Error</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={`relative bg-black border border-white/10 p-6 h-full group hover:border-white/20 transition-all duration-300 overflow-hidden ${className}`}>
       <CornerAccents />
-      
+
       {/* Content */}
       <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
         <div className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider mb-2 sm:mb-3">// AVG UPTIME</div>
         <div className="text-blue-400 text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1">
-          <AnimatedValue value={stats ? formatUptime(stats.averageUptime) : '0h'} />
+          <AnimatedValue value={formatUptime(uptimeStats.averageUptime)} />
         </div>
         <div className="text-white/40 text-[9px] sm:text-[10px] mb-2 sm:mb-3">
-          <AnimatedValue value={`${stats?.uptimePercentage.toFixed(1) || '0.0'}%`} /> online
+          <AnimatedValue value={`${uptimeStats.uptimePercentage.toFixed(1)}%`} /> online
         </div>
-        
-        {/* Uptime Bar Graph - SVG based like statuspage */}
+
+        {/* Uptime Bar Graph */}
         <div className="w-full px-1 sm:px-2 mt-1 sm:mt-2">
-          <svg 
-            className="w-full" 
-            height="20" 
-            viewBox="0 0 200 24" 
+          <svg
+            className="w-full"
+            height="20"
+            viewBox="0 0 200 24"
             preserveAspectRatio="none"
           >
             {Array.from({ length: 45 }).map((_, index) => {
-              // Calculate color based on uptime data
-              const uptimeValue = stats?.uptimeBars?.[index % (stats?.uptimeBars?.length || 1)] || 80;
+              const uptimeValue = uptimeStats.uptimeBars[index % uptimeStats.uptimeBars.length] || 80;
               const isGood = uptimeValue > 50;
-              
+
               return (
                 <rect
                   key={index}
@@ -226,7 +132,9 @@ export const PNodeUptimeCard: React.FC<PNodeUptimeCardProps> = ({ className = ""
             })}
           </svg>
           <div className="flex justify-center items-center mt-1 sm:mt-1.5">
-            <span className="text-green-400 text-[8px] sm:text-[9px] font-medium">{stats?.uptimePercentage.toFixed(1)}% uptime</span>
+            <span className="text-green-400 text-[8px] sm:text-[9px] font-medium">
+              {uptimeStats.uptimePercentage.toFixed(1)}% uptime
+            </span>
           </div>
         </div>
       </div>
