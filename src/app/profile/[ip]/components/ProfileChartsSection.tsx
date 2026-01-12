@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { ChartIcon } from './ProfileIcons';
 import { LineChart, StatusChart } from './ProfileCharts';
 import { formatCredits } from './utils';
-import { TimeRange, timeRangeOptions, DbNodeSnapshot, CurrentNodeData } from './types';
+import { TimeRange, timeRangeOptions, DbNodeSnapshot, CurrentNodeData, PingRecord } from './types';
 import { CornerAccents } from '@/components/ui/CornerAccents';
 import { useNetwork } from '@/libs/context/network-context';
 
@@ -16,6 +16,7 @@ interface ProfileChartsSectionProps {
   filteredDbHistoryLength: number;
   isShowingFallbackData: boolean;
   ip?: string;
+  pingHistory?: PingRecord[];
 }
 
 export const ProfileChartsSection = ({
@@ -25,7 +26,8 @@ export const ProfileChartsSection = ({
   setTimeRange,
   filteredDbHistoryLength,
   isShowingFallbackData,
-  ip
+  ip,
+  pingHistory
 }: ProfileChartsSectionProps) => {
   const { network, isMainnet } = useNetwork();
 
@@ -34,6 +36,23 @@ export const ProfileChartsSection = ({
   const uptimeData = displayHistory.map(h => ({ time: h.timestamp, value: h.uptime / 3600 }));
   const creditsData = displayHistory.map(h => ({ time: h.timestamp, value: h.credits || 0 }));
   const storageData = displayHistory.map(h => ({ time: h.timestamp, value: h.storage_committed / (1024**3) }));
+
+  // Generate ping data from ping history
+  const pingData = useMemo(() => {
+    if (!pingHistory || pingHistory.length === 0) return [];
+    
+    // Filter ping history based on time range
+    const now = Date.now() / 1000;
+    const rangeHours = timeRangeOptions.find(r => r.value === timeRange)?.hours || 168;
+    const cutoffTime = timeRange === 'all' ? 0 : now - (rangeHours * 3600);
+    
+    return pingHistory
+      .filter(p => p.timestamp >= cutoffTime && p.ping !== null)
+      .map(p => ({ time: p.timestamp, value: p.ping as number }))
+      .sort((a, b) => a.time - b.time);
+  }, [pingHistory, timeRange]);
+
+  const hasPingData = pingData.length > 0;
 
   // Add current live data point
   const currentCredits = node?.credits || 0;
@@ -111,16 +130,27 @@ export const ProfileChartsSection = ({
           <StatusChart data={statusData} height={60} />
         </div>
         
-        {/* Ping Latency - Disabled, always shows N/A */}
+        {/* Ping Latency */}
         <div className="bg-black p-3 sm:p-4 overflow-visible">
           <h3 className="text-xs font-medium text-white/60 mb-3 flex items-center gap-2">
             <span className="w-1.5 h-1.5 bg-cyan-500"></span>
             Ping Latency
-            <span className="text-white/30 text-[10px]">(N/A)</span>
+            {!hasPingData && <span className="text-white/30 text-[10px]">(N/A)</span>}
           </h3>
-          <div className="flex items-center justify-center h-[100px] text-white/30 text-xs">
-            Ping data not available
-          </div>
+          {hasPingData ? (
+            <LineChart 
+              data={pingData} 
+              color="#06b6d4" 
+              height={100} 
+              label="ms" 
+              valueFormatter={v => `${Math.round(v)}ms`} 
+              highlightCurrent={false}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-[100px] text-white/30 text-xs">
+              Ping data not available
+            </div>
+          )}
         </div>
         
         {/* Uptime */}

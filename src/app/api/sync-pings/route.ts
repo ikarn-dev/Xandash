@@ -1,181 +1,196 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { savePingRecordsBatch } from '@/libs/db/node-service';
 import { getMainnetData } from '@/libs/services/mainnet-data-service';
+import { getDevnetData } from '@/libs/services/devnet-data-service';
 
 /**
- * SYNC PINGS API
- * 
- * Collects ping data for MAINNET nodes from geo data and saves to MongoDB.
- * Devnet ping is disabled - not needed.
- * Should be called by cron job every 5-10 minutes.
+ * Sync Pings API - Automatically ping all nodes and save results
+ * This endpoint is designed to be called by a cron job or scheduled task
  */
-
-type NetworkType = 'devnet' | 'mainnet';
-
-/**
- * Sync pings for mainnet using geo data from Source B
- */
-async function syncMainnetPings(): Promise<{
-  total: number;
-  online: number;
-  offline: number;
-  avgPing: number | null;
-}> {
-  console.log(`[SYNC-PINGS] Syncing pings for mainnet from geo data...`);
-  
-  try {
-    // Get mainnet data which includes geo data with ping
-    const data = await getMainnetData(true);
-    
-    if (data.nodes.length === 0) {
-      console.warn(`[SYNC-PINGS] No mainnet nodes found`);
-      return { total: 0, online: 0, offline: 0, avgPing: null };
-    }
-    
-    // Extract ping data from geo data
-    const pingRecords: Array<{ ip: string; ping: number | null; status: 'online' | 'timeout' | 'offline'; port: number; pubkey?: string }> = [];
-    
-    for (const node of data.nodes) {
-      const ip = node.address?.split(':')[0];
-      if (!ip) continue;
-      
-      // Get ping from node data (enriched from geo) or directly from geo
-      const geo = data.geo[ip];
-      const ping = node.ping ?? geo?.ping ?? null;
-      
-      // Consider online if ping is a valid number (including 0 which means very fast)
-      // Only mark offline if ping is null/undefined
-      const status: 'online' | 'timeout' | 'offline' = 
-        ping !== null && ping !== undefined ? 'online' : 'offline';
-      
-      pingRecords.push({
-        ip,
-        ping,
-        status,
-        port: 6000,
-        pubkey: node.pubkey,
-      });
-    }
-    
-    console.log(`[SYNC-PINGS] Found ${pingRecords.length} mainnet nodes with ping data`);
-    
-    // Save to MongoDB
-    const savedCount = await savePingRecordsBatch(pingRecords, 'mainnet');
-    
-    // Calculate stats
-    const onlineCount = pingRecords.filter(r => r.status === 'online').length;
-    const offlineCount = pingRecords.filter(r => r.status !== 'online').length;
-    const onlinePings = pingRecords.filter(r => r.ping !== null).map(r => r.ping as number);
-    const avgPing = onlinePings.length > 0 
-      ? Math.round(onlinePings.reduce((a, b) => a + b, 0) / onlinePings.length)
-      : null;
-    
-    console.log(`[SYNC-PINGS] Saved ${savedCount} ping records for mainnet (${onlineCount} online, ${offlineCount} offline, avg: ${avgPing}ms)`);
-    
-    return {
-      total: pingRecords.length,
-      online: onlineCount,
-      offline: offlineCount,
-      avgPing,
-    };
-  } catch (error) {
-    console.error(`[SYNC-PINGS] Error syncing mainnet pings:`, error);
-    throw error;
-  }
-}
-
-function verifyAuth(request: NextRequest): boolean {
-  const upstashSignature = request.headers.get('upstash-signature');
-  if (upstashSignature) return true;
-  
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return true;
-  
-  const auth = request.headers.get('authorization');
-  const queryAuth = request.nextUrl.searchParams.get('auth');
-  
-  return auth === `Bearer ${secret}` || auth === secret || queryAuth === secret;
-}
-
 export async function POST(request: NextRequest) {
-  const startTime = Date.now();
-  
-  if (!verifyAuth(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { searchParams } = new URL(request.url);
-  const network = (searchParams.get('network') as NetworkType) || 'mainnet';
-  
-  // Only mainnet ping sync is supported
-  if (network === 'devnet') {
-    return NextResponse.json({ 
-      success: true,
-      message: 'Devnet ping sync is disabled - not needed',
-      network: 'devnet',
-      total: 0,
-      online: 0,
-      offline: 0,
-      avgPing: null,
-    });
-  }
-
   try {
-    const result = await syncMainnetPings();
-    const duration = Date.now() - startTime;
+    const body = await request.json();
+    const { network = 'devnet', timeout = 3000, batchSize = 50 } = body;
 
-    return NextResponse.json({
-      success: true,
-      network: 'mainnet',
-      ...result,
-      duration: `${duration}ms`,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error: any) {
-    console.error(`[SYNC-PINGS] Error:`, error);
-    return NextResponse.json({ error: error.message || 'Sync failed', network: 'mainnet' }, { status: 500 });
-  }
-}
+    if (network !== 'devnet' && network !== 'mainnet') {
+      return NextResponse.json({ error: 'Invalid network' }, { status: 400 });
+    }
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const action = searchParams.get('action');
-  const network = (searchParams.get('network') as NetworkType) || 'mainnet';
+    let nodes: any[] = [];
 
-  try {
-    if (action === 'sync') {
-      // Only mainnet ping sync is supported
-      if (network === 'devnet') {
-        return NextResponse.json({ 
-          success: true,
-          message: 'Devnet ping sync is disabled - not needed',
-          network: 'devnet',
-        });
-      }
-      
-      const startTime = Date.now();
-      const result = await syncMainnetPings();
-      return NextResponse.json({
-        success: true,
-        network: 'mainnet',
-        ...result,
-        duration: `${Date.now() - startTime}ms`,
-        timestamp: new Date().toISOString(),
+    // Get nodes based on network
+    if (network === 'mainnet') {
+      const mainnetData = await getMainnetData();
+      nodes = mainnetData.nodes || [];
+    } else {
+      // For devnet, use devnet data service
+      const devnetData = await getDevnetData();
+      nodes = devnetData.nodes || [];
+    }
+
+    if (nodes.length === 0) {
+      return NextResponse.json({ 
+        message: 'No nodes found to ping',
+        network,
+        pinged: 0,
+        saved: 0
       });
     }
 
+    // Extract IPs from nodes
+    const nodeIps = nodes
+      .map(node => {
+        const ip = node.address?.split(':')[0] || node.ip;
+        return ip && ip !== '127.0.0.1' ? { ip, pubkey: node.pubkey } : null;
+      })
+      .filter((node): node is NonNullable<typeof node> => node !== null);
+
+    if (nodeIps.length === 0) {
+      return NextResponse.json({ 
+        message: 'No valid IPs found to ping',
+        network,
+        pinged: 0,
+        saved: 0
+      });
+    }
+
+    const results: Array<{
+      ip: string;
+      pubkey?: string;
+      ping: number | null;
+      status: 'online' | 'offline' | 'timeout';
+      port: number;
+    }> = [];
+
+    // Ping nodes in batches to avoid overwhelming the system
+    for (let i = 0; i < nodeIps.length; i += batchSize) {
+      const batch = nodeIps.slice(i, i + batchSize);
+      
+      const batchResults = await Promise.all(
+        batch.map(async (node) => {
+          const result = await pingNode(node.ip, 6000, timeout);
+          
+          // If port 6000 fails, try port 9001
+          if (result.status !== 'online') {
+            const result9001 = await pingNode(node.ip, 9001, timeout);
+            if (result9001.status === 'online') {
+              return {
+                ip: node.ip,
+                pubkey: node.pubkey,
+                ping: result9001.ping,
+                status: result9001.status,
+                port: 9001
+              };
+            }
+          }
+          
+          return {
+            ip: node.ip,
+            pubkey: node.pubkey,
+            ping: result.ping,
+            status: result.status,
+            port: 6000
+          };
+        })
+      );
+      
+      results.push(...batchResults);
+      
+      // Small delay between batches to be nice to the network
+      if (i + batchSize < nodeIps.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    // Save all ping results to database
+    await savePingRecordsBatch(results, network);
+
+    const successCount = results.filter(r => r.status === 'online').length;
+    const timeoutCount = results.filter(r => r.status === 'timeout').length;
+    const offlineCount = results.filter(r => r.status === 'offline').length;
+
     return NextResponse.json({
-      message: 'XanDash Ping Sync API',
-      note: 'Only mainnet ping sync is supported. Devnet ping is disabled.',
-      endpoints: {
-        sync_mainnet: 'GET /api/sync-pings?action=sync&network=mainnet',
-        cron_mainnet: 'POST /api/sync-pings?network=mainnet',
-      },
-      collections: {
-        mainnet: 'mainnet_node_pings',
-      },
+      message: 'Ping sync completed',
+      network,
+      pinged: results.length,
+      saved: results.length,
+      stats: {
+        online: successCount,
+        timeout: timeoutCount,
+        offline: offlineCount,
+        successRate: ((successCount / results.length) * 100).toFixed(1) + '%'
+      }
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+
+  } catch (error) {
+    console.error('Sync pings API error:', error);
+    return NextResponse.json({ error: 'Failed to sync pings' }, { status: 500 });
   }
+}
+
+// GET - Get sync status or trigger manual sync
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const network = (searchParams.get('network') as 'devnet' | 'mainnet') || 'devnet';
+    const trigger = searchParams.get('trigger') === 'true';
+
+    if (trigger) {
+      // Trigger a manual sync by calling POST internally
+      const syncRequest = new NextRequest(request.url, {
+        method: 'POST',
+        body: JSON.stringify({ network }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      return await POST(syncRequest);
+    }
+
+    return NextResponse.json({
+      message: 'Ping sync endpoint ready',
+      network,
+      endpoints: {
+        sync: 'POST /api/sync-pings',
+        trigger: 'GET /api/sync-pings?trigger=true',
+        status: 'GET /api/sync-pings'
+      }
+    });
+
+  } catch (error) {
+    console.error('Sync pings GET API error:', error);
+    return NextResponse.json({ error: 'Failed to get sync status' }, { status: 500 });
+  }
+}
+
+// TCP ping implementation
+async function pingNode(ip: string, port: number, timeout: number): Promise<{
+  ping: number | null;
+  status: 'online' | 'offline' | 'timeout';
+}> {
+  const net = await import('net');
+  
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    const socket = new net.Socket();
+    
+    socket.setTimeout(timeout);
+    
+    socket.on('connect', () => {
+      const ping = Date.now() - startTime;
+      socket.destroy();
+      resolve({ ping, status: 'online' });
+    });
+    
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve({ ping: null, status: 'timeout' });
+    });
+    
+    socket.on('error', () => {
+      socket.destroy();
+      resolve({ ping: null, status: 'offline' });
+    });
+    
+    socket.connect(port, ip);
+  });
 }

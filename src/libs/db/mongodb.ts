@@ -105,14 +105,28 @@ export interface NodeEventLog {
   created_at: Date;
 }
 
+// Ping record - stores ping latency data
+export interface PingRecord {
+  _id?: string;
+  ip: string;
+  pubkey?: string;
+  ping: number | null;
+  status: 'online' | 'offline' | 'timeout';
+  port: number;
+  timestamp: number;
+  created_at: Date;
+}
+
 // Network-aware collection names
 export const getCollectionNames = (network: 'devnet' | 'mainnet' = 'devnet') => ({
   NODE_SNAPSHOTS: network === 'mainnet' ? 'mainnet_node_snapshots' : 'node_snapshots',
   NODE_EVENTS: network === 'mainnet' ? 'mainnet_node_events' : 'node_events',
+  PING_RECORDS: network === 'mainnet' ? 'mainnet_ping_records' : 'ping_records',
 });
 
 // Default collections (devnet) - for backward compatibility
 export const COLLECTIONS = {
   NODE_SNAPSHOTS: 'node_snapshots',
   NODE_EVENTS: 'node_events',
+  PING_RECORDS: 'ping_records',
 };

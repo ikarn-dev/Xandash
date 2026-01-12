@@ -1,6 +1,6 @@
 import { ClockIcon, ServerIcon, ActivityIcon, WifiIcon } from './ProfileIcons';
 import { formatBytes, formatUptime } from './utils';
-import { CurrentNodeData } from './types';
+import { CurrentNodeData, PingStats, PingResult } from './types';
 import { PingValue, PingLoadingIcon } from '@/components/ui/PingLoadingIcon';
 
 interface ProfileStatsCardsProps {
@@ -8,13 +8,19 @@ interface ProfileStatsCardsProps {
   ping?: number | null;
   isPingLoading?: boolean;
   network?: string;
+  pingStats?: PingStats;
+  dbPing?: PingResult;
 }
 
-export const ProfileStatsCards = ({ node, ping, isPingLoading = false, network }: ProfileStatsCardsProps) => {
+export const ProfileStatsCards = ({ node, ping, isPingLoading = false, network, pingStats, dbPing }: ProfileStatsCardsProps) => {
   const isMainnet = network === 'mainnet';
   
+  // Use live ping for mainnet, database ping for devnet, or fallback
+  const displayPing = isMainnet ? ping : (dbPing?.ping ?? ping);
+  const showPingStats = pingStats && pingStats.count > 0;
+  
   return (
-    <div className={`grid grid-cols-2 ${isMainnet ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-2 sm:gap-3`}>
+    <div className={`grid grid-cols-2 ${isMainnet || showPingStats ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-2 sm:gap-3`}>
       <div className="bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4 hover:border-blue-500/30 transition-colors">
         <div className="flex items-center gap-1.5 text-blue-400/70 text-[10px] sm:text-xs mb-1.5 sm:mb-2">
           <ClockIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -62,8 +68,8 @@ export const ProfileStatsCards = ({ node, ping, isPingLoading = false, network }
         )}
       </div>
       
-      {/* Ping card - Mainnet only */}
-      {isMainnet && (
+      {/* Ping card - Show for both networks when we have data or are loading */}
+      {(isMainnet || showPingStats || (network === 'devnet' && (dbPing?.ping !== null && dbPing?.ping !== undefined))) && (
         <div className="bg-black/40 border border-white/10 rounded-lg p-3 sm:p-4 hover:border-cyan-500/30 transition-colors">
           <div className="flex items-center gap-1.5 text-cyan-400/70 text-[10px] sm:text-xs mb-1.5 sm:mb-2">
             <WifiIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -76,11 +82,19 @@ export const ProfileStatsCards = ({ node, ping, isPingLoading = false, network }
             </div>
           ) : (
             <div className={`text-base sm:text-xl lg:text-2xl font-bold font-mono ${
-              ping !== null && ping !== undefined
-                ? ping < 100 ? 'text-green-400' : ping < 300 ? 'text-yellow-400' : 'text-orange-400'
+              displayPing !== null && displayPing !== undefined
+                ? displayPing < 100 ? 'text-green-400' : displayPing < 300 ? 'text-yellow-400' : 'text-orange-400'
                 : 'text-white/30'
             }`}>
-              {ping !== null && ping !== undefined ? `${ping}ms` : '—'}
+              {displayPing !== null && displayPing !== undefined ? `${displayPing}ms` : '—'}
+            </div>
+          )}
+          {/* Show ping statistics if available */}
+          {showPingStats && (
+            <div className="flex items-center gap-2 mt-1 text-[9px] sm:text-[10px] text-white/40">
+              <span>Avg: <span className="text-cyan-400/80">{pingStats.average ? `${Math.round(pingStats.average)}ms` : '—'}</span></span>
+              <span>•</span>
+              <span>Success: <span className="text-green-400/80">{Math.round(pingStats.successRate)}%</span></span>
             </div>
           )}
         </div>

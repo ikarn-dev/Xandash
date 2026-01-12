@@ -2,6 +2,7 @@ import {
   connectToDatabase, 
   NodeSnapshot, 
   NodeEventLog, 
+  PingRecord,
   getCollectionNames 
 } from './mongodb';
 
@@ -411,5 +412,142 @@ export async function createIndexes(network?: NetworkType): Promise<void> {
     await eventsCol.createIndex({ ip: 1, timestamp: -1 });
     await eventsCol.createIndex({ event_type: 1, timestamp: -1 });
     await eventsCol.createIndex({ timestamp: -1 });
+
+    const pingCol = db.collection(collections.PING_RECORDS);
+    await pingCol.createIndex({ ip: 1, timestamp: -1 });
+    await pingCol.createIndex({ timestamp: -1 });
   }
+}
+
+// Save a single ping record
+export async function savePingRecord(pingData: {
+  ip: string;
+  pubkey?: string;
+  ping: number | null;
+  status: 'online' | 'offline' | 'timeout';
+  port?: number;
+}, network: NetworkType = 'devnet'): Promise<void> {
+  const db = await connectToDatabase();
+  const collections = getCollectionNames(network);
+  const col = db.collection<PingRecord>(collections.PING_RECORDS);
+  
+  const now = Date.now();
+  const timestamp = Math.floor(now / 1000);
+  
+  const record: PingRecord = {
+    ip: pingData.ip,
+    pubkey: pingData.pubkey || '',
+    ping: pingData.ping,
+    status: pingData.status,
+    port: pingData.port || 6000,
+    timestamp,
+    created_at: new Date(),
+  };
+  
+  await col.insertOne(record);
+}
+
+// Save multiple ping records (batch)
+export async function savePingRecordsBatch(pingRecords: Array<{
+  ip: string;
+  pubkey?: string;
+  ping: number | null;
+  status: 'online' | 'offline' | 'timeout';
+  port?: number;
+}>, network: NetworkType = 'devnet'): Promise<void> {
+  if (pingRecords.length === 0) return;
+  
+  const db = await connectToDatabase();
+  const collections = getCollectionNames(network);
+  const col = db.collection<PingRecord>(collections.PING_RECORDS);
+  
+  const now = Date.now();
+  const timestamp = Math.floor(now / 1000);
+  
+  const records: PingRecord[] = pingRecords.map(ping => ({
+    ip: ping.ip,
+    pubkey: ping.pubkey || '',
+    ping: ping.ping,
+    status: ping.status,
+    port: ping.port || 6000,
+    timestamp,
+    created_at: new Date(),
+  }));
+  
+  await col.insertMany(records, { ordered: false });
+}
+
+// Get ping history for a node
+export async function getNodePingHistory(ip: string, limit: number = 100, network: NetworkType = 'devnet'): Promise<PingRecord[]> {
+  const db = await connectToDatabase();
+  const collections = getCollectionNames(network);
+  const col = db.collection<PingRecord>(collections.PING_RECORDS);
+  
+  return col.find({ ip }).sort({ timestamp: -1 }).limit(limit).toArray();
+}
+
+// Get ping stats for a node (average, min, max over time period)
+export async function getNodePingStats(ip: string, hours: number = 24, network: NetworkType = 'devnet'): Promise<{
+  average: number | null;
+  min: number | null;
+  max: number | null;
+  count: number;
+  successRate: number;
+}> {
+  const db = await connectToDatabase();
+  const collections = getCollectionNames(network);
+  const col = db.collection<PingRecord>(collections.PING_RECORDS);
+  
+  const cutoffTime = Math.floor(Date.now() / 1000) - (hours * 3600);
+  
+  const records = await col.find({ 
+    ip, 
+    timestamp: { $gte: cutoffTime } 
+  }).toArray();
+  
+  if (records.length === 0) {
+    return { average: null, min: null, max: null, count: 0, successRate: 0 };
+  }
+  
+  const validPings = records.filter(r => r.ping !== null).map(r => r.ping as number);
+  const successCount = validPings.length;
+  const totalCount = records.length;
+  
+  if (validPings.length === 0) {
+    return { average: null, min: null, max: null, count: totalCount, successRate: 0 };
+  }
+  
+  const average = validPings.reduce((sum, ping) => sum + ping, 0) / validPings.length;
+  const min = Math.min(...validPings);
+  const max = Math.max(...validPings);
+  const successRate = (successCount / totalCount) * 100;
+  
+  return { average, min, max, count: totalCount, successRate };
+}
+
+// Get latest pings for multiple nodes
+export async function getLatestPingsForNodes(ips: string[], network: NetworkType = 'devnet'): Promise<Record<string, PingRecord | null>> {
+  const db = await connectToDatabase();
+  const collections = getCollectionNames(network);
+  const col = db.collection<PingRecord>(collections.PING_RECORDS);
+  
+  const latestPings = await col.aggregate([
+    { $match: { ip: { $in: ips } } },
+    { $sort: { timestamp: -1 } },
+    { $group: { _id: '$ip', doc: { $first: '$$ROOT' } } }
+  ]).toArray();
+  
+  const result: Record<string, PingRecord | null> = {};
+  
+  // Initialize all IPs with null
+  ips.forEach(ip => {
+    result[ip] = null;
+  });
+  
+  // Fill in the latest pings
+  latestPings.forEach(item => {
+    result[item._id] = item.doc;
+  });
+  
+  return result;
 }

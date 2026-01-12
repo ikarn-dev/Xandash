@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cache } from '@/libs/cache/LocalCache';
-import { getNodeEvents, getLatestNodeSnapshot, getNodeStatsHistory, saveNodeSnapshot } from '@/libs/db/node-service';
+import { getNodeEvents, getLatestNodeSnapshot, getNodeStatsHistory, saveNodeSnapshot, getNodePingHistory, getNodePingStats } from '@/libs/db/node-service';
 import { getMainnetNodeByIp } from '@/libs/services/mainnet-data-service';
 import { getDevnetNodeByIp } from '@/libs/services/devnet-data-service';
 import net from 'net';
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid network' }, { status: 400 });
     }
 
-    const [locationData, currentNodeData, creditsData, dbHistory, dbEvents, dbSnapshot, pingData] = await Promise.all([
+    const [locationData, currentNodeData, creditsData, dbHistory, dbEvents, dbSnapshot, pingData, pingHistory, pingStats] = await Promise.all([
       fetchLocationData(ip).catch(() => null),
       fetchCurrentNodeData(ip, network).catch(() => null),
       quick ? Promise.resolve(null) : (network === 'devnet' ? fetchCreditsData().catch(() => null) : Promise.resolve(null)),
@@ -59,6 +59,8 @@ export async function GET(request: NextRequest) {
       getNodeEvents(ip, 100, network).catch(() => []),
       getLatestNodeSnapshot(ip, network).catch(() => null),
       pingNode(ip).catch(() => ({ ping: null, status: 'offline' as const })),
+      getNodePingHistory(ip, 100, network).catch(() => []),
+      getNodePingStats(ip, hours, network).catch(() => ({ average: null, min: null, max: null, count: 0, successRate: 0 })),
     ]);
 
     // Save node snapshot on visit (if we have live data)
@@ -118,6 +120,8 @@ export async function GET(request: NextRequest) {
       network,
       location: locationData,
       ping: pingData,
+      pingHistory: pingHistory.length > 0 ? pingHistory : undefined,
+      pingStats,
       currentNode: nodeData ? {
         pubkey: nodeData.pubkey || '',
         address: nodeData.address || `${ip}:9001`,

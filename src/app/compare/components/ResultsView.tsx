@@ -82,11 +82,22 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
       const days = (n.uptime / 86400).toFixed(1);
       const storageCommitted = formatStorageAI(n.storage_committed);
       const storageUsed = formatStorageAI(n.storage_used);
-      return `Node ${i+1} (${n.ip}): ${n.status}, ${n.credits.toLocaleString()} credits, ${days}d uptime, ${storageCommitted} committed (${storageUsed} used)`;
+      
+      // Include ping data if available (mainnet only)
+      let pingInfo = '';
+      if (isMainnet) {
+        const ping = mainnetPings[n.ip];
+        if (ping !== null && ping !== undefined) {
+          const pingQuality = ping < 100 ? 'excellent' : ping < 300 ? 'good' : 'high';
+          pingInfo = `, ${ping}ms ping (${pingQuality})`;
+        }
+      }
+      
+      return `Node ${i+1} (${n.ip}): ${n.status}, ${n.credits.toLocaleString()} credits, ${days}d uptime, ${storageCommitted} committed (${storageUsed} used)${pingInfo}`;
     }).join('. ');
 
-    return `Compare these ${nodes.length} Xandeum network nodes. ${nodeDetails}. In 2-3 sentences: identify the best performer, note key differences, give one recommendation.`;
-  }, [nodes]);
+    return `Compare these ${nodes.length} Xandeum ${isMainnet ? 'mainnet' : 'devnet'} nodes. ${nodeDetails}. In 2-3 sentences: identify the best performer, note key differences${isMainnet ? ' including network latency' : ''}, give one recommendation.`;
+  }, [nodes, isMainnet, mainnetPings]);
 
   const creditsChartData = useMemo(() => 
     nodes.map(p => ({

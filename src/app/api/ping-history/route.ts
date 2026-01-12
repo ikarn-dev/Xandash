@@ -6,67 +6,60 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const ip = searchParams.get('ip');
-    const ips = searchParams.get('ips'); // comma-separated IPs for batch
+    const ips = searchParams.get('ips');
+    const limit = parseInt(searchParams.get('limit') || '100');
     const hours = parseInt(searchParams.get('hours') || '24');
-    const network = (searchParams.get('network') || 'devnet') as 'devnet' | 'mainnet';
-    const stats = searchParams.get('stats') === 'true';
+    const network = (searchParams.get('network') as 'devnet' | 'mainnet') || 'devnet';
+    const statsOnly = searchParams.get('stats') === 'true';
 
-    // Batch request for latest pings
+    if (network !== 'devnet' && network !== 'mainnet') {
+      return NextResponse.json({ error: 'Invalid network' }, { status: 400 });
+    }
+
+    // Batch request for multiple IPs (latest pings only)
     if (ips) {
-      const ipList = ips.split(',').map(ip => ip.trim()).filter(Boolean).slice(0, 100);
+      const ipList = ips.split(',').map(ip => ip.trim()).filter(Boolean);
+      if (ipList.length === 0) {
+        return NextResponse.json({ error: 'No valid IPs provided' }, { status: 400 });
+      }
+
       const latestPings = await getLatestPingsForNodes(ipList, network);
-      
-      const results: Record<string, { ping: number | null; status: string; timestamp: number } | null> = {};
-      ipList.forEach(ip => {
-        const record = latestPings.get(ip);
-        results[ip] = record ? {
-          ping: record.ping,
-          status: record.status,
-          timestamp: record.timestamp,
-        } : null;
-      });
-      
-      return NextResponse.json({ results }, {
-        headers: { 'Cache-Control': 'no-store' },
+      return NextResponse.json({ latestPings }, {
+        headers: { 'Cache-Control': 'no-store' }
       });
     }
 
     // Single IP request
     if (!ip) {
-      return NextResponse.json({ error: 'IP or IPs parameter is required' }, { status: 400 });
+      return NextResponse.json({ error: 'IP address or IPs list is required' }, { status: 400 });
     }
 
-    // Get stats if requested
-    if (stats) {
-      const pingStats = await getNodePingStats(ip, hours, network);
-      return NextResponse.json({
-        ip,
-        hours,
-        network,
-        stats: pingStats,
-      }, {
-        headers: { 'Cache-Control': 'no-store' },
+    if (statsOnly) {
+      // Return only stats
+      const stats = await getNodePingStats(ip, hours, network);
+      return NextResponse.json({ ip, network, stats }, {
+        headers: { 'Cache-Control': 'no-store' }
       });
     }
 
-    // Get full history
-    const history = await getNodePingHistory(ip, hours, network);
-    
+    // Return full history and stats
+    const [history, stats] = await Promise.all([
+      getNodePingHistory(ip, limit, network),
+      getNodePingStats(ip, hours, network)
+    ]);
+
     return NextResponse.json({
       ip,
-      hours,
       network,
-      count: history.length,
-      history: history.map(h => ({
-        ping: h.ping,
-        status: h.status,
-        timestamp: h.timestamp,
-      })),
+      history,
+      stats,
+      count: history.length
     }, {
-      headers: { 'Cache-Control': 'no-store' },
+      headers: { 'Cache-Control': 'no-store' }
     });
+
   } catch (error) {
-    console.error('Ping history error:', error);
-    return NextResponse.json({ error: 'Failed to get ping history' }, { status: 500 });
+    console.error('Ping history API error:', error);
+    return NextResponse.json({ error: 'Failed to fetch ping history' }, { status: 500 });
   }
 }

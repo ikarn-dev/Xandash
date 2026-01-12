@@ -76,8 +76,22 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
       ? ((node.storage_used / node.storage_committed) * 100).toFixed(1) 
       : '0';
     
-    return `Summarize this node in format: "Node [IP] is [status] with [uptime]d uptime, [credits] credits earned, [storage] committed ([used] used, [efficiency]% utilized). [One sentence assessment and recommendation]." Data: IP=${ip}, Status=${node.status}, Uptime=${uptimeDays}d (${uptimeHours}h), Credits=${node.credits?.toLocaleString() || 0}, Storage Committed=${storageCommitted}, Storage Used=${storageUsed} (${efficiency}% efficiency), Version=${node.version || 'N/A'}${location ? `, Location=${location.city}, ${location.country}` : ''}.`;
-  }, [node, ip, location]);
+    // Include ping data in AI analysis
+    const currentPing = isMainnet ? mainnetPings[ip] : data?.ping?.ping;
+    const pingStats = data?.pingStats;
+    let pingInfo = '';
+    
+    if (currentPing !== null && currentPing !== undefined) {
+      const pingQuality = currentPing < 100 ? 'excellent' : currentPing < 300 ? 'good' : 'high';
+      pingInfo = `, Ping=${currentPing}ms (${pingQuality})`;
+    } else if (pingStats && pingStats.average !== null) {
+      const avgPing = Math.round(pingStats.average);
+      const pingQuality = avgPing < 100 ? 'excellent' : avgPing < 300 ? 'good' : 'high';
+      pingInfo = `, Avg Ping=${avgPing}ms (${pingQuality}, ${Math.round(pingStats.successRate)}% success rate)`;
+    }
+    
+    return `Summarize this node in format: "Node [IP] is [status] with [uptime]d uptime, [credits] credits earned, [storage] committed ([used] used, [efficiency]% utilized)${pingInfo ? ', [ping] latency' : ''}. [One sentence assessment and recommendation]." Data: IP=${ip}, Status=${node.status}, Uptime=${uptimeDays}d (${uptimeHours}h), Credits=${node.credits?.toLocaleString() || 0}, Storage Committed=${storageCommitted}, Storage Used=${storageUsed} (${efficiency}% efficiency), Version=${node.version || 'N/A'}${location ? `, Location=${location.city}, ${location.country}` : ''}${pingInfo}.`;
+  }, [node, ip, location, isMainnet, mainnetPings, data?.ping, data?.pingStats]);
 
   if (loading) {
     return <ProfileSkeleton />;
@@ -110,7 +124,9 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
           node={node || null} 
           ping={mainnetPings[ip]} 
           isPingLoading={isPingLoading}
-          network={network} 
+          network={network}
+          pingStats={data?.pingStats}
+          dbPing={data?.ping}
         />
 
         {/* Charts */}
@@ -123,6 +139,7 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
             filteredDbHistoryLength={filteredDbHistoryLength}
             isShowingFallbackData={isShowingFallbackData}
             ip={ip}
+            pingHistory={data?.pingHistory}
           />
         )}
 

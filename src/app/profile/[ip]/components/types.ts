@@ -9,6 +9,30 @@ export interface LocationData {
   lon?: number;
 }
 
+export interface PingRecord {
+  _id?: string;
+  ip: string;
+  pubkey?: string;
+  ping: number | null;
+  status: 'online' | 'offline' | 'timeout';
+  port: number;
+  timestamp: number;
+  created_at: string;
+}
+
+export interface PingStats {
+  average: number | null;
+  min: number | null;
+  max: number | null;
+  count: number;
+  successRate: number;
+}
+
+export interface PingResult {
+  ping: number | null;
+  status: 'online' | 'offline' | 'timeout';
+}
+
 export interface NodeEventLog {
   _id?: string;
   ip: string;
@@ -58,7 +82,11 @@ export interface CurrentNodeData {
 
 export interface NodeProfileData {
   ip: string;
+  network?: string;
   location: LocationData | null;
+  ping?: PingResult;
+  pingHistory?: PingRecord[];
+  pingStats?: PingStats;
   currentNode: CurrentNodeData | null;
   dbHistory?: DbNodeSnapshot[];
   dbEvents?: NodeEventLog[];
