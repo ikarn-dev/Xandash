@@ -8,7 +8,6 @@ import { Pagination, ValidatorTableSkeleton, SearchBox } from '@/components/ui';
 import { extractIPFromAddress, formatLocation, getCountryFlagUrl } from '@/libs/services/geolocation';
 import { useStaggeredScrollAnimation } from '@/libs/hooks/useScrollAnimation';
 import { usePrefetchProfile } from '@/libs/hooks/usePrefetchProfile';
-import { useMainnetPing } from '@/libs/hooks/useMainnetPing';
 import { toast } from 'sonner';
 import { useNetwork } from '@/libs/context/network-context';
 import { useNodesData as useSharedNodesData } from '@/libs/context/nodes-data-context';
@@ -143,26 +142,6 @@ export function NodesPageClientRefactored({
     }
     return locations;
   }, [isMainnet, geoData, locations]);
-
-  // Mainnet ping data - client-side worker-based ping
-  const { pings: mainnetPings, isLoading: isPingLoading, pingNodes } = useMainnetPing({ 
-    enabled: isMainnet,
-    refreshInterval: 60000,
-  });
-
-  // Trigger ping when mainnet nodes are loaded
-  useEffect(() => {
-    if (isMainnet && allValidators.length > 0 && !isLoadingShared) {
-      const nodesToPing = allValidators.map(node => ({
-        ip: extractIPFromAddress(node.address || ''),
-        rpc_port: node.rpc_port || 8899,
-      })).filter(n => n.ip);
-      
-      if (nodesToPing.length > 0) {
-        pingNodes(nodesToPing);
-      }
-    }
-  }, [isMainnet, allValidators.length, isLoadingShared]); // Don't include pingNodes
 
   // For both mainnet and devnet, use credits from useNodesCredits hook (fetches from pod-credits API)
   // The credits hook already handles network-specific API endpoints
@@ -410,8 +389,6 @@ export function NodesPageClientRefactored({
               validators={validators}
               locations={mergedLocations}
               credits={mergedCredits}
-              pings={mainnetPings}
-              isPingLoading={isPingLoading}
               dataFetchTime={dataFetchTime}
               clickedNodeId={clickedNodeId}
               shouldAnimate={shouldAnimate}

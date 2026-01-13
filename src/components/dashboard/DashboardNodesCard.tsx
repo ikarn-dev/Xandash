@@ -7,13 +7,11 @@ import { useRouter } from 'next/navigation';
 import { CopyBtn } from '@/components/ui/CopyBtn';
 import { getLocationsForIPs, extractIPFromAddress, getCountryFlagUrl } from '@/libs/services/geolocation';
 import { usePrefetchProfile } from '@/libs/hooks/usePrefetchProfile';
-import { useMainnetPing } from '@/libs/hooks/useMainnetPing';
 import { toast } from 'sonner';
 import { useNetwork } from '@/libs/context/network-context';
 import { useNodesData } from '@/libs/context/nodes-data-context';
 import { getNodeName, hasNodeName } from '@/libs/utils/node-names';
 import { formatStorage } from '@/libs/utils';
-import { PingValue } from '@/components/ui/PingLoadingIcon';
 
 // Compare icon
 const CompareIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -80,26 +78,6 @@ export const DashboardNodesCard: React.FC = () => {
   const lastMainnetCallRef = useRef(0);
   const router = useRouter();
   const { prefetchProfile, navigateToProfile } = usePrefetchProfile();
-  
-  // Mainnet ping data - client-side worker-based ping
-  const { pings: mainnetPings, isLoading: isPingLoading, pingNodes } = useMainnetPing({ 
-    enabled: isMainnet,
-    refreshInterval: 60000,
-  });
-
-  // Trigger ping when mainnet nodes are loaded
-  useEffect(() => {
-    if (isMainnet && nodes.length > 0 && !loading) {
-      const nodesToPing = nodes.map(node => ({
-        ip: extractIPFromAddress(node.address || ''),
-        rpc_port: node.rpc_port || 8899,
-      })).filter(n => n.ip);
-      
-      if (nodesToPing.length > 0) {
-        pingNodes(nodesToPing);
-      }
-    }
-  }, [isMainnet, nodes.length, loading]); // Don't include pingNodes to avoid infinite loop
 
   // Toggle node for comparison
   const handleToggleCompare = useCallback((pubkey: string, e: React.MouseEvent) => {
@@ -454,16 +432,12 @@ export const DashboardNodesCard: React.FC = () => {
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Last Seen</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Credits</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Status</th>
-                {/* Ping column - Mainnet only */}
-                {isMainnet && (
-                  <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Ping</th>
-                )}
               </tr>
             </thead>
             <tbody>
               {nodes.length === 0 ? (
                 <tr>
-                  <td colSpan={isMainnet ? 13 : 12} className="px-6 py-12 text-center text-white/60 text-sm">
+                  <td colSpan={isMainnet ? 12 : 11} className="px-6 py-12 text-center text-white/60 text-sm">
                     No nodes found for {isMainnet ? 'mainnet' : 'devnet'}
                   </td>
                 </tr>
@@ -610,15 +584,6 @@ export const DashboardNodesCard: React.FC = () => {
                         </span>
                       </div>
                     </td>
-                    {/* Ping cell - Mainnet only */}
-                    {isMainnet && (
-                      <td className="px-3 py-3 text-xs">
-                        <PingValue 
-                          ping={mainnetPings[ip]} 
-                          isLoading={isPingLoading} 
-                        />
-                      </td>
-                    )}
                   </tr>
                 );
               })}

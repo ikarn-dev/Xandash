@@ -1,13 +1,11 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { CopyBtn as CopyButton } from '@/components/ui/CopyBtn';
 import { extractIPFromAddress } from '@/libs/services/geolocation';
 import { getNodeStatus } from '@/libs/utils/node-status';
 import { getNodeName, hasNodeName } from '@/libs/utils/node-names';
-import { useMainnetPing } from '@/libs/hooks/useMainnetPing';
-import { PingValue } from '@/components/ui/PingLoadingIcon';
 import { NodesIcon, SearchIcon } from './CountryIcons';
 import { formatBytes, formatUptime, formatCredits } from './utils';
 
@@ -36,27 +34,6 @@ interface CountryNodesTableProps {
 export const CountryNodesTable = ({ nodes, locations, countryName, network = 'devnet' }: CountryNodesTableProps) => {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const isMainnet = network === 'mainnet';
-  
-  // Mainnet ping data - client-side worker-based ping
-  const { pings: mainnetPings, isLoading: isPingLoading, pingNodes } = useMainnetPing({ 
-    enabled: isMainnet,
-    refreshInterval: 60000,
-  });
-
-  // Trigger ping when nodes are loaded
-  useEffect(() => {
-    if (isMainnet && nodes.length > 0) {
-      const nodesToPing = nodes.map(node => ({
-        ip: extractIPFromAddress(node.address || ''),
-        rpc_port: node.rpc_port || 8899,
-      })).filter(n => n.ip);
-      
-      if (nodesToPing.length > 0) {
-        pingNodes(nodesToPing);
-      }
-    }
-  }, [isMainnet, nodes.length]); // Don't include pingNodes
 
   const filteredNodes = useMemo(() => {
     if (!searchQuery) return nodes;
@@ -111,9 +88,6 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Name</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">IP Address</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Status</th>
-              {isMainnet && (
-                <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Ping</th>
-              )}
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">City</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Uptime</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Storage</th>
@@ -124,7 +98,7 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
           <tbody>
             {filteredNodes.length === 0 ? (
               <tr>
-                <td colSpan={isMainnet ? 9 : 8} className="px-3 sm:px-4 py-6 sm:py-8 text-center text-white/40 text-xs sm:text-sm">
+                <td colSpan={8} className="px-3 sm:px-4 py-6 sm:py-8 text-center text-white/40 text-xs sm:text-sm">
                   {searchQuery ? 'No nodes match your search' : 'No nodes found in this country'}
                 </td>
               </tr>
@@ -167,14 +141,6 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
                         {status === 'online' ? 'ACTIVE' : status === 'syncing' ? 'SYNCING' : 'OFFLINE'}
                       </span>
                     </td>
-                    {isMainnet && (
-                      <td className="px-3 sm:px-4 py-2 sm:py-3 font-mono text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
-                        <PingValue 
-                          ping={mainnetPings[ip]} 
-                          isLoading={isPingLoading} 
-                        />
-                      </td>
-                    )}
                     <td className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
                       {loc?.city && loc.city !== 'Unknown' ? loc.city : '—'}
                     </td>

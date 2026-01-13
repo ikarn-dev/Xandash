@@ -5,7 +5,6 @@ import { Globe } from 'lucide-react';
 import { CopyBtn } from '@/components/ui/CopyBtn';
 import { getNodeName } from '@/libs/utils/node-names';
 import { formatStorage } from '@/libs/utils';
-import { PingValue } from '@/components/ui/PingLoadingIcon';
 import type { ValidatorData } from '@/libs/server';
 
 interface LocationData {
@@ -21,8 +20,6 @@ interface ResponsiveNodesTableProps {
   validators: ValidatorData[];
   locations: Record<string, LocationData | null>;
   credits: Record<string, number | null>;
-  pings?: Record<string, number | null>;
-  isPingLoading?: boolean;
   dataFetchTime: number;
   clickedNodeId: string | null;
   shouldAnimate: (index: number) => boolean;
@@ -53,8 +50,6 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
   validators,
   locations,
   credits,
-  pings = {},
-  isPingLoading = false,
   dataFetchTime,
   clickedNodeId,
   shouldAnimate,
@@ -147,12 +142,6 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
               >
                 Status {getSortIcon('status')}
               </th>
-              {/* Ping column - Mainnet only, always shows N/A */}
-              {isMainnet && (
-                <th className="w-[6%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
-                  Ping
-                </th>
-              )}
             </tr>
           </thead>
           <tbody>
@@ -324,20 +313,6 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                       </span>
                     </div>
                   </td>
-
-                  {/* Ping - Mainnet only, only show for online nodes */}
-                  {isMainnet && (
-                    <td className="px-3 py-3 text-xs">
-                      {isOnline ? (
-                        <PingValue 
-                          ping={pings[ip]} 
-                          isLoading={isPingLoading} 
-                        />
-                      ) : (
-                        <span className="text-white/30">-</span>
-                      )}
-                    </td>
-                  )}
                 </tr>
               );
             })}

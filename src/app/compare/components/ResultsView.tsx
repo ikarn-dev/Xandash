@@ -1,10 +1,8 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import { ComparisonChart } from './ComparisonChart';
 import { AISummary } from '@/components/ui/AISummary';
-import { useMainnetPing } from '@/libs/hooks/useMainnetPing';
-import { PingValue } from '@/components/ui/PingLoadingIcon';
 
 interface NodeProfile {
   ip: string;
@@ -28,20 +26,6 @@ interface ResultsViewProps {
 
 export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewProps) {
   const isMainnet = network === 'mainnet';
-  
-  // Mainnet ping data - client-side worker-based ping
-  const { pings: mainnetPings, isLoading: isPingLoading, pingNodes } = useMainnetPing({ 
-    enabled: isMainnet,
-    refreshInterval: 60000,
-  });
-
-  // Trigger ping when nodes are loaded
-  useEffect(() => {
-    if (isMainnet && nodes.length > 0) {
-      const nodesToPing = nodes.map(n => ({ ip: n.ip, rpc_port: 8899 }));
-      pingNodes(nodesToPing);
-    }
-  }, [isMainnet, nodes.length]); // Don't include pingNodes
 
   const formatUptime = (s: number) => {
     const d = Math.floor(s / 86400);
@@ -56,11 +40,6 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
 
   const getBest = (key: keyof NodeProfile) => {
     return Math.max(...nodes.map(p => typeof p[key] === 'number' ? p[key] as number : 0));
-  };
-  
-  const getBestPing = () => {
-    const pings = nodes.map(n => mainnetPings[n.ip]).filter(p => p !== null && p !== undefined) as number[];
-    return pings.length > 0 ? Math.min(...pings) : null;
   };
 
   const stats = [
@@ -83,21 +62,11 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
       const storageCommitted = formatStorageAI(n.storage_committed);
       const storageUsed = formatStorageAI(n.storage_used);
       
-      // Include ping data if available (mainnet only)
-      let pingInfo = '';
-      if (isMainnet) {
-        const ping = mainnetPings[n.ip];
-        if (ping !== null && ping !== undefined) {
-          const pingQuality = ping < 100 ? 'excellent' : ping < 300 ? 'good' : 'high';
-          pingInfo = `, ${ping}ms ping (${pingQuality})`;
-        }
-      }
-      
-      return `Node ${i+1} (${n.ip}): ${n.status}, ${n.credits.toLocaleString()} credits, ${days}d uptime, ${storageCommitted} committed (${storageUsed} used)${pingInfo}`;
+      return `Node ${i+1} (${n.ip}): ${n.status}, ${n.credits.toLocaleString()} credits, ${days}d uptime, ${storageCommitted} committed (${storageUsed} used)`;
     }).join('. ');
 
-    return `Compare these ${nodes.length} Xandeum ${isMainnet ? 'mainnet' : 'devnet'} nodes. ${nodeDetails}. In 2-3 sentences: identify the best performer, note key differences${isMainnet ? ' including network latency' : ''}, give one recommendation.`;
-  }, [nodes, isMainnet, mainnetPings]);
+    return `Compare these ${nodes.length} Xandeum ${isMainnet ? 'mainnet' : 'devnet'} nodes. ${nodeDetails}. In 2-3 sentences: identify the best performer, note key differences, give one recommendation.`;
+  }, [nodes, isMainnet]);
 
   const creditsChartData = useMemo(() => 
     nodes.map(p => ({
@@ -152,24 +121,6 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
               </div>
 
               <div className="space-y-3">
-                {/* Ping - Mainnet only */}
-                {isMainnet && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-white/50">Ping</span>
-                    <div className="flex items-center gap-1.5">
-                      <PingValue 
-                        ping={mainnetPings[node.ip]} 
-                        isLoading={isPingLoading}
-                        className="text-sm"
-                      />
-                      {mainnetPings[node.ip] !== null && mainnetPings[node.ip] !== undefined && 
-                       getBestPing() !== null && mainnetPings[node.ip] === getBestPing() && nodes.length > 1 && (
-                        <span className="text-[8px] px-1 py-0.5 bg-emerald-500/20 text-emerald-400 rounded">BEST</span>
-                      )}
-                    </div>
-                  </div>
-                )}
-                
                 {stats.map(stat => {
                   const value = node[stat.key as keyof NodeProfile] as number;
                   const winner = isWinner(stat.key);
@@ -226,23 +177,6 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
                   </td>
                 ))}
               </tr>
-              
-              {/* Ping row - Mainnet only */}
-              {isMainnet && (
-                <tr className="border-b border-white/5 hover:bg-white/5">
-                  <td className="py-3 px-4 text-white/60 text-sm">Ping</td>
-                  {nodes.map(node => {
-                    const ping = mainnetPings[node.ip];
-                    const isBestPing = ping !== null && ping !== undefined && getBestPing() !== null && ping === getBestPing() && nodes.length > 1;
-                    return (
-                      <td key={node.pubkey} className="py-3 px-4 text-center">
-                        <PingValue ping={ping} isLoading={isPingLoading} className="text-sm" />
-                        {isBestPing && <span className="ml-1 text-emerald-400">★</span>}
-                      </td>
-                    );
-                  })}
-                </tr>
-              )}
               
               {/* Other stats rows */}
               {[

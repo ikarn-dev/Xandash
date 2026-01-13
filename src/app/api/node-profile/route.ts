@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cache } from '@/libs/cache/LocalCache';
-import { getNodeEvents, getLatestNodeSnapshot, getNodeStatsHistory, saveNodeSnapshot, getNodePingHistory, getNodePingStats } from '@/libs/db/node-service';
+import { getNodeEvents, getLatestNodeSnapshot, getNodeStatsHistory, saveNodeSnapshot } from '@/libs/db/node-service';
 import { getMainnetNodeByIp } from '@/libs/services/mainnet-data-service';
 import { getDevnetNodeByIp } from '@/libs/services/devnet-data-service';
-import net from 'net';
 
 /**
  * Node Profile API
@@ -26,11 +25,6 @@ interface LocationData {
   lon?: number;
 }
 
-interface PingResult {
-  ping: number | null;
-  status: 'online' | 'offline' | 'timeout';
-}
-
 // Credits endpoint for devnet only - from env vars
 const DEVNET_CREDITS_URL = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || '';
 
@@ -51,16 +45,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid network' }, { status: 400 });
     }
 
-    const [locationData, currentNodeData, liveCreditsData, dbHistory, dbEvents, dbSnapshot, pingData, pingHistory, pingStats] = await Promise.all([
+    const [locationData, currentNodeData, liveCreditsData, dbHistory, dbEvents, dbSnapshot] = await Promise.all([
       fetchLocationData(ip).catch(() => null),
       fetchCurrentNodeData(ip, network).catch(() => null),
       quick ? Promise.resolve(null) : fetchLiveCreditsData(network).catch(() => null),
       getNodeStatsHistory(ip, hours, network).catch(() => []),
       getNodeEvents(ip, 100, network).catch(() => []),
       getLatestNodeSnapshot(ip, network).catch(() => null),
-      pingNode(ip).catch(() => ({ ping: null, status: 'offline' as const })),
-      getNodePingHistory(ip, 100, network).catch(() => []),
-      getNodePingStats(ip, hours, network).catch(() => ({ average: null, min: null, max: null, count: 0, successRate: 0 })),
     ]);
 
     // Save node snapshot on visit (if we have live data)
@@ -120,9 +111,6 @@ export async function GET(request: NextRequest) {
       ip,
       network,
       location: locationData,
-      ping: pingData,
-      pingHistory: pingHistory.length > 0 ? pingHistory : undefined,
-      pingStats,
       liveCredits: liveCreditsData,
       currentNode: nodeData ? {
         pubkey: nodeData.pubkey || '',
@@ -254,80 +242,6 @@ async function fetchCurrentNodeData(ip: string, network: NetworkType): Promise<a
   } catch {
     return null;
   }
-}
-
-async function fetchCreditsData(): Promise<any[] | null> {
-  const cacheKey = `credits:devnet:all`;
-  const cached = await cache.get(cacheKey);
-  if (cached) return cached as any[];
-
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    
-    const res = await fetch(DEVNET_CREDITS_URL, {
-      signal: controller.signal,
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-    });
-    clearTimeout(timeout);
-    
-    if (!res.ok) return null;
-    const data = await res.json();
-    const credits = data.pods_credits || [];
-    
-    await cache.set(cacheKey, credits, 60);
-    return credits;
-  } catch {
-    return null;
-  }
-}
-
-// TCP ping to measure latency
-async function pingNode(ip: string, port: number = 6000): Promise<PingResult> {
-  const cacheKey = `ping:${ip}`;
-  const cached = await cache.get(cacheKey);
-  if (cached) return cached as PingResult;
-
-  const result = await tcpPing(ip, port);
-  
-  // If port 6000 fails, try port 9001
-  if (result.status !== 'online') {
-    const result9001 = await tcpPing(ip, 9001);
-    if (result9001.status === 'online') {
-      await cache.set(cacheKey, result9001, 30);
-      return result9001;
-    }
-  }
-  
-  await cache.set(cacheKey, result, 30);
-  return result;
-}
-
-function tcpPing(ip: string, port: number, timeout: number = 3000): Promise<PingResult> {
-  return new Promise((resolve) => {
-    const startTime = Date.now();
-    const socket = new net.Socket();
-    
-    socket.setTimeout(timeout);
-    
-    socket.on('connect', () => {
-      const ping = Date.now() - startTime;
-      socket.destroy();
-      resolve({ ping, status: 'online' });
-    });
-    
-    socket.on('timeout', () => {
-      socket.destroy();
-      resolve({ ping: null, status: 'timeout' });
-    });
-    
-    socket.on('error', () => {
-      socket.destroy();
-      resolve({ ping: null, status: 'offline' });
-    });
-    
-    socket.connect(port, ip);
-  });
 }
 
 async function fetchLiveCreditsData(network: NetworkType): Promise<any[] | null> {

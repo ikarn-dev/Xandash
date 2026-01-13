@@ -74,6 +74,9 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
   const lastNetworkRef = useRef(network);
   const fetchingRef = useRef(false);
   const mountedRef = useRef(true);
+  
+  // High watermark for mainnet node count - keeps track of the highest node count seen
+  const mainnetHighWatermarkRef = useRef<Map<string, NodeData>>(new Map());
 
   // Calculate stats from nodes
   const stats = useMemo((): NodesStats => {
@@ -178,11 +181,33 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
           };
         });
         
+        // High watermark logic for mainnet:
+        // If new fetch has more nodes, replace everything
+        // If new fetch has fewer/equal nodes, only update existing nodes' data
+        const currentHighWatermark = mainnetHighWatermarkRef.current;
+        
+        if (fetchedNodes.length > currentHighWatermark.size) {
+          // New high watermark - replace all nodes
+          currentHighWatermark.clear();
+          for (const node of fetchedNodes) {
+            currentHighWatermark.set(node.address, node);
+          }
+          setNodes(fetchedNodes);
+        } else {
+          // Update only the nodes that came back, keep the rest
+          for (const node of fetchedNodes) {
+            currentHighWatermark.set(node.address, node);
+          }
+          // Convert map back to array, preserving all nodes
+          setNodes(Array.from(currentHighWatermark.values()));
+        }
+        
         // Store geo data for mainnet
         if (data.geo) {
-          setGeoData(data.geo);
+          setGeoData(prev => ({ ...prev, ...data.geo }));
         }
       } else if (data.nodes) {
+        // For devnet, just replace nodes normally (no high watermark)
         fetchedNodes = data.nodes.map((node: any) => {
           const timeDiff = serverTime - (node.last_seen_timestamp || 0);
           let status: 'online' | 'syncing' | 'offline' = 'offline';
@@ -203,9 +228,9 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
             status,
           };
         });
+        setNodes(fetchedNodes);
       }
       
-      setNodes(fetchedNodes);
       setDataFetchTime(serverTime);
       setLastFetchTime(Date.now());
       setSource(data.source || 'api');
@@ -234,6 +259,8 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
       setIsLoading(true);
       setNodes([]);
       setGeoData({});
+      // Clear high watermark when switching networks
+      mainnetHighWatermarkRef.current.clear();
     }
     
     fetchData(networkChanged);
