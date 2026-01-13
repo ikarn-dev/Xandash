@@ -153,48 +153,54 @@ function serializeMongoObject(obj: any): any {
 }
 
 async function fetchLocationData(ip: string) {
-  const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-  
+  // Try ip-api.com first (most reliable for server-side)
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
     
-    let res;
-    if (isProduction) {
-      res = await fetch(
-        `https://ipapi.co/${ip}/json/`,
-        { signal: controller.signal }
-      );
-    } else {
-      res = await fetch(
-        `http://ip-api.com/json/${ip}?fields=country,countryCode,regionName,city,lat,lon,isp`,
-        { signal: controller.signal }
-      );
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,lat,lon,isp`, { signal: controller.signal });
+    clearTimeout(timeout);
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (data.status === 'success') {
+        return {
+          country: data.country || 'Unknown',
+          country_code: (data.countryCode || '').toLowerCase(),
+          city: data.city || 'Unknown',
+          region: data.regionName || '',
+          provider: data.isp || 'Unknown',
+          ip,
+          lat: data.lat,
+          lon: data.lon,
+        };
+      }
     }
+  } catch {
+    // Continue to fallback
+  }
+
+  // Fallback to ipwho.is
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    
+    const res = await fetch(`https://ipwho.is/${ip}`, { signal: controller.signal });
     clearTimeout(timeout);
     
     if (!res.ok) return null;
     const data = await res.json();
-    if (data.error) return null;
+    if (!data.success) return null;
     
-    return isProduction ? {
-      country: data.country_name || 'Unknown',
+    return {
+      country: data.country || 'Unknown',
       country_code: data.country_code?.toLowerCase() || '',
       city: data.city || 'Unknown',
       region: data.region || '',
-      provider: data.org || 'Unknown',
+      provider: data.connection?.isp || data.connection?.org || 'Unknown',
       ip,
       lat: data.latitude,
       lon: data.longitude,
-    } : {
-      country: data.country || 'Unknown',
-      country_code: data.countryCode?.toLowerCase() || '',
-      city: data.city || 'Unknown',
-      region: data.regionName || '',
-      provider: data.isp || 'Unknown',
-      ip,
-      lat: data.lat,
-      lon: data.lon,
     };
   } catch {
     return null;

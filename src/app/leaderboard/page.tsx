@@ -152,12 +152,20 @@ function LeaderboardPageContent() {
     return sorted.map((node, index) => ({ ...node, globalRank: index + 1 }));
   }, [mergedData, activeTab]);
 
-  // Filter by search query
+  // Filter by search query (Pod ID or IP address)
   const filteredData = useMemo(() => {
     if (!searchQuery.trim()) return sortedData;
-    return sortedData.filter(pod => 
-      pod.pod_id.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const query = searchQuery.toLowerCase().trim();
+    return sortedData.filter(pod => {
+      // Search by Pod ID
+      if (pod.pod_id.toLowerCase().includes(query)) return true;
+      // Search by IP address (extracted from address field)
+      if (pod.address) {
+        const ip = pod.address.split(':')[0];
+        if (ip.toLowerCase().includes(query)) return true;
+      }
+      return false;
+    });
   }, [sortedData, searchQuery]);
 
   // Paginate data
@@ -271,7 +279,7 @@ function LeaderboardPageContent() {
 
       <SearchBox 
         onSearch={handleSearch}
-        placeholder="Search by Pod ID..."
+        placeholder="Search by Pod ID or IP..."
       />
 
       {/* Bookmarks Section */}

@@ -194,22 +194,35 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
         // High watermark logic for mainnet:
         // If new fetch has more nodes, replace everything
         // If new fetch has fewer/equal nodes, only update existing nodes' data
+        // Use pubkey as the unique identifier
         const currentHighWatermark = mainnetHighWatermarkRef.current;
         
         if (fetchedNodes.length > currentHighWatermark.size) {
           // New high watermark - replace all nodes
           currentHighWatermark.clear();
           for (const node of fetchedNodes) {
-            currentHighWatermark.set(node.address, node);
+            if (node.pubkey) {
+              currentHighWatermark.set(node.pubkey, node);
+            }
           }
           setNodes(fetchedNodes);
-        } else {
-          // Update only the nodes that came back, keep the rest
+        } else if (currentHighWatermark.size > 0) {
+          // Update only the nodes that came back, keep the rest with their old data
           for (const node of fetchedNodes) {
-            currentHighWatermark.set(node.address, node);
+            if (node.pubkey) {
+              currentHighWatermark.set(node.pubkey, node);
+            }
           }
-          // Convert map back to array, preserving all nodes
+          // Convert map back to array, preserving all nodes from high watermark
           setNodes(Array.from(currentHighWatermark.values()));
+        } else {
+          // First fetch - initialize high watermark
+          for (const node of fetchedNodes) {
+            if (node.pubkey) {
+              currentHighWatermark.set(node.pubkey, node);
+            }
+          }
+          setNodes(fetchedNodes);
         }
         
         // Store geo data for mainnet

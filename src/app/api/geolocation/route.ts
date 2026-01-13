@@ -14,31 +14,113 @@ interface LocationData {
 // In-memory cache for geolocation data
 const geoCache = new Map<string, LocationData | null>();
 
-// Check if we're in production/Vercel environment
-const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-
-async function fetchGeoWithHttps(ip: string): Promise<LocationData | null> {
+/**
+ * Batch fetch using ip-api.com batch endpoint
+ * This is the most reliable for server-side as it handles up to 100 IPs at once
+ * HTTP is allowed from server-side in Next.js
+ */
+async function batchFetchGeo(ips: string[]): Promise<Map<string, LocationData | null>> {
+  const results = new Map<string, LocationData | null>();
+  
+  if (ips.length === 0) return results;
+  
   try {
-    const response = await fetch(`https://ipapi.co/${ip}/json/`, {
+    // ip-api.com batch endpoint - POST with array of IPs
+    // Max 100 IPs per request, 45 requests per minute
+    const response = await fetch('http://ip-api.com/batch?fields=status,query,country,countryCode,regionName,city,lat,lon,isp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(ips.slice(0, 100)),
+      signal: AbortSignal.timeout(15000),
+    });
+    
+    if (!response.ok) {
+      console.error(`ip-api.com batch failed: ${response.status}`);
+      return results;
+    }
+    
+    const data = await response.json();
+    
+    if (Array.isArray(data)) {
+      for (const item of data) {
+        if (item.status === 'success' && item.query) {
+          results.set(item.query, {
+            country: item.country || 'Unknown',
+            country_code: (item.countryCode || '').toLowerCase(),
+            city: item.city || 'Unknown',
+            region: item.regionName || '',
+            provider: item.isp || 'Unknown Provider',
+            ip: item.query,
+            lat: item.lat,
+            lon: item.lon,
+          });
+        } else if (item.query) {
+          results.set(item.query, null);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Batch geolocation error:', error);
+  }
+  
+  return results;
+}
+
+/**
+ * Single IP fetch fallback using multiple services
+ */
+async function fetchGeoForIP(ip: string): Promise<LocationData | null> {
+  // Try ip-api.com single endpoint first (most reliable)
+  try {
+    const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,lat,lon,isp`, {
       signal: AbortSignal.timeout(5000),
     });
-    if (!response.ok) return null;
-    const data = await response.json();
-    if (data.error) return null;
-    
-    return {
-      country: data.country_name || 'Unknown',
-      country_code: data.country_code?.toLowerCase() || '',
-      city: data.city || 'Unknown',
-      region: data.region || '',
-      provider: data.org || 'Unknown Provider',
-      ip: ip,
-      lat: data.latitude,
-      lon: data.longitude,
-    };
-  } catch {
-    return null;
+    if (response.ok) {
+      const data = await response.json();
+      if (data.status === 'success') {
+        return {
+          country: data.country || 'Unknown',
+          country_code: (data.countryCode || '').toLowerCase(),
+          city: data.city || 'Unknown',
+          region: data.regionName || '',
+          provider: data.isp || 'Unknown Provider',
+          ip: ip,
+          lat: data.lat,
+          lon: data.lon,
+        };
+      }
+    }
+  } catch (e) {
+    console.error(`ip-api.com single failed for ${ip}:`, e);
   }
+  
+  // Fallback to ipwho.is (HTTPS, no rate limits)
+  try {
+    const response = await fetch(`https://ipwho.is/${ip}`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        return {
+          country: data.country || 'Unknown',
+          country_code: (data.country_code || '').toLowerCase(),
+          city: data.city || 'Unknown',
+          region: data.region || '',
+          provider: data.connection?.isp || data.connection?.org || 'Unknown Provider',
+          ip: ip,
+          lat: data.latitude,
+          lon: data.longitude,
+        };
+      }
+    }
+  } catch (e) {
+    console.error(`ipwho.is failed for ${ip}:`, e);
+  }
+  
+  return null;
 }
 
 export async function POST(request: NextRequest) {
@@ -62,101 +144,20 @@ export async function POST(request: NextRequest) {
     }
     
     if (uncachedIPs.length > 0) {
-      if (isProduction) {
-        // In production, use HTTPS with ipapi.co (individual requests)
-        const batchSize = 30; // Limit concurrent requests
-        
-        for (let i = 0; i < uncachedIPs.length; i += batchSize) {
-          const batch = uncachedIPs.slice(i, i + batchSize);
-          
-          const batchResults = await Promise.allSettled(
-            batch.map(ip => fetchGeoWithHttps(ip))
-          );
-          
-          batchResults.forEach((result, index) => {
-            const ip = batch[index];
-            if (result.status === 'fulfilled' && result.value) {
-              results[ip] = result.value;
-              geoCache.set(ip, result.value);
-            } else {
-              results[ip] = null;
-              geoCache.set(ip, null);
-            }
-          });
-          
-          // Small delay between batches
-          if (i + batchSize < uncachedIPs.length) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-          }
-        }
-      } else {
-        // In development, use ip-api.com batch endpoint (HTTP)
-        const batchSize = 100;
-        
-        for (let i = 0; i < uncachedIPs.length; i += batchSize) {
-          const batch = uncachedIPs.slice(i, i + batchSize);
-          
-          try {
-            const batchUrl = process.env.NEXT_PUBLIC_IP_API_BATCH_URL || 'http://ip-api.com/batch';
-            
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
-            
-            const response = await fetch(batchUrl, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(batch.map(ip => ({
-                query: ip,
-                fields: 'status,message,country,countryCode,region,regionName,city,lat,lon,isp,org,query'
-              }))),
-              signal: controller.signal,
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (response.ok) {
-              const batchResults = await response.json();
-              
-              batchResults.forEach((result: any, index: number) => {
-                const ip = batch[index];
-                
-                if (result.status === 'success') {
-                  const locationData: LocationData = {
-                    country: result.country || 'Unknown',
-                    country_code: result.countryCode?.toLowerCase() || '',
-                    city: result.city || 'Unknown',
-                    region: result.regionName || result.region || '',
-                    provider: result.isp || result.org || 'Unknown Provider',
-                    ip: ip,
-                    lat: result.lat,
-                    lon: result.lon
-                  };
-                  
-                  results[ip] = locationData;
-                  geoCache.set(ip, locationData);
-                } else {
-                  results[ip] = null;
-                  geoCache.set(ip, null);
-                }
-              });
-            } else {
-              batch.forEach(ip => {
-                results[ip] = null;
-                geoCache.set(ip, null);
-              });
-            }
-          } catch (error) {
-            batch.forEach(ip => {
-              results[ip] = null;
-              geoCache.set(ip, null);
-            });
-          }
-          
-          if (i + batchSize < uncachedIPs.length) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
+      // Use batch endpoint for efficiency (up to 100 IPs at once)
+      const batchResults = await batchFetchGeo(uncachedIPs);
+      
+      // Process batch results
+      for (const ip of uncachedIPs) {
+        if (batchResults.has(ip)) {
+          const location = batchResults.get(ip);
+          results[ip] = location ?? null;
+          geoCache.set(ip, location ?? null);
+        } else {
+          // Batch didn't return this IP, try single fetch as fallback
+          const location = await fetchGeoForIP(ip);
+          results[ip] = location;
+          geoCache.set(ip, location);
         }
       }
     }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { getLocationsForIPs, extractIPFromAddress } from '@/libs/services/geolocation';
 import { getNodeStatus, type NodeStatus } from '@/libs/utils/node-status';
+import { useNodesData } from '@/libs/context/nodes-data-context';
 
 interface LocationData {
   country: string;
@@ -117,50 +118,52 @@ const COUNTRY_COORDS: Record<string, { lat: number; lon: number }> = {
 };
 
 export function useNetworkPageData(network: string) {
-  const [nodes, setNodes] = useState<RawNodeData[]>([]);
+  // Use shared nodes data context - includes high watermark logic for mainnet
+  const { nodes: sharedNodes, geoData: sharedGeoData, isLoading: sharedLoading } = useNodesData();
+  
   const [locations, setLocations] = useState<{ [ip: string]: LocationData | null }>({});
-  const [mainnetGeoData, setMainnetGeoData] = useState<Record<string, any>>({});
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isMainnet = network === 'mainnet';
 
+  // Transform shared nodes to RawNodeData format
+  const nodes: RawNodeData[] = useMemo(() => {
+    return sharedNodes.map(node => ({
+      pubkey: node.pubkey,
+      address: node.address,
+      status: node.status,
+      uptime: node.uptime,
+      storage_committed: node.storage_committed,
+      storage_used: node.storage_used,
+      version: node.version,
+      is_public: node.is_public,
+      last_seen_timestamp: node.last_seen_timestamp,
+      country: node.country,
+      country_code: node.country_code,
+      provider: node.provider,
+    }));
+  }, [sharedNodes]);
+
+  // Fetch geolocation for devnet nodes
   useEffect(() => {
-    const fetchData = async () => {
+    if (isMainnet || nodes.length === 0) return;
+    
+    const fetchLocations = async () => {
       try {
-        setLoading(true);
-        setError(null);
+        const uniqueIPs: string[] = Array.from(new Set(
+          nodes.map((node: RawNodeData) => extractIPFromAddress(node.address || '')).filter(Boolean)
+        ));
         
-        const response = await fetch(`/api/nodes?includeAll=true&network=${network}`);
-        if (!response.ok) throw new Error(`Failed to fetch nodes: ${response.statusText}`);
-        
-        const data = await response.json();
-        if (data.error) throw new Error(data.error);
-        
-        const allNodes = data.nodes || [];
-        setNodes(allNodes);
-        
-        // For mainnet, nodes already have geo data from external sources
-        // For devnet, fetch geolocation data
-        if (!isMainnet) {
-          const uniqueIPs: string[] = Array.from(new Set(
-            allNodes.map((node: RawNodeData) => extractIPFromAddress(node.address || '')).filter(Boolean)
-          ));
-          
-          if (uniqueIPs.length > 0) {
-            const locationData = await getLocationsForIPs(uniqueIPs);
-            setLocations(locationData);
-          }
+        if (uniqueIPs.length > 0) {
+          const locationData = await getLocationsForIPs(uniqueIPs);
+          setLocations(locationData);
         }
       } catch (err) {
-        console.error('Failed to fetch node data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load data');
-      } finally {
-        setLoading(false);
+        console.error('Failed to fetch location data:', err);
       }
     };
 
-    fetchData();
-  }, [network, isMainnet]);
+    fetchLocations();
+  }, [nodes, isMainnet]);
 
   const processedData = useMemo(() => {
     const locationGroups = new Map<string, { lat: number; lng: number; city: string; country: string; count: number }>();
@@ -262,5 +265,5 @@ export function useNetworkPageData(network: string) {
     return { mapValidators, countryStats, countryDetailedStats, totalNodes: nodes.length, locatedNodes: validNodes };
   }, [nodes, locations, isMainnet]);
 
-  return { ...processedData, loading, error };
+  return { ...processedData, loading: sharedLoading, error };
 }

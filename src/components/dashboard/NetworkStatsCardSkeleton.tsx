@@ -116,47 +116,73 @@ const PieChartSkeleton: React.FC = () => {
 
 export const NetworkStatsCardSkeleton: React.FC = () => {
   return (
-    <div className="relative bg-black border border-white/10 p-6 h-full">
-      <CornerEdges />
-      
-      {/* Headers - desktop only */}
-      <div className="hidden lg:grid lg:grid-cols-4 gap-6 mb-4">
-        <div className="h-4 bg-white/10 rounded w-28 mx-auto animate-pulse"></div>
-        <div className="h-4 bg-white/10 rounded w-24 mx-auto animate-pulse"></div>
-        <div className="h-4 bg-white/10 rounded w-32 mx-auto animate-pulse"></div>
-        <div className="h-4 bg-white/10 rounded w-28 mx-auto animate-pulse"></div>
+    <div className="flex flex-col gap-4">
+      {/* Main stats card skeleton */}
+      <div className="relative bg-black border border-white/10 p-6">
+        <CornerEdges />
+        
+        {/* Headers - desktop only */}
+        <div className="hidden lg:grid lg:grid-cols-4 gap-6 mb-4">
+          <div className="h-4 bg-white/10 rounded w-28 mx-auto animate-pulse"></div>
+          <div className="h-4 bg-white/10 rounded w-24 mx-auto animate-pulse"></div>
+          <div className="h-4 bg-white/10 rounded w-32 mx-auto animate-pulse"></div>
+          <div className="h-4 bg-white/10 rounded w-28 mx-auto animate-pulse"></div>
+        </div>
+
+        {/* Divider line - desktop only */}
+        <div className="relative mb-6 overflow-hidden hidden lg:block">
+          <div className="w-full h-0.5 bg-white/10"></div>
+        </div>
+
+        {/* Desktop layout: 4 columns */}
+        <div className="hidden lg:grid lg:grid-cols-4 gap-6">
+          <div className="flex flex-col justify-center items-center text-center">
+            <div className="h-8 bg-white/10 rounded w-16 mb-1 animate-pulse"></div>
+            <div className="h-4 bg-white/10 rounded w-8 animate-pulse"></div>
+          </div>
+
+          <div className="flex flex-col justify-center items-center text-center">
+            <div className="h-8 bg-white/10 rounded w-14 mb-1 animate-pulse"></div>
+            <div className="h-4 bg-white/10 rounded w-8 animate-pulse"></div>
+          </div>
+
+          <div className="flex flex-col justify-center items-center text-center">
+            <div className="h-8 bg-white/10 rounded w-12 mb-1 animate-pulse"></div>
+            <div className="h-4 bg-white/10 rounded w-8 animate-pulse"></div>
+          </div>
+
+          <div className="flex flex-col justify-center items-center">
+            <PieChartSkeleton />
+          </div>
+        </div>
+
+        {/* Mobile layout: 3 columns for text stats */}
+        <div className="grid grid-cols-3 gap-2 lg:hidden">
+          <div className="flex flex-col justify-center items-center text-center">
+            <div className="h-2 bg-white/10 rounded w-16 mb-1 animate-pulse"></div>
+            <div className="h-6 bg-white/10 rounded w-12 mb-1 animate-pulse"></div>
+            <div className="h-3 bg-white/10 rounded w-6 animate-pulse"></div>
+          </div>
+
+          <div className="flex flex-col justify-center items-center text-center">
+            <div className="h-2 bg-white/10 rounded w-14 mb-1 animate-pulse"></div>
+            <div className="h-6 bg-white/10 rounded w-10 mb-1 animate-pulse"></div>
+            <div className="h-3 bg-white/10 rounded w-6 animate-pulse"></div>
+          </div>
+
+          <div className="flex flex-col justify-center items-center text-center">
+            <div className="h-2 bg-white/10 rounded w-14 mb-1 animate-pulse"></div>
+            <div className="h-6 bg-white/10 rounded w-10 mb-1 animate-pulse"></div>
+            <div className="h-3 bg-white/10 rounded w-6 animate-pulse"></div>
+          </div>
+        </div>
       </div>
 
-      {/* Divider line - desktop only */}
-      <div className="relative mb-6 overflow-hidden hidden lg:block">
-        <div className="w-full h-0.5 bg-white/10"></div>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        {/* Storage Committed Skeleton */}
-        <div className="flex flex-col justify-center items-center text-center">
-          <div className="h-3 bg-white/10 rounded w-24 mb-2 lg:hidden animate-pulse"></div>
-          <div className="h-8 bg-white/10 rounded w-16 mb-1 animate-pulse"></div>
-          <div className="h-4 bg-white/10 rounded w-8 animate-pulse"></div>
-        </div>
-
-        {/* Storage Used Skeleton */}
-        <div className="flex flex-col justify-center items-center text-center">
-          <div className="h-3 bg-white/10 rounded w-20 mb-2 lg:hidden animate-pulse"></div>
-          <div className="h-8 bg-white/10 rounded w-14 mb-1 animate-pulse"></div>
-          <div className="h-4 bg-white/10 rounded w-8 animate-pulse"></div>
-        </div>
-
-        {/* Avg Committed per Pod Skeleton */}
-        <div className="flex flex-col justify-center items-center text-center">
-          <div className="h-3 bg-white/10 rounded w-28 mb-2 lg:hidden animate-pulse"></div>
-          <div className="h-8 bg-white/10 rounded w-12 mb-1 animate-pulse"></div>
-          <div className="h-4 bg-white/10 rounded w-8 animate-pulse"></div>
-        </div>
-
-        {/* Pie Chart Skeleton */}
-        <div className="flex flex-col justify-center items-center col-span-2 lg:col-span-1">
-          <div className="h-3 bg-white/10 rounded w-28 mb-2 lg:hidden animate-pulse"></div>
+      {/* Mobile-only pie chart card skeleton */}
+      <div className="relative bg-black border border-white/10 p-4 lg:hidden">
+        <CornerEdges />
+        <div className="flex flex-col items-center">
+          <div className="h-3 bg-white/10 rounded w-28 mb-3 animate-pulse"></div>
           <PieChartSkeleton />
         </div>
       </div>

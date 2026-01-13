@@ -22,66 +22,70 @@ export async function getLocationForIP(ip: string): Promise<LocationData | null>
     return geoCache[ip];
   }
 
-  // Try multiple geolocation services
-  const services = [
-    {
-      name: 'ipapi.co',
-      url: `${process.env.NEXT_PUBLIC_IPAPI_CO_URL || 'https://ipapi.co'}/${ip}/json/`,
-      parser: (data: any) => ({
-        country: data.country_name || 'Unknown',
-        country_code: data.country_code?.toLowerCase() || '',
-        city: data.city || 'Unknown',
-        region: data.region || '',
-        provider: data.org || 'Unknown Provider',
-        ip: ip,
-        lat: data.latitude,
-        lon: data.longitude
-      })
-    },
-    {
-      name: 'ip-api.com',
-      url: `${process.env.NEXT_PUBLIC_IP_API_COM_URL || 'http://ip-api.com'}/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,lat,lon,isp,org`,
-      parser: (data: any) => ({
-        country: data.country || 'Unknown',
-        country_code: data.countryCode?.toLowerCase() || '',
-        city: data.city || 'Unknown',
-        region: data.regionName || '',
-        provider: data.isp || 'Unknown Provider',
-        ip: ip,
-        lat: data.lat,
-        lon: data.lon
-      })
-    }
-  ];
-
-  for (const service of services) {
-    try {
-      const response = await fetch(service.url);
-      
-      if (!response.ok) {
-        continue; // Try next service
-      }
-
+  // Use ip-api.com - most reliable for server-side
+  try {
+    const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,lat,lon,isp`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    
+    if (response.ok) {
       const data = await response.json();
       
-      // Handle API errors
-      if (data.error || data.status === 'fail') {
-        continue; // Try next service
+      if (data.status === 'success') {
+        const locationData: LocationData = {
+          country: data.country || 'Unknown',
+          country_code: (data.countryCode || '').toLowerCase(),
+          city: data.city || 'Unknown',
+          region: data.regionName || '',
+          provider: data.isp || 'Unknown Provider',
+          ip: ip,
+          lat: data.lat,
+          lon: data.lon
+        };
+        
+        geoCache[ip] = locationData;
+        return locationData;
       }
-
-      const locationData = service.parser(data);
-      
-      // Cache the result
-      geoCache[ip] = locationData;
-      return locationData;
-    } catch (error) {
-      continue; // Try next service
     }
+  } catch (error) {
+    // Continue to fallback
   }
 
-  // If all services failed
-  geoCache[ip] = null;
-  return null;
+  // Fallback to ipwho.is - HTTPS, no strict rate limits
+  try {
+    const response = await fetch(`https://ipwho.is/${ip}`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    
+    if (!response.ok) {
+      geoCache[ip] = null;
+      return null;
+    }
+
+    const data = await response.json();
+    
+    if (!data.success) {
+      geoCache[ip] = null;
+      return null;
+    }
+
+    const locationData: LocationData = {
+      country: data.country || 'Unknown',
+      country_code: data.country_code?.toLowerCase() || '',
+      city: data.city || 'Unknown',
+      region: data.region || '',
+      provider: data.connection?.isp || data.connection?.org || 'Unknown Provider',
+      ip: ip,
+      lat: data.latitude,
+      lon: data.longitude
+    };
+    
+    geoCache[ip] = locationData;
+    return locationData;
+  } catch (error) {
+    geoCache[ip] = null;
+    return null;
+  }
 }
 
 export async function getLocationsForIPs(ips: string[]): Promise<{ [ip: string]: LocationData | null }> {
@@ -140,6 +144,6 @@ export function formatLocation(location: LocationData | null): string {
 
 export function getCountryFlagUrl(countryCode: string): string {
   if (!countryCode) return '';
-  const flagCdnUrl = process.env.NEXT_PUBLIC_FLAG_CDN_URL || 'https://flagcdn.com';
-  return `${flagCdnUrl}/24x18/${countryCode}.png`;
+  // Hardcoded flag CDN URL - no sensitive data
+  return `https://flagcdn.com/24x18/${countryCode.toLowerCase()}.png`;
 }
