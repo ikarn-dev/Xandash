@@ -63,20 +63,40 @@ export async function GET(request: NextRequest) {
 }
 
 async function fetchLocationData(ip: string) {
+  const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+  
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2000); // Faster timeout
+    const timeout = setTimeout(() => controller.abort(), 2000);
     
-    const res = await fetch(
-      `http://ip-api.com/json/${ip}?fields=country,countryCode,regionName,city,lat,lon,isp`,
-      { signal: controller.signal }
-    );
+    let res;
+    if (isProduction) {
+      res = await fetch(
+        `https://ipapi.co/${ip}/json/`,
+        { signal: controller.signal }
+      );
+    } else {
+      res = await fetch(
+        `http://ip-api.com/json/${ip}?fields=country,countryCode,regionName,city,lat,lon,isp`,
+        { signal: controller.signal }
+      );
+    }
     clearTimeout(timeout);
     
     if (!res.ok) return null;
     const data = await res.json();
+    if (data.error) return null;
     
-    return {
+    return isProduction ? {
+      country: data.country_name || 'Unknown',
+      country_code: data.country_code?.toLowerCase() || '',
+      city: data.city || 'Unknown',
+      region: data.region || '',
+      provider: data.org || 'Unknown',
+      ip,
+      lat: data.latitude,
+      lon: data.longitude,
+    } : {
       country: data.country || 'Unknown',
       country_code: data.countryCode?.toLowerCase() || '',
       city: data.city || 'Unknown',

@@ -204,18 +204,38 @@ async function fetchCountryData(countryCode: string) {
     const ips = nodes.map((n: any) => n.address?.split(':')[0]).filter(Boolean).slice(0, 100);
     
     let geoData: Record<string, any> = {};
+    const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+    
     try {
-      const batchUrl = process.env.NEXT_PUBLIC_IP_API_BATCH_URL || 'http://ip-api.com/batch';
-      const geoRes = await fetch(batchUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ips.map((ip: string) => ({ query: ip, fields: 'countryCode,country,city' }))),
-      });
-      if (geoRes.ok) {
-        const geoResults = await geoRes.json();
-        geoResults.forEach((g: any, i: number) => {
-          if (g.countryCode) geoData[ips[i]] = g;
+      if (isProduction) {
+        // Use HTTPS in production with individual requests
+        const results = await Promise.allSettled(
+          ips.slice(0, 30).map(async (ip: string) => {
+            const res = await fetch(`https://ipapi.co/${ip}/json/`, { signal: AbortSignal.timeout(3000) });
+            if (!res.ok) return null;
+            const data = await res.json();
+            if (data.error) return null;
+            return { ip, countryCode: data.country_code, country: data.country_name, city: data.city };
+          })
+        );
+        results.forEach((r) => {
+          if (r.status === 'fulfilled' && r.value) {
+            geoData[r.value.ip] = r.value;
+          }
         });
+      } else {
+        const batchUrl = process.env.NEXT_PUBLIC_IP_API_BATCH_URL || 'http://ip-api.com/batch';
+        const geoRes = await fetch(batchUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(ips.map((ip: string) => ({ query: ip, fields: 'countryCode,country,city' }))),
+        });
+        if (geoRes.ok) {
+          const geoResults = await geoRes.json();
+          geoResults.forEach((g: any, i: number) => {
+            if (g.countryCode) geoData[ips[i]] = g;
+          });
+        }
       }
     } catch {}
     

@@ -58,9 +58,14 @@ const MobileNetworkSelector: React.FC = () => {
     return () => clearInterval(id);
   }, []);
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
+    // Force refresh all data including nodes
     refreshRef.current();
+    // Also trigger a force fetch of nodes data via API
+    try {
+      await fetch('/api/mainnet-rpc?refresh=true', { cache: 'no-store' });
+    } catch {}
     setTimeLeft(30);
     setTimeout(() => setIsRefreshing(false), 500);
   }, []);
@@ -150,9 +155,14 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
     return () => clearInterval(id);
   }, []);
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
+    // Force refresh all data including nodes
     refreshRef.current();
+    // Also trigger a force fetch of nodes data via API
+    try {
+      await fetch('/api/mainnet-rpc?refresh=true', { cache: 'no-store' });
+    } catch {}
     setTimeLeft(30);
     setTimeout(() => setIsRefreshing(false), 500);
   }, []);

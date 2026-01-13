@@ -177,34 +177,81 @@ async function fetchGeoData(items: Array<{ ip: string; pubkey: string }>): Promi
     
     if (uniqueIps.length === 0) return {};
     
-    const response = await fetch('http://ip-api.com/batch', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(uniqueIps.map(ip => ({ query: ip }))),
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (!response.ok) {
-      return {};
-    }
-
-    const results = await response.json();
+    // Try batch endpoint first (ip-api.com free tier only supports HTTP)
+    // For production, we'll fetch individually using ipapi.co which supports HTTPS
+    const batchUrl = process.env.NEXT_PUBLIC_IP_API_BATCH_URL || 'http://ip-api.com/batch';
     
-    for (const result of results) {
-      if (result.status === 'success') {
-        geoData[result.query] = {
-          country: result.country || '',
-          country_code: result.countryCode || '',
-          credits: null,
-          geo_sort: result.country || '',
-          ip: result.query,
-          name: '',
-          nfts: [],
-          provider: result.isp || result.org || '',
-          stake: 0,
-        };
+    // Check if we're in a secure context (Vercel) - use individual HTTPS calls
+    const isSecureContext = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+    
+    if (isSecureContext) {
+      // Use ipapi.co for HTTPS support in production
+      const results = await Promise.allSettled(
+        uniqueIps.slice(0, 30).map(async (ip) => {
+          try {
+            const response = await fetch(`https://ipapi.co/${ip}/json/`, {
+              signal: AbortSignal.timeout(5000),
+            });
+            if (!response.ok) return null;
+            const data = await response.json();
+            if (data.error) return null;
+            return {
+              ip,
+              country: data.country_name || '',
+              country_code: data.country_code || '',
+              provider: data.org || '',
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+      
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) {
+          const { ip, country, country_code, provider } = result.value;
+          geoData[ip] = {
+            country,
+            country_code,
+            credits: null,
+            geo_sort: country,
+            ip,
+            name: '',
+            nfts: [],
+            provider,
+            stake: 0,
+          };
+        }
+      }
+    } else {
+      // Local development - use batch endpoint
+      const response = await fetch(batchUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(uniqueIps.map(ip => ({ query: ip }))),
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (response.ok) {
+        const results = await response.json();
+        
+        for (const result of results) {
+          if (result.status === 'success') {
+            geoData[result.query] = {
+              country: result.country || '',
+              country_code: result.countryCode || '',
+              credits: null,
+              geo_sort: result.country || '',
+              ip: result.query,
+              name: '',
+              nfts: [],
+              provider: result.isp || result.org || '',
+              stake: 0,
+            };
+          }
+        }
       }
     }
     

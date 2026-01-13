@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, ReactNode } from 'react';
 import { useNetwork } from './network-context';
+import { useRPCContext } from './rpc-context';
 
 /**
  * Shared Nodes Data Context
@@ -60,7 +61,7 @@ interface NodesDataContextType {
 const NodesDataContext = createContext<NodesDataContextType | null>(null);
 
 const REFRESH_INTERVAL = 30 * 1000; // 30 seconds
-const MIN_REFRESH_INTERVAL = 10 * 1000; // Minimum 10 seconds between refreshes
+const MIN_REFRESH_INTERVAL = 5 * 1000; // Minimum 5 seconds between refreshes (reduced for manual refresh)
 
 export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { network, isMainnet } = useNetwork();
@@ -77,6 +78,15 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
   
   // High watermark for mainnet node count - keeps track of the highest node count seen
   const mainnetHighWatermarkRef = useRef<Map<string, NodeData>>(new Map());
+  
+  // Get RPC context for registering refresh function
+  let rpcContext: { registerRefresh: (id: string, fn: () => void) => void; unregisterRefresh: (id: string) => void } | null = null;
+  try {
+    rpcContext = useRPCContext();
+  } catch {
+    // RPC context not available, that's okay
+  }
+
 
   // Calculate stats from nodes
   const stats = useMemo((): NodesStats => {
@@ -249,6 +259,18 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
   const refreshData = useCallback(async (force = false) => {
     await fetchData(force);
   }, [fetchData]);
+
+  // Register with RPC context for global refresh
+  useEffect(() => {
+    if (rpcContext) {
+      rpcContext.registerRefresh('nodes-data', () => {
+        fetchData(true);
+      });
+      return () => {
+        rpcContext.unregisterRefresh('nodes-data');
+      };
+    }
+  }, [fetchData, rpcContext]);
 
   // Initial fetch and network change handling
   useEffect(() => {
