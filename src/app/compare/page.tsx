@@ -50,6 +50,12 @@ function ComparePageContent() {
 
   // Fetch all nodes with full data
   useEffect(() => {
+    // Reset state when network changes
+    setSelectedPubkeys([]);
+    setNodeProfiles([]);
+    setShowResults(false);
+    setAutoCompareTriggered(false);
+    
     const fetchNodes = async () => {
       setIsLoading(true);
       try {
@@ -108,7 +114,6 @@ function ComparePageContent() {
     };
     
     fetchNodes();
-    handleReset();
   }, [network]);
 
   // Auto-compare when nodes are selected from URL

@@ -47,6 +47,9 @@ async function fetchTokenData() {
   }
 }
 
+// Hardcoded credits URL for devnet
+const DEVNET_CREDITS_URL = 'https://podcredits.xandeum.network/api/pods-credits';
+
 // Fetch specific node by IP or pubkey (tries both mainnet external API and native RPC)
 async function fetchNodeByIdentifier(identifier: string) {
   try {
@@ -111,14 +114,11 @@ async function fetchNodeByIdentifier(identifier: string) {
     let credits = node.credits || 0;
     if (!isMainnet && !credits) {
       try {
-        const creditsUrl = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL;
-        if (creditsUrl) {
-          const creditsRes = await fetch(creditsUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
-          if (creditsRes.ok) {
-            const creditsData = await creditsRes.json();
-            const creditEntry = creditsData.pods_credits?.find((c: any) => c.pod_id === node.pubkey);
-            credits = creditEntry?.credits || 0;
-          }
+        const creditsRes = await fetch(DEVNET_CREDITS_URL, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
+        if (creditsRes.ok) {
+          const creditsData = await creditsRes.json();
+          const creditEntry = creditsData.pods_credits?.find((c: any) => c.pod_id === node.pubkey);
+          credits = creditEntry?.credits || 0;
         }
       } catch {}
     }
@@ -368,10 +368,7 @@ async function fetchCreditsSummary(networkType?: 'mainnet' | 'devnet') {
     }
     
     // For devnet, use credits API
-    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL;
-    if (!url) return null;
-    
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
+    const res = await fetch(DEVNET_CREDITS_URL, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
     if (!res.ok) return null;
     
     const data = await res.json();

@@ -62,6 +62,11 @@ export function NodesPageClientRefactored({
   const [clickedNodeId, setClickedNodeId] = useState<string | null>(null);
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
 
+  // Clear compare selection when network changes
+  useEffect(() => {
+    setSelectedForCompare([]);
+  }, [network]);
+
   // Use shared nodes data context - single source of truth for all components
   const { nodes: sharedNodes, geoData, stats: sharedStats, isLoading: isLoadingShared, dataFetchTime: sharedDataFetchTime } = useSharedNodesData();
   
@@ -409,38 +414,38 @@ export function NodesPageClientRefactored({
 
           {/* Floating Compare Button - rendered via portal to escape overflow:hidden */}
           {selectedForCompare.length > 0 && typeof document !== 'undefined' && createPortal(
-            <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2 bg-black/95 border border-emerald-500/30 rounded-full px-3 sm:px-4 py-2 shadow-lg shadow-emerald-500/20 backdrop-blur-xl animate-blur-reveal safe-area-bottom">
-              <div className="flex items-center gap-2">
-                <div className="flex -space-x-1">
+            <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2 sm:gap-3 bg-black/95 border border-emerald-500/30 rounded-full px-4 sm:px-5 py-2.5 sm:py-3 shadow-lg shadow-emerald-500/20 backdrop-blur-xl animate-blur-reveal safe-area-bottom">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex -space-x-1.5">
                   {selectedForCompare.slice(0, 4).map((_, i) => (
                     <div 
                       key={i} 
-                      className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-[9px] sm:text-[10px] text-emerald-400 font-bold"
+                      className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-[10px] sm:text-xs text-emerald-400 font-bold"
                     >
                       {i + 1}
                     </div>
                   ))}
                 </div>
-                <span className="text-white/60 text-xs sm:text-sm">{selectedForCompare.length} selected</span>
+                <span className="text-white/60 text-sm">{selectedForCompare.length} selected</span>
               </div>
-              <div className="w-px h-5 sm:h-6 bg-white/10" />
+              <div className="w-px h-6 sm:h-7 bg-white/10" />
               <button
                 onClick={handleClearCompare}
-                className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-colors"
               >
                 Clear
               </button>
               <button
                 onClick={handleCompareSelected}
                 disabled={selectedForCompare.length < 2}
-                className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm font-medium transition-all ${
                   selectedForCompare.length >= 2
                     ? 'bg-emerald-500 text-white hover:bg-emerald-400'
                     : 'bg-white/10 text-white/40 cursor-not-allowed'
                 }`}
               >
-                <CompareIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                Compare
+                <CompareIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>Compare</span>
               </button>
             </div>,
             document.body

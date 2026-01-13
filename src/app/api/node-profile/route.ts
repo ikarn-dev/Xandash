@@ -25,8 +25,9 @@ interface LocationData {
   lon?: number;
 }
 
-// Credits endpoint for devnet only - from env vars
-const DEVNET_CREDITS_URL = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || '';
+// Hardcoded credits API URLs
+const DEVNET_CREDITS_URL = 'https://podcredits.xandeum.network/api/pods-credits';
+const MAINNET_CREDITS_URL = 'https://podcredits.xandeum.network/api/mainnet-pod-credits';
 
 export async function GET(request: NextRequest) {
   try {
@@ -57,12 +58,24 @@ export async function GET(request: NextRequest) {
     // Save node snapshot on visit (if we have live data)
     if (currentNodeData) {
       // Get live credits for the node's pubkey
-      let liveCredits = 0;
+      // Use null to indicate "unknown/failed" vs 0 which is a valid value
+      let liveCredits: number | null = null;
+      
+      // Try from liveCreditsData (fetched from credits API)
       if (liveCreditsData && currentNodeData.pubkey) {
         const creditsEntry = liveCreditsData.find((c: any) => c.pod_id === currentNodeData.pubkey);
-        liveCredits = creditsEntry?.credits || 0;
+        if (creditsEntry) {
+          // API returned a value (could be 0 or positive)
+          liveCredits = creditsEntry.credits ?? 0;
+        }
       }
       
+      // If API didn't return data for this node, try node data
+      if (liveCredits === null && currentNodeData.credits !== undefined && currentNodeData.credits !== null) {
+        liveCredits = currentNodeData.credits;
+      }
+      
+      // Pass the credits (null means API failed, 0 means API returned 0)
       saveNodeSnapshotOnVisit(ip, currentNodeData, liveCredits, network).catch(() => {});
     }
 
@@ -145,17 +158,23 @@ export async function GET(request: NextRequest) {
 }
 
 // Save node snapshot when user visits the profile page
-async function saveNodeSnapshotOnVisit(ip: string, nodeData: any, credits: number, network: NetworkType): Promise<void> {
+async function saveNodeSnapshotOnVisit(ip: string, nodeData: any, credits: number | null, network: NetworkType): Promise<void> {
   const cacheKey = `snapshot-saved:${network}:${ip}`;
   const recentlySaved = await cache.get(cacheKey);
   if (recentlySaved) return;
   
   try {
+    // Calculate status from last_seen_timestamp
+    const timeDiff = Math.floor(Date.now() / 1000) - (nodeData.last_seen_timestamp || 0);
+    let status: 'online' | 'offline' | 'syncing' = 'offline';
+    if (timeDiff < 300) status = 'online';
+    else if (timeDiff < 3600) status = 'syncing';
+    
     await saveNodeSnapshot({
       ip,
       pubkey: nodeData.pubkey || '',
       address: nodeData.address || `${ip}:9001`,
-      status: nodeData.status || 'unknown',
+      status,
       uptime: nodeData.uptime || 0,
       storage_committed: nodeData.storage_committed || 0,
       storage_used: nodeData.storage_used || 0,
@@ -164,13 +183,13 @@ async function saveNodeSnapshotOnVisit(ip: string, nodeData: any, credits: numbe
       rpc_port: nodeData.rpc_port || 0,
       is_public: nodeData.is_public || false,
       last_seen_timestamp: nodeData.last_seen_timestamp || 0,
-      credits,
+      credits: credits ?? undefined, // Pass undefined if null to let saveNodeSnapshot handle it
       active_streams: nodeData.active_streams || 0,
     }, network);
     
     await cache.set(cacheKey, true, 60);
-  } catch {
-    // Failed to save snapshot silently
+  } catch (err) {
+    console.error(`[Profile] Failed to save snapshot for ${ip} on ${network}:`, err);
   }
 }
 
@@ -282,15 +301,8 @@ async function fetchLiveCreditsData(network: NetworkType): Promise<any[] | null>
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     
-    // Use network-specific credits API URL
-    const url = network === 'mainnet' 
-      ? process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL
-      : process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL;
-    
-    if (!url) {
-      console.warn(`[Profile] ${network} credits URL not configured`);
-      return null;
-    }
+    // Use hardcoded network-specific credits API URL
+    const url = network === 'mainnet' ? MAINNET_CREDITS_URL : DEVNET_CREDITS_URL;
     
     const res = await fetch(url, {
       signal: controller.signal,

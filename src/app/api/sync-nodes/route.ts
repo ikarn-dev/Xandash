@@ -16,8 +16,8 @@ import { getDevnetData } from '@/libs/services/devnet-data-service';
 
 type NetworkType = 'devnet' | 'mainnet';
 
-// Credits endpoint for devnet only - from env vars
-const DEVNET_CREDITS_URL = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || '';
+// Hardcoded credits endpoint for devnet
+const DEVNET_CREDITS_URL = 'https://podcredits.xandeum.network/api/pods-credits';
 
 /**
  * Sync mainnet nodes using external data sources only

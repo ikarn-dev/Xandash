@@ -130,8 +130,18 @@ export async function saveNodeSnapshot(nodeData: {
     }
     
     const prevCredits = lastSnapshot.credits || 0;
-    const newCredits = nodeData.credits || 0;
-    const creditsDiff = Math.abs(newCredits - prevCredits);
+    const newCredits = nodeData.credits ?? null;
+    
+    // For mainnet: only use previous credits if current is null (API failed)
+    // If API returned 0, that's a valid value
+    let finalCredits: number;
+    if (network === 'mainnet' && newCredits === null && prevCredits > 0) {
+      finalCredits = prevCredits;
+    } else {
+      finalCredits = newCredits ?? 0;
+    }
+    
+    const creditsDiff = Math.abs(finalCredits - prevCredits);
     
     if (creditsDiff >= CREDITS_CHANGE_THRESHOLD) {
       creditsChanged = true;
@@ -140,11 +150,19 @@ export async function saveNodeSnapshot(nodeData: {
         pubkey: nodeData.pubkey,
         event_type: 'credits_change',
         previous_value: prevCredits,
-        new_value: newCredits,
+        new_value: finalCredits,
         timestamp,
         created_at: new Date(),
       });
     }
+  }
+  
+  // For mainnet: only use previous credits if current is null (API failed)
+  let snapshotCredits: number;
+  if (network === 'mainnet' && nodeData.credits === null && lastSnapshot?.credits && lastSnapshot.credits > 0) {
+    snapshotCredits = lastSnapshot.credits;
+  } else {
+    snapshotCredits = nodeData.credits ?? 0;
   }
   
   const snapshot: NodeSnapshot = {
@@ -160,7 +178,7 @@ export async function saveNodeSnapshot(nodeData: {
     rpc_port: nodeData.rpc_port,
     is_public: nodeData.is_public,
     last_seen_timestamp: nodeData.last_seen_timestamp,
-    credits: nodeData.credits || 0,
+    credits: snapshotCredits,
     active_streams: nodeData.active_streams || 0,
     timestamp,
     created_at: new Date(),
@@ -202,7 +220,7 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
   const latestSnapshots = await snapshotsCol.aggregate([
     { $match: { ip: { $in: ips } } },
     { $sort: { timestamp: -1 } },
-    { $group: { _id: '$ip', doc: { $first: '$ROOT' } } }
+    { $group: { _id: '$ip', doc: { $first: '$$ROOT' } } }
   ]).toArray();
   
   const snapshotMap = new Map(latestSnapshots.map(s => [s._id, s.doc]));
@@ -218,8 +236,18 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
   
   for (const node of validNodes) {
     const ip = node.address?.split(':')[0];
-    const credits = creditsMap?.get(node.pubkey) || 0;
+    // Get credits from creditsMap, node data, or default to null (unknown)
+    let credits: number | null = creditsMap?.get(node.pubkey) ?? node.credits ?? null;
     const lastSnapshot = snapshotMap.get(ip);
+    
+    // For mainnet: only use previous credits if current fetch returned null (API failed)
+    // If API returned 0, that's a valid value - don't override it
+    if (network === 'mainnet' && credits === null && lastSnapshot?.credits && lastSnapshot.credits > 0) {
+      credits = lastSnapshot.credits;
+    }
+    
+    // Convert null to 0 for storage
+    const finalCredits = credits ?? 0;
     
     const timeDiff = timestamp - (node.last_seen_timestamp || 0);
     let status: 'online' | 'offline' | 'syncing' = 'offline';
@@ -234,7 +262,7 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
         event_type: 'node_new',
         new_status: status,
         new_value: node.version || '',
-        details: { version: node.version, storage_committed: node.storage_committed, credits },
+        details: { version: node.version, storage_committed: node.storage_committed, credits: finalCredits },
         timestamp,
         created_at: new Date(),
       });
@@ -286,14 +314,14 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
       }
       
       const prevCredits = lastSnapshot.credits || 0;
-      if (Math.abs(credits - prevCredits) >= CREDITS_CHANGE_THRESHOLD) {
+      if (Math.abs(finalCredits - prevCredits) >= CREDITS_CHANGE_THRESHOLD) {
         creditsChanges++;
         eventsToInsert.push({
           ip,
           pubkey: node.pubkey || '',
           event_type: 'credits_change',
           previous_value: prevCredits,
-          new_value: credits,
+          new_value: finalCredits,
           timestamp,
           created_at: new Date(),
         });
@@ -313,7 +341,7 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
       rpc_port: node.rpc_port || 0,
       is_public: node.is_public || false,
       last_seen_timestamp: node.last_seen_timestamp || 0,
-      credits,
+      credits: finalCredits,
       active_streams: node.active_streams || 0,
       timestamp,
       created_at: new Date(),

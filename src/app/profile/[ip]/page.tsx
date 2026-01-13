@@ -221,18 +221,15 @@ async function fetchCurrentNodeData(ip: string) {
   }
 }
 
+// Hardcoded credits URL for devnet
+const DEVNET_CREDITS_URL = 'https://podcredits.xandeum.network/api/pods-credits';
+
 async function fetchCreditsData() {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     
-    const url = process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL;
-    if (!url) {
-      console.warn('[Profile] Credits URL not configured');
-      return null;
-    }
-    
-    const res = await fetch(url, {
+    const res = await fetch(DEVNET_CREDITS_URL, {
       signal: controller.signal,
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
     });

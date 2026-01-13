@@ -8,19 +8,21 @@
  * - Geo data fetched separately for enrichment
  * - Credits fetched from dedicated credits API
  * - MERGE strategy: Never reduce node count, only update existing + add new
- * 
- * All URLs from environment variables - no hardcoding
  */
 
 import { cache } from '@/libs/cache/LocalCache';
 
-// Get URLs from environment variables - NEVER hardcode
+// Get URLs from environment variables for RPC (sensitive)
 const MAINNET_RPC_URL = process.env.MAINNET_RPC_DIRECT_URL || '';
 const MAINNET_RPC_KEY = process.env.MAINNET_RPC_API_KEY || '';
+
+// Hardcoded credits API URL for mainnet
+const MAINNET_CREDITS_URL = 'https://podcredits.xandeum.network/api/mainnet-pod-credits';
 
 // Cache keys
 const CACHE_KEY_NODES = 'mainnet:nodes';
 const CACHE_KEY_GEO = 'mainnet:geo';
+const CACHE_KEY_CREDITS = 'mainnet:credits';
 const CACHE_KEY_MERGED = 'mainnet:merged';
 const CACHE_KEY_LAST_FETCH = 'mainnet:lastFetch';
 
@@ -162,6 +164,39 @@ async function fetchPodsWithStats(): Promise<MainnetNodeData[] | null> {
 }
 
 /**
+ * Fetch credits data from dedicated credits API
+ */
+async function fetchCreditsData(): Promise<Map<string, number>> {
+  const creditsMap = new Map<string, number>();
+  
+  try {
+    const response = await fetch(MAINNET_CREDITS_URL, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+    
+    if (!response.ok) {
+      return creditsMap;
+    }
+    
+    const data = await response.json();
+    const credits = data.pods_credits || [];
+    
+    for (const entry of credits) {
+      if (entry.pod_id && entry.credits !== null && entry.credits !== undefined) {
+        creditsMap.set(entry.pod_id, entry.credits);
+      }
+    }
+  } catch (err) {
+    console.error('Credits fetch error:', err);
+  }
+  
+  return creditsMap;
+}
+
+/**
  * Fetch geo data for nodes using ip-api.com batch endpoint
  * This is the most reliable for server-side as it handles up to 100 IPs at once
  */
@@ -222,27 +257,34 @@ async function fetchGeoData(items: Array<{ ip: string; pubkey: string }>): Promi
 }
 
 /**
- * Enrich nodes with geo data
+ * Enrich nodes with geo data and credits
  */
-function enrichNodesWithGeo(
+function enrichNodesWithGeoAndCredits(
   nodes: MainnetNodeData[],
-  geoData: Record<string, MainnetGeoData>
+  geoData: Record<string, MainnetGeoData>,
+  creditsMap: Map<string, number>
 ): MainnetNodeData[] {
   return nodes.map(node => {
     const ip = node.address?.split(':')[0] || '';
     const geo = geoData[ip];
     
+    // Get credits from credits API first, then fallback to node data, then geo data
+    const credits = creditsMap.get(node.pubkey) ?? node.credits ?? geo?.credits ?? null;
+    
     if (geo) {
       return {
         ...node,
-        credits: node.credits ?? geo.credits,
+        credits,
         country: node.country || geo.country,
         country_code: node.country_code || geo.country_code,
         provider: node.provider || geo.provider,
       };
     }
     
-    return node;
+    return {
+      ...node,
+      credits,
+    };
   });
 }
 
@@ -254,6 +296,7 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
   
   let currentNodes = await cache.get(CACHE_KEY_NODES) as MainnetNodeData[] | null;
   let cachedGeo = await cache.get(CACHE_KEY_GEO) as Record<string, MainnetGeoData> | null;
+  let cachedCredits = await cache.get(CACHE_KEY_CREDITS) as Map<string, number> | null;
   const cachedMerged = await cache.get(CACHE_KEY_MERGED) as MainnetExternalData | null;
   
   let freshFetch = false;
@@ -286,15 +329,32 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
         cachedGeo = { ...(cachedGeo || {}), ...newGeoData };
         await cache.set(CACHE_KEY_GEO, cachedGeo, CACHE_TTL_MS * 10);
       }
+      
+      // Fetch credits data from dedicated API
+      const freshCredits = await fetchCreditsData();
+      if (freshCredits.size > 0) {
+        cachedCredits = freshCredits;
+        // Convert Map to object for caching
+        const creditsObj = Object.fromEntries(freshCredits);
+        await cache.set(CACHE_KEY_CREDITS, creditsObj, CACHE_TTL_MS * 2);
+      }
+    }
+  }
+  
+  // Convert cached credits object back to Map if needed
+  let creditsMap = new Map<string, number>();
+  if (cachedCredits) {
+    if (cachedCredits instanceof Map) {
+      creditsMap = cachedCredits;
     } else {
+      // It's an object from cache
+      creditsMap = new Map(Object.entries(cachedCredits as unknown as Record<string, number>));
     }
   }
 
-  // Enrich nodes with geo data
+  // Enrich nodes with geo data and credits
   let enrichedNodes = currentNodes || [];
-  if (cachedGeo && Object.keys(cachedGeo).length > 0) {
-    enrichedNodes = enrichNodesWithGeo(enrichedNodes, cachedGeo);
-  }
+  enrichedNodes = enrichNodesWithGeoAndCredits(enrichedNodes, cachedGeo || {}, creditsMap);
   
   // Update merged cache if fresh data
   if (freshFetch && enrichedNodes.length > 0) {
@@ -314,9 +374,7 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
   // Return cached data if available
   if (cachedMerged && cachedMerged.nodes.length > 0) {
     let nodes = cachedMerged.nodes;
-    if (cachedGeo && Object.keys(cachedGeo).length > 0) {
-      nodes = enrichNodesWithGeo(nodes, cachedGeo);
-    }
+    nodes = enrichNodesWithGeoAndCredits(nodes, cachedGeo || cachedMerged.geo, creditsMap);
     return {
       ...cachedMerged,
       nodes,
@@ -365,24 +423,24 @@ export async function getMainnetNodeByPubkey(pubkey: string): Promise<MainnetNod
 }
 
 /**
- * Get credits map (pubkey -> credits)
+ * Get credits map (pubkey -> credits) - fetches directly from credits API
+ * Returns null values for nodes not found in API (vs 0 which is a valid value)
  */
 export async function getMainnetCreditsMap(): Promise<Map<string, number>> {
+  // Always fetch fresh credits directly from the API for sync operations
+  const creditsMap = await fetchCreditsData();
+  
+  // If direct fetch returned data, use it (even if some values are 0)
+  if (creditsMap.size > 0) {
+    return creditsMap;
+  }
+  
+  // If API completely failed, try to get from cached node data as fallback
   const data = await getMainnetData();
-  const creditsMap = new Map<string, number>();
   
   for (const node of data.nodes) {
     if (node.pubkey && node.credits !== null && node.credits !== undefined) {
       creditsMap.set(node.pubkey, node.credits);
-    }
-  }
-  
-  for (const [ip, geo] of Object.entries(data.geo)) {
-    if (geo.credits !== null && geo.credits !== undefined) {
-      const node = data.nodes.find(n => n.address?.split(':')[0] === ip);
-      if (node?.pubkey && !creditsMap.has(node.pubkey)) {
-        creditsMap.set(node.pubkey, geo.credits);
-      }
     }
   }
   

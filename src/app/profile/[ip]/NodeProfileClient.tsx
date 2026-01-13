@@ -76,8 +76,10 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
       }
     }
     
-    return `Summarize this node in format: "Node [IP] is [status] with [uptime]d uptime, [credits] credits earned${creditsInfo ? ' [live/historical info]' : ''}, [storage] committed ([used] used, [efficiency]% utilized). [One sentence assessment and recommendation]." Data: IP=${ip}, Status=${node.status}, Uptime=${uptimeDays}d (${uptimeHours}h), Credits=${nodeCredits.toLocaleString()}${creditsInfo}, Storage Committed=${storageCommitted}, Storage Used=${storageUsed} (${efficiency}% efficiency), Version=${node.version || 'N/A'}${location ? `, Location=${location.city}, ${location.country}` : ''}.`;
-  }, [node, ip, location, data?.liveCredits]);
+    const networkName = isMainnet ? 'Mainnet' : 'Devnet';
+    
+    return `Summarize this ${networkName} node in format: "Node [IP] on ${networkName} is [status] with [uptime]d uptime, [credits] credits earned${creditsInfo ? ' [live/historical info]' : ''}, [storage] committed ([used] used, [efficiency]% utilized). [One sentence assessment and recommendation]." Data: Network=${networkName}, IP=${ip}, Status=${node.status}, Uptime=${uptimeDays}d (${uptimeHours}h), Credits=${nodeCredits.toLocaleString()}${creditsInfo}, Storage Committed=${storageCommitted}, Storage Used=${storageUsed} (${efficiency}% efficiency), Version=${node.version || 'N/A'}${location ? `, Location=${location.city}, ${location.country}` : ''}.`;
+  }, [node, ip, location, data?.liveCredits, isMainnet]);
 
   if (loading) {
     return <ProfileSkeleton />;

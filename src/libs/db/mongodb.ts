@@ -1,69 +1,80 @@
 import { MongoClient, Db, Collection } from 'mongodb';
 
-// MongoDB connection
-let client: MongoClient | null = null;
-let db: Db | null = null;
-
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const DB_NAME = process.env.MONGODB_DB_NAME || 'xandash';
 
-export async function connectToDatabase(): Promise<Db> {
-  if (db) return db;
+// Connection options optimized for serverless
+const options = {
+  maxPoolSize: 10, // Limit connections per instance
+  minPoolSize: 1,
+  maxIdleTimeMS: 30000, // Close idle connections after 30s
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  connectTimeoutMS: 10000,
+};
 
+// Global cache for connection reuse in serverless environment
+declare global {
+  var _mongoClientPromise: Promise<MongoClient> | undefined;
+  var _mongoDb: Db | undefined;
+}
+
+let clientPromise: Promise<MongoClient>;
+
+if (process.env.NODE_ENV === 'development') {
+  // In development, use a global variable to preserve connection across hot reloads
+  if (!global._mongoClientPromise) {
+    const client = new MongoClient(MONGODB_URI, options);
+    global._mongoClientPromise = client.connect();
+  }
+  clientPromise = global._mongoClientPromise;
+} else {
+  // In production, create a new client promise
+  const client = new MongoClient(MONGODB_URI, options);
+  clientPromise = client.connect();
+}
+
+export async function connectToDatabase(): Promise<Db> {
   try {
-    if (!MONGODB_URI) {
-      throw new Error('MONGODB_URI environment variable is not set');
+    // Return cached db if available
+    if (global._mongoDb) {
+      return global._mongoDb;
     }
 
-    client = new MongoClient(MONGODB_URI);
-    await client.connect();
-    db = client.db(DB_NAME);
+    const client = await clientPromise;
+    const db = client.db(DB_NAME);
     
-    // Test the connection
-    await db.admin().ping();
+    // Cache the db instance
+    global._mongoDb = db;
     
     return db;
   } catch (error) {
-    // Clean up on connection failure
-    if (client) {
-      try {
-        await client.close();
-      } catch (closeError) {
-        // Ignore close errors
-      }
-      client = null;
-    }
-    db = null;
-    
+    // Clear cache on error
+    global._mongoDb = undefined;
     throw new Error(`Failed to connect to MongoDB: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
 export async function getCollection<T extends Document>(name: string): Promise<Collection<T>> {
-  try {
-    if (!name || typeof name !== 'string') {
-      throw new Error('Collection name must be a non-empty string');
-    }
-    
-    const database = await connectToDatabase();
-    return database.collection<T>(name);
-  } catch (error) {
-    throw new Error(`Failed to get collection '${name}': ${error instanceof Error ? error.message : 'Unknown error'}`);
+  if (!name || typeof name !== 'string') {
+    throw new Error('Collection name must be a non-empty string');
   }
+  
+  const database = await connectToDatabase();
+  return database.collection<T>(name);
 }
 
 /**
- * Gracefully close the MongoDB connection
+ * Gracefully close the MongoDB connection (mainly for cleanup scripts)
  */
 export async function closeConnection(): Promise<void> {
   try {
-    if (client) {
-      await client.close();
-      client = null;
-      db = null;
-    }
+    const client = await clientPromise;
+    await client.close();
+    global._mongoClientPromise = undefined;
+    global._mongoDb = undefined;
   } catch (error) {
-    throw new Error(`Failed to close MongoDB connection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // Ignore close errors in serverless
   }
 }
 

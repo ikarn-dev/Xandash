@@ -5,6 +5,10 @@
 
 export type NetworkType = 'devnet' | 'mainnet';
 
+// Hardcoded credits API URLs
+const DEVNET_CREDITS_URL = 'https://podcredits.xandeum.network/api/pods-credits';
+const MAINNET_CREDITS_URL = 'https://podcredits.xandeum.network/api/mainnet-pod-credits';
+
 export interface NetworkConfig {
   name: string;
   displayName: string;
@@ -17,8 +21,7 @@ export interface NetworkConfig {
 
 /**
  * Network configurations
- * All URLs from environment variables - no hardcoding
- * Note: These are evaluated at module load time
+ * Credits URLs are hardcoded for reliability
  */
 export const NETWORK_CONFIGS: Record<NetworkType, NetworkConfig> = {
   devnet: {
@@ -27,7 +30,7 @@ export const NETWORK_CONFIGS: Record<NetworkType, NetworkConfig> = {
     color: 'green',
     glowColor: 'rgba(74,222,128,0.8)',
     badgeColor: 'bg-green-500/20 text-green-400 border-green-500/30',
-    creditsApiUrl: process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || '',
+    creditsApiUrl: DEVNET_CREDITS_URL,
     apiUrl: process.env.DEVNET_API_URL || '',
   },
   mainnet: {
@@ -36,7 +39,7 @@ export const NETWORK_CONFIGS: Record<NetworkType, NetworkConfig> = {
     color: 'blue',
     glowColor: 'rgba(59,130,246,0.8)',
     badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    creditsApiUrl: process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL || '',
+    creditsApiUrl: MAINNET_CREDITS_URL,
     apiUrl: '', // Mainnet uses external data sources only
   },
 };
@@ -50,13 +53,9 @@ export function getNetworkConfig(network: NetworkType): NetworkConfig {
 
 /**
  * Get credits API URL for network
- * Reads directly from env to ensure fresh value
  */
 export function getCreditsApiUrl(network: NetworkType): string {
-  if (network === 'mainnet') {
-    return process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL || '';
-  }
-  return process.env.NEXT_PUBLIC_POD_CREDITS_EXTERNAL_URL || '';
+  return network === 'mainnet' ? MAINNET_CREDITS_URL : DEVNET_CREDITS_URL;
 }
 
 /**
