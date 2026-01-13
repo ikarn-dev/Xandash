@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
-import { AlertCircle } from 'lucide-react';
+import React, { useMemo } from 'react';
 import { VersionCardSkeleton } from './VersionCardSkeleton';
-import { useNetwork } from '@/libs/context/network-context';
+import { useNodesData } from '@/libs/context/nodes-data-context';
 import { AnimatedValue } from '@/components/ui/SlotNumber';
 
 // Custom Code Icon
@@ -45,118 +44,62 @@ const CornerAccents = () => (
 );
 
 export const VersionCardSSR: React.FC = () => {
-  const { network } = useNetwork();
-  const [stats, setStats] = useState<VersionStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
-  
-  // Use ref to track if this is the first load (survives re-renders and interval callbacks)
-  const hasLoadedRef = useRef(false);
-  const prevNetworkRef = useRef(network);
+  // Use shared nodes data context - includes high watermark logic for mainnet
+  const { nodes, isLoading } = useNodesData();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Check if network changed - if so, show loading skeleton
-        const networkChanged = prevNetworkRef.current !== network;
-        if (networkChanged) {
-          prevNetworkRef.current = network;
-          hasLoadedRef.current = false;
-        }
-        
-        // Show loading skeleton only on initial load or network change
-        if (!hasLoadedRef.current) {
-          setLoading(true);
-        } else {
-          // For auto-refresh, just show subtle updating state
-          setIsUpdating(true);
-        }
-        setError(null);
-        
-        const response = await fetch(`/api/nodes?includeAll=true&network=${network}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch nodes');
-        }
-        
-        const data = await response.json();
-        const nodes = data.nodes || [];
-        
-        if (nodes.length === 0) {
-          setStats({
-            latestVersion: 'N/A',
-            nodeCount: 0,
-            percentage: 0,
-            totalNodes: 0,
-            totalVersions: 0,
-          });
-          return;
-        }
+  // Calculate version stats from shared nodes data
+  const stats = useMemo((): VersionStats | null => {
+    if (nodes.length === 0) {
+      return null;
+    }
 
-        // Count versions
-        const versionCounts = new Map<string, number>();
-        nodes.forEach((node: any) => {
-          const version = node.version || 'unknown';
-          versionCounts.set(version, (versionCounts.get(version) || 0) + 1);
-        });
+    // Count versions
+    const versionCounts = new Map<string, number>();
+    nodes.forEach((node) => {
+      const version = node.version || 'unknown';
+      versionCounts.set(version, (versionCounts.get(version) || 0) + 1);
+    });
 
-        // Find most popular version (highest count)
-        let maxCount = 0;
-        let latestVersion = 'unknown';
-        versionCounts.forEach((count, version) => {
-          if (count > maxCount && version !== 'unknown') {
-            maxCount = count;
-            latestVersion = version;
-          }
-        });
-
-        const totalNodes = nodes.length;
-        const percentage = (maxCount / totalNodes) * 100;
-
-        setStats({
-          latestVersion,
-          nodeCount: maxCount,
-          percentage,
-          totalNodes,
-          totalVersions: versionCounts.size,
-        });
-      } catch (err) {
-        // Only set error if we don't have existing data
-        if (!stats) {
-          setError(err instanceof Error ? err.message : 'Failed to load version data');
-        }
-      } finally {
-        setLoading(false);
-        hasLoadedRef.current = true;
-        // Delay removing updating state for smooth animation
-        setTimeout(() => setIsUpdating(false), 300);
+    // Find most popular version (highest count)
+    let maxCount = 0;
+    let latestVersion = 'unknown';
+    versionCounts.forEach((count, version) => {
+      if (count > maxCount && version !== 'unknown') {
+        maxCount = count;
+        latestVersion = version;
       }
+    });
+
+    const totalNodes = nodes.length;
+    const percentage = totalNodes > 0 ? (maxCount / totalNodes) * 100 : 0;
+
+    return {
+      latestVersion,
+      nodeCount: maxCount,
+      percentage,
+      totalNodes,
+      totalVersions: versionCounts.size,
     };
+  }, [nodes]);
 
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, [network]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (loading) {
+  if (isLoading) {
     return <VersionCardSkeleton />;
   }
 
-  if (error || !stats) {
+  if (!stats) {
     return (
       <div className="relative bg-black border border-white/10 p-4 sm:p-6 h-full group hover:border-white/20 transition-all duration-300">
         <CornerAccents />
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <h3 className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider">// VERSION</h3>
-            <div className="text-red-400">
-              <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+            <div className="text-white/40">
+              <CodeIcon className="w-3 h-3 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div className="flex-1 flex flex-col justify-center items-center text-center">
             <div className="text-white text-2xl sm:text-3xl lg:text-4xl font-bold font-mono">N/A</div>
-            <div className="text-white/40 text-[10px] sm:text-xs mt-1 sm:mt-2">Error Loading</div>
-            <div className="text-red-400/60 text-[9px] sm:text-[10px] mt-2 sm:mt-3 px-2">{error}</div>
+            <div className="text-white/40 text-[10px] sm:text-xs mt-1 sm:mt-2">No nodes available</div>
           </div>
         </div>
       </div>

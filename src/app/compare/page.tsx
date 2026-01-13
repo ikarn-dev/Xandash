@@ -46,7 +46,6 @@ function ComparePageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isComparing, setIsComparing] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const [autoCompareTriggered, setAutoCompareTriggered] = useState(false);
 
   // Fetch all nodes with full data
   useEffect(() => {
@@ -54,7 +53,6 @@ function ComparePageContent() {
     setSelectedPubkeys([]);
     setNodeProfiles([]);
     setShowResults(false);
-    setAutoCompareTriggered(false);
     
     const fetchNodes = async () => {
       setIsLoading(true);
@@ -92,17 +90,17 @@ function ComparePageContent() {
           
           setAllNodes(nodes);
           
-          // Check for URL params and auto-select nodes
+          // Check for URL params and pre-select nodes (but don't auto-compare)
+          // User can add more nodes or click Compare button
           const nodesParam = searchParams.get('nodes');
-          if (nodesParam && !autoCompareTriggered) {
+          if (nodesParam) {
             const pubkeysFromUrl = nodesParam.split(',').filter(Boolean);
             const validPubkeys = pubkeysFromUrl.filter(pk => 
               nodes.some((n: NodeData) => n.pubkey === pk)
             ).slice(0, 4);
             
-            if (validPubkeys.length >= 2) {
+            if (validPubkeys.length > 0) {
               setSelectedPubkeys(validPubkeys);
-              setAutoCompareTriggered(true);
             }
           }
         }
@@ -115,13 +113,6 @@ function ComparePageContent() {
     
     fetchNodes();
   }, [network]);
-
-  // Auto-compare when nodes are selected from URL
-  useEffect(() => {
-    if (autoCompareTriggered && selectedPubkeys.length >= 2 && allNodes.length > 0 && !showResults) {
-      handleCompare();
-    }
-  }, [autoCompareTriggered, selectedPubkeys, allNodes]);
 
   const handleToggleNode = useCallback((pubkey: string) => {
     setSelectedPubkeys(prev => {

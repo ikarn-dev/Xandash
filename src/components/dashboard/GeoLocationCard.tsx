@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { InteractiveMap } from '@/components/ui';
 import { getLocationsForIPs, extractIPFromAddress } from '@/libs/services/geolocation';
 import { useNetwork } from '@/libs/context/network-context';
+import { useNodesData } from '@/libs/context/nodes-data-context';
 
 interface LocationData {
   country: string;
@@ -31,69 +32,51 @@ interface CountryStats {
   count: number;
 }
 
-interface RawNodeData {
-  pubkey?: string;
-  address?: string;
-  status?: string;
-  uptime?: number;
-  storage_committed?: number;
-  storage_used?: number;
-  storage_usage_percent?: number;
-  version?: string;
-  rpc_port?: number;
-  is_public?: boolean;
-  last_seen_timestamp?: number;
-}
+// Approximate lat/lon for countries (for map display when exact coords not available)
+const COUNTRY_COORDS: Record<string, { lat: number; lon: number }> = {
+  'US': { lat: 37.0902, lon: -95.7129 },
+  'DE': { lat: 51.1657, lon: 10.4515 },
+  'FR': { lat: 46.2276, lon: 2.2137 },
+  'GB': { lat: 55.3781, lon: -3.4360 },
+  'NL': { lat: 52.1326, lon: 5.2913 },
+  'CA': { lat: 56.1304, lon: -106.3468 },
+  'AU': { lat: -25.2744, lon: 133.7751 },
+  'JP': { lat: 36.2048, lon: 138.2529 },
+  'SG': { lat: 1.3521, lon: 103.8198 },
+  'IN': { lat: 20.5937, lon: 78.9629 },
+  'FI': { lat: 61.9241, lon: 25.7482 },
+  'SE': { lat: 60.1282, lon: 18.6435 },
+  'PL': { lat: 51.9194, lon: 19.1451 },
+};
 
 export const GeoLocationCard: React.FC = () => {
-  const { network } = useNetwork();
-  const [nodes, setNodes] = useState<RawNodeData[]>([]);
-  const [locations, setLocations] = useState<{ [ip: string]: LocationData | null }>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const { network, isMainnet } = useNetwork();
+  // Use shared nodes data context - includes high watermark logic for mainnet
+  const { nodes: sharedNodes, isLoading } = useNodesData();
   
-  // Use ref to track if this is the first load (survives re-renders and interval callbacks)
-  const hasLoadedRef = useRef(false);
+  const [locations, setLocations] = useState<{ [ip: string]: LocationData | null }>({});
+  const [locationsLoading, setLocationsLoading] = useState(false);
+  
+  // Track previous network for location cache clearing
   const prevNetworkRef = useRef(network);
 
-  // Fetch nodes and location data - refetch when network changes
+  // Fetch geolocation for devnet nodes only (mainnet has geo data in node itself)
   useEffect(() => {
-    const fetchData = async () => {
+    // Clear locations on network change
+    if (prevNetworkRef.current !== network) {
+      prevNetworkRef.current = network;
+      setLocations({});
+    }
+    
+    // Skip geolocation fetch for mainnet (data comes from external source)
+    if (isMainnet || sharedNodes.length === 0) return;
+    
+    const fetchLocations = async () => {
+      setLocationsLoading(true);
       try {
-        // Check if network changed - if so, show loading skeleton
-        const networkChanged = prevNetworkRef.current !== network;
-        if (networkChanged) {
-          prevNetworkRef.current = network;
-          hasLoadedRef.current = false;
-        }
-        
-        // Only show loading skeleton on initial load or network change
-        if (!hasLoadedRef.current) {
-          setLoading(true);
-        } else {
-          // For auto-refresh, just show subtle updating state
-          setIsUpdating(true);
-        }
-        
-        // Fetch nodes from API with network parameter
-        const response = await fetch(`/api/nodes?includeAll=true&network=${network}`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch nodes: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        if (data.error) {
-          throw new Error(data.error);
-        }
-        
-        const allNodes = data.nodes || [];
-        setNodes(allNodes);
-        
-        // Extract unique IPs
         const uniqueIPs: string[] = Array.from(new Set(
-          allNodes
-            .map((node: RawNodeData) => extractIPFromAddress(node.address || ''))
+          sharedNodes
+            .map((node) => extractIPFromAddress(node.address || ''))
             .filter((ip: string) => ip)
         ));
         
@@ -101,28 +84,15 @@ export const GeoLocationCard: React.FC = () => {
           const locationData = await getLocationsForIPs(uniqueIPs);
           setLocations(locationData);
         }
-        
-        setError(null);
       } catch (err) {
-        console.error('Failed to fetch node data:', err);
-        // Only set error if we don't have existing data
-        if (nodes.length === 0) {
-          setError(err instanceof Error ? err.message : 'Failed to load data');
-        }
+        console.error('Failed to fetch location data:', err);
       } finally {
-        setLoading(false);
-        hasLoadedRef.current = true;
-        // Delay removing updating state for smooth transition
-        setTimeout(() => setIsUpdating(false), 300);
+        setLocationsLoading(false);
       }
     };
 
-    fetchData();
-    
-    // Set up auto-refresh every 30 seconds
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, [network]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchLocations();
+  }, [sharedNodes, isMainnet, network]);
 
   // Process nodes into map locations
   const { mapValidators, countryStats, totalNodes } = useMemo(() => {
@@ -132,32 +102,56 @@ export const GeoLocationCard: React.FC = () => {
       city: string;
       country: string;
       count: number;
-      nodes: RawNodeData[];
     }>();
     
     const countryMap = new Map<string, { country: string; country_code: string; count: number }>();
 
-    nodes.forEach((node) => {
+    sharedNodes.forEach((node) => {
       const ip = extractIPFromAddress(node.address || '');
-      const location = locations[ip];
       
-      if (location && location.lat && location.lon) {
+      // For mainnet, use geo data from node itself (from external sources)
+      // For devnet, use fetched location data
+      let location: LocationData | null = null;
+      
+      if (isMainnet && node.country && node.country_code) {
+        const countryCode = node.country_code.toUpperCase();
+        const coords = COUNTRY_COORDS[countryCode];
+        location = {
+          country: node.country,
+          country_code: node.country_code,
+          city: '',
+          region: '',
+          provider: node.provider || 'Unknown',
+          ip,
+          lat: coords?.lat,
+          lon: coords?.lon,
+        };
+      } else {
+        location = locations[ip];
+      }
+      
+      if (location && (location.lat || isMainnet)) {
         // Group by city/country for map markers
-        const locationKey = `${location.city}-${location.country}`;
+        const locationKey = isMainnet 
+          ? `${location.country}-center`
+          : `${location.city}-${location.country}`;
         const existing = locationGroups.get(locationKey);
         
-        if (existing) {
-          existing.count++;
-          existing.nodes.push(node);
-        } else {
-          locationGroups.set(locationKey, {
-            lat: location.lat,
-            lng: location.lon,
-            city: location.city,
-            country: location.country,
-            count: 1,
-            nodes: [node]
-          });
+        const lat = location.lat || COUNTRY_COORDS[location.country_code?.toUpperCase()]?.lat || 0;
+        const lon = location.lon || COUNTRY_COORDS[location.country_code?.toUpperCase()]?.lon || 0;
+        
+        if (lat && lon) {
+          if (existing) {
+            existing.count++;
+          } else {
+            locationGroups.set(locationKey, {
+              lat,
+              lng: lon,
+              city: location.city || location.country,
+              country: location.country,
+              count: 1
+            });
+          }
         }
       }
       
@@ -205,9 +199,11 @@ export const GeoLocationCard: React.FC = () => {
     return {
       mapValidators,
       countryStats,
-      totalNodes: nodes.length // Total including unknown locations
+      totalNodes: sharedNodes.length
     };
-  }, [nodes, locations]);
+  }, [sharedNodes, locations, isMainnet]);
+
+  const loading = isLoading || (locationsLoading && !isMainnet);
 
   if (loading) {
     return (
@@ -220,26 +216,15 @@ export const GeoLocationCard: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-lg h-full min-h-[300px] sm:min-h-[400px] md:min-h-[500px] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-400 text-sm mb-2">Failed to load pNode data</div>
-          <div className="text-white/40 text-xs">{error}</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-lg h-full min-h-[300px] sm:min-h-[400px] md:min-h-[500px] flex flex-col relative overflow-hidden">
       {/* Stats Overlay - Top Left */}
       <div className="absolute top-3 left-3 sm:top-6 sm:left-6 z-50 space-y-2 sm:space-y-3 bg-black/40 backdrop-blur-sm rounded-lg p-2 sm:p-3">
-        <div className={`text-left transition-all duration-300 ${isUpdating ? 'opacity-60' : 'opacity-100'}`}>
+        <div className="text-left">
           <div className="text-white text-xl sm:text-2xl md:text-3xl font-bold font-mono">{totalNodes}</div>
           <div className="text-white/60 text-xs sm:text-sm">pNodes</div>
         </div>
-        <div className={`text-left transition-all duration-300 ${isUpdating ? 'opacity-60' : 'opacity-100'}`}>
+        <div className="text-left">
           <div className="text-white text-lg sm:text-xl md:text-2xl font-bold font-mono">{countryStats.length}</div>
           <div className="text-white/60 text-xs sm:text-sm">Countries</div>
         </div>
