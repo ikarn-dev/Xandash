@@ -46,13 +46,12 @@ export const ProfileStatsCards = ({ node, network }: ProfileStatsCardsProps) => 
           <span>Credits</span>
         </div>
         <div className="text-base sm:text-xl lg:text-2xl font-bold text-emerald-400 font-mono">
-          {(node?.totalCredits || node?.credits || 0).toLocaleString()}
+          {(node?.credits || 0).toLocaleString()}
         </div>
-        {(node?.previousCredits && node.previousCredits > 0) && (
+        {/* Only show previous credits when current is 0 and there's historical data */}
+        {(node?.credits === 0 && node?.previousCredits && node.previousCredits > 0) && (
           <div className="flex items-center gap-2 mt-1 text-[9px] sm:text-[10px] text-white/40">
-            <span>Current: <span className="text-emerald-400/80">{(node?.credits || 0).toLocaleString()}</span></span>
-            <span>•</span>
-            <span>Prev: <span className="text-amber-400/80">{node.previousCredits.toLocaleString()}</span></span>
+            <span>Previous: <span className="text-amber-400/80">{node.previousCredits.toLocaleString()}</span></span>
           </div>
         )}
       </div>

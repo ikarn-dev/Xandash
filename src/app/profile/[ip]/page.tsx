@@ -42,10 +42,12 @@ export async function getProfileData(ip: string) {
       if (entry) currentCredits = entry.credits;
     }
 
-    // Calculate previous month's credits from MongoDB
-    if (dbHistory.length > 0) {
+    // Only show previous credits if current API returned 0 (not null/undefined)
+    // This indicates the node had credits before but now shows 0 from the API
+    // We use the max historical value as a reference
+    if (currentCredits === 0 && dbHistory.length > 0) {
       const maxHistoricalCredits = Math.max(...dbHistory.map(h => h.credits || 0));
-      if (maxHistoricalCredits > currentCredits) {
+      if (maxHistoricalCredits > 0) {
         previousCredits = maxHistoricalCredits;
       }
     }
@@ -79,7 +81,9 @@ export async function getProfileData(ip: string) {
         last_seen_timestamp: nodeData.last_seen_timestamp || 0,
         credits: currentCredits,
         previousCredits: previousCredits,
-        totalCredits: currentCredits + previousCredits,
+        // Don't add previous to current - totalCredits is just current credits
+        // Previous is only shown as reference when current is 0
+        totalCredits: currentCredits,
       } : null,
       // Serialize MongoDB arrays to plain objects
       dbHistory: dbHistory.length > 0 ? dbHistory.map(serializeMongoObject) : undefined,

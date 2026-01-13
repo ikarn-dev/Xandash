@@ -97,24 +97,17 @@ export async function GET(request: NextRequest) {
       currentCredits = creditsEntry?.credits || 0;
     }
 
-    // Calculate previous credits from historical data
-    if (dbHistory.length > 0) {
-      const historicalCredits = dbHistory.map(h => h.credits || 0);
-      const maxHistoricalCredits = Math.max(...historicalCredits);
-      
-      // If we have current credits, previous is the difference
-      if (currentCredits > 0) {
-        // Find the most recent historical value that's different from current
-        const recentHistorical = historicalCredits.find(c => c !== currentCredits && c > 0);
-        previousCredits = recentHistorical || 0;
-      } else {
-        // If no current credits, use the latest historical value
-        currentCredits = maxHistoricalCredits;
+    // Only show previous credits if current API returned 0
+    // This indicates the node had credits before but now shows 0 from the API
+    if (currentCredits === 0 && dbHistory.length > 0) {
+      const maxHistoricalCredits = Math.max(...dbHistory.map(h => h.credits || 0));
+      if (maxHistoricalCredits > 0) {
+        previousCredits = maxHistoricalCredits;
       }
     }
 
-    // Fallback to database snapshot if no live credits
-    if (currentCredits === 0 && dbSnapshot?.credits) {
+    // Fallback to database snapshot if no live credits and API didn't return data
+    if (currentCredits === 0 && !liveCreditsData && dbSnapshot?.credits) {
       currentCredits = dbSnapshot.credits;
     }
 
@@ -140,7 +133,9 @@ export async function GET(request: NextRequest) {
         active_streams: nodeData.active_streams || 0,
         credits: currentCredits,
         previousCredits,
-        totalCredits: currentCredits + previousCredits,
+        // Don't add previous to current - totalCredits is just current credits
+        // Previous is only shown as reference when current is 0
+        totalCredits: currentCredits,
       } : null,
       dbHistory: dbHistory.length > 0 ? dbHistory : undefined,
       dbEvents: dbEvents.length > 0 ? dbEvents : undefined,
