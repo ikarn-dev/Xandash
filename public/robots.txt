@@ -1,0 +1,32 @@
+# XanDash - Xandeum Network Dashboard
+# https://www.xandash.online
+
+# Allow all bots
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /_next/
+Disallow: /admin/
+
+# Specific bot rules
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 1
+
+User-agent: DuckDuckBot
+Allow: /
+Crawl-delay: 1
+
+# Sitemap
+Sitemap: https://www.xandash.online/sitemap.xml
+
+# Cache control
+Cache-Control: max-age=86400

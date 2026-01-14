@@ -5,10 +5,13 @@ import { getNodeStatsHistory, getNodeEvents, getLatestNodeSnapshot } from '@/lib
 import { ProfileCacheService } from '@/libs/services/profile-cache';
 import { getMainnetNodeByIp } from '@/libs/services/mainnet-data-service';
 import { getDevnetNodeByIp } from '@/libs/services/devnet-data-service';
+import { generateMetadata } from './metadata';
 
 interface PageProps {
   params: Promise<{ ip: string }>;
 }
+
+export { generateMetadata };
 
 // Enable SSR with revalidation every 30 seconds
 export const revalidate = 30;

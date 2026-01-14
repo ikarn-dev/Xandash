@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
   
+  // Trailing slash handling for consistent URLs
+  trailingSlash: false,
+  
   // CDN and caching headers
   async headers() {
     return [
