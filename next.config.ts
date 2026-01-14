@@ -54,6 +54,9 @@ const nextConfig: NextConfig = {
   // Reduce bundle size - target modern browsers only
   reactStrictMode: true,
   
+  // Target modern browsers to reduce polyfills (saves ~14KB)
+  transpilePackages: [],
+  
   // CDN and caching headers
   async headers() {
     return [
@@ -77,6 +80,16 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        // Static assets with long cache
+        source: '/logo/:path*',
         headers: [
           {
             key: 'Cache-Control',

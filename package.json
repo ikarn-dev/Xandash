@@ -12,6 +12,14 @@
     "clear-all": "rm -rf .next node_modules package-lock.json && npm install && npm run dev",
     "clear-all-win": "rmdir /s /q .next && rmdir /s /q node_modules && del package-lock.json && npm install && npm run dev"
   },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "last 2 Firefox versions",
+    "last 2 Safari versions",
+    "last 2 Edge versions",
+    "not dead",
+    "not IE 11"
+  ],
   "dependencies": {
     "@lottiefiles/dotlottie-react": "^0.17.12",
     "@radix-ui/react-slot": "^1.2.4",

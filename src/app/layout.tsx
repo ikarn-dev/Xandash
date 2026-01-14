@@ -136,15 +136,19 @@ export default function RootLayout({
         <meta property="og:type" content="website" />
         <meta property="og:locale" content="en_US" />
         <meta name="format-detection" content="telephone=no" />
-        {/* Preconnect to critical origins */}
+        {/* Preconnect to critical origins - improves LCP */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://challenges.cloudflare.com" />
         {/* DNS prefetch for API endpoints */}
         <link rel="dns-prefetch" href="https://api.coingecko.com" />
         <link rel="dns-prefetch" href="https://stats.xandeum.network" />
         <link rel="dns-prefetch" href="https://flagcdn.com" />
-        {/* Critical CSS inline */}
-        <style dangerouslySetInnerHTML={{ __html: `html,body{background:#000!important;margin:0;padding:0}` }} />
+        <link rel="dns-prefetch" href="https://podcredits.xandeum.network" />
+        {/* Preload critical assets for faster LCP */}
+        <link rel="preload" href="/logo/xandash.png" as="image" type="image/png" />
+        {/* Critical CSS inline - prevents render blocking */}
+        <style dangerouslySetInnerHTML={{ __html: `html,body{background:#000!important;margin:0;padding:0}.gradient-bg{background:linear-gradient(180deg,#000 0%,#0a0a0a 100%)}` }} />
         <StructuredData />
       </head>
       <body
