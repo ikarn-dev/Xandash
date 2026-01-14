@@ -12,7 +12,7 @@
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb)](https://www.mongodb.com/)
 [![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react)](https://react.dev/)
 
-[Live Demo](https://xandash.vercel.app) · [Documentation](https://xandash.vercel.app/docs) · [Xandeum Network](https://www.xandeum.network)
+[Live Demo](https://www.xandash.online) · [Documentation](https://www.xandash.online/docs) · [Xandeum Network](https://www.xandeum.network)
 
 </div>
 
@@ -218,7 +218,7 @@ src/
 
 ```bash
 # Initialize MongoDB indexes (run once)
-curl "https://your-domain.vercel.app/api/sync-nodes?action=init"
+curl "https://www.xandash.online/api/sync-nodes?action=init"
 ```
 
 ## Contributing

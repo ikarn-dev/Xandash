@@ -623,7 +623,7 @@ export async function POST(req: NextRequest) {
           headers: { 
             'Authorization': `Bearer ${OPENROUTER_API_KEY}`, 
             'Content-Type': 'application/json', 
-            'HTTP-Referer': 'https://xandash.vercel.app' 
+            'HTTP-Referer': 'https://www.xandash.online' 
           },
           body: JSON.stringify({ 
             model, 

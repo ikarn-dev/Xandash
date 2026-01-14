@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   title: "XanDash - Xandeum Network Dashboard",
   description: "Real-time monitoring dashboard for Xandeum network validators and nodes with offline support",
   manifest: "/manifest.json",
+  metadataBase: new URL('https://www.xandash.online'),
   icons: {
     icon: [
       { url: "/icon.png", sizes: "any" },
@@ -42,11 +43,14 @@ export const metadata: Metadata = {
     description: "Real-time monitoring dashboard for Xandeum network validators and nodes",
     type: "website",
     locale: "en_US",
+    url: "https://www.xandash.online",
+    siteName: "XanDash",
   },
   twitter: {
     card: "summary_large_image",
     title: "XanDash - Xandeum Network Dashboard",
     description: "Real-time monitoring dashboard for Xandeum network validators and nodes",
+    site: "@xandeum",
   },
 };
 

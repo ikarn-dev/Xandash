@@ -15,7 +15,7 @@ jobs:
       - name: Sync devnet nodes to MongoDB
         run: |
           response=$(curl -s -w "\n%{http_code}" -X POST \
-            "https://xandash.vercel.app/api/sync-nodes?network=devnet" \
+            "https://www.xandash.online/api/sync-nodes?network=devnet" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json")
           
