@@ -2,7 +2,7 @@ import React from 'react';
 
 export const VersionCardSkeleton: React.FC = () => {
   return (
-    <div className="relative bg-black border border-white/10 p-4 sm:p-6 h-full animate-pulse">
+    <div className="relative bg-black border border-white/10 p-4 sm:p-6 h-full">
       {/* Corner accents */}
       <div className="absolute top-0 left-0 w-4 sm:w-6 h-4 sm:h-6">
         <div className="absolute top-0 left-0 w-2 sm:w-3 h-0.5 bg-white/20"></div>

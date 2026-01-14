@@ -133,8 +133,11 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
               >
                 Last Seen {getSortIcon('last_seen')}
               </th>
-              <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
-                Credits
+              <th 
+                className="w-[8%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
+                onClick={() => handleSort('credits')}
+              >
+                Credits {getSortIcon('credits')}
               </th>
               <th 
                 className="w-[7%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
@@ -176,9 +179,8 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                 <tr
                   key={nodeId}
                   className={`border-b border-white/5 hover:bg-white/5 transition-all duration-200 cursor-pointer group ${
-                    clickedNodeId === nodeId ? 'bg-cyan-500/10 animate-pulse' : ''
-                  } ${isSelected ? 'bg-emerald-500/10' : ''} ${animate ? 'animate-blur-reveal-item' : ''}`}
-                  style={animate ? { animationDelay: `${index * 50}ms` } : {}}
+                    clickedNodeId === nodeId ? 'bg-cyan-500/10' : ''
+                  } ${isSelected ? 'bg-emerald-500/10' : ''}`}
                   onClick={() => onNavigate(validator.address || '', nodeId)}
                   onMouseEnter={() => onPrefetch(validator.address || '')}
                 >

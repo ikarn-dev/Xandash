@@ -15,7 +15,7 @@ export function useNodeProfile({ ip, initialData }: UseNodeProfileProps) {
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<NodeProfileData | null>(initialData || null);
-  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
+  const [timeRange, setTimeRange] = useState<TimeRange>('24h');
   const [lastUpdate, setLastUpdate] = useState<Date | null>(initialData ? new Date() : null);
 
   // Dismiss navigation toast
@@ -76,13 +76,14 @@ export function useNodeProfile({ ip, initialData }: UseNodeProfileProps) {
     setLoading(true);
     setError(null);
     setData(null);
-    fetchData(true, 168);
+    fetchData(true, 168); // Always fetch 7 days for credits calculation
   }, [ip, network]);
 
-  // Refetch when time range changes
+  // Refetch when time range changes - but always fetch full data for credits
   useEffect(() => {
-    const hours = timeRangeOptions.find(r => r.value === timeRange)?.hours || 168;
-    fetchData(false, hours);
+    // Always fetch 168 hours (7 days) to ensure credits calculation has enough data
+    // The time range filter is applied client-side for chart display only
+    fetchData(false, 168);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRange]);
 

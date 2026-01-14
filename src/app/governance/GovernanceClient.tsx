@@ -116,19 +116,19 @@ export function GovernanceClient() {
 function LoadingSkeleton() {
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="bg-black border border-white/10 p-4 sm:p-6 animate-pulse">
+      <div className="bg-black border border-white/10 p-4 sm:p-6">
         <div className="h-6 sm:h-8 bg-white/10 rounded w-1/3 mb-2"></div>
         <div className="h-3 sm:h-4 bg-white/10 rounded w-2/3"></div>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-black border border-white/10 p-3 sm:p-4 animate-pulse">
+          <div key={i} className="bg-black border border-white/10 p-3 sm:p-4">
             <div className="h-3 sm:h-4 bg-white/10 rounded w-1/2 mb-2"></div>
             <div className="h-6 sm:h-8 bg-white/10 rounded w-3/4"></div>
           </div>
         ))}
       </div>
-      <div className="bg-black border border-white/10 p-4 sm:p-6 animate-pulse">
+      <div className="bg-black border border-white/10 p-4 sm:p-6">
         <div className="h-8 bg-white/10 rounded w-full mb-4"></div>
         <div className="space-y-2">
           {[...Array(3)].map((_, i) => (

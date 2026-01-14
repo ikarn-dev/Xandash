@@ -150,7 +150,7 @@ export const ProfileChartsSection = ({
             <span className="w-1.5 h-1.5 bg-blue-500"></span>
             Uptime
           </h3>
-          <LineChart data={uptimeData} color="#3b82f6" height={120} label="Hours" valueFormatter={v => `${v.toFixed(1)}h`} highlightCurrent={true} startFromZero={true} />
+          <LineChart data={uptimeData} color="#3b82f6" height={120} label="Hours" valueFormatter={v => `${v.toFixed(1)}h`} highlightCurrent={true} />
         </div>
         
         {/* Credits */}
@@ -159,7 +159,7 @@ export const ProfileChartsSection = ({
             <span className="w-1.5 h-1.5 bg-emerald-500"></span>
             Credits
           </h3>
-          <LineChart data={creditsData} color="#10b981" height={120} label="Credits" valueFormatter={formatCredits} highlightCurrent={true} startFromZero={true} />
+          <LineChart data={creditsData} color="#10b981" height={120} label="Credits" valueFormatter={formatCredits} highlightCurrent={true} />
         </div>
         
         {/* Storage */}
@@ -168,7 +168,7 @@ export const ProfileChartsSection = ({
             <span className="w-1.5 h-1.5 bg-amber-500"></span>
             Storage
           </h3>
-          <LineChart data={storageData} color="#f59e0b" height={120} label="GB" valueFormatter={v => `${v.toFixed(1)} GB`} highlightCurrent={true} startFromZero={true} />
+          <LineChart data={storageData} color="#f59e0b" height={120} label="GB" valueFormatter={v => `${v.toFixed(1)} GB`} highlightCurrent={true} />
         </div>
       </div>
     </div>

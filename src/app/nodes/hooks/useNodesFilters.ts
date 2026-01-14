@@ -25,7 +25,7 @@ export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: n
     onlySyncing: false,
   });
   const [versionFilter, setVersionFilter] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'address' | 'location' | 'pubkey' | 'public' | 'storage_committed' | 'storage_used' | 'usage_percent' | 'rpc_port' | 'version' | 'uptime' | 'last_seen' | 'status'>('last_seen');
+  const [sortBy, setSortBy] = useState<'address' | 'location' | 'pubkey' | 'public' | 'storage_committed' | 'storage_used' | 'usage_percent' | 'rpc_port' | 'version' | 'uptime' | 'last_seen' | 'status' | 'credits'>('last_seen');
   const [isPending, startTransition] = useTransition();
 
   const hasActiveFilters = searchQuery !== '' || selectedFilters.onlyPublic || selectedFilters.hideHighStake || selectedFilters.showDuplicates || selectedFilters.onlyOnline || selectedFilters.onlyInactive || selectedFilters.onlySyncing || versionFilter !== '';

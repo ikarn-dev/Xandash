@@ -8,25 +8,13 @@ Disallow: /api/
 Disallow: /_next/
 Disallow: /admin/
 
-# Specific bot rules
+# Googlebot
 User-agent: Googlebot
 Allow: /
-Crawl-delay: 0
 
+# Bingbot
 User-agent: Bingbot
 Allow: /
-Crawl-delay: 1
-
-User-agent: Slurp
-Allow: /
-Crawl-delay: 1
-
-User-agent: DuckDuckBot
-Allow: /
-Crawl-delay: 1
 
 # Sitemap
 Sitemap: https://www.xandash.online/sitemap.xml
-
-# Cache control
-Cache-Control: max-age=86400

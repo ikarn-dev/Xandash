@@ -339,16 +339,16 @@ export const NetworkStatsCardSSR: React.FC = () => {
 
         {/* Desktop headers */}
         <div className="hidden lg:grid lg:grid-cols-4 gap-6 mb-4">
-          <div className="text-white/80 text-sm font-medium animate-blur-reveal-item-1 text-center">Storage Committed</div>
-          <div className="text-white/80 text-sm font-medium animate-blur-reveal-item-2 text-center">Storage Used</div>
-          <div className="text-white/80 text-sm font-medium animate-blur-reveal-item-3 text-center">Avg Committed per Pod</div>
-          <div className="text-white/80 text-sm font-medium animate-blur-reveal-item-4 text-center">Storage Distribution</div>
+          <div className="text-white/80 text-sm font-medium text-center">Storage Committed</div>
+          <div className="text-white/80 text-sm font-medium text-center">Storage Used</div>
+          <div className="text-white/80 text-sm font-medium text-center">Avg Committed per Pod</div>
+          <div className="text-white/80 text-sm font-medium text-center">Storage Distribution</div>
         </div>
 
         {/* Desktop beam divider */}
         <div className="relative mb-6 overflow-hidden hidden lg:block">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-beam shadow-[0_0_10px_rgba(255,255,255,0.5)]"></div>
+            <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
           </div>
         </div>
 
@@ -357,32 +357,32 @@ export const NetworkStatsCardSSR: React.FC = () => {
           <div className="absolute inset-0 grid grid-cols-4 gap-6 pointer-events-none">
             <div></div>
             <div className="relative">
-              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-white/60 to-transparent animate-beam-vertical shadow-[0_0_10px_rgba(255,255,255,0.5)]"></div>
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
             </div>
             <div className="relative">
-              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-white/60 to-transparent animate-beam-vertical shadow-[0_0_10px_rgba(255,255,255,0.5)]" style={{animationDelay: '0.7s'}}></div>
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
             </div>
             <div className="relative">
-              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-white/60 to-transparent animate-beam-vertical shadow-[0_0_10px_rgba(255,255,255,0.5)]" style={{animationDelay: '1.4s'}}></div>
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
             </div>
           </div>
 
-          <div className="flex flex-col justify-center items-center animate-blur-reveal-item-1 relative z-10 text-center">
+          <div className="flex flex-col justify-center items-center relative z-10 text-center">
             <div className="text-white text-3xl font-bold font-mono mb-1">{storageCommitted.value}</div>
             <div className="text-white/60 text-sm">{storageCommitted.unit}</div>
           </div>
 
-          <div className="flex flex-col justify-center items-center animate-blur-reveal-item-2 relative z-10 text-center">
+          <div className="flex flex-col justify-center items-center relative z-10 text-center">
             <div className="text-white text-3xl font-bold font-mono mb-1">{storageUsed.value}</div>
             <div className="text-white/60 text-sm">{storageUsed.unit}</div>
           </div>
 
-          <div className="flex flex-col justify-center items-center animate-blur-reveal-item-3 relative z-10 text-center">
+          <div className="flex flex-col justify-center items-center relative z-10 text-center">
             <div className="text-white text-3xl font-bold font-mono mb-1">{avgPerPod.value}</div>
             <div className="text-white/60 text-sm">{avgPerPod.unit}</div>
           </div>
 
-          <div className="flex flex-col justify-center items-center animate-blur-reveal-item-4 relative z-10">
+          <div className="flex flex-col justify-center items-center relative z-10">
             <StoragePieChart 
               used={storageStats.storage_used} 
               committed={storageStats.storage_committed}
@@ -394,19 +394,19 @@ export const NetworkStatsCardSSR: React.FC = () => {
 
         {/* Mobile layout: 3 columns for text stats */}
         <div className="grid grid-cols-3 gap-2 lg:hidden">
-          <div className="flex flex-col justify-center items-center animate-blur-reveal-item-1 text-center">
+          <div className="flex flex-col justify-center items-center text-center">
             <div className="text-white/80 text-[10px] sm:text-xs font-medium mb-1">Storage Committed</div>
             <div className="text-white text-lg sm:text-xl font-bold font-mono">{storageCommitted.value}</div>
             <div className="text-white/60 text-xs">{storageCommitted.unit}</div>
           </div>
 
-          <div className="flex flex-col justify-center items-center animate-blur-reveal-item-2 text-center">
+          <div className="flex flex-col justify-center items-center text-center">
             <div className="text-white/80 text-[10px] sm:text-xs font-medium mb-1">Storage Used</div>
             <div className="text-white text-lg sm:text-xl font-bold font-mono">{storageUsed.value}</div>
             <div className="text-white/60 text-xs">{storageUsed.unit}</div>
           </div>
 
-          <div className="flex flex-col justify-center items-center animate-blur-reveal-item-3 text-center">
+          <div className="flex flex-col justify-center items-center text-center">
             <div className="text-white/80 text-[10px] sm:text-xs font-medium mb-1">Avg per Pod</div>
             <div className="text-white text-lg sm:text-xl font-bold font-mono">{avgPerPod.value}</div>
             <div className="text-white/60 text-xs">{avgPerPod.unit}</div>
@@ -417,7 +417,7 @@ export const NetworkStatsCardSSR: React.FC = () => {
       {/* Mobile-only pie chart card */}
       <div className="relative bg-black border border-white/10 p-4 group hover:border-white/20 transition-all duration-300 overflow-hidden lg:hidden">
         <CornerEdges />
-        <div className="flex flex-col items-center animate-blur-reveal-item-4">
+        <div className="flex flex-col items-center">
           <div className="text-white/80 text-xs font-medium mb-3">Storage Distribution</div>
           <StoragePieChart 
             used={storageStats.storage_used} 

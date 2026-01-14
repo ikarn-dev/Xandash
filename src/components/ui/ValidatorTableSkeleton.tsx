@@ -25,7 +25,7 @@ export const ValidatorTableSkeleton: React.FC<ValidatorTableSkeletonProps> = ({ 
           </thead>
           <tbody className="divide-y divide-white/5">
             {Array.from({ length: count }).map((_, index) => (
-              <tr key={index} className="animate-pulse">
+              <tr key={index}>
                 <td className="px-3 py-3">
                   <div className="h-4 bg-white/10 rounded w-24"></div>
                 </td>

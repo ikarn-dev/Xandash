@@ -3,12 +3,19 @@
 import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-// Register GSAP plugins
+// Lazy load GSAP only when needed
+let gsap: any;
+let ScrollTrigger: any;
+
 if (typeof window !== 'undefined') {
-  gsap.registerPlugin(ScrollTrigger);
+  import('gsap').then(mod => {
+    gsap = mod.gsap;
+    import('gsap/ScrollTrigger').then(stMod => {
+      ScrollTrigger = stMod.ScrollTrigger;
+      gsap.registerPlugin(ScrollTrigger);
+    });
+  });
 }
 
 // Custom SVG Icons
@@ -111,51 +118,64 @@ function AboutContent() {
   const ctaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      // Hero animation - subtle fade up
-      gsap.fromTo(heroRef.current?.querySelectorAll('.hero-animate') || [],
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power2.out' }
-      );
+    // Wait for GSAP to load
+    const initAnimations = async () => {
+      if (!gsap) {
+        const gsapModule = await import('gsap');
+        gsap = gsapModule.gsap;
+        const stModule = await import('gsap/ScrollTrigger');
+        ScrollTrigger = stModule.ScrollTrigger;
+        gsap.registerPlugin(ScrollTrigger);
+      }
 
-      // Features cards animation - consistent fade up
-      gsap.fromTo(featuresRef.current?.querySelectorAll('.feature-card') || [],
-        { opacity: 0, y: 30 },
-        {
-          opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: 'power2.out',
-          scrollTrigger: { trigger: featuresRef.current, start: 'top 85%', toggleActions: 'play none none none' }
-        }
-      );
+      const ctx = gsap.context(() => {
+        // Hero animation - subtle fade up
+        gsap.fromTo(heroRef.current?.querySelectorAll('.hero-animate') || [],
+          { opacity: 0, y: 20 },
+          { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power2.out' }
+        );
 
-      // Why section animation - subtle fade up
-      gsap.fromTo(whyRef.current?.querySelectorAll('.why-animate') || [],
-        { opacity: 0, y: 20 },
-        {
-          opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: 'power2.out',
-          scrollTrigger: { trigger: whyRef.current, start: 'top 85%', toggleActions: 'play none none none' }
-        }
-      );
+        // Features cards animation - consistent fade up
+        gsap.fromTo(featuresRef.current?.querySelectorAll('.feature-card') || [],
+          { opacity: 0, y: 30 },
+          {
+            opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: 'power2.out',
+            scrollTrigger: { trigger: featuresRef.current, start: 'top 85%', toggleActions: 'play none none none' }
+          }
+        );
 
-      // Stats counter animation - consistent fade up
-      gsap.fromTo(statsRef.current?.querySelectorAll('.stat-card') || [],
-        { opacity: 0, y: 20 },
-        {
-          opacity: 1, y: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out',
-          scrollTrigger: { trigger: statsRef.current, start: 'top 85%', toggleActions: 'play none none none' }
-        }
-      );
+        // Why section animation - subtle fade up
+        gsap.fromTo(whyRef.current?.querySelectorAll('.why-animate') || [],
+          { opacity: 0, y: 20 },
+          {
+            opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: 'power2.out',
+            scrollTrigger: { trigger: whyRef.current, start: 'top 85%', toggleActions: 'play none none none' }
+          }
+        );
 
-      // CTA animation - subtle fade up
-      gsap.fromTo(ctaRef.current?.querySelectorAll('.cta-animate') || [],
-        { opacity: 0, y: 20 },
-        {
-          opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: 'power2.out',
-          scrollTrigger: { trigger: ctaRef.current, start: 'top 85%', toggleActions: 'play none none none' }
-        }
-      );
-    }, containerRef);
+        // Stats counter animation - consistent fade up
+        gsap.fromTo(statsRef.current?.querySelectorAll('.stat-card') || [],
+          { opacity: 0, y: 20 },
+          {
+            opacity: 1, y: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out',
+            scrollTrigger: { trigger: statsRef.current, start: 'top 85%', toggleActions: 'play none none none' }
+          }
+        );
 
-    return () => ctx.revert();
+        // CTA animation - subtle fade up
+        gsap.fromTo(ctaRef.current?.querySelectorAll('.cta-animate') || [],
+          { opacity: 0, y: 20 },
+          {
+            opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: 'power2.out',
+            scrollTrigger: { trigger: ctaRef.current, start: 'top 85%', toggleActions: 'play none none none' }
+          }
+        );
+      }, containerRef);
+
+      return () => ctx.revert();
+    };
+
+    initAnimations();
   }, []);
 
   return (

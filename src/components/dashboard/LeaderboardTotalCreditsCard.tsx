@@ -61,8 +61,13 @@ export const LeaderboardTotalCreditsCard: React.FC<LeaderboardTotalCreditsCardPr
       <div className={`relative bg-black border border-white/10 p-6 h-full group hover:border-white/20 transition-all duration-300 overflow-hidden ${className}`}>
         <CornerAccents />
         <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
-          <div className="w-6 h-6 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin mb-3"></div>
-          <div className="text-white/40 text-xs">Loading...</div>
+          <div className="h-3 w-32 bg-white/10 rounded mb-3"></div>
+          <div className="h-10 w-24 bg-yellow-400/20 rounded mb-1"></div>
+          <div className="h-2 w-20 bg-white/10 rounded mb-3"></div>
+          <div className="w-full px-2 mt-1">
+            <div className="h-6 w-full bg-white/10 rounded"></div>
+            <div className="h-2 w-24 bg-white/10 rounded mx-auto mt-1.5"></div>
+          </div>
         </div>
       </div>
     );

@@ -2,7 +2,7 @@
 
 export function CountryCardSkeleton() {
   return (
-    <div className="relative bg-black border border-white/10 p-3 sm:p-4 md:p-6 animate-pulse">
+    <div className="relative bg-black border border-white/10 p-3 sm:p-4 md:p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
           <div className="w-6 h-4 bg-gray-700/50 rounded"></div>

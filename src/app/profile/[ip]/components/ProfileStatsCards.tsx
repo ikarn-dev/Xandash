@@ -46,25 +46,11 @@ export const ProfileStatsCards = ({ node, network }: ProfileStatsCardsProps) => 
           <span>Credits</span>
         </div>
         <div className="text-base sm:text-xl lg:text-2xl font-bold text-emerald-400 font-mono">
-          {(node?.totalCredits || node?.credits || 0).toLocaleString()}
+          {(node?.credits || 0).toLocaleString()}
         </div>
-        {/* Show breakdown when there's previous month data */}
-        {(node?.previousMonthCredits && node.previousMonthCredits > 0) ? (
-          <div className="flex flex-col gap-0.5 mt-1.5 text-[9px] sm:text-[10px]">
-            <div className="flex items-center justify-between text-white/50">
-              <span>This Month:</span>
-              <span className="text-emerald-400/80 font-mono">{(node?.thisMonthCredits || 0).toLocaleString()}</span>
-            </div>
-            <div className="flex items-center justify-between text-white/50">
-              <span>Prev Month:</span>
-              <span className="text-amber-400/80 font-mono">{node.previousMonthCredits.toLocaleString()}</span>
-            </div>
-          </div>
-        ) : (
-          <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
-            This month
-          </div>
-        )}
+        <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
+          Current
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 export const ProfileSkeleton = () => (
-  <div className="space-y-3 sm:space-y-4 px-2 sm:px-0 animate-pulse">
+  <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
     {/* Header Skeleton */}
     <div className="relative bg-black border border-white/10 p-3 sm:p-4">
       <div className="flex flex-col gap-3">

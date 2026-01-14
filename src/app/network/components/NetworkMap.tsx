@@ -67,9 +67,38 @@ export function NetworkMap({ mapValidators, countryStats, totalNodes, isMainnet,
       {/* Loading State */}
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-40">
-          <div className="text-center">
-            <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <div className="text-white/60 text-sm">Loading network data...</div>
+          <div className="w-full h-full p-4">
+            {/* Stats Skeleton - Top Left */}
+            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 md:top-6 md:left-6 space-y-2 sm:space-y-3 bg-black/60 backdrop-blur-sm rounded-lg p-2 sm:p-3 border border-white/10">
+              <div className="text-left">
+                <div className="h-8 w-12 bg-white/10 rounded mb-1"></div>
+                <div className="h-3 w-10 bg-white/10 rounded"></div>
+              </div>
+              <div className="text-left">
+                <div className="h-6 w-8 bg-white/10 rounded mb-1"></div>
+                <div className="h-3 w-14 bg-white/10 rounded"></div>
+              </div>
+            </div>
+            {/* Network Badge Skeleton - Top Right */}
+            <div className="absolute top-3 right-3 sm:top-4 sm:right-4 md:top-6 md:right-6 flex items-center space-x-2 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/10">
+              <div className="w-2 h-2 bg-white/20 rounded-full"></div>
+              <div className="h-3 w-14 bg-white/10 rounded"></div>
+            </div>
+            {/* Countries Skeleton - Bottom Left */}
+            <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 md:bottom-6 md:left-6 bg-black/60 backdrop-blur-sm rounded-lg p-2 sm:p-3 border border-white/10">
+              <div className="h-3 w-24 bg-white/10 rounded mb-2"></div>
+              <div className="space-y-1.5">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-3 bg-white/10 rounded"></div>
+                      <div className="h-3 w-14 bg-white/10 rounded"></div>
+                    </div>
+                    <div className="h-4 w-6 bg-white/10 rounded-full ml-2"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}

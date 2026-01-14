@@ -211,7 +211,7 @@ export const DashboardInteractive: React.FC = () => {
           {isSearching ? (
             <div className="flex items-center justify-center py-12">
               <div className="inline-flex items-center space-x-3 bg-black/60 backdrop-blur-sm rounded-xl px-6 py-4 border border-white/10">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-cyan-400"></div>
+                <div className="h-5 w-5 bg-cyan-400/30 rounded-full"></div>
                 <span className="text-white/80">Searching...</span>
               </div>
             </div>

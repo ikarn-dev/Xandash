@@ -1,8 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell } from 'recharts';
+import dynamic from 'next/dynamic';
+
+// Lazy load recharts components
+const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false });
+const Bar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false });
+const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
+const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
+const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
+const Cell = dynamic(() => import('recharts').then(mod => mod.Cell), { ssr: false });
 
 // Custom Refresh Icon with animation support
 const RefreshIcon = ({ className = "w-4 h-4", spinning = false }: { className?: string; spinning?: boolean }) => (
@@ -300,7 +309,7 @@ export const CombinedTokenCard: React.FC = () => {
           <div className="absolute bottom-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
         </div>
 
-        <div className="animate-pulse">
+        <div>
           <div className="h-4 bg-white/10 rounded mb-3"></div>
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
             <div className="lg:col-span-2 space-y-4">
@@ -390,7 +399,7 @@ export const CombinedTokenCard: React.FC = () => {
         {/* Left Side - Detailed Token Information */}
         <div className="lg:col-span-2 space-y-3">
           {/* Current Price Display */}
-          <div className="mb-3 animate-blur-reveal-item-1">
+          <div className="mb-3">
             <div className="text-white text-xl font-bold font-mono mb-1">
               ${currentPrice.toFixed(6)}
             </div>
@@ -406,7 +415,7 @@ export const CombinedTokenCard: React.FC = () => {
           </div>
 
           {/* 24h Range */}
-          <div className="mb-3 animate-blur-reveal-item-2">
+          <div className="mb-3">
             <div className="flex justify-between items-center mb-1">
               <span className="text-white/60 text-xs">24h Range</span>
             </div>
@@ -420,7 +429,7 @@ export const CombinedTokenCard: React.FC = () => {
           </div>
 
           {/* Detailed Stats */}
-          <div className="space-y-2 animate-blur-reveal-item-3">
+          <div className="space-y-2">
             <div className="flex justify-between items-center py-1.5 border-b border-white/10">
               <span className="text-white/60 text-xs">Market Cap</span>
               <span className="text-white text-xs font-mono">${formatNumber(marketCap)}</span>
@@ -454,7 +463,7 @@ export const CombinedTokenCard: React.FC = () => {
         </div>
 
         {/* Right Side - Price Chart */}
-        <div className="lg:col-span-3 flex items-end animate-blur-reveal-item-4">
+        <div className="lg:col-span-3 flex items-end">
           <PriceChart data={priceHistory} />
         </div>
       </div>

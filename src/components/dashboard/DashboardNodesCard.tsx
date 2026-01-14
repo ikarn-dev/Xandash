@@ -220,12 +220,41 @@ export const DashboardNodesCard: React.FC = () => {
 
   if (isLoading && sharedNodes.length === 0) {
     return (
-      <div className="relative bg-black border border-white/10 p-6 h-full group hover:border-white/20 transition-all duration-300">
+      <div className="relative bg-black border border-white/10 p-4 sm:p-6 h-full group hover:border-white/20 transition-all duration-300">
         <CornerEdges />
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <div className="text-white/60 text-sm">Loading pNodes...</div>
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="h-5 w-28 bg-white/10 rounded"></div>
+            <div className="h-5 w-16 bg-white/10 rounded-full"></div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="h-8 w-8 bg-white/10 rounded-lg"></div>
+            <div className="h-8 w-20 bg-white/10 rounded-lg"></div>
+          </div>
+        </div>
+        {/* Table Skeleton */}
+        <div className="bg-black border border-white/10 rounded-lg overflow-hidden">
+          <div className="bg-white/5 border-b border-white/10 px-3 py-3">
+            <div className="flex space-x-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="h-3 w-16 bg-white/10 rounded"></div>
+              ))}
+            </div>
+          </div>
+          <div className="divide-y divide-white/5">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="px-3 py-3 flex space-x-4">
+                <div className="h-4 w-4 bg-white/10 rounded"></div>
+                <div className="h-4 w-24 bg-white/10 rounded"></div>
+                <div className="h-4 w-20 bg-white/10 rounded"></div>
+                <div className="h-4 w-28 bg-white/10 rounded"></div>
+                <div className="h-4 w-12 bg-white/10 rounded"></div>
+                <div className="h-4 w-16 bg-white/10 rounded"></div>
+                <div className="h-4 w-14 bg-white/10 rounded"></div>
+                <div className="h-4 w-12 bg-white/10 rounded"></div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -236,7 +265,7 @@ export const DashboardNodesCard: React.FC = () => {
     <div className="relative bg-black border border-white/10 p-4 sm:p-6 h-full group hover:border-white/20 transition-all duration-300 overflow-hidden">
       <CornerEdges />
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 animate-blur-reveal-item-1">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2 sm:space-x-3">
           <h3 className="text-white text-base sm:text-lg font-semibold">Recent pNodes</h3>
           <div className={`flex items-center space-x-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${isMainnet ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`}>
@@ -355,7 +384,7 @@ export const DashboardNodesCard: React.FC = () => {
 
       {/* Floating Compare Button */}
       {selectedForCompare.length > 0 && typeof document !== 'undefined' && createPortal(
-        <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2 sm:gap-3 bg-black/95 border border-emerald-500/30 rounded-full px-4 sm:px-5 py-2.5 sm:py-3 shadow-lg shadow-emerald-500/20 backdrop-blur-xl animate-blur-reveal safe-area-bottom">
+        <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2 sm:gap-3 bg-black/95 border border-emerald-500/30 rounded-full px-4 sm:px-5 py-2.5 sm:py-3 shadow-lg shadow-emerald-500/20 backdrop-blur-xl safe-area-bottom">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex -space-x-1.5">
               {selectedForCompare.slice(0, 4).map((_, i) => (

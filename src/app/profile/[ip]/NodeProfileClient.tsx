@@ -61,19 +61,10 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
       ? ((node.storage_used / node.storage_committed) * 100).toFixed(1) 
       : '0';
     
-    // Credits breakdown
-    const totalCredits = node.totalCredits || node.credits || 0;
-    const thisMonthCredits = node.thisMonthCredits || node.credits || 0;
-    const previousMonthCredits = node.previousMonthCredits || 0;
-    
-    let creditsInfo = `Total: ${totalCredits.toLocaleString()}`;
-    if (previousMonthCredits > 0) {
-      creditsInfo += `, This Month: ${thisMonthCredits.toLocaleString()}, Previous Month: ${previousMonthCredits.toLocaleString()}`;
-    }
-    
+    const credits = node.credits || 0;
     const networkName = isMainnet ? 'Mainnet' : 'Devnet';
     
-    return `Summarize this ${networkName} pNode data in 1-2 simple sentences. Just state the facts, do NOT provide any recommendations or suggestions. Data: IP=${ip}, Status=${node.status}, Uptime=${uptimeDays} days, Credits: ${creditsInfo}, Storage=${storageCommitted} committed (${storageUsed} used, ${efficiency}% utilization), Version=${node.version || 'N/A'}${location ? `, Location=${location.city}, ${location.country}` : ''}.`;
+    return `Summarize this ${networkName} pNode data in 1-2 simple sentences. Just state the facts, do NOT provide any recommendations or suggestions. Data: IP=${ip}, Status=${node.status}, Uptime=${uptimeDays} days, Credits: ${credits.toLocaleString()}, Storage=${storageCommitted} committed (${storageUsed} used, ${efficiency}% utilization), Version=${node.version || 'N/A'}${location ? `, Location=${location.city}, ${location.country}` : ''}.`;
   }, [node, ip, location, isMainnet]);
 
   if (loading) {

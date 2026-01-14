@@ -52,9 +52,6 @@ export interface CurrentNodeData {
   is_public?: boolean;
   last_seen_timestamp?: number;
   credits?: number;
-  thisMonthCredits?: number;
-  previousMonthCredits?: number;
-  totalCredits?: number;
 }
 
 export interface NodeProfileData {

@@ -35,45 +35,13 @@ export async function getProfileData(ip: string) {
       getLatestNodeSnapshot(ip).catch(() => null),
     ]);
 
-    // Calculate credits
+    // Get current credits from API
     let currentCredits = 0;
-    let previousMonthCredits = 0;
-    let thisMonthCredits = 0;
-    let totalCredits = 0;
     const pubkey = currentNodeData?.pubkey || dbSnapshot?.pubkey;
     
     if (pubkey && creditsData) {
       const entry = creditsData.find((c: any) => c.pod_id === pubkey);
       if (entry) currentCredits = entry.credits;
-    }
-
-    // Calculate previous month credits and detect reset
-    if (dbHistory.length > 0) {
-      const sortedHistory = [...dbHistory].sort((a, b) => a.timestamp - b.timestamp);
-      
-      // Find the reset point (where credits dropped significantly)
-      let resetIndex = -1;
-      for (let i = 1; i < sortedHistory.length; i++) {
-        const prev = sortedHistory[i - 1].credits || 0;
-        const curr = sortedHistory[i].credits || 0;
-        if (prev > 1000 && curr < prev * 0.5) {
-          resetIndex = i;
-          break;
-        }
-      }
-      
-      if (resetIndex > 0) {
-        const beforeReset = sortedHistory.slice(0, resetIndex);
-        previousMonthCredits = Math.max(...beforeReset.map(h => h.credits || 0));
-        thisMonthCredits = currentCredits;
-        totalCredits = previousMonthCredits + thisMonthCredits;
-      } else {
-        thisMonthCredits = currentCredits;
-        totalCredits = currentCredits;
-      }
-    } else {
-      thisMonthCredits = currentCredits;
-      totalCredits = currentCredits;
     }
 
     // Derive status
@@ -104,9 +72,6 @@ export async function getProfileData(ip: string) {
         is_public: nodeData.is_public || false,
         last_seen_timestamp: nodeData.last_seen_timestamp || 0,
         credits: currentCredits,
-        thisMonthCredits,
-        previousMonthCredits,
-        totalCredits,
       } : null,
       // Serialize MongoDB arrays to plain objects
       dbHistory: dbHistory.length > 0 ? dbHistory.map(serializeMongoObject) : undefined,

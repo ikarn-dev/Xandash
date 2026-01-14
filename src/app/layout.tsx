@@ -4,26 +4,44 @@ import "./globals.css";
 import { RPCProvider } from "@/libs";
 import { QueryProvider } from "@/libs/providers";
 import { Toaster } from "sonner";
-import { AIAssistant } from "@/components/ui/AIAssistant";
-import { AppCaptchaGate } from "@/components/ui/AppCaptchaGate";
 import { NetworkProvider } from "@/libs/context/network-context";
 import { NodesDataProvider } from "@/libs/context/nodes-data-context";
 import { StructuredData } from "@/libs/seo";
+import { AIAssistant } from "@/components/ui/AIAssistant";
+import { AppCaptchaGate } from "@/components/ui/AppCaptchaGate";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
+  preload: true,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
-  title: "XanDash - Real-Time Xandeum Network Dashboard & Node Monitor",
-  description: "Monitor Xandeum pNodes in real-time. Track node performance, uptime, storage, credits, and network statistics. AI-powered analytics for devnet and mainnet validators.",
-  keywords: ["Xandeum", "pNodes", "network monitoring", "dashboard", "validators", "blockchain", "storage network", "node tracker", "devnet", "mainnet"],
+  title: {
+    default: "XanDash - Real-Time Xandeum Network Dashboard & Node Monitor",
+    template: "%s | XanDash"
+  },
+  description: "XanDash is the official real-time monitoring dashboard for Xandeum network. Track pNode performance, uptime, storage, credits, and network statistics with AI-powered analytics.",
+  keywords: ["XanDash", "XanDash Dashboard", "Xandeum", "Xandeum dashboard", "Xandeum network", "Xandeum monitor", "Xandeum analytics", "Xandeum explorer", "pNodes", "pNode monitor", "pNode tracker", "pNode dashboard", "Xandeum pNodes", "Xandeum validators", "network monitoring", "blockchain dashboard", "validators", "node tracker", "storage network", "devnet", "mainnet", "crypto dashboard", "XAND token", "STOINC"],
+  applicationName: "XanDash",
+  authors: [{ name: "XanDash Team", url: "https://www.xandash.online" }],
+  generator: "Next.js",
+  referrer: "origin-when-cross-origin",
+  creator: "XanDash",
+  publisher: "XanDash",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
   manifest: "/manifest.json",
   metadataBase: new URL('https://www.xandash.online'),
   alternates: {
@@ -32,9 +50,11 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+    nocache: false,
     googleBot: {
       index: true,
       follow: true,
+      noimageindex: false,
       'max-video-preview': -1,
       'max-image-preview': 'large',
       'max-snippet': -1,
@@ -56,7 +76,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "XanDash - Real-Time Xandeum Network Dashboard",
-    description: "Monitor Xandeum pNodes in real-time. Track performance, uptime, storage, and credits with AI-powered analytics.",
+    description: "XanDash is the official monitoring dashboard for Xandeum network. Track pNode performance, uptime, storage, and credits with AI-powered analytics.",
     type: "website",
     locale: "en_US",
     url: "https://www.xandash.online",
@@ -79,16 +99,18 @@ export const metadata: Metadata = {
     creator: "@xandeum",
     images: ["https://www.xandash.online/icon.png"],
   },
-  verification: {
-    google: "google-site-verification-code",
-  },
+  category: "technology",
+  // Add your actual Google verification code from Search Console
+  // verification: {
+  //   google: "your-actual-verification-code",
+  // },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
   themeColor: "#000000",
 };
 
@@ -106,7 +128,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="XanDash" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <meta name="author" content="Xandeum" />
         <meta name="copyright" content="© 2026 XanDash. All rights reserved." />
         <meta name="language" content="English" />
@@ -115,11 +136,15 @@ export default function RootLayout({
         <meta property="og:type" content="website" />
         <meta property="og:locale" content="en_US" />
         <meta name="format-detection" content="telephone=no" />
+        {/* Preconnect to critical origins */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* DNS prefetch for API endpoints */}
         <link rel="dns-prefetch" href="https://api.coingecko.com" />
         <link rel="dns-prefetch" href="https://stats.xandeum.network" />
-        <style dangerouslySetInnerHTML={{ __html: `html,body{background:#000!important}` }} />
+        <link rel="dns-prefetch" href="https://flagcdn.com" />
+        {/* Critical CSS inline */}
+        <style dangerouslySetInnerHTML={{ __html: `html,body{background:#000!important;margin:0;padding:0}` }} />
         <StructuredData />
       </head>
       <body

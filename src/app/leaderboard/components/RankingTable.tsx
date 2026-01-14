@@ -111,13 +111,13 @@ export function RankingTable({
         <tbody>
           {isLoading ? (
             Array.from({ length: 10 }).map((_, i) => (
-              <tr key={i} className="border-b border-gray-800/50">
-                <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>
-                {isMainnet && <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>}
-                <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>
-                <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>
-                {type === 'credits' && <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>}
-                <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-gray-700/50 rounded animate-pulse"></div></td>
+              <tr key={i} className="border-b border-white/5">
+                <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-white/10 rounded"></div></td>
+                {isMainnet && <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-white/10 rounded"></div></td>}
+                <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-white/10 rounded"></div></td>
+                <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-white/10 rounded"></div></td>
+                {type === 'credits' && <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-white/10 rounded"></div></td>}
+                <td className="py-2 sm:py-3 px-2 sm:px-3"><div className="h-3 sm:h-4 bg-white/10 rounded"></div></td>
               </tr>
             ))
           ) : rankedData.length === 0 ? (

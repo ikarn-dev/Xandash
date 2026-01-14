@@ -227,28 +227,28 @@ function LeaderboardPageContent() {
   if (showSkeleton) {
     return (
       <div className="space-y-4 sm:space-y-6">
-        <div className="relative bg-black border border-white/10 p-4 sm:p-6 h-20 sm:h-24 animate-pulse">
-          <div className="h-6 sm:h-8 bg-gray-700/50 rounded w-36 sm:w-48 mb-2 sm:mb-3"></div>
-          <div className="h-3 sm:h-4 bg-gray-700/50 rounded w-48 sm:w-64"></div>
+        <div className="relative bg-black border border-white/10 p-4 sm:p-6 h-20 sm:h-24">
+          <div className="h-6 sm:h-8 bg-white/10 rounded w-36 sm:w-48 mb-2 sm:mb-3"></div>
+          <div className="h-3 sm:h-4 bg-white/10 rounded w-48 sm:w-64"></div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {[1, 2, 3].map(i => (
-            <div key={i} className="relative bg-black border border-white/10 p-4 sm:p-6 h-32 sm:h-40 animate-pulse">
+            <div key={i} className="relative bg-black border border-white/10 p-4 sm:p-6 h-32 sm:h-40">
               <div className="flex flex-col items-center justify-center h-full">
-                <div className="h-3 sm:h-4 bg-gray-700/50 rounded w-20 sm:w-24 mb-2 sm:mb-3"></div>
-                <div className="h-8 sm:h-10 bg-gray-700/50 rounded w-24 sm:w-32 mb-1 sm:mb-2"></div>
-                <div className="h-2 sm:h-3 bg-gray-700/50 rounded w-16 sm:w-20"></div>
+                <div className="h-3 sm:h-4 bg-white/10 rounded w-20 sm:w-24 mb-2 sm:mb-3"></div>
+                <div className="h-8 sm:h-10 bg-white/10 rounded w-24 sm:w-32 mb-1 sm:mb-2"></div>
+                <div className="h-2 sm:h-3 bg-white/10 rounded w-16 sm:w-20"></div>
               </div>
             </div>
           ))}
         </div>
-        <div className="bg-black/90 border border-gray-800 rounded-lg overflow-hidden">
-          <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-800">
-            <div className="h-5 sm:h-6 bg-gray-700/50 rounded w-24 sm:w-32 animate-pulse"></div>
+        <div className="bg-black/90 border border-white/10 rounded-lg overflow-hidden">
+          <div className="flex items-center justify-between p-3 sm:p-4 border-b border-white/10">
+            <div className="h-5 sm:h-6 bg-white/10 rounded w-24 sm:w-32"></div>
           </div>
           <div className="p-4">
             {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="h-10 bg-gray-700/30 rounded mb-2 animate-pulse"></div>
+              <div key={i} className="h-10 bg-white/5 rounded mb-2"></div>
             ))}
           </div>
         </div>

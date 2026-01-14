@@ -9,7 +9,6 @@ interface LineChartProps {
   label?: string;
   valueFormatter?: (v: number) => string;
   highlightCurrent?: boolean;
-  startFromZero?: boolean;
 }
 
 // Smooth curve using Catmull-Rom spline
@@ -68,19 +67,24 @@ export const LineChart = ({
   height = 100,
   label = '',
   valueFormatter = (v: number) => v.toFixed(0),
-  highlightCurrent = false,
-  startFromZero = true
+  highlightCurrent = false
 }: LineChartProps) => {
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; value: number; time: number; index: number } | null>(null);
   const [isAnimating, setIsAnimating] = useState(true);
+  const [pathLength, setPathLength] = useState(0);
   const svgRef = useRef<SVGSVGElement>(null);
+  const pathRef = useRef<SVGPathElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
   const lastInteractionRef = useRef<number>(0);
 
   useEffect(() => {
     setIsAnimating(true);
-    const timer = setTimeout(() => setIsAnimating(false), 800);
+    // Get path length for animation
+    if (pathRef.current) {
+      setPathLength(pathRef.current.getTotalLength());
+    }
+    const timer = setTimeout(() => setIsAnimating(false), 600);
     return () => clearTimeout(timer);
   }, [data]);
 
@@ -100,10 +104,29 @@ export const LineChart = ({
     const rawMin = Math.min(...values);
     const rawMax = Math.max(...values);
     
-    // Always start from 0 for better visualization
-    const minValue = startFromZero ? 0 : rawMin;
-    // Add 10% padding to max for better visualization
-    const maxValue = rawMax * 1.1 || 1;
+    // Smart Y-axis scaling:
+    // - If values have meaningful variation (>5%), show that range with padding
+    // - If values are relatively flat, show a range that makes the line visible
+    const valueRange = rawMax - rawMin;
+    const avgValue = values.reduce((a, b) => a + b, 0) / values.length;
+    const variationPercent = avgValue > 0 ? (valueRange / avgValue) * 100 : 0;
+    
+    let minValue: number;
+    let maxValue: number;
+    
+    if (variationPercent > 5) {
+      // Meaningful variation - show the actual range with 20% padding
+      const padding = valueRange * 0.2;
+      minValue = Math.max(0, rawMin - padding);
+      maxValue = rawMax + padding;
+    } else {
+      // Flat data - create a visible range around the values
+      // Show ±15% of the average value, but at least some visible range
+      const rangeSize = Math.max(avgValue * 0.15, rawMax * 0.1, 1);
+      minValue = Math.max(0, rawMin - rangeSize);
+      maxValue = rawMax + rangeSize;
+    }
+    
     const range = maxValue - minValue || 1;
     
     const width = 100;
@@ -119,7 +142,7 @@ export const LineChart = ({
       return { x, y, value: d.value, time: d.time, index: i };
     });
 
-    // Generate Y-axis tick values (0, 25%, 50%, 75%, 100% of max)
+    // Generate Y-axis tick values
     const yTicks = [0, 0.25, 0.5, 0.75, 1].map(ratio => ({
       value: minValue + ratio * range,
       y: padding.top + chartHeight - ratio * chartHeight
@@ -136,7 +159,7 @@ export const LineChart = ({
     }));
 
     return { points, minValue, maxValue, width, height, padding, chartHeight, chartWidth, yTicks, xTicks };
-  }, [data, height, startFromZero]);
+  }, [data, height]);
 
   // Throttled interaction handler
   const findClosestPoint = useCallback((clientX: number) => {
@@ -208,8 +231,8 @@ export const LineChart = ({
     );
   }
 
-  const { points, minValue, maxValue, width, padding, chartHeight, chartWidth, yTicks, xTicks } = chartData;
-  const smoothPath = createSmoothPath(points);
+  const { points, width, padding, chartHeight, chartWidth, yTicks, xTicks } = chartData;
+  const smoothPath = createSmoothPath(points, 0.25);
   const areaPath = `${smoothPath} L ${points[points.length - 1].x},${padding.top + chartHeight} L ${points[0].x},${padding.top + chartHeight} Z`;
   const lastPoint = points[points.length - 1];
 
@@ -229,8 +252,8 @@ export const LineChart = ({
       >
         <defs>
           <linearGradient id={`areaGradient-${label}`} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+            <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.01" />
           </linearGradient>
         </defs>
         
@@ -240,12 +263,12 @@ export const LineChart = ({
             <line 
               x1={padding.left} y1={tick.y} 
               x2={width - padding.right} y2={tick.y}
-              stroke="white" strokeOpacity="0.08" strokeWidth="0.5" strokeDasharray="2,4"
+              stroke="white" strokeOpacity="0.06" strokeWidth="0.3" strokeDasharray="1,3"
             />
             <text 
               x={padding.left - 1} y={tick.y} 
-              fill="white" fillOpacity="0.3" 
-              fontSize="3" 
+              fill="white" fillOpacity="0.25" 
+              fontSize="2.5" 
               textAnchor="end" 
               dominantBaseline="middle"
             >
@@ -259,32 +282,39 @@ export const LineChart = ({
           <text 
             key={`x-${i}`}
             x={tick.x} y={height - 2} 
-            fill="white" fillOpacity="0.3" 
-            fontSize="2.5" 
+            fill="white" fillOpacity="0.25" 
+            fontSize="2.2" 
             textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}
           >
             {formatTimeLabel(tick.time)}
           </text>
         ))}
         
-        {/* Area fill */}
+        {/* Area fill with fade-in animation */}
         <path 
           d={areaPath} 
           fill={`url(#areaGradient-${label})`}
-          className={isAnimating ? 'opacity-0' : 'opacity-100'}
-          style={{ transition: 'opacity 0.3s' }}
+          style={{ 
+            opacity: isAnimating ? 0 : 1,
+            transition: 'opacity 0.4s ease-out'
+          }}
         />
         
-        {/* Main line */}
+        {/* Main line with draw animation */}
         <path 
+          ref={pathRef}
           d={smoothPath} 
           fill="none" 
           stroke={color}
-          strokeWidth="2" 
+          strokeWidth="1.2" 
           strokeLinecap="round" 
           strokeLinejoin="round"
-          className={isAnimating ? 'opacity-0' : 'opacity-100'}
-          style={{ transition: 'opacity 0.3s' }}
+          style={{ 
+            strokeDasharray: pathLength || 1000,
+            strokeDashoffset: isAnimating ? (pathLength || 1000) : 0,
+            transition: 'stroke-dashoffset 0.6s ease-out',
+            opacity: isAnimating ? 0.3 : 1
+          }}
         />
         
         {/* Hover vertical line */}
@@ -292,24 +322,40 @@ export const LineChart = ({
           <line 
             x1={hoveredPoint.x} y1={padding.top} 
             x2={hoveredPoint.x} y2={padding.top + chartHeight}
-            stroke="white" strokeWidth="1" strokeOpacity="0.3"
+            stroke="white" strokeWidth="0.5" strokeOpacity="0.2"
+            strokeDasharray="2,2"
           />
         )}
         
         {/* Hovered point */}
         {hoveredPoint && (
-          <circle 
-            cx={hoveredPoint.x} cy={hoveredPoint.y} r="4"
-            fill={color} stroke="#000" strokeWidth="1.5"
-          />
+          <g>
+            <circle 
+              cx={hoveredPoint.x} cy={hoveredPoint.y} r="3"
+              fill={color} stroke="#000" strokeWidth="1"
+              style={{ transition: 'all 0.1s ease-out' }}
+            />
+            <circle 
+              cx={hoveredPoint.x} cy={hoveredPoint.y} r="6"
+              fill={color} fillOpacity="0.2"
+            />
+          </g>
         )}
         
-        {/* Last point indicator */}
+        {/* Last point indicator with pulse animation */}
         {highlightCurrent && lastPoint && !hoveredPoint && (
-          <circle 
-            cx={lastPoint.x} cy={lastPoint.y} r="3"
-            fill={color} stroke="#000" strokeWidth="1"
-          />
+          <g>
+            <circle 
+              cx={lastPoint.x} cy={lastPoint.y} r="2"
+              fill={color} stroke="#000" strokeWidth="0.8"
+            />
+            <circle 
+              cx={lastPoint.x} cy={lastPoint.y} r="4"
+              fill={color} fillOpacity="0.3"
+              className="animate-ping"
+              style={{ animationDuration: '2s' }}
+            />
+          </g>
         )}
       </svg>
       
@@ -319,7 +365,7 @@ export const LineChart = ({
         <span style={{ color }}>{valueFormatter(chartData.points[chartData.points.length - 1]?.value || 0)}</span>
         {highlightCurrent && (
           <span className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }}></span>
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: color }}></span>
             <span className="text-white/50 text-[9px]">LIVE</span>
           </span>
         )}
@@ -328,7 +374,7 @@ export const LineChart = ({
       {/* Tooltip */}
       {hoveredPoint && (
         <div 
-          className="absolute bg-black/95 border border-white/20 rounded px-2 py-1.5 pointer-events-none z-50 shadow-lg"
+          className="absolute bg-black/95 border border-white/15 rounded-lg px-2.5 py-1.5 pointer-events-none z-50 shadow-xl backdrop-blur-sm"
           style={{ 
             left: `${Math.min(Math.max((hoveredPoint.x / width) * 100, 10), 90)}%`, 
             top: '50%',
@@ -339,7 +385,7 @@ export const LineChart = ({
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }}></div>
             <span className="font-mono font-bold text-sm" style={{ color }}>{valueFormatter(hoveredPoint.value)}</span>
           </div>
-          <div className="text-white/50 text-[10px] font-mono mt-0.5">
+          <div className="text-white/40 text-[10px] font-mono mt-0.5">
             {new Date(hoveredPoint.time * 1000).toLocaleString()}
           </div>
         </div>

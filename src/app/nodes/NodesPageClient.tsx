@@ -355,13 +355,13 @@ export function NodesPageClientRefactored({
         <NodesPageHeader />
         <NodesStats />
 
-      <div className="space-y-4 animate-blur-reveal">
+      <div className="space-y-4">
         <SearchBox 
           onSearch={handleSearchChange}
           placeholder="Search pNodes..."
         />
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 animate-blur-reveal-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <NodesFilters
             selectedFilters={selectedFilters}
             versionFilter={versionFilter}
@@ -389,7 +389,7 @@ export function NodesPageClientRefactored({
       ) : (
         <>
           {/* Responsive Table */}
-          <div className="animate-blur-reveal-2">
+          <div>
             <ResponsiveNodesTable
               validators={validators}
               locations={mergedLocations}
@@ -414,7 +414,7 @@ export function NodesPageClientRefactored({
 
           {/* Floating Compare Button - rendered via portal to escape overflow:hidden */}
           {selectedForCompare.length > 0 && typeof document !== 'undefined' && createPortal(
-            <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2 sm:gap-3 bg-black/95 border border-emerald-500/30 rounded-full px-4 sm:px-5 py-2.5 sm:py-3 shadow-lg shadow-emerald-500/20 backdrop-blur-xl animate-blur-reveal safe-area-bottom">
+            <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2 sm:gap-3 bg-black/95 border border-emerald-500/30 rounded-full px-4 sm:px-5 py-2.5 sm:py-3 shadow-lg shadow-emerald-500/20 backdrop-blur-xl safe-area-bottom">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="flex -space-x-1.5">
                   {selectedForCompare.slice(0, 4).map((_, i) => (
@@ -453,7 +453,7 @@ export function NodesPageClientRefactored({
 
           {/* Pagination */}
           {pagination.totalPages > 1 && (
-            <div className="flex justify-center animate-blur-reveal-3">
+            <div className="flex justify-center">
               <Pagination
                 currentPage={pagination.currentPage}
                 totalPages={pagination.totalPages}

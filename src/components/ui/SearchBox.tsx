@@ -52,11 +52,14 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
+            aria-label="Search"
             className="w-full pl-12 pr-12 py-3 bg-transparent text-white placeholder-white/40 focus:outline-none focus:ring-0 text-sm font-mono"
           />
           {query && (
             <button
+              type="button"
               onClick={clearSearch}
+              aria-label="Clear search"
               className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors"
             >
               <X className="w-4 h-4" />
@@ -66,8 +69,10 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
         
         {/* Search Button - White theme */}
         <button
+          type="button"
           onClick={handleManualSearch}
           disabled={!query.trim()}
+          aria-label="Submit search"
           className="px-5 py-3 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed border-l border-white/20 rounded-r-lg"
         >
           <span className="text-sm font-medium">Search</span>

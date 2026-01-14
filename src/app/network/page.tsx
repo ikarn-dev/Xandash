@@ -109,8 +109,8 @@ function NetworkPageContent() {
       {loading && (
         <div className="space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between">
-            <div className="h-5 sm:h-6 bg-gray-700/50 rounded w-24 sm:w-32 animate-pulse"></div>
-            <div className="h-3 sm:h-4 bg-gray-700/50 rounded w-20 sm:w-24 animate-pulse"></div>
+            <div className="h-5 sm:h-6 bg-white/10 rounded w-24 sm:w-32"></div>
+            <div className="h-3 sm:h-4 bg-white/10 rounded w-20 sm:w-24"></div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
             {[1, 2, 3, 4, 5, 6].map(i => <CountryCardSkeleton key={i} />)}

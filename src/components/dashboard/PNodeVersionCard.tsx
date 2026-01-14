@@ -160,8 +160,9 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
       <div className={`relative bg-black border border-white/10 p-6 h-full group hover:border-white/20 transition-all duration-300 overflow-hidden ${className}`}>
         <CornerAccents />
         <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
-          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mb-3"></div>
-          <div className="text-white/40 text-xs">Loading...</div>
+          <div className="h-3 w-20 bg-white/10 rounded mb-4"></div>
+          <div className="h-10 w-12 bg-white/10 rounded mb-2"></div>
+          <div className="h-3 w-28 bg-white/10 rounded"></div>
         </div>
       </div>
     );

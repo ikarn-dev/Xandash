@@ -17,6 +17,7 @@ export interface ValidatorData {
   storage_usage_percent?: number;
   isDuplicate?: boolean;
   duplicateCount?: number;
+  credits?: number | null;
 }
 
 export interface ValidatorStats {
@@ -230,7 +231,7 @@ export function filterAndSortValidators(
     versionFilter?: string;
   },
   sort: {
-    field: 'address' | 'location' | 'pubkey' | 'public' | 'storage_committed' | 'storage_used' | 'usage_percent' | 'rpc_port' | 'version' | 'uptime' | 'last_seen' | 'status' | 'score' | 'storage';
+    field: 'address' | 'location' | 'pubkey' | 'public' | 'storage_committed' | 'storage_used' | 'usage_percent' | 'rpc_port' | 'version' | 'uptime' | 'last_seen' | 'status' | 'score' | 'storage' | 'credits';
     direction: 'asc' | 'desc';
   },
   network: string = 'devnet'
@@ -364,6 +365,10 @@ export function filterAndSortValidators(
       case 'score':
         aVal = a.score;
         bVal = b.score;
+        break;
+      case 'credits':
+        aVal = a.credits || 0;
+        bVal = b.credits || 0;
         break;
       case 'storage': // Legacy support
         aVal = a.storage_committed;

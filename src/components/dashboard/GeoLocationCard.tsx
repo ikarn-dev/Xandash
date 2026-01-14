@@ -207,11 +207,43 @@ export const GeoLocationCard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-lg h-full min-h-[300px] sm:min-h-[400px] md:min-h-[500px] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-white/60 text-sm">Loading pNode locations...</div>
+      <div className="bg-gray-900/95 backdrop-blur-sm border border-white/10 rounded-xl shadow-lg h-full min-h-[300px] sm:min-h-[400px] md:min-h-[500px] flex flex-col relative overflow-hidden">
+        {/* Stats Overlay Skeleton - Top Left */}
+        <div className="absolute top-3 left-3 sm:top-6 sm:left-6 z-50 space-y-2 sm:space-y-3 bg-black/40 backdrop-blur-sm rounded-lg p-2 sm:p-3">
+          <div className="text-left">
+            <div className="h-8 w-16 bg-white/10 rounded mb-1"></div>
+            <div className="h-3 w-12 bg-white/10 rounded"></div>
+          </div>
+          <div className="text-left">
+            <div className="h-6 w-12 bg-white/10 rounded mb-1"></div>
+            <div className="h-3 w-16 bg-white/10 rounded"></div>
+          </div>
         </div>
+
+        {/* Live indicator Skeleton - Top Right */}
+        <div className="absolute top-3 right-3 sm:top-6 sm:right-6 z-50 flex items-center space-x-1 sm:space-x-2 bg-black/40 backdrop-blur-sm rounded-lg px-2 py-1 sm:px-3 sm:py-2">
+          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/30 rounded-full"></div>
+          <div className="h-3 w-8 bg-white/10 rounded"></div>
+        </div>
+
+        {/* Country Stats Skeleton - Bottom Left */}
+        <div className="absolute bottom-3 left-3 sm:bottom-6 sm:left-6 z-50 bg-black/40 backdrop-blur-sm rounded-lg p-2 sm:p-3">
+          <div className="h-3 w-24 bg-white/10 rounded mb-2"></div>
+          <div className="space-y-1">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-3 bg-white/10 rounded"></div>
+                  <div className="h-3 w-16 bg-white/10 rounded"></div>
+                </div>
+                <div className="h-4 w-8 bg-white/10 rounded-full ml-2"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Map Skeleton Background */}
+        <div className="absolute inset-0 z-0 bg-gray-800/50"></div>
       </div>
     );
   }

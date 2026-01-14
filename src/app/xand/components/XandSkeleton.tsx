@@ -1,6 +1,6 @@
 export function XandSkeleton() {
   return (
-    <div className="space-y-6 animate-pulse">
+    <div className="space-y-6">
       <div className="h-32 bg-white/5 rounded-lg"></div>
       <div className="h-16 bg-white/5 rounded-lg"></div>
       <div className="h-24 bg-white/5 rounded-lg"></div>

@@ -289,7 +289,7 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
           <div className="flex items-center space-x-2 mb-4 p-2 bg-white/5 rounded-lg">
             <LocationIcon />
             {getCountryFlag() && (
-              <img src={getCountryFlag()!} alt="" className="w-5 h-4 rounded-sm" />
+              <img src={getCountryFlag()!} alt="Country flag" className="w-5 h-4 rounded-sm" />
             )}
             <span className="text-white/80 text-xs">{getLocationString()}</span>
           </div>
