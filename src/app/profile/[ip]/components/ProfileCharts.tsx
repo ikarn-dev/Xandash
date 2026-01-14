@@ -9,6 +9,7 @@ interface LineChartProps {
   label?: string;
   valueFormatter?: (v: number) => string;
   highlightCurrent?: boolean;
+  startFromZero?: boolean;
 }
 
 // Smooth curve using Catmull-Rom spline
@@ -37,13 +38,38 @@ const createSmoothPath = (points: { x: number; y: number }[], tension = 0.3): st
   return path;
 };
 
+// Format time for X-axis labels
+const formatTimeLabel = (timestamp: number): string => {
+  const date = new Date(timestamp * 1000);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } else if (diffDays < 7) {
+    return date.toLocaleDateString([], { weekday: 'short', hour: '2-digit' });
+  } else {
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
+};
+
+// Format Y-axis value
+const formatYAxisValue = (value: number): string => {
+  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+  if (value >= 100) return value.toFixed(0);
+  if (value >= 10) return value.toFixed(1);
+  return value.toFixed(2);
+};
+
 export const LineChart = ({ 
   data, 
   color = '#10b981', 
   height = 100,
   label = '',
   valueFormatter = (v: number) => v.toFixed(0),
-  highlightCurrent = false
+  highlightCurrent = false,
+  startFromZero = true
 }: LineChartProps) => {
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; value: number; time: number; index: number } | null>(null);
   const [isAnimating, setIsAnimating] = useState(true);
@@ -73,37 +99,44 @@ export const LineChart = ({
     const values = data.map(d => d.value);
     const rawMin = Math.min(...values);
     const rawMax = Math.max(...values);
-    const rawRange = rawMax - rawMin;
     
-    const isConstant = rawRange < 0.001 || (rawRange / Math.max(Math.abs(rawMax), 0.001)) < 0.01;
-    
-    let minValue: number, maxValue: number, range: number;
-    if (isConstant) {
-      const avgValue = (rawMin + rawMax) / 2;
-      const padding = Math.max(Math.abs(avgValue) * 0.1, 1);
-      minValue = avgValue - padding;
-      maxValue = avgValue + padding;
-      range = maxValue - minValue;
-    } else {
-      minValue = rawMin;
-      maxValue = rawMax;
-      range = rawRange;
-    }
+    // Always start from 0 for better visualization
+    const minValue = startFromZero ? 0 : rawMin;
+    // Add 10% padding to max for better visualization
+    const maxValue = rawMax * 1.1 || 1;
+    const range = maxValue - minValue || 1;
     
     const width = 100;
-    const padding = { top: 8, right: 4, bottom: 4, left: 4 };
+    // Increased padding for axis labels
+    const padding = { top: 12, right: 8, bottom: 20, left: 12 };
     const chartHeight = height - padding.top - padding.bottom;
     const chartWidth = width - padding.left - padding.right;
     
     const points = data.map((d, i) => {
       const x = padding.left + (i / (data.length - 1 || 1)) * chartWidth;
-      const normalizedValue = isConstant ? 0.5 : (d.value - minValue) / range;
+      const normalizedValue = (d.value - minValue) / range;
       const y = padding.top + chartHeight - normalizedValue * chartHeight;
       return { x, y, value: d.value, time: d.time, index: i };
     });
 
-    return { points, minValue: rawMin, maxValue: rawMax, width, height, padding, chartHeight, isConstant };
-  }, [data, height]);
+    // Generate Y-axis tick values (0, 25%, 50%, 75%, 100% of max)
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map(ratio => ({
+      value: minValue + ratio * range,
+      y: padding.top + chartHeight - ratio * chartHeight
+    }));
+
+    // Generate X-axis tick values (start, middle, end)
+    const xTicks = data.length > 2 ? [
+      { time: data[0].time, x: padding.left },
+      { time: data[Math.floor(data.length / 2)].time, x: padding.left + chartWidth / 2 },
+      { time: data[data.length - 1].time, x: padding.left + chartWidth }
+    ] : data.map((d, i) => ({
+      time: d.time,
+      x: padding.left + (i / (data.length - 1 || 1)) * chartWidth
+    }));
+
+    return { points, minValue, maxValue, width, height, padding, chartHeight, chartWidth, yTicks, xTicks };
+  }, [data, height, startFromZero]);
 
   // Throttled interaction handler
   const findClosestPoint = useCallback((clientX: number) => {
@@ -175,12 +208,10 @@ export const LineChart = ({
     );
   }
 
-  const { points, minValue, maxValue, width, padding, chartHeight, isConstant } = chartData;
+  const { points, minValue, maxValue, width, padding, chartHeight, chartWidth, yTicks, xTicks } = chartData;
   const smoothPath = createSmoothPath(points);
-  const areaPath = `${smoothPath} L ${points[points.length - 1].x},${height - padding.bottom} L ${points[0].x},${height - padding.bottom} Z`;
+  const areaPath = `${smoothPath} L ${points[points.length - 1].x},${padding.top + chartHeight} L ${points[0].x},${padding.top + chartHeight} Z`;
   const lastPoint = points[points.length - 1];
-
-  const gridLines = [0.25, 0.5, 0.75].map(ratio => padding.top + chartHeight * ratio);
 
   return (
     <div ref={containerRef} className="relative w-full touch-none" style={{ height }}>
@@ -203,14 +234,40 @@ export const LineChart = ({
           </linearGradient>
         </defs>
         
-        {/* Grid lines */}
-        {gridLines.map((y, i) => (
-          <line key={i} x1={padding.left} y1={y} x2={width - padding.right} y2={y}
-            stroke="white" strokeOpacity="0.06" strokeWidth="0.5" strokeDasharray="2,4"
-          />
+        {/* Y-axis grid lines and labels */}
+        {yTicks.map((tick, i) => (
+          <g key={`y-${i}`}>
+            <line 
+              x1={padding.left} y1={tick.y} 
+              x2={width - padding.right} y2={tick.y}
+              stroke="white" strokeOpacity="0.08" strokeWidth="0.5" strokeDasharray="2,4"
+            />
+            <text 
+              x={padding.left - 1} y={tick.y} 
+              fill="white" fillOpacity="0.3" 
+              fontSize="3" 
+              textAnchor="end" 
+              dominantBaseline="middle"
+            >
+              {formatYAxisValue(tick.value)}
+            </text>
+          </g>
         ))}
         
-        {/* Area fill - simplified, no filter */}
+        {/* X-axis labels */}
+        {xTicks.map((tick, i) => (
+          <text 
+            key={`x-${i}`}
+            x={tick.x} y={height - 2} 
+            fill="white" fillOpacity="0.3" 
+            fontSize="2.5" 
+            textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}
+          >
+            {formatTimeLabel(tick.time)}
+          </text>
+        ))}
+        
+        {/* Area fill */}
         <path 
           d={areaPath} 
           fill={`url(#areaGradient-${label})`}
@@ -218,7 +275,7 @@ export const LineChart = ({
           style={{ transition: 'opacity 0.3s' }}
         />
         
-        {/* Main line - no filter for performance */}
+        {/* Main line */}
         <path 
           d={smoothPath} 
           fill="none" 
@@ -234,7 +291,7 @@ export const LineChart = ({
         {hoveredPoint && (
           <line 
             x1={hoveredPoint.x} y1={padding.top} 
-            x2={hoveredPoint.x} y2={height - padding.bottom}
+            x2={hoveredPoint.x} y2={padding.top + chartHeight}
             stroke="white" strokeWidth="1" strokeOpacity="0.3"
           />
         )}
@@ -266,14 +323,6 @@ export const LineChart = ({
             <span className="text-white/50 text-[9px]">LIVE</span>
           </span>
         )}
-      </div>
-      
-      {/* Min/Max labels */}
-      <div className="absolute bottom-0 left-2 text-[8px] text-white/25 font-mono pointer-events-none">
-        {isConstant ? 'stable' : `min: ${valueFormatter(minValue)}`}
-      </div>
-      <div className="absolute bottom-0 right-2 text-[8px] text-white/25 font-mono pointer-events-none">
-        {isConstant ? valueFormatter(maxValue) : `max: ${valueFormatter(maxValue)}`}
       </div>
       
       {/* Tooltip */}

@@ -43,7 +43,7 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
     fetchData
   } = useNodeProfile({ ip, initialData });
 
-  // Generate AI summary prompt - includes node details + feedback with proper units
+  // Generate AI summary prompt - includes node details in simple terms
   const aiSummaryPrompt = useMemo(() => {
     if (!node) return '';
     
@@ -55,31 +55,26 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
     };
     
     const uptimeDays = (node.uptime / 86400).toFixed(1);
-    const uptimeHours = (node.uptime / 3600).toFixed(0);
     const storageCommitted = formatStorageAI(node.storage_committed);
     const storageUsed = formatStorageAI(node.storage_used);
     const efficiency = node.storage_committed > 0 
       ? ((node.storage_used / node.storage_committed) * 100).toFixed(1) 
       : '0';
     
-    // Include live credits information
-    let creditsInfo = '';
-    const liveCredits = data?.liveCredits;
-    const nodeCredits = node.credits || 0;
+    // Credits breakdown
+    const totalCredits = node.totalCredits || node.credits || 0;
+    const thisMonthCredits = node.thisMonthCredits || node.credits || 0;
+    const previousMonthCredits = node.previousMonthCredits || 0;
     
-    if (liveCredits && node.pubkey) {
-      const liveEntry = liveCredits.find((c: any) => c.pod_id === node.pubkey);
-      const liveCreditsValue = liveEntry?.credits || 0;
-      
-      if (liveCreditsValue > 0 && liveCreditsValue !== nodeCredits) {
-        creditsInfo = ` (Live: ${liveCreditsValue.toLocaleString()}, Historical: ${nodeCredits.toLocaleString()})`;
-      }
+    let creditsInfo = `Total: ${totalCredits.toLocaleString()}`;
+    if (previousMonthCredits > 0) {
+      creditsInfo += `, This Month: ${thisMonthCredits.toLocaleString()}, Previous Month: ${previousMonthCredits.toLocaleString()}`;
     }
     
     const networkName = isMainnet ? 'Mainnet' : 'Devnet';
     
-    return `Summarize this ${networkName} node in format: "Node [IP] on ${networkName} is [status] with [uptime]d uptime, [credits] credits earned${creditsInfo ? ' [live/historical info]' : ''}, [storage] committed ([used] used, [efficiency]% utilized). [One sentence assessment and recommendation]." Data: Network=${networkName}, IP=${ip}, Status=${node.status}, Uptime=${uptimeDays}d (${uptimeHours}h), Credits=${nodeCredits.toLocaleString()}${creditsInfo}, Storage Committed=${storageCommitted}, Storage Used=${storageUsed} (${efficiency}% efficiency), Version=${node.version || 'N/A'}${location ? `, Location=${location.city}, ${location.country}` : ''}.`;
-  }, [node, ip, location, data?.liveCredits, isMainnet]);
+    return `Summarize this ${networkName} pNode data in 1-2 simple sentences. Just state the facts, do NOT provide any recommendations or suggestions. Data: IP=${ip}, Status=${node.status}, Uptime=${uptimeDays} days, Credits: ${creditsInfo}, Storage=${storageCommitted} committed (${storageUsed} used, ${efficiency}% utilization), Version=${node.version || 'N/A'}${location ? `, Location=${location.city}, ${location.country}` : ''}.`;
+  }, [node, ip, location, isMainnet]);
 
   if (loading) {
     return <ProfileSkeleton />;
@@ -133,6 +128,7 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
             prompt={aiSummaryPrompt}
             title="AI Analysis"
             autoLoad={true}
+            network={isMainnet ? 'mainnet' : 'devnet'}
           />
         )}
 

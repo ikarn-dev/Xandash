@@ -89,7 +89,9 @@ export async function GET(request: NextRequest) {
 
     // Get live credits from credits API
     let currentCredits = 0;
-    let previousCredits = 0;
+    let previousMonthCredits = 0;
+    let thisMonthCredits = 0;
+    let totalCredits = 0;
     const pubkey = currentNodeData?.pubkey || dbSnapshot?.pubkey;
     
     if (pubkey && liveCreditsData) {
@@ -97,18 +99,48 @@ export async function GET(request: NextRequest) {
       currentCredits = creditsEntry?.credits || 0;
     }
 
-    // Only show previous credits if current API returned 0
-    // This indicates the node had credits before but now shows 0 from the API
-    if (currentCredits === 0 && dbHistory.length > 0) {
-      const maxHistoricalCredits = Math.max(...dbHistory.map(h => h.credits || 0));
-      if (maxHistoricalCredits > 0) {
-        previousCredits = maxHistoricalCredits;
+    // Calculate previous month credits and detect reset
+    // Credits reset at month end, so we look for the max value before the reset point
+    if (dbHistory.length > 0) {
+      const sortedHistory = [...dbHistory].sort((a, b) => a.timestamp - b.timestamp);
+      
+      // Find the reset point (where credits dropped significantly)
+      let resetIndex = -1;
+      for (let i = 1; i < sortedHistory.length; i++) {
+        const prev = sortedHistory[i - 1].credits || 0;
+        const curr = sortedHistory[i].credits || 0;
+        // Detect reset: credits dropped by more than 50% and previous was > 1000
+        if (prev > 1000 && curr < prev * 0.5) {
+          resetIndex = i;
+          break;
+        }
       }
+      
+      if (resetIndex > 0) {
+        // We found a reset - calculate previous month max
+        const beforeReset = sortedHistory.slice(0, resetIndex);
+        previousMonthCredits = Math.max(...beforeReset.map(h => h.credits || 0));
+        
+        // This month credits is the current value from API
+        thisMonthCredits = currentCredits;
+        
+        // Total is previous month + this month
+        totalCredits = previousMonthCredits + thisMonthCredits;
+      } else {
+        // No reset found - all credits are from this period
+        thisMonthCredits = currentCredits;
+        totalCredits = currentCredits;
+      }
+    } else {
+      thisMonthCredits = currentCredits;
+      totalCredits = currentCredits;
     }
 
     // Fallback to database snapshot if no live credits and API didn't return data
     if (currentCredits === 0 && !liveCreditsData && dbSnapshot?.credits) {
       currentCredits = dbSnapshot.credits;
+      thisMonthCredits = currentCredits;
+      totalCredits = previousMonthCredits + thisMonthCredits;
     }
 
     const nodeData = currentNodeData || dbSnapshot;
@@ -132,10 +164,9 @@ export async function GET(request: NextRequest) {
         last_seen_timestamp: nodeData.last_seen_timestamp || 0,
         active_streams: nodeData.active_streams || 0,
         credits: currentCredits,
-        previousCredits,
-        // Don't add previous to current - totalCredits is just current credits
-        // Previous is only shown as reference when current is 0
-        totalCredits: currentCredits,
+        thisMonthCredits,
+        previousMonthCredits,
+        totalCredits,
       } : null,
       dbHistory: dbHistory.length > 0 ? dbHistory : undefined,
       dbEvents: dbEvents.length > 0 ? dbEvents : undefined,

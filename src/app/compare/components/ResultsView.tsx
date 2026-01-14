@@ -65,28 +65,31 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
       return `Node ${i+1} (${n.ip}): ${n.status}, ${n.credits.toLocaleString()} credits, ${days}d uptime, ${storageCommitted} committed (${storageUsed} used)`;
     }).join('. ');
 
-    return `Compare these ${nodes.length} Xandeum ${isMainnet ? 'mainnet' : 'devnet'} nodes. ${nodeDetails}. In 2-3 sentences: identify the best performer, note key differences, give one recommendation.`;
+    return `Compare these ${nodes.length} Xandeum ${isMainnet ? 'mainnet' : 'devnet'} nodes. ${nodeDetails}. In 2-3 sentences: identify the best performer and note key differences. Do not provide any recommendations.`;
   }, [nodes, isMainnet]);
 
   const creditsChartData = useMemo(() => 
     nodes.map(p => ({
       label: p.ip,
       color: p.color,
-      data: p.history?.map(h => ({ timestamp: h.timestamp, value: h.credits })) || []
+      data: p.history?.map(h => ({ timestamp: h.timestamp, value: h.credits })) || [],
+      currentValue: p.credits
     })), [nodes]);
 
   const uptimeChartData = useMemo(() => 
     nodes.map(p => ({
       label: p.ip,
       color: p.color,
-      data: p.history?.map(h => ({ timestamp: h.timestamp, value: h.uptime / 3600 })) || []
+      data: p.history?.map(h => ({ timestamp: h.timestamp, value: h.uptime / 3600 })) || [],
+      currentValue: p.uptime / 3600
     })), [nodes]);
 
   const storageChartData = useMemo(() => 
     nodes.map(p => ({
       label: p.ip,
       color: p.color,
-      data: p.history?.map(h => ({ timestamp: h.timestamp, value: h.storage_committed / (1024 * 1024 * 1024) })) || []
+      data: p.history?.map(h => ({ timestamp: h.timestamp, value: h.storage_committed / (1024 * 1024 * 1024) })) || [],
+      currentValue: p.storage_committed / (1024 * 1024 * 1024)
     })), [nodes]);
 
   return (
@@ -207,13 +210,13 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
       <div className="bg-black/50 border border-white/10 rounded-xl p-4">
         <h3 className="text-sm font-medium text-white mb-4">Historical Trends (7 Days)</h3>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <ComparisonChart title="Credits Over Time" datasets={creditsChartData} valueFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}K` : v.toString()} />
-          <ComparisonChart title="Uptime (Hours)" datasets={uptimeChartData} valueFormatter={(v) => `${v.toFixed(0)}h`} />
-          <ComparisonChart title="Storage (GB)" datasets={storageChartData} valueFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}TB` : `${v.toFixed(0)}GB`} />
+          <ComparisonChart title="Credits Over Time" datasets={creditsChartData} valueFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}K` : v.toString()} startFromZero={true} />
+          <ComparisonChart title="Uptime (Hours)" datasets={uptimeChartData} valueFormatter={(v) => `${v.toFixed(0)}h`} startFromZero={true} />
+          <ComparisonChart title="Storage (GB)" datasets={storageChartData} valueFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}TB` : `${v.toFixed(0)}GB`} startFromZero={true} />
         </div>
       </div>
 
-      {aiComparisonPrompt && <AISummary prompt={aiComparisonPrompt} title="Comparison Analysis" autoLoad={true} />}
+      {aiComparisonPrompt && <AISummary prompt={aiComparisonPrompt} title="Comparison Analysis" autoLoad={true} network={isMainnet ? 'mainnet' : 'devnet'} />}
     </div>
   );
 }

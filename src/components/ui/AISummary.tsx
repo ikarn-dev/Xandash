@@ -7,9 +7,10 @@ interface AISummaryProps {
   title?: string;
   autoLoad?: boolean;
   className?: string;
+  network?: 'devnet' | 'mainnet';
 }
 
-export function AISummary({ prompt, title = 'AI Analysis', autoLoad = true, className = '' }: AISummaryProps) {
+export function AISummary({ prompt, title = 'AI Analysis', autoLoad = true, className = '', network = 'devnet' }: AISummaryProps) {
   const [summary, setSummary] = useState('');
   const [displayedText, setDisplayedText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -32,11 +33,16 @@ export function AISummary({ prompt, title = 'AI Analysis', autoLoad = true, clas
     setDisplayedText('');
 
     try {
+      // Include network context in the prompt
+      const networkContext = `[Network: ${network.toUpperCase()}] `;
+      const fullPrompt = networkContext + prompt;
+      
       const response = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [{ role: 'user', content: prompt }]
+          messages: [{ role: 'user', content: fullPrompt }],
+          network
         })
       });
 
@@ -80,6 +86,13 @@ export function AISummary({ prompt, title = 'AI Analysis', autoLoad = true, clas
       generateSummary();
     }
   }, [prompt, autoLoad]);
+
+  // Reset when network changes
+  useEffect(() => {
+    hasLoaded.current = false;
+    setSummary('');
+    setDisplayedText('');
+  }, [network]);
 
   return (
     <div className={`bg-gradient-to-br from-purple-500/5 to-blue-500/5 border border-purple-500/20 rounded-xl overflow-hidden ${className}`}>

@@ -390,15 +390,29 @@ async function fetchCreditsSummary(networkType?: 'mainnet' | 'devnet') {
 }
 
 // Build context based on user message
-async function buildContext(msg: string) {
+async function buildContext(msg: string, requestNetwork?: 'mainnet' | 'devnet') {
   const lower = msg.toLowerCase();
   let ctx = '';
   let hints = '';
   
-  // Detect network type from message
+  // Use network from request if provided, otherwise detect from message
   const isMainnetQuery = /mainnet|main\s*net|production/.test(lower);
   const isDevnetQuery = /devnet|dev\s*net|testnet|test\s*net/.test(lower);
-  const networkType: 'mainnet' | 'devnet' | undefined = isMainnetQuery ? 'mainnet' : isDevnetQuery ? 'devnet' : undefined;
+  
+  // Priority: request network > detected from message > default to devnet
+  let networkType: 'mainnet' | 'devnet' | undefined;
+  if (requestNetwork) {
+    networkType = requestNetwork;
+  } else if (isMainnetQuery) {
+    networkType = 'mainnet';
+  } else if (isDevnetQuery) {
+    networkType = 'devnet';
+  }
+  
+  // Add network context to response
+  if (networkType) {
+    ctx += `\n[ACTIVE_NETWORK: ${networkType.toUpperCase()}]`;
+  }
   
   // Token/XAND queries
   if (/xand|token|price|market|coin|crypto|supply|volume/.test(lower)) {
@@ -556,7 +570,6 @@ RESPONSE GUIDELINES - BE COMPREHENSIVE:
   * Analyze uptime (compare to network average if available)
   * Evaluate storage efficiency (used vs committed ratio)
   * Note version and if updates might be needed
-  * Provide actionable insights and recommendations
 - For token queries: 
   * Provide price with 24h change context
   * Include market cap and volume analysis
@@ -583,19 +596,23 @@ HANDLE INVALID INPUTS:
 SUMMARY GENERATION (for auto-summaries):
 When generating node or comparison summaries:
 - For single node: Start with node details (IP, status, uptime, credits, storage), then assessment
-- For comparisons: Identify the best performer first, then compare others, end with recommendation
+- For comparisons: Identify the best performer first, then compare others, note key differences
 - Keep total response to 2-3 sentences max
+- Do NOT provide any recommendations or suggestions - just state the facts
 - NO bullet points, NO lists, NO headers
 - Include specific numbers and IPs from the data provided
 - Always provide actionable insights`;
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages } = await req.json();
+    const { messages, network: requestNetwork } = await req.json();
     if (!OPENROUTER_API_KEY) return new Response(JSON.stringify({ error: 'No API key' }), { status: 500 });
     
     const lastMsg = messages[messages.length - 1]?.content || '';
-    const ctx = await buildContext(lastMsg);
+    
+    // Use network from request if provided, otherwise detect from message
+    const networkFromRequest = requestNetwork as 'mainnet' | 'devnet' | undefined;
+    const ctx = await buildContext(lastMsg, networkFromRequest);
     const sysPrompt = SYSTEM + (ctx ? `\n\n--- LIVE DATA ---${ctx}\n--- END DATA ---` : '');
     
     let response: Response | null = null;

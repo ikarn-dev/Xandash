@@ -56,7 +56,7 @@ function NetworkPageContent() {
     const uptimeDays = (networkStats.avgUptime / 86400).toFixed(1);
     const networkName = isMainnet ? 'Mainnet' : 'Devnet';
 
-    return `Provide a brief network health summary for Xandeum ${networkName} in 2-3 sentences. Data: Total Nodes=${networkStats.totalNodes}, Online=${networkStats.totalOnline} (${networkStats.onlinePercent}%), Syncing=${networkStats.totalSyncing}, Offline=${networkStats.totalOffline}, Countries=${networkStats.countriesCount}, Top Countries=${networkStats.topCountries}, Total Storage=${formatStorage(networkStats.totalStorage)}, Used Storage=${formatStorage(networkStats.totalStorageUsed)} (${networkStats.storageEfficiency}% efficiency), Avg Uptime=${uptimeDays}d. Include: overall health assessment, geographic distribution insight, and one recommendation.`;
+    return `Summarize this ${networkName} network data in 1-2 simple sentences. Just state the facts, do NOT provide any recommendations or suggestions. Data: Total Nodes=${networkStats.totalNodes}, Online=${networkStats.totalOnline} (${networkStats.onlinePercent}%), Syncing=${networkStats.totalSyncing}, Offline=${networkStats.totalOffline}, Countries=${networkStats.countriesCount}, Top Countries=${networkStats.topCountries}, Total Storage=${formatStorage(networkStats.totalStorage)}, Used Storage=${formatStorage(networkStats.totalStorageUsed)} (${networkStats.storageEfficiency}% efficiency), Avg Uptime=${uptimeDays}d.`;
   }, [networkStats, isMainnet]);
 
   return (
@@ -76,6 +76,7 @@ function NetworkPageContent() {
           prompt={aiNetworkPrompt}
           title={`${isMainnet ? 'Mainnet' : 'Devnet'} Network Analysis`}
           autoLoad={true}
+          network={isMainnet ? 'mainnet' : 'devnet'}
         />
       )}
 

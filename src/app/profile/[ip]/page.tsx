@@ -34,7 +34,9 @@ export async function getProfileData(ip: string) {
 
     // Calculate credits
     let currentCredits = 0;
-    let previousCredits = 0;
+    let previousMonthCredits = 0;
+    let thisMonthCredits = 0;
+    let totalCredits = 0;
     const pubkey = currentNodeData?.pubkey || dbSnapshot?.pubkey;
     
     if (pubkey && creditsData) {
@@ -42,14 +44,33 @@ export async function getProfileData(ip: string) {
       if (entry) currentCredits = entry.credits;
     }
 
-    // Only show previous credits if current API returned 0 (not null/undefined)
-    // This indicates the node had credits before but now shows 0 from the API
-    // We use the max historical value as a reference
-    if (currentCredits === 0 && dbHistory.length > 0) {
-      const maxHistoricalCredits = Math.max(...dbHistory.map(h => h.credits || 0));
-      if (maxHistoricalCredits > 0) {
-        previousCredits = maxHistoricalCredits;
+    // Calculate previous month credits and detect reset
+    if (dbHistory.length > 0) {
+      const sortedHistory = [...dbHistory].sort((a, b) => a.timestamp - b.timestamp);
+      
+      // Find the reset point (where credits dropped significantly)
+      let resetIndex = -1;
+      for (let i = 1; i < sortedHistory.length; i++) {
+        const prev = sortedHistory[i - 1].credits || 0;
+        const curr = sortedHistory[i].credits || 0;
+        if (prev > 1000 && curr < prev * 0.5) {
+          resetIndex = i;
+          break;
+        }
       }
+      
+      if (resetIndex > 0) {
+        const beforeReset = sortedHistory.slice(0, resetIndex);
+        previousMonthCredits = Math.max(...beforeReset.map(h => h.credits || 0));
+        thisMonthCredits = currentCredits;
+        totalCredits = previousMonthCredits + thisMonthCredits;
+      } else {
+        thisMonthCredits = currentCredits;
+        totalCredits = currentCredits;
+      }
+    } else {
+      thisMonthCredits = currentCredits;
+      totalCredits = currentCredits;
     }
 
     // Derive status
@@ -80,10 +101,9 @@ export async function getProfileData(ip: string) {
         is_public: nodeData.is_public || false,
         last_seen_timestamp: nodeData.last_seen_timestamp || 0,
         credits: currentCredits,
-        previousCredits: previousCredits,
-        // Don't add previous to current - totalCredits is just current credits
-        // Previous is only shown as reference when current is 0
-        totalCredits: currentCredits,
+        thisMonthCredits,
+        previousMonthCredits,
+        totalCredits,
       } : null,
       // Serialize MongoDB arrays to plain objects
       dbHistory: dbHistory.length > 0 ? dbHistory.map(serializeMongoObject) : undefined,
