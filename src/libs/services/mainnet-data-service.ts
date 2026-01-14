@@ -5,13 +5,12 @@
  * Data Flow:
  * - Single source: Gossip RPC Direct API (POST requests)
  * - Methods: get-pods-with-stats, get-stats, get-version
- * - Geo data fetched separately for enrichment (local DB first, then external API fallback)
+ * - Geo data fetched from external APIs (ipwho.is primary, ip-api.com fallback)
  * - Credits fetched from dedicated credits API
  * - MERGE strategy: Never reduce node count, only update existing + add new
  */
 
 import { cache } from '@/libs/cache/LocalCache';
-import { batchLocalGeo, type GeoResult } from './ip-geo-local';
 
 // Get URLs from environment variables for RPC (sensitive)
 const MAINNET_RPC_URL = process.env.MAINNET_RPC_DIRECT_URL || '';
@@ -198,8 +197,9 @@ async function fetchCreditsData(): Promise<Map<string, number>> {
 }
 
 /**
- * Fetch geo data for nodes - uses local database first, then external API fallback
- * This approach is more reliable for server-side as it avoids external API issues
+ * Fetch geo data for nodes - uses external APIs with fallback chain
+ * Primary: ipwho.is (HTTPS, reliable)
+ * Fallback: ip-api.com batch (HTTP, fast for multiple IPs)
  */
 async function fetchGeoData(items: Array<{ ip: string; pubkey: string }>): Promise<Record<string, MainnetGeoData>> {
   if (items.length === 0) {
@@ -212,84 +212,103 @@ async function fetchGeoData(items: Array<{ ip: string; pubkey: string }>): Promi
   
   if (uniqueIps.length === 0) return {};
   
-  // Step 1: Try local database lookup first (fast, no network)
-  const localResults = batchLocalGeo(uniqueIps);
-  const missingIps: string[] = [];
-  
-  for (const ip of uniqueIps) {
-    const localGeo = localResults.get(ip);
-    if (localGeo) {
-      geoData[ip] = {
-        country: localGeo.country || '',
-        country_code: localGeo.country_code || '',
-        credits: null,
-        geo_sort: localGeo.country || '',
-        ip: ip,
-        name: '',
-        nfts: [],
-        provider: localGeo.provider || '',
-        stake: 0,
-      };
-    } else {
-      missingIps.push(ip);
-    }
-  }
-  
-  // Step 2: For IPs not in local DB, try external API (with fallback chain)
-  if (missingIps.length > 0) {
-    const externalGeo = await fetchExternalGeoData(missingIps.slice(0, 100));
-    Object.assign(geoData, externalGeo);
-  }
+  // Fetch geo data from external APIs
+  const externalGeo = await fetchExternalGeoData(uniqueIps);
+  Object.assign(geoData, externalGeo);
   
   return geoData;
 }
 
 /**
  * Fetch geo data from external APIs with fallback chain
- * Tries ipwho.is first (HTTPS, reliable), then ip-api.com batch as fallback
+ * Primary: ip-api.com batch (fast for multiple IPs)
+ * Fallback: ipwho.is for any missing IPs (HTTPS, reliable)
  */
 async function fetchExternalGeoData(ips: string[]): Promise<Record<string, MainnetGeoData>> {
   const geoData: Record<string, MainnetGeoData> = {};
   
   if (ips.length === 0) return geoData;
   
-  // Try ipwho.is for each IP (more reliable, HTTPS)
-  const fetchPromises = ips.slice(0, 20).map(async (ip) => {
-    try {
-      const response = await fetch(`https://ipwho.is/${ip}`, {
-        signal: AbortSignal.timeout(5000),
-      });
+  const uniqueIps = [...new Set(ips)].slice(0, 100);
+  
+  // Step 1: Try ip-api.com batch endpoint first (most efficient for multiple IPs)
+  try {
+    const response = await fetch('http://ip-api.com/batch?fields=status,query,country,countryCode,regionName,city,lat,lon,isp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(uniqueIps),
+      signal: AbortSignal.timeout(15000),
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
       
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          return {
-            ip,
-            data: {
-              country: data.country || '',
-              country_code: (data.country_code || '').toLowerCase(),
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          if (item.status === 'success' && item.query) {
+            geoData[item.query] = {
+              country: item.country || '',
+              country_code: (item.countryCode || '').toLowerCase(),
               credits: null,
-              geo_sort: data.country || '',
-              ip: ip,
+              geo_sort: item.country || '',
+              ip: item.query,
               name: '',
               nfts: [],
-              provider: data.connection?.isp || data.connection?.org || '',
+              provider: item.isp || '',
               stake: 0,
-            } as MainnetGeoData
-          };
+            };
+          }
         }
       }
-    } catch {
-      // Silent fail
     }
-    return null;
-  });
+  } catch {
+    // Silent fail - will use ipwho.is fallback
+  }
   
-  const results = await Promise.allSettled(fetchPromises);
+  // Step 2: For IPs not returned by batch, try ipwho.is individually
+  const missingIps = uniqueIps.filter(ip => !geoData[ip]);
   
-  for (const result of results) {
-    if (result.status === 'fulfilled' && result.value) {
-      geoData[result.value.ip] = result.value.data;
+  if (missingIps.length > 0) {
+    // Limit concurrent requests to avoid rate limiting
+    const fetchPromises = missingIps.slice(0, 30).map(async (ip) => {
+      try {
+        const response = await fetch(`https://ipwho.is/${ip}`, {
+          signal: AbortSignal.timeout(5000),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            return {
+              ip,
+              data: {
+                country: data.country || '',
+                country_code: (data.country_code || '').toLowerCase(),
+                credits: null,
+                geo_sort: data.country || '',
+                ip: ip,
+                name: '',
+                nfts: [],
+                provider: data.connection?.isp || data.connection?.org || '',
+                stake: 0,
+              } as MainnetGeoData
+            };
+          }
+        }
+      } catch {
+        // Silent fail
+      }
+      return null;
+    });
+    
+    const results = await Promise.allSettled(fetchPromises);
+    
+    for (const result of results) {
+      if (result.status === 'fulfilled' && result.value) {
+        geoData[result.value.ip] = result.value.data;
+      }
     }
   }
   

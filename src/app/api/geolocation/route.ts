@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { batchLocalGeo } from '@/libs/services/ip-geo-local';
 
 interface LocationData {
   country: string;
@@ -16,7 +15,56 @@ interface LocationData {
 const geoCache = new Map<string, LocationData | null>();
 
 /**
- * Single IP fetch fallback using ipwho.is (HTTPS, reliable)
+ * Batch fetch using ip-api.com batch endpoint (up to 100 IPs)
+ * This is the most efficient for multiple IPs
+ */
+async function batchFetchGeo(ips: string[]): Promise<Map<string, LocationData | null>> {
+  const results = new Map<string, LocationData | null>();
+  
+  if (ips.length === 0) return results;
+  
+  try {
+    // ip-api.com batch endpoint - POST with array of IPs
+    const response = await fetch('http://ip-api.com/batch?fields=status,query,country,countryCode,regionName,city,lat,lon,isp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(ips.slice(0, 100)),
+      signal: AbortSignal.timeout(10000),
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          if (item.status === 'success' && item.query) {
+            results.set(item.query, {
+              country: item.country || 'Unknown',
+              country_code: (item.countryCode || '').toLowerCase(),
+              city: item.city || 'Unknown',
+              region: item.regionName || '',
+              provider: item.isp || 'Unknown Provider',
+              ip: item.query,
+              lat: item.lat,
+              lon: item.lon,
+            });
+          } else if (item.query) {
+            results.set(item.query, null);
+          }
+        }
+      }
+    }
+  } catch {
+    // Silent fail - will use single IP fallback
+  }
+  
+  return results;
+}
+
+/**
+ * Single IP fetch using ipwho.is (HTTPS, reliable fallback)
  */
 async function fetchGeoForIP(ip: string): Promise<LocationData | null> {
   try {
@@ -66,46 +114,29 @@ export async function POST(request: NextRequest) {
     }
     
     if (uncachedIPs.length > 0) {
-      // Step 1: Try local database lookup first (fast, no network)
-      const localResults = batchLocalGeo(uncachedIPs);
+      // Step 1: Try batch API first (most efficient)
+      const batchResults = await batchFetchGeo(uncachedIPs);
       const stillMissing: string[] = [];
       
       for (const ip of uncachedIPs) {
-        const localGeo = localResults.get(ip);
-        if (localGeo) {
-          const location: LocationData = {
-            country: localGeo.country || 'Unknown',
-            country_code: localGeo.country_code || '',
-            city: localGeo.city || '',
-            region: localGeo.region || '',
-            provider: localGeo.provider || 'Unknown Provider',
-            ip: ip,
-            lat: localGeo.lat,
-            lon: localGeo.lon,
-          };
-          results[ip] = location;
-          geoCache.set(ip, location);
+        if (batchResults.has(ip)) {
+          const location = batchResults.get(ip);
+          results[ip] = location ?? null;
+          geoCache.set(ip, location ?? null);
         } else {
           stillMissing.push(ip);
         }
       }
       
-      // Step 2: For IPs not in local DB, try external API
-      // Limit concurrent requests to avoid rate limiting
-      const fetchPromises = stillMissing.slice(0, 10).map(async (ip) => {
-        const location = await fetchGeoForIP(ip);
-        results[ip] = location;
-        geoCache.set(ip, location);
-      });
-      
-      await Promise.allSettled(fetchPromises);
-      
-      // Mark remaining IPs as null (not found)
-      for (const ip of stillMissing.slice(10)) {
-        if (!results[ip]) {
-          results[ip] = null;
-          geoCache.set(ip, null);
-        }
+      // Step 2: For IPs not returned by batch, try individual fallback
+      if (stillMissing.length > 0) {
+        const fetchPromises = stillMissing.map(async (ip) => {
+          const location = await fetchGeoForIP(ip);
+          results[ip] = location;
+          geoCache.set(ip, location);
+        });
+        
+        await Promise.allSettled(fetchPromises);
       }
     }
     
