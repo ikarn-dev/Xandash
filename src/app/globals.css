@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "leaflet/dist/leaflet.css";
+
+/* Leaflet CSS is loaded dynamically in InteractiveMap component */
 
 @custom-variant dark (&:is(.dark *));
 
@@ -313,6 +314,16 @@
     @apply bg-background text-foreground;
     background-color: #000 !important;
   }
+}
+
+/* Hide scrollbars globally while maintaining scroll functionality */
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+*::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
 }
 
 /* Safe area insets for mobile devices with notches/home indicators */

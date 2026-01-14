@@ -7,14 +7,16 @@ import { Toaster } from "sonner";
 import { NetworkProvider } from "@/libs/context/network-context";
 import { NodesDataProvider } from "@/libs/context/nodes-data-context";
 import { StructuredData } from "@/libs/seo";
-import { AIAssistant } from "@/components/ui/AIAssistant";
 import { AppCaptchaGate } from "@/components/ui/AppCaptchaGate";
+import { AIAssistantLoader } from "@/components/ui/AIAssistantLoader";
 
+// Optimize font loading - swap ensures text is visible immediately
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
   display: "swap",
   preload: true,
+  adjustFontFallback: true,
 });
 
 const geistMono = Geist_Mono({
@@ -22,17 +24,18 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
   display: "swap",
   preload: false,
+  adjustFontFallback: true,
 });
 
 export const metadata: Metadata = {
   title: {
-    default: "XanDash - Real-Time Xandeum Network Dashboard & Node Monitor",
+    default: "XanDash - Xandeum Dashboard | pNode Monitor & Network Analytics",
     template: "%s | XanDash"
   },
-  description: "XanDash is the official real-time monitoring dashboard for Xandeum network. Track pNode performance, uptime, storage, credits, and network statistics with AI-powered analytics.",
-  keywords: ["XanDash", "XanDash Dashboard", "Xandeum", "Xandeum dashboard", "Xandeum network", "Xandeum monitor", "Xandeum analytics", "Xandeum explorer", "pNodes", "pNode monitor", "pNode tracker", "pNode dashboard", "Xandeum pNodes", "Xandeum validators", "network monitoring", "blockchain dashboard", "validators", "node tracker", "storage network", "devnet", "mainnet", "crypto dashboard", "XAND token", "STOINC"],
+  description: "XanDash is the official Xandeum dashboard for monitoring pNodes. Track node performance, uptime, storage, credits, and network statistics in real-time with AI-powered analytics.",
+  keywords: ["xandeum dashboard", "pnode dashboard", "xandeum pnode dashboard", "xandash", "XanDash", "Xandeum", "pNodes", "pNode monitor", "pNode tracker", "Xandeum network", "Xandeum monitor", "blockchain dashboard", "node tracker", "XAND token", "STOINC"],
   applicationName: "XanDash",
-  authors: [{ name: "XanDash Team", url: "https://www.xandash.online" }],
+  authors: [{ name: "XanDash", url: "https://www.xandash.online" }],
   generator: "Next.js",
   referrer: "origin-when-cross-origin",
   creator: "XanDash",
@@ -62,12 +65,14 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icon.png", sizes: "any" },
-      { url: "/favicon.ico", sizes: "any" }
+      { url: "/favicon.ico", sizes: "48x48", type: "image/x-icon" },
+      { url: "/icon.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon.png", sizes: "512x512", type: "image/png" },
     ],
+    shortcut: "/favicon.ico",
     apple: [
       { url: "/icon.png", sizes: "180x180", type: "image/png" }
-    ]
+    ],
   },
   appleWebApp: {
     capable: true,
@@ -75,8 +80,8 @@ export const metadata: Metadata = {
     title: "XanDash",
   },
   openGraph: {
-    title: "XanDash - Real-Time Xandeum Network Dashboard",
-    description: "XanDash is the official monitoring dashboard for Xandeum network. Track pNode performance, uptime, storage, and credits with AI-powered analytics.",
+    title: "XanDash - Xandeum Dashboard | pNode Monitor",
+    description: "XanDash is the official Xandeum dashboard. Monitor pNodes in real-time, track performance, uptime, storage, and credits with AI-powered analytics.",
     type: "website",
     locale: "en_US",
     url: "https://www.xandash.online",
@@ -86,24 +91,23 @@ export const metadata: Metadata = {
         url: "https://www.xandash.online/icon.png",
         width: 512,
         height: 512,
-        alt: "XanDash - Xandeum Network Dashboard",
+        alt: "XanDash - Xandeum Dashboard",
         type: "image/png",
       }
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "XanDash - Real-Time Xandeum Network Dashboard",
+    title: "XanDash - Xandeum Dashboard | pNode Monitor",
     description: "Monitor Xandeum pNodes in real-time with AI-powered analytics and performance tracking.",
     site: "@xandeum",
     creator: "@xandeum",
     images: ["https://www.xandash.online/icon.png"],
   },
   category: "technology",
-  // Add your actual Google verification code from Search Console
-  // verification: {
-  //   google: "your-actual-verification-code",
-  // },
+  other: {
+    "google-site-verification": "your-verification-code-here",
+  },
 };
 
 export const viewport: Viewport = {
@@ -122,33 +126,51 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark bg-black">
       <head>
+        {/* Favicon - Critical for Google Search display */}
+        <link rel="icon" href="/favicon.ico" sizes="48x48" />
+        <link rel="icon" href="/icon.png" type="image/png" sizes="192x192" />
+        <link rel="apple-touch-icon" href="/icon.png" sizes="180x180" />
+        
         <link rel="manifest" href="/manifest.json" />
         <link rel="canonical" href="https://www.xandash.online" />
         <meta name="theme-color" content="#000000" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="XanDash" />
-        <meta name="author" content="Xandeum" />
+        <meta name="author" content="XanDash" />
         <meta name="copyright" content="© 2026 XanDash. All rights reserved." />
         <meta name="language" content="English" />
-        <meta name="revisit-after" content="7 days" />
+        <meta name="revisit-after" content="1 days" />
         <meta name="distribution" content="global" />
         <meta property="og:type" content="website" />
         <meta property="og:locale" content="en_US" />
         <meta name="format-detection" content="telephone=no" />
-        {/* Preconnect to critical origins - improves LCP */}
+        
+        {/* Preconnect to critical origins - reduces connection latency */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://challenges.cloudflare.com" />
-        {/* DNS prefetch for API endpoints */}
+        <link rel="preconnect" href="https://www.xandash.online" />
+        
+        {/* DNS prefetch for API endpoints - reduces DNS lookup time */}
         <link rel="dns-prefetch" href="https://api.coingecko.com" />
         <link rel="dns-prefetch" href="https://stats.xandeum.network" />
         <link rel="dns-prefetch" href="https://flagcdn.com" />
         <link rel="dns-prefetch" href="https://podcredits.xandeum.network" />
+        <link rel="dns-prefetch" href="https://ipwho.is" />
+        
         {/* Preload critical assets for faster LCP */}
-        <link rel="preload" href="/logo/xandash.png" as="image" type="image/png" />
-        {/* Critical CSS inline - prevents render blocking */}
-        <style dangerouslySetInnerHTML={{ __html: `html,body{background:#000!important;margin:0;padding:0}.gradient-bg{background:linear-gradient(180deg,#000 0%,#0a0a0a 100%)}` }} />
+        <link rel="preload" href="/logo/xandash.png" as="image" type="image/png" fetchPriority="high" />
+        
+        {/* Critical CSS inline - prevents render blocking (620ms savings) */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          html,body{background:#000!important;margin:0;padding:0;min-height:100vh}
+          .gradient-bg{background:radial-gradient(ellipse at center top,#2a2a2a 0%,#222 15%,#1a1a1a 35%,#111 60%,#0a0a0a 80%,#000 100%);background-attachment:fixed;min-height:100vh}
+          .dark{color-scheme:dark}
+          *{-ms-overflow-style:none;scrollbar-width:none}
+          *::-webkit-scrollbar{display:none}
+        `.replace(/\s+/g, '') }} />
+        
         <StructuredData />
       </head>
       <body
@@ -160,7 +182,7 @@ export default function RootLayout({
               <NodesDataProvider>
                 <AppCaptchaGate>
                   {children}
-                  <AIAssistant />
+                  <AIAssistantLoader />
                 </AppCaptchaGate>
               </NodesDataProvider>
             </NetworkProvider>

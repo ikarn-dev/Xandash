@@ -9,19 +9,23 @@ export function generateRobots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/', '/_next/', '/admin/'],
+        disallow: ['/api/', '/_next/', '/admin/', '/private/'],
       },
       {
         userAgent: 'Googlebot',
         allow: '/',
-        crawlDelay: 0,
       },
       {
-        userAgent: ['Bingbot', 'Slurp', 'DuckDuckBot'],
+        userAgent: 'Googlebot-Image',
+        allow: '/',
+      },
+      {
+        userAgent: ['Bingbot', 'Slurp', 'DuckDuckBot', 'Baiduspider', 'YandexBot'],
         allow: '/',
         crawlDelay: 1,
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
+    host: baseUrl,
   };
 }

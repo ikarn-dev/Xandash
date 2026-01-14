@@ -5,18 +5,37 @@ export function generateManifest(): MetadataRoute.Manifest {
   const { siteName, defaultDescription } = SEO_CONFIG;
 
   return {
-    name: `${siteName} - Xandeum Network Dashboard`,
+    name: `${siteName} - Xandeum Dashboard`,
     short_name: siteName,
     description: defaultDescription,
     start_url: '/',
+    id: '/',
+    scope: '/',
     display: 'standalone',
     background_color: '#000000',
-    theme_color: '#3B82F6',
+    theme_color: '#000000',
     orientation: 'portrait-primary',
-    categories: ['productivity', 'utilities', 'business'],
+    categories: ['productivity', 'utilities', 'finance'],
     lang: 'en',
     dir: 'ltr',
     icons: [
+      {
+        src: '/favicon.ico',
+        sizes: '48x48',
+        type: 'image/x-icon',
+      },
+      {
+        src: '/icon.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icon.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
       {
         src: '/icon.png',
         sizes: '192x192',
@@ -27,21 +46,21 @@ export function generateManifest(): MetadataRoute.Manifest {
         src: '/icon.png',
         sizes: '512x512',
         type: 'image/png',
-        purpose: 'any',
+        purpose: 'maskable',
       },
     ],
     shortcuts: [
       {
         name: 'pNodes',
         short_name: 'pNodes',
-        description: 'View all Xandeum network validators',
+        description: 'View all pNodes',
         url: '/nodes',
         icons: [{ src: '/icon.png', sizes: '96x96' }],
       },
       {
         name: 'Leaderboard',
         short_name: 'Leaderboard',
-        description: 'View pNode credits leaderboard',
+        description: 'View credits leaderboard',
         url: '/leaderboard',
         icons: [{ src: '/icon.png', sizes: '96x96' }],
       },
@@ -53,5 +72,7 @@ export function generateManifest(): MetadataRoute.Manifest {
         icons: [{ src: '/icon.png', sizes: '96x96' }],
       },
     ],
+    related_applications: [],
+    prefer_related_applications: false,
   };
 }

@@ -2,8 +2,8 @@
 export const SEO_CONFIG = {
   baseUrl: 'https://www.xandash.online',
   siteName: 'XanDash',
-  defaultTitle: 'XanDash - Real-Time Xandeum Network Dashboard & Node Monitor',
-  defaultDescription: 'Monitor Xandeum pNodes in real-time. Track node performance, uptime, storage, credits, and network statistics. AI-powered analytics for devnet and mainnet validators.',
+  defaultTitle: 'XanDash - Xandeum Dashboard | pNode Monitor & Network Analytics',
+  defaultDescription: 'XanDash is the official Xandeum dashboard for monitoring pNodes in real-time. Track node performance, uptime, storage, credits, and network statistics with AI-powered analytics.',
   twitterHandle: '@xandeum',
   
   // Open Graph defaults
@@ -14,30 +14,26 @@ export const SEO_CONFIG = {
     alt: 'XanDash - Xandeum Network Dashboard',
   },
   
-  // Keywords - optimized for search
+  // Keywords - optimized for search (primary keywords first)
   defaultKeywords: [
+    // Primary search terms (what users search for)
+    'xandeum dashboard',
+    'pnode dashboard',
+    'xandeum pnode dashboard',
+    'xandash',
+    'xandash dashboard',
     // Brand keywords
     'XanDash',
-    'XanDash Dashboard',
-    'XanDash online',
-    'XanDash monitor',
-    'XanDash analytics',
     'Xandeum',
-    'Xandeum dashboard',
     'Xandeum network',
     'Xandeum monitor',
     'Xandeum analytics',
     'Xandeum explorer',
-    'Xandeum stats',
-    'Xandeum statistics',
-    'Xandeum tracker',
     // Node keywords
     'pNodes',
     'pNode monitor',
     'pNode tracker',
-    'pNode dashboard',
     'pNode analytics',
-    'pNode stats',
     'pNode status',
     'pNode uptime',
     'pNode credits',
@@ -49,42 +45,24 @@ export const SEO_CONFIG = {
     'network monitoring',
     'network dashboard',
     'network analytics',
-    'network stats',
-    'network map',
     'node distribution',
-    'global nodes',
     // Blockchain keywords
     'blockchain dashboard',
     'blockchain analytics',
-    'blockchain monitor',
-    'blockchain explorer',
     'crypto dashboard',
-    'crypto analytics',
-    'crypto monitor',
     // Storage keywords
     'storage network',
     'decentralized storage',
-    'storage analytics',
     'STOINC',
     'STOINC calculator',
-    'storage incentive',
     // Token keywords
     'XAND',
     'XAND token',
-    'XAND price',
-    'XAND analytics',
     // Technical keywords
     'validators',
     'node tracker',
     'devnet',
     'mainnet',
-    'RPC endpoints',
-    'API testing',
-    // Governance keywords
-    'governance',
-    'proposals',
-    'voting',
-    'treasury',
   ],
 } as const;
 

@@ -183,11 +183,12 @@ export function NodesPageClientRefactored({
     });
   }, []);
 
-  // Navigate to compare page with selected nodes
+  // Navigate to compare page with selected nodes - auto-compare enabled
   const handleCompareSelected = useCallback(() => {
     if (selectedForCompare.length >= 2) {
       const params = new URLSearchParams();
       params.set('nodes', selectedForCompare.join(','));
+      params.set('auto', 'true');
       router.push(`/compare?${params.toString()}`);
     }
   }, [selectedForCompare, router]);

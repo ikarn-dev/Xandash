@@ -1,67 +1,69 @@
 {
-  "name": "XanDash - Xandeum Network Dashboard",
+  "name": "XanDash - Xandeum Dashboard",
   "short_name": "XanDash",
-  "description": "Real-time monitoring dashboard for Xandeum network validators and nodes",
+  "description": "XanDash is the official Xandeum dashboard for monitoring pNodes. Track node performance, uptime, storage, and credits in real-time.",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
   "background_color": "#000000",
-  "theme_color": "#3B82F6",
+  "theme_color": "#000000",
   "orientation": "portrait-primary",
-  "categories": ["productivity", "utilities"],
+  "categories": ["productivity", "utilities", "finance"],
   "lang": "en",
   "dir": "ltr",
+  "scope": "/",
   "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    },
     {
       "src": "/icon.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshot-wide.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide"
+      "purpose": "any"
     },
     {
-      "src": "/screenshot-narrow.png",
-      "sizes": "750x1334",
+      "src": "/icon.png",
+      "sizes": "192x192",
       "type": "image/png",
-      "form_factor": "narrow"
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
     {
-      "name": "Validators",
-      "short_name": "Validators",
-      "description": "View network validators",
+      "name": "pNodes",
+      "short_name": "pNodes",
+      "description": "View all pNodes",
       "url": "/nodes",
-      "icons": [
-        {
-          "src": "/icon.png",
-          "sizes": "96x96"
-        }
-      ]
+      "icons": [{ "src": "/icon.png", "sizes": "96x96" }]
     },
     {
       "name": "Leaderboard",
       "short_name": "Leaderboard",
-      "description": "View pod credits leaderboard",
+      "description": "View credits leaderboard",
       "url": "/leaderboard",
-      "icons": [
-        {
-          "src": "/icon.png",
-          "sizes": "96x96"
-        }
-      ]
+      "icons": [{ "src": "/icon.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Network Map",
+      "short_name": "Network",
+      "description": "View global node distribution",
+      "url": "/network",
+      "icons": [{ "src": "/icon.png", "sizes": "96x96" }]
     }
   ],
   "related_applications": [],

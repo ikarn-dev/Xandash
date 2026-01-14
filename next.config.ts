@@ -41,6 +41,11 @@ const securityHeaders = [
     key: 'Permissions-Policy',
     value: 'camera=(), microphone=(), geolocation=()',
   },
+  // HSTS - Force HTTPS to eliminate redirect latency
+  {
+    key: 'Strict-Transport-Security',
+    value: 'max-age=31536000; includeSubDomains; preload',
+  },
 ];
 
 const nextConfig: NextConfig = {
@@ -51,11 +56,11 @@ const nextConfig: NextConfig = {
   // Trailing slash handling for consistent URLs
   trailingSlash: false,
   
-  // Reduce bundle size - target modern browsers only
+  // Strict mode for better debugging
   reactStrictMode: true,
   
-  // Target modern browsers to reduce polyfills (saves ~14KB)
-  transpilePackages: [],
+  // Enable Turbopack (Next.js 16 default) - empty config to acknowledge webpack coexistence
+  turbopack: {},
   
   // CDN and caching headers
   async headers() {
@@ -64,6 +69,16 @@ const nextConfig: NextConfig = {
         // Apply security headers to all routes
         source: '/:path*',
         headers: securityHeaders,
+      },
+      {
+        // HTML pages - short cache with revalidation
+        source: '/',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, s-maxage=60, stale-while-revalidate=300',
+          },
+        ],
       },
       {
         source: '/api/:path*',
@@ -79,6 +94,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // Static JS/CSS chunks - immutable long cache
         source: '/_next/static/:path*',
         headers: [
           {
@@ -102,7 +118,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=86400',
+            value: 'public, max-age=86400, stale-while-revalidate=604800',
           },
         ],
       },
@@ -111,11 +127,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=86400',
-          },
-          {
-            key: 'Content-Type',
-            value: 'image/x-icon',
+            value: 'public, max-age=31536000, immutable',
           },
         ],
       },
@@ -124,11 +136,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=86400',
-          },
-          {
-            key: 'Content-Type',
-            value: 'image/png',
+            value: 'public, max-age=31536000, immutable',
           },
         ],
       },
@@ -137,7 +145,17 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=86400',
+            value: 'public, max-age=86400, stale-while-revalidate=604800',
+          },
+        ],
+      },
+      {
+        // Font files - long cache
+        source: '/:path*.woff2',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
           },
         ],
       },
@@ -146,20 +164,28 @@ const nextConfig: NextConfig = {
   
   // Experimental features for better performance
   experimental: {
+    // CSS optimization
     optimizeCss: true,
+    // Package imports optimization - reduces bundle size
     optimizePackageImports: [
       'lucide-react',
       '@tanstack/react-query',
       'recharts',
       'sonner',
       'gsap',
+      'react-leaflet',
+      'leaflet',
+      'clsx',
+      'tailwind-merge',
     ],
   },
   
   // Image optimization
   images: {
-    formats: ['image/webp', 'image/avif'],
-    minimumCacheTTL: 86400,
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 31536000,
+    deviceSizes: [640, 750, 828, 1080, 1200],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
   
   // Modular imports for smaller bundles
@@ -169,17 +195,60 @@ const nextConfig: NextConfig = {
     },
   },
   
-  // Bundle analyzer (optional)
-  ...(process.env.ANALYZE === 'true' && {
-    webpack: (config: any) => {
-      config.plugins.push(
-        new (require('@next/bundle-analyzer'))({
-          enabled: true,
-        })
-      );
-      return config;
-    },
-  }),
+  // Webpack configuration for optimization
+  webpack: (config, { dev, isServer }) => {
+    // Production optimizations only
+    if (!dev && !isServer) {
+      // Optimize chunk splitting
+      config.optimization = {
+        ...config.optimization,
+        moduleIds: 'deterministic',
+        splitChunks: {
+          chunks: 'all',
+          minSize: 20000,
+          maxSize: 244000,
+          cacheGroups: {
+            // Vendor chunk for node_modules
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              chunks: 'all',
+              priority: 20,
+            },
+            // React ecosystem
+            react: {
+              test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+              name: 'react',
+              chunks: 'all',
+              priority: 30,
+            },
+            // Charts library (heavy)
+            charts: {
+              test: /[\\/]node_modules[\\/](recharts|d3-.*)[\\/]/,
+              name: 'charts',
+              chunks: 'all',
+              priority: 25,
+            },
+            // Map library (heavy)
+            maps: {
+              test: /[\\/]node_modules[\\/](leaflet|react-leaflet)[\\/]/,
+              name: 'maps',
+              chunks: 'all',
+              priority: 25,
+            },
+            // Common chunks
+            common: {
+              minChunks: 2,
+              priority: 10,
+              reuseExistingChunk: true,
+            },
+          },
+        },
+      };
+    }
+    
+    return config;
+  },
 };
 
 export default nextConfig;

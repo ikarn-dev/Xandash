@@ -102,11 +102,12 @@ export const DashboardNodesCard: React.FC = () => {
     });
   }, []);
 
-  // Navigate to compare page
+  // Navigate to compare page - auto-compare enabled
   const handleCompareSelected = useCallback(() => {
     if (selectedForCompare.length >= 2) {
       const params = new URLSearchParams();
       params.set('nodes', selectedForCompare.join(','));
+      params.set('auto', 'true');
       router.push(`/compare?${params.toString()}`);
     }
   }, [selectedForCompare, router]);

@@ -207,13 +207,31 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
         </div>
       </div>
 
-      <div className="bg-black/50 border border-white/10 rounded-xl p-4">
-        <h3 className="text-sm font-medium text-white mb-4">Historical Trends (7 Days)</h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <ComparisonChart title="Credits Over Time" datasets={creditsChartData} valueFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}K` : v.toString()} startFromZero={true} />
-          <ComparisonChart title="Uptime (Hours)" datasets={uptimeChartData} valueFormatter={(v) => `${v.toFixed(0)}h`} startFromZero={true} />
-          <ComparisonChart title="Storage (GB)" datasets={storageChartData} valueFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}TB` : `${v.toFixed(0)}GB`} startFromZero={true} />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-medium text-white">Historical Trends (7 Days)</h3>
         </div>
+        <ComparisonChart 
+          title="Credits Over Time" 
+          datasets={creditsChartData} 
+          valueFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}K` : v.toFixed(0)} 
+          startFromZero={true}
+          height={320}
+        />
+        <ComparisonChart 
+          title="Uptime (Hours)" 
+          datasets={uptimeChartData} 
+          valueFormatter={(v) => `${v.toFixed(0)}h`} 
+          startFromZero={true}
+          height={320}
+        />
+        <ComparisonChart 
+          title="Storage (GB)" 
+          datasets={storageChartData} 
+          valueFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}TB` : `${v.toFixed(0)}GB`} 
+          startFromZero={true}
+          height={320}
+        />
       </div>
 
       {aiComparisonPrompt && <AISummary prompt={aiComparisonPrompt} title="Comparison Analysis" autoLoad={true} network={isMainnet ? 'mainnet' : 'devnet'} />}

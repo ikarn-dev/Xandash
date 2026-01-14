@@ -29,10 +29,18 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
   useEffect(() => {
     setIsClient(true);
     
-    // Dynamically import Leaflet only on client side
+    // Dynamically import Leaflet and its CSS only on client side
     const loadLeaflet = async () => {
+      // Load CSS via link tag to avoid TypeScript issues
+      if (!document.querySelector('link[href*="leaflet.css"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+        link.crossOrigin = '';
+        document.head.appendChild(link);
+      }
       const leaflet = await import('leaflet');
-      // CSS is handled by the global CSS import in layout
       setL(leaflet.default);
     };
     

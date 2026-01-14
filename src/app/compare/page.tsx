@@ -46,6 +46,15 @@ function ComparePageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isComparing, setIsComparing] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [autoCompareTriggered, setAutoCompareTriggered] = useState(false);
+
+  // Calculate node status from last_seen_timestamp
+  const getNodeStatus = useCallback((lastSeen: number, timestamp: number) => {
+    const timeDiff = timestamp - lastSeen;
+    if (timeDiff < 300) return 'online';
+    if (timeDiff < 3600) return 'syncing';
+    return 'offline';
+  }, []);
 
   // Fetch all nodes with full data
   useEffect(() => {
@@ -53,6 +62,7 @@ function ComparePageContent() {
     setSelectedPubkeys([]);
     setNodeProfiles([]);
     setShowResults(false);
+    setAutoCompareTriggered(false);
     
     const fetchNodes = async () => {
       setIsLoading(true);
@@ -67,7 +77,8 @@ function ComparePageContent() {
           const creditsData = await creditsRes.json();
           
           // Store server timestamp for status calculation
-          setServerTimestamp(nodesData.serverTimestamp || Math.floor(Date.now() / 1000));
+          const srvTimestamp = nodesData.serverTimestamp || Math.floor(Date.now() / 1000);
+          setServerTimestamp(srvTimestamp);
           
           const creditsMap = new Map<string, number>();
           (creditsData.pods_credits || []).forEach((c: any) => {
@@ -90,16 +101,25 @@ function ComparePageContent() {
           
           setAllNodes(nodes);
           
-          // Check for URL params and pre-select nodes (but don't auto-compare)
-          // User can add more nodes or click Compare button
+          // Check for URL params - auto-compare if 'auto=true' is present
           const nodesParam = searchParams.get('nodes');
+          const autoParam = searchParams.get('auto');
+          
           if (nodesParam) {
             const pubkeysFromUrl = nodesParam.split(',').filter(Boolean);
             const validPubkeys = pubkeysFromUrl.filter(pk => 
               nodes.some((n: NodeData) => n.pubkey === pk)
             ).slice(0, 4);
             
-            if (validPubkeys.length > 0) {
+            if (validPubkeys.length >= 2) {
+              setSelectedPubkeys(validPubkeys);
+              
+              // Auto-compare if auto=true param is present
+              if (autoParam === 'true') {
+                // Trigger auto-compare with the fetched data
+                triggerAutoCompare(validPubkeys, nodes, srvTimestamp);
+              }
+            } else if (validPubkeys.length > 0) {
               setSelectedPubkeys(validPubkeys);
             }
           }
@@ -112,7 +132,101 @@ function ComparePageContent() {
     };
     
     fetchNodes();
-  }, [network]);
+  }, [network, searchParams]);
+
+  // Auto-compare function that runs immediately with fetched data
+  const triggerAutoCompare = async (pubkeys: string[], nodes: NodeData[], timestamp: number) => {
+    if (pubkeys.length < 2 || autoCompareTriggered) return;
+    
+    setAutoCompareTriggered(true);
+    setIsComparing(true);
+    
+    try {
+      // Build profiles from fetched data
+      const profiles: NodeProfile[] = [];
+      
+      for (let i = 0; i < pubkeys.length; i++) {
+        const pubkey = pubkeys[i];
+        const node = nodes.find(n => n.pubkey === pubkey);
+        if (!node) continue;
+        
+        const ip = node.address?.split(':')[0] || '';
+        
+        profiles.push({
+          ip,
+          pubkey,
+          color: NODE_COLORS[i % NODE_COLORS.length],
+          status: getNodeStatus(node.last_seen_timestamp || 0, timestamp),
+          uptime: node.uptime || 0,
+          credits: node.credits || 0,
+          storage_committed: node.storage_committed || 0,
+          storage_used: node.storage_used || 0,
+          version: node.version || '',
+          location: undefined,
+          history: []
+        });
+      }
+      
+      // Show results immediately
+      setNodeProfiles(profiles);
+      setShowResults(true);
+      setIsComparing(false);
+      
+      // Fetch historical data in background
+      const historyPromises = profiles.map(async (profile) => {
+        try {
+          const statsRes = await fetch(`/api/node-history?ip=${profile.ip}&type=stats&hours=168`);
+          const statsData = statsRes.ok ? await statsRes.json() : { stats: [] };
+          return { ip: profile.ip, history: statsData.stats || [] };
+        } catch {
+          return { ip: profile.ip, history: [] };
+        }
+      });
+      
+      // Fetch locations in batch
+      const ips = profiles.map(p => p.ip);
+      let locationMap: Record<string, any> = {};
+      try {
+        const locationRes = await fetch('/api/geolocation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ips })
+        });
+        if (locationRes.ok) {
+          locationMap = await locationRes.json();
+        }
+      } catch {
+        // Location is optional
+      }
+      
+      const historyResults = await Promise.all(historyPromises);
+      
+      setNodeProfiles(prev => prev.map(profile => {
+        const historyData = historyResults.find(h => h.ip === profile.ip);
+        const location = locationMap[profile.ip];
+        
+        return {
+          ...profile,
+          location: location ? {
+            country: location.country,
+            city: location.city,
+            provider: location.provider
+          } : undefined,
+          history: historyData?.history?.map((h: any) => ({
+            timestamp: h.timestamp,
+            credits: h.credits || 0,
+            uptime: h.uptime || 0,
+            storage_committed: h.storage_committed || 0,
+            storage_used: h.storage_used || 0
+          })) || []
+        };
+      }));
+      
+    } catch (err) {
+      toast.error('Failed to compare nodes');
+      setIsComparing(false);
+    }
+  };
 
   const handleToggleNode = useCallback((pubkey: string) => {
     setSelectedPubkeys(prev => {
@@ -123,14 +237,6 @@ function ComparePageContent() {
       return [...prev, pubkey];
     });
   }, []);
-
-  // Calculate node status from last_seen_timestamp
-  const getNodeStatus = useCallback((lastSeen: number) => {
-    const timeDiff = serverTimestamp - lastSeen;
-    if (timeDiff < 300) return 'online';
-    if (timeDiff < 3600) return 'syncing';
-    return 'offline';
-  }, [serverTimestamp]);
 
   const handleCompare = useCallback(async () => {
     if (selectedPubkeys.length < 2) return;
@@ -152,7 +258,7 @@ function ComparePageContent() {
           ip,
           pubkey,
           color: NODE_COLORS[i % NODE_COLORS.length],
-          status: getNodeStatus(node.last_seen_timestamp || 0),
+          status: getNodeStatus(node.last_seen_timestamp || 0, serverTimestamp),
           uptime: node.uptime || 0,
           credits: node.credits || 0,
           storage_committed: node.storage_committed || 0,
@@ -227,7 +333,7 @@ function ComparePageContent() {
       toast.error('Failed to compare nodes');
       setIsComparing(false);
     }
-  }, [selectedPubkeys, allNodes, network, getNodeStatus]);
+  }, [selectedPubkeys, allNodes, serverTimestamp, getNodeStatus]);
 
   const handleReset = useCallback(() => {
     setSelectedPubkeys([]);
