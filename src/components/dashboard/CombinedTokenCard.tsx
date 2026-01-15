@@ -184,6 +184,8 @@ export const CombinedTokenCard: React.FC = () => {
   const PriceChart: React.FC<{ data: PriceHistoryPoint[] }> = ({ data }) => {
     const [animationKey, setAnimationKey] = useState(0);
     const [hasAnimated, setHasAnimated] = useState(false);
+    const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+    const containerRef = React.useRef<HTMLDivElement>(null);
 
     // Only trigger animation on initial load or manual refresh
     useEffect(() => {
@@ -194,25 +196,31 @@ export const CombinedTokenCard: React.FC = () => {
       }
     }, [data, hasAnimated, shouldAnimateChart]);
 
-    // Wait for container to have dimensions before rendering chart
-    const [isReady, setIsReady] = useState(false);
-    const containerRef = React.useRef<HTMLDivElement>(null);
-
+    // Track container dimensions
     useEffect(() => {
-      const checkDimensions = () => {
+      const updateDimensions = () => {
         if (containerRef.current) {
           const { clientWidth, clientHeight } = containerRef.current;
           if (clientWidth > 0 && clientHeight > 0) {
-            setIsReady(true);
+            setDimensions({ width: clientWidth, height: clientHeight });
           }
         }
       };
-      checkDimensions();
-      const timer = setTimeout(checkDimensions, 50);
-      window.addEventListener('resize', checkDimensions);
+      
+      // Initial check after mount
+      const raf = requestAnimationFrame(updateDimensions);
+      const timer = setTimeout(updateDimensions, 150);
+      
+      // ResizeObserver for responsive updates
+      const resizeObserver = new ResizeObserver(updateDimensions);
+      if (containerRef.current) {
+        resizeObserver.observe(containerRef.current);
+      }
+      
       return () => {
+        cancelAnimationFrame(raf);
         clearTimeout(timer);
-        window.removeEventListener('resize', checkDimensions);
+        resizeObserver.disconnect();
       };
     }, []);
 
@@ -263,8 +271,8 @@ export const CombinedTokenCard: React.FC = () => {
         className="w-full h-64 lg:h-96 bg-black/10 rounded border border-white/5"
         style={{ minHeight: '256px' }}
       >
-        {isReady ? (
-          <ResponsiveContainer width="100%" height="100%">
+        {dimensions ? (
+          <ResponsiveContainer width={dimensions.width} height={dimensions.height}>
           <BarChart 
             key={animationKey}
             data={chartData} 
