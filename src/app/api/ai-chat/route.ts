@@ -263,13 +263,12 @@ async function fetchCountryData(countryCode: string) {
 }
 
 // Fetch network summary (compact) - supports both mainnet and devnet
-async function fetchNetworkSummary(networkType?: 'mainnet' | 'devnet') {
+async function fetchNetworkSummary(networkType: 'mainnet' | 'devnet' = 'devnet') {
   try {
     let nodes: any[] = [];
-    let network = networkType || 'devnet';
     
-    // Try mainnet external API first if mainnet requested or not specified
-    if (!networkType || networkType === 'mainnet') {
+    if (networkType === 'mainnet') {
+      // Fetch mainnet data
       try {
         const mainnetRes = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000'}/api/mainnet-rpc`, {
           method: 'GET',
@@ -280,17 +279,17 @@ async function fetchNetworkSummary(networkType?: 'mainnet' | 'devnet') {
           const mainnetData = await mainnetRes.json();
           if (mainnetData.nodes && mainnetData.nodes.length > 0) {
             nodes = mainnetData.nodes;
-            network = 'mainnet';
           }
         }
       } catch {}
-    }
-    
-    // Fallback to devnet API
-    if (nodes.length === 0) {
+    } else {
+      // Fetch devnet data
       const devnetData = await getDevnetData();
       nodes = devnetData.nodes;
-      network = 'devnet';
+    }
+    
+    if (nodes.length === 0) {
+      return { network: networkType, totalNodes: 0, onlineNodes: 0, syncingNodes: 0, offlineNodes: 0, message: 'No nodes found' };
     }
     
     const totalNodes = nodes.length;
@@ -312,7 +311,7 @@ async function fetchNetworkSummary(networkType?: 'mainnet' | 'devnet') {
     nodes.forEach((n: any) => { versions[n.version || 'unknown'] = (versions[n.version || 'unknown'] || 0) + 1; });
     
     return {
-      network,
+      network: networkType,
       totalNodes,
       onlineNodes,
       syncingNodes,
@@ -328,12 +327,10 @@ async function fetchNetworkSummary(networkType?: 'mainnet' | 'devnet') {
 }
 
 // Fetch credits summary - supports both mainnet and devnet
-async function fetchCreditsSummary(networkType?: 'mainnet' | 'devnet') {
+async function fetchCreditsSummary(networkType: 'mainnet' | 'devnet' = 'devnet') {
   try {
-    const isMainnet = networkType === 'mainnet';
-    
     // For mainnet, get credits from external data sources
-    if (isMainnet) {
+    if (networkType === 'mainnet') {
       try {
         const mainnetRes = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000'}/api/mainnet-rpc`, {
           method: 'GET',
@@ -364,7 +361,7 @@ async function fetchCreditsSummary(networkType?: 'mainnet' | 'devnet') {
           };
         }
       } catch {}
-      return null;
+      return { network: 'mainnet', totalCredits: 0, avgCredits: 0, totalPods: 0, topEarners: [], message: 'Mainnet credits data unavailable' };
     }
     
     // For devnet, use credits API
@@ -395,24 +392,25 @@ async function buildContext(msg: string, requestNetwork?: 'mainnet' | 'devnet') 
   let ctx = '';
   let hints = '';
   
-  // Use network from request if provided, otherwise detect from message
+  // Use network from request - this is the primary source of truth
+  // Only fall back to message detection if no network provided
   const isMainnetQuery = /mainnet|main\s*net|production/.test(lower);
   const isDevnetQuery = /devnet|dev\s*net|testnet|test\s*net/.test(lower);
   
   // Priority: request network > detected from message > default to devnet
-  let networkType: 'mainnet' | 'devnet' | undefined;
+  let networkType: 'mainnet' | 'devnet';
   if (requestNetwork) {
     networkType = requestNetwork;
-  } else if (isMainnetQuery) {
+  } else if (isMainnetQuery && !isDevnetQuery) {
     networkType = 'mainnet';
-  } else if (isDevnetQuery) {
+  } else if (isDevnetQuery && !isMainnetQuery) {
     networkType = 'devnet';
+  } else {
+    networkType = 'devnet'; // Default
   }
   
-  // Add network context to response
-  if (networkType) {
-    ctx += `\n[ACTIVE_NETWORK: ${networkType.toUpperCase()}]`;
-  }
+  // Always add network context to response
+  ctx += `\n[ACTIVE_NETWORK: ${networkType.toUpperCase()}] - All data below is from ${networkType.toUpperCase()} network.`;
   
   // Token/XAND queries
   if (/xand|token|price|market|coin|crypto|supply|volume/.test(lower)) {

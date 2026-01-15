@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNetwork } from '@/libs/context/network-context';
 
 // Triangle Logo Icon (matching navbar)
 const TriangleLogo = ({ className = "w-6 h-6" }: { className?: string }) => (
@@ -34,12 +35,19 @@ interface Message {
 }
 
 export function AIAssistant() {
+  const { network } = useNetwork();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentNetwork, setCurrentNetwork] = useState<'devnet' | 'mainnet'>('devnet');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Sync network from context
+  useEffect(() => {
+    setCurrentNetwork(network);
+  }, [network]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -67,6 +75,7 @@ export function AIAssistant() {
     if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
+    const networkToUse = currentNetwork; // Use synced network state
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
@@ -77,6 +86,7 @@ export function AIAssistant() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [...messages, { role: 'user', content: userMessage }],
+          network: networkToUse,
         }),
       });
 
@@ -131,6 +141,11 @@ export function AIAssistant() {
 
   const clearChat = () => setMessages([]);
 
+  // Clear chat when network changes
+  useEffect(() => {
+    setMessages([]);
+  }, [currentNetwork]);
+
   return (
     <>
       {/* Floating Button - Black/White theme */}
@@ -160,7 +175,12 @@ export function AIAssistant() {
                 <TriangleLogo className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-white">XanDash AI</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-white">XanDash AI</h3>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${currentNetwork === 'mainnet' ? 'bg-blue-500/20 text-blue-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                    {currentNetwork.toUpperCase()}
+                  </span>
+                </div>
                 <p className="text-[10px] text-white/40 hidden sm:block">Ask about nodes, network stats & more</p>
               </div>
             </div>

@@ -16,24 +16,58 @@ export function CompareButton({ count, minRequired = 2, onClick, disabled, isLoa
       onClick={onClick}
       disabled={!canCompare}
       className={`
-        relative w-full py-3 rounded-xl font-medium text-sm
-        transition-all duration-300 border
+        relative w-full py-4 font-medium text-base
+        transition-all duration-300 ease-out
+        rounded-2xl overflow-hidden
         ${canCompare 
-          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50' 
+          ? 'text-white cursor-pointer' 
           : isLoading
-            ? 'bg-white/5 border-white/10 text-white/60'
-            : 'bg-white/5 border-white/10 text-white/30 cursor-not-allowed'
+            ? 'text-white/70 cursor-wait'
+            : 'text-white/40 cursor-not-allowed'
         }
       `}
+      style={{
+        background: canCompare 
+          ? 'linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 50%, #1a1a1a 100%)'
+          : isLoading
+            ? 'linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 100%)'
+            : '#0a0a0a',
+        boxShadow: canCompare 
+          ? 'inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.3)'
+          : 'none',
+        border: canCompare 
+          ? '1px solid rgba(255,255,255,0.15)'
+          : '1px solid rgba(255,255,255,0.08)'
+      }}
     >
-      <div className="flex items-center justify-center gap-2">
+      {/* Subtle gradient overlay on hover */}
+      {canCompare && (
+        <div 
+          className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-300"
+          style={{
+            background: 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(255,255,255,0.03) 100%)'
+          }}
+        />
+      )}
+      
+      {/* Top edge highlight */}
+      {canCompare && (
+        <div 
+          className="absolute top-0 left-4 right-4 h-px"
+          style={{
+            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)'
+          }}
+        />
+      )}
+      
+      <div className="relative flex items-center justify-center gap-2">
         {isLoading ? (
           <>
-            <div className="w-4 h-4 border-2 border-white/20 border-t-emerald-500 rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-white/20 border-t-white/70 rounded-full animate-spin" />
             <span>Comparing nodes...</span>
           </>
         ) : (
-          <span>
+          <span className="tracking-wide">
             {count < minRequired 
               ? `Select ${minRequired - count} more node${minRequired - count > 1 ? 's' : ''}`
               : `Compare ${count} Nodes`

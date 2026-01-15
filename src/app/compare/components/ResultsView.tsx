@@ -26,6 +26,9 @@ interface ResultsViewProps {
 
 export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewProps) {
   const isMainnet = network === 'mainnet';
+  
+  // Check if historical data is still loading (history array is empty for all nodes)
+  const isHistoryLoading = nodes.length > 0 && nodes.every(n => !n.history || n.history.length === 0);
 
   const formatUptime = (s: number) => {
     const d = Math.floor(s / 86400);
@@ -209,7 +212,7 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
 
       <div className="space-y-6">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-white">Historical Trends (3 Days)</h3>
+          <h3 className="text-sm font-medium text-white">Historical Trends (7 Days)</h3>
         </div>
         <ComparisonChart 
           title="Credits Over Time" 
@@ -217,6 +220,7 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
           valueFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}K` : v.toFixed(0)} 
           startFromZero={true}
           height={320}
+          isLoading={isHistoryLoading}
         />
         <ComparisonChart 
           title="Uptime (Hours)" 
@@ -224,6 +228,7 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
           valueFormatter={(v) => `${v.toFixed(0)}h`} 
           startFromZero={true}
           height={320}
+          isLoading={isHistoryLoading}
         />
         <ComparisonChart 
           title="Storage (GB)" 
@@ -231,6 +236,7 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
           valueFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}TB` : `${v.toFixed(0)}GB`} 
           startFromZero={true}
           height={320}
+          isLoading={isHistoryLoading}
         />
       </div>
 

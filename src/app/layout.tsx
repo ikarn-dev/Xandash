@@ -170,9 +170,6 @@ export default function RootLayout({
           crossOrigin=""
         />
         
-        {/* Preload critical assets for faster LCP */}
-        <link rel="preload" href="/logo/xandash.png" as="image" type="image/png" fetchPriority="high" />
-        
         {/* Critical CSS inline - prevents render blocking (620ms savings) */}
         <style dangerouslySetInnerHTML={{ __html: `
           html,body{background:#000!important;margin:0;padding:0;min-height:100vh}
