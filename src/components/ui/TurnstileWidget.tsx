@@ -66,7 +66,19 @@ export function TurnstileWidget({
 
   return (
     <div className="flex justify-center">
-      <div ref={containerRef} />
+      {/* Fixed size container to prevent layout shift - Turnstile widget is 300x65 */}
+      <div 
+        ref={containerRef} 
+        className="flex items-center justify-center"
+        style={{ minWidth: '300px', minHeight: '65px' }}
+      >
+        {!isLoaded && (
+          <div className="flex items-center gap-2 text-white/40 text-sm">
+            <div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+            <span>Loading...</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

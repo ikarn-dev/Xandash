@@ -44,13 +44,13 @@ const LoadingSpinner = () => (
 // Format date for X-axis (show day and date)
 const formatDateLabel = (date: Date, compact: boolean = false): string => {
   const dayNum = date.getUTCDate();
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const day = days[date.getUTCDay()];
   if (compact) {
-    // For mobile: show short day + number (e.g., "Fri 9")
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const day = days[date.getUTCDay()];
-    return `${day} ${dayNum}`;
+    // For mobile: show short format (e.g., "M9" for Mon 9)
+    const shortDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    return `${shortDays[date.getUTCDay()]}${dayNum}`;
   }
-  const day = date.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
   return `${day} ${dayNum}`;
 };
 
@@ -344,7 +344,7 @@ export function ComparisonChart({
         <div className="p-2 sm:p-5">
           <div className="relative" style={{ height: chartHeight }}>
             {/* Y-axis labels */}
-            <div className="absolute left-0 top-0 bottom-14 sm:bottom-12 w-12 sm:w-16 flex flex-col justify-between">
+            <div className="absolute left-0 top-0 bottom-10 w-12 sm:w-16 flex flex-col justify-between">
               {yTicks.slice().reverse().map((tick, i) => (
                 <div key={i} className="flex items-center justify-end pr-1 sm:pr-2">
                   <span className="text-[8px] sm:text-[10px] text-white/50 font-mono whitespace-nowrap">
@@ -357,7 +357,7 @@ export function ComparisonChart({
             {/* Chart area */}
             <div 
               ref={chartRef}
-              className="absolute top-0 right-2 sm:right-4 bottom-14 sm:bottom-12"
+              className="absolute top-0 right-2 sm:right-4 bottom-10"
               style={{ left: isMobile ? '52px' : '68px' }}
               onMouseLeave={handleMouseLeave}
             >
@@ -424,29 +424,30 @@ export function ComparisonChart({
               {/* Tooltip */}
               {tooltip && tooltip.values.length > 0 && (
                 <div 
-                  className="absolute z-30 bg-gray-900/95 backdrop-blur-md border border-white/20 rounded-xl px-4 py-3 pointer-events-none shadow-2xl"
+                  className="absolute z-30 bg-gray-900/95 backdrop-blur-md border border-white/20 rounded-lg sm:rounded-xl px-2 sm:px-4 py-2 sm:py-3 pointer-events-none shadow-2xl"
                   style={{ 
-                    left: Math.min(Math.max(tooltip.x, 100), (chartRef.current?.clientWidth || 300) - 100),
-                    top: 12,
+                    left: Math.min(Math.max(tooltip.x, isMobile ? 70 : 100), (chartRef.current?.clientWidth || 300) - (isMobile ? 70 : 100)),
+                    top: isMobile ? 8 : 12,
                     transform: 'translateX(-50%)',
-                    minWidth: '180px'
+                    minWidth: isMobile ? '140px' : '180px',
+                    maxWidth: isMobile ? '160px' : '220px'
                   }}
                 >
-                  <div className="text-xs text-white/80 font-medium mb-2 pb-2 border-b border-white/10">
+                  <div className="text-[10px] sm:text-xs text-white/80 font-medium mb-1.5 sm:mb-2 pb-1.5 sm:pb-2 border-b border-white/10">
                     {formatTooltipTime(tooltip.timestamp)}
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-1 sm:space-y-2">
                     {tooltip.values.map((v, i) => (
-                      <div key={i} className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-2 min-w-0">
+                      <div key={i} className="flex items-center justify-between gap-2 sm:gap-4">
+                        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                           <div 
-                            className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
+                            className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full flex-shrink-0" 
                             style={{ backgroundColor: v.color }} 
                           />
-                          <span className="text-[11px] text-white/60 truncate">{v.label}</span>
+                          <span className="text-[9px] sm:text-[11px] text-white/60 truncate max-w-[60px] sm:max-w-none">{v.label}</span>
                         </div>
-                        <span className="text-sm text-white font-mono font-bold">
+                        <span className="text-xs sm:text-sm text-white font-mono font-bold">
                           {valueFormatter(v.value)}
                         </span>
                       </div>
@@ -463,32 +464,22 @@ export function ComparisonChart({
               )}
             </div>
 
-            {/* X-axis labels - Always show 7 days, aligned with bars, tilted on mobile */}
+            {/* X-axis labels - Always show 7 days, aligned with bars */}
             <div 
-              className="absolute bottom-0 h-14 sm:h-12"
+              className="absolute bottom-0 h-10 sm:h-10"
               style={{ left: isMobile ? '48px' : '68px', right: isMobile ? '4px' : '16px' }}
             >
-              <div className="relative w-full h-full flex items-start pt-3 sm:pt-2">
+              <div className="relative w-full h-full flex items-start pt-2">
                 {last7Days.map((date, i) => (
                   <div 
                     key={i}
                     className="flex-1 flex justify-center"
                   >
-                    {isMobile ? (
-                      <span 
-                        className="text-[8px] text-white/50 font-mono whitespace-nowrap"
-                        style={{ 
-                          transform: 'rotate(-45deg) translateX(-6px)',
-                          transformOrigin: 'top center'
-                        }}
-                      >
-                        {formatDateLabel(date, false)}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-white/50 font-mono whitespace-nowrap">
-                        {formatDateLabel(date, false)}
-                      </span>
-                    )}
+                    <span 
+                      className={`${isMobile ? 'text-[7px]' : 'text-[10px]'} text-white/50 font-mono whitespace-nowrap`}
+                    >
+                      {formatDateLabel(date, isMobile)}
+                    </span>
                   </div>
                 ))}
               </div>

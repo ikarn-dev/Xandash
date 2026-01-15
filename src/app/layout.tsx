@@ -133,7 +133,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <link rel="canonical" href="https://www.xandash.online" />
         <meta name="theme-color" content="#000000" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="XanDash" />
         <meta name="author" content="XanDash" />

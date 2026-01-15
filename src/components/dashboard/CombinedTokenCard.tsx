@@ -193,6 +193,29 @@ export const CombinedTokenCard: React.FC = () => {
         setShouldAnimateChart(false); // Reset flag after animation
       }
     }, [data, hasAnimated, shouldAnimateChart]);
+
+    // Wait for container to have dimensions before rendering chart
+    const [isReady, setIsReady] = useState(false);
+    const containerRef = React.useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      const checkDimensions = () => {
+        if (containerRef.current) {
+          const { clientWidth, clientHeight } = containerRef.current;
+          if (clientWidth > 0 && clientHeight > 0) {
+            setIsReady(true);
+          }
+        }
+      };
+      checkDimensions();
+      const timer = setTimeout(checkDimensions, 50);
+      window.addEventListener('resize', checkDimensions);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener('resize', checkDimensions);
+      };
+    }, []);
+
     if (data.length === 0) {
       return (
         <div className="w-full h-64 lg:h-96 flex items-center justify-center bg-black/20 rounded border border-white/10">
@@ -235,8 +258,13 @@ export const CombinedTokenCard: React.FC = () => {
     };
 
     return (
-      <div className="w-full h-64 lg:h-96 bg-black/10 rounded border border-white/5">
-        <ResponsiveContainer width="100%" height="100%">
+      <div 
+        ref={containerRef}
+        className="w-full h-64 lg:h-96 bg-black/10 rounded border border-white/5"
+        style={{ minHeight: '256px' }}
+      >
+        {isReady ? (
+          <ResponsiveContainer width="100%" height="100%">
           <BarChart 
             key={animationKey}
             data={chartData} 
@@ -286,7 +314,12 @@ export const CombinedTokenCard: React.FC = () => {
               }}
             />
           </BarChart>
-        </ResponsiveContainer>
+          </ResponsiveContainer>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-white/30 text-xs">Loading chart...</div>
+          </div>
+        )}
       </div>
     );
   };

@@ -70,30 +70,58 @@ export function NodesPageClientRefactored({
   // Use shared nodes data context - single source of truth for all components
   const { nodes: sharedNodes, geoData, stats: sharedStats, isLoading: isLoadingShared, dataFetchTime: sharedDataFetchTime } = useSharedNodesData();
   
-  // Transform shared nodes to ValidatorData format
+  // Transform shared nodes to ValidatorData format with duplicate detection
   const allValidators = useMemo((): ValidatorData[] => {
-    return sharedNodes.map((node, index) => ({
-      address: node.address || '',
-      pubkey: node.pubkey || `node-${index}`,
-      is_public: node.is_public || false,
-      storage_committed: node.storage_committed || 0,
-      storage_used: node.storage_used || 0,
-      usage_percent: node.storage_usage_percent || 0,
-      storage_usage_percent: node.storage_usage_percent || 0,
-      rpc_port: node.rpc_port || 0,
-      version: node.version || '',
-      uptime: node.uptime || 0,
-      last_seen_timestamp: node.last_seen_timestamp || 0,
-      status: node.status,
-      score: 0,
-      rank: index + 1,
-      duplicateCount: 0,
-      isDuplicate: false,
-      credits: node.credits,
-      country: node.country,
-      country_code: node.country_code,
-      provider: node.provider,
-    }));
+    // First pass: group nodes by pubkey to find duplicates
+    const pubkeyGroups = new Map<string, typeof sharedNodes>();
+    sharedNodes.forEach(node => {
+      const pubkey = node.pubkey || '';
+      if (pubkey) {
+        if (!pubkeyGroups.has(pubkey)) {
+          pubkeyGroups.set(pubkey, []);
+        }
+        pubkeyGroups.get(pubkey)!.push(node);
+      }
+    });
+
+    // Find pubkeys that have duplicates (more than 1 node with same pubkey)
+    const duplicatePubkeys = new Set<string>();
+    pubkeyGroups.forEach((nodes, pubkey) => {
+      if (nodes.length > 1) {
+        duplicatePubkeys.add(pubkey);
+      }
+    });
+
+    // Transform all nodes, marking those with duplicate pubkeys
+    return sharedNodes.map((node, index) => {
+      const pubkey = node.pubkey || `node-${index}`;
+      const hasDuplicate = duplicatePubkeys.has(pubkey);
+      
+      return {
+        address: node.address || '',
+        pubkey: pubkey,
+        is_public: node.is_public || false,
+        storage_committed: node.storage_committed || 0,
+        storage_used: node.storage_used || 0,
+        usage_percent: node.storage_usage_percent || 0,
+        storage_usage_percent: node.storage_usage_percent || 0,
+        rpc_port: node.rpc_port || 0,
+        version: node.version || '',
+        uptime: node.uptime || 0,
+        last_seen_timestamp: node.last_seen_timestamp || 0,
+        status: node.status,
+        score: 0,
+        rank: index + 1,
+        // duplicateCount: 1 means this node IS a duplicate (has same pubkey as another)
+        // This is used for filtering - when showDuplicates is true, show nodes where duplicateCount > 0
+        duplicateCount: hasDuplicate ? 1 : 0,
+        isDuplicate: hasDuplicate,
+        credits: node.credits,
+        country: node.country,
+        country_code: node.country_code,
+        provider: node.provider,
+      };
+    });
   }, [sharedNodes]);
 
   const dataFetchTime = sharedDataFetchTime;

@@ -49,12 +49,14 @@ export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: n
 
     const paginated = paginateValidators(filtered, currentPage, pageSize);
     
-    const duplicateCount = allValidators.reduce((total, v) => total + (v.duplicateCount || 0), 0);
-    const totalWithDuplicates = allValidators.length + duplicateCount;
+    // Count nodes that are duplicates (have duplicateCount > 0)
+    const duplicateCount = allValidators.filter(v => v.duplicateCount && v.duplicateCount > 0).length;
+    // Total is just the number of unique validators (matching API response)
+    const total = allValidators.length;
     const referenceTime = dataFetchTime;
     
     const calculatedStats = hasActiveFilters ? {
-      total: totalWithDuplicates,
+      total: total,
       online: filtered.filter(v => {
         const timeDiff = referenceTime - v.last_seen_timestamp;
         return timeDiff < 1800;
@@ -69,7 +71,7 @@ export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: n
         return timeDiff >= 3600;
       }).length,
     } : {
-      total: totalWithDuplicates,
+      total: total,
       online: allValidators.filter(v => {
         const timeDiff = referenceTime - v.last_seen_timestamp;
         return timeDiff < 1800;

@@ -60,9 +60,7 @@ const MobileNetworkSelector: React.FC = () => {
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    // Force refresh all data including nodes
     refreshRef.current();
-    // Also trigger a force fetch of nodes data via API
     try {
       await fetch('/api/mainnet-rpc?refresh=true', { cache: 'no-store' });
     } catch {}
@@ -72,40 +70,46 @@ const MobileNetworkSelector: React.FC = () => {
 
   return (
     <div className="flex items-center gap-2 p-2 bg-white/5 rounded-lg border border-white/10">
-      {/* Network Toggle Buttons - Compact */}
+      {/* Network Toggle Buttons - Instant switching */}
       <div className="flex gap-1.5 flex-1">
         <button
           onClick={() => setNetwork('devnet')}
           className={cn(
-            'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[10px] font-medium transition-all',
+            'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[10px] font-medium',
             !isMainnet 
               ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400' 
-              : 'bg-white/5 border border-transparent text-white/40'
+              : 'bg-white/5 border border-transparent text-white/40 active:bg-white/10'
           )}
         >
-          <div className={cn('w-1.5 h-1.5 rounded-full', !isMainnet ? 'bg-emerald-400' : 'bg-white/30')} />
+          <div className={cn(
+            'w-1.5 h-1.5 rounded-full', 
+            !isMainnet ? 'bg-emerald-400' : 'bg-white/30'
+          )} />
           Devnet
         </button>
         <button
           onClick={() => setNetwork('mainnet')}
           className={cn(
-            'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[10px] font-medium transition-all',
+            'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[10px] font-medium',
             isMainnet 
               ? 'bg-blue-500/20 border border-blue-500/40 text-blue-400' 
-              : 'bg-white/5 border border-transparent text-white/40'
+              : 'bg-white/5 border border-transparent text-white/40 active:bg-white/10'
           )}
         >
-          <div className={cn('w-1.5 h-1.5 rounded-full', isMainnet ? 'bg-blue-400' : 'bg-white/30')} />
+          <div className={cn(
+            'w-1.5 h-1.5 rounded-full', 
+            isMainnet ? 'bg-blue-400' : 'bg-white/30'
+          )} />
           Mainnet
         </button>
       </div>
       
-      {/* Refresh Timer - Compact */}
+      {/* Refresh Timer */}
       <div className="flex items-center gap-1.5 pl-2 border-l border-white/10">
-        <span className="font-mono text-white/50 text-[10px]">{timeLeft}s</span>
+        <span className="font-mono text-white/50 text-[10px] tabular-nums w-[18px] text-center">{timeLeft}s</span>
         <button
           onClick={handleRefresh}
-          className="p-1 rounded hover:bg-white/10 transition-colors"
+          className="p-1 rounded active:bg-white/10"
         >
           <RefreshCw className={cn(
             'w-3 h-3 text-white/40',
@@ -157,9 +161,7 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    // Force refresh all data including nodes
     refreshRef.current();
-    // Also trigger a force fetch of nodes data via API
     try {
       await fetch('/api/mainnet-rpc?refresh=true', { cache: 'no-store' });
     } catch {}
@@ -172,8 +174,9 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          'flex items-center gap-1.5 sm:gap-2 rounded-full transition-all duration-300',
-          'bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20',
+          'flex items-center gap-1.5 sm:gap-2 rounded-full',
+          'bg-white/5 border border-white/10',
+          'hover:bg-white/10 hover:border-white/20 active:bg-white/15',
           compact ? 'px-2 py-1' : 'px-2 sm:px-3 py-1 sm:py-1.5',
           isOpen && 'bg-white/10 border-white/20'
         )}
@@ -190,10 +193,10 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
           )} />
         </div>
 
-        {/* Network Name */}
+        {/* Network Name - Fixed width to prevent layout shift */}
         <span className={cn(
           'font-semibold tracking-wide',
-          compact ? 'text-[10px]' : 'text-[10px] sm:text-xs',
+          compact ? 'text-[10px] min-w-[52px]' : 'text-[10px] sm:text-xs min-w-[52px] sm:min-w-[60px]',
           isMainnet ? 'text-blue-400' : 'text-emerald-400'
         )}>
           {isMainnet ? 'MAINNET' : 'DEVNET'}
@@ -202,12 +205,12 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
         {/* Timer */}
         <div className="flex items-center gap-0.5 sm:gap-1 pl-1.5 sm:pl-2 border-l border-white/10">
           <span className={cn(
-            'font-mono text-white/50 text-center',
-            compact ? 'text-[9px] min-w-[14px]' : 'text-[9px] sm:text-[10px] min-w-[14px] sm:min-w-[18px]'
+            'font-mono text-white/50 text-center tabular-nums',
+            compact ? 'text-[9px] w-[16px]' : 'text-[9px] sm:text-[10px] w-[16px] sm:w-[20px]'
           )}>{timeLeft}s</span>
           <span
             onClick={(e) => { e.stopPropagation(); handleRefresh(); }}
-            className="p-0.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+            className="p-0.5 rounded-full hover:bg-white/10 active:bg-white/20 cursor-pointer"
             role="button"
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleRefresh(); } }}
@@ -221,41 +224,53 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
         </div>
 
         <ChevronDown className={cn(
-          'text-white/40 transition-transform duration-200',
+          'text-white/40',
           compact ? 'w-2.5 h-2.5' : 'w-2.5 h-2.5 sm:w-3 sm:h-3',
           isOpen && 'rotate-180'
-        )} />
+        )} 
+        style={{ transition: 'transform 150ms ease-out' }}
+        />
       </button>
 
-      {/* Dropdown */}
-      <div className={cn(
-        'absolute top-full right-0 mt-2 w-32 sm:w-36 py-1 rounded-xl overflow-hidden transition-all duration-200',
-        'bg-black/95 backdrop-blur-xl border border-white/10 shadow-2xl',
-        isOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'
-      )}>
-        <button
-          onClick={() => { setNetwork('devnet'); setIsOpen(false); }}
-          className={cn(
-            'w-full flex items-center gap-2 px-3 py-2 text-[11px] sm:text-xs transition-colors',
-            !isMainnet ? 'bg-emerald-500/10 text-emerald-400' : 'text-white/60 hover:bg-white/5 hover:text-white'
-          )}
+      {/* Dropdown - Fast animation */}
+      {isOpen && (
+        <div 
+          className="absolute top-full right-0 mt-2 w-32 sm:w-36 py-1 rounded-xl overflow-hidden bg-black/95 backdrop-blur-xl border border-white/10 shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-right"
         >
-          <div className={cn('w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full', !isMainnet ? 'bg-emerald-400' : 'bg-white/20')} />
-          <span>Devnet</span>
-          {!isMainnet && <span className="ml-auto text-[8px] sm:text-[9px] opacity-60">LIVE</span>}
-        </button>
-        <button
-          onClick={() => { setNetwork('mainnet'); setIsOpen(false); }}
-          className={cn(
-            'w-full flex items-center gap-2 px-3 py-2 text-[11px] sm:text-xs transition-colors',
-            isMainnet ? 'bg-blue-500/10 text-blue-400' : 'text-white/60 hover:bg-white/5 hover:text-white'
-          )}
-        >
-          <div className={cn('w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full', isMainnet ? 'bg-blue-400' : 'bg-white/20')} />
-          <span>Mainnet</span>
-          {isMainnet && <span className="ml-auto text-[8px] sm:text-[9px] opacity-60">LIVE</span>}
-        </button>
-      </div>
+          <button
+            onClick={() => { setNetwork('devnet'); setIsOpen(false); }}
+            className={cn(
+              'w-full flex items-center gap-2 px-3 py-2 text-[11px] sm:text-xs',
+              !isMainnet 
+                ? 'bg-emerald-500/10 text-emerald-400' 
+                : 'text-white/60 hover:bg-white/5 hover:text-white active:bg-white/10'
+            )}
+          >
+            <div className={cn(
+              'w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full', 
+              !isMainnet ? 'bg-emerald-400' : 'bg-white/20'
+            )} />
+            <span>Devnet</span>
+            {!isMainnet && <span className="ml-auto text-[8px] sm:text-[9px] opacity-60">LIVE</span>}
+          </button>
+          <button
+            onClick={() => { setNetwork('mainnet'); setIsOpen(false); }}
+            className={cn(
+              'w-full flex items-center gap-2 px-3 py-2 text-[11px] sm:text-xs',
+              isMainnet 
+                ? 'bg-blue-500/10 text-blue-400' 
+                : 'text-white/60 hover:bg-white/5 hover:text-white active:bg-white/10'
+            )}
+          >
+            <div className={cn(
+              'w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full', 
+              isMainnet ? 'bg-blue-400' : 'bg-white/20'
+            )} />
+            <span>Mainnet</span>
+            {isMainnet && <span className="ml-auto text-[8px] sm:text-[9px] opacity-60">LIVE</span>}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

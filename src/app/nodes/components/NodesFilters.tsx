@@ -81,14 +81,12 @@ export const NodesFilters: React.FC<NodesFiltersProps> = ({
         onClick={() => onFilterChange('onlyPublic')}
         color="blue"
       />
-      {quickStats.duplicates > 0 && (
-        <FilterBadge
-          label={`Duplicates (${quickStats.duplicates})`}
-          active={selectedFilters.showDuplicates}
-          onClick={() => onFilterChange('showDuplicates')}
-          color="purple"
-        />
-      )}
+      <FilterBadge
+        label={`Duplicates (${quickStats.duplicates})`}
+        active={selectedFilters.showDuplicates}
+        onClick={() => onFilterChange('showDuplicates')}
+        color="purple"
+      />
       
       {/* Version Filter Dropdown */}
       {availableVersions && availableVersions.length > 0 && (
