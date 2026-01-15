@@ -65,11 +65,10 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "48x48", type: "image/x-icon" },
+      { url: "/icon.png", sizes: "32x32", type: "image/png" },
       { url: "/icon.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon.png", sizes: "512x512", type: "image/png" },
     ],
-    shortcut: "/favicon.ico",
+    shortcut: "/icon.png",
     apple: [
       { url: "/icon.png", sizes: "180x180", type: "image/png" }
     ],
@@ -126,8 +125,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark bg-black">
       <head>
-        {/* Favicon - Critical for Google Search display */}
-        <link rel="icon" href="/favicon.ico" sizes="48x48" />
+        {/* Favicon - Using PNG since favicon.ico is actually a PNG */}
+        <link rel="icon" href="/icon.png" type="image/png" sizes="32x32" />
         <link rel="icon" href="/icon.png" type="image/png" sizes="192x192" />
         <link rel="apple-touch-icon" href="/icon.png" sizes="180x180" />
         

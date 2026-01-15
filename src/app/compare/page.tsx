@@ -173,18 +173,34 @@ function ComparePageContent() {
       setIsComparing(false);
       
       // Fetch historical data in background
-      const historyPromises = profiles.map(async (profile) => {
-        try {
-          const statsRes = await fetch(`/api/node-history?ip=${profile.ip}&type=stats&hours=168`);
-          const statsData = statsRes.ok ? await statsRes.json() : { stats: [] };
-          return { ip: profile.ip, history: statsData.stats || [] };
-        } catch {
-          return { ip: profile.ip, history: [] };
+      const ips = profiles.map(p => p.ip);
+      
+      // Use batch fetch for all nodes at once (single DB query)
+      let historyByIp: Record<string, any[]> = {};
+      try {
+        const batchRes = await fetch(`/api/node-history?type=batch-stats&ips=${ips.join(',')}&hours=168&network=${network}`);
+        if (batchRes.ok) {
+          const batchData = await batchRes.json();
+          historyByIp = batchData.results || {};
+        } else {
+          // Fallback to individual requests if batch fails
+          const historyPromises = profiles.map(async (profile) => {
+            try {
+              const statsRes = await fetch(`/api/node-history?ip=${profile.ip}&type=stats&hours=168&network=${network}`);
+              const statsData = statsRes.ok ? await statsRes.json() : { stats: [] };
+              return { ip: profile.ip, history: statsData.stats || [] };
+            } catch {
+              return { ip: profile.ip, history: [] };
+            }
+          });
+          const results = await Promise.all(historyPromises);
+          results.forEach(r => { historyByIp[r.ip] = r.history; });
         }
-      });
+      } catch {
+        // Fall back to empty history on error
+      }
       
       // Fetch locations in batch
-      const ips = profiles.map(p => p.ip);
       let locationMap: Record<string, any> = {};
       try {
         const locationRes = await fetch('/api/geolocation', {
@@ -199,10 +215,8 @@ function ComparePageContent() {
         // Location is optional
       }
       
-      const historyResults = await Promise.all(historyPromises);
-      
       setNodeProfiles(prev => prev.map(profile => {
-        const historyData = historyResults.find(h => h.ip === profile.ip);
+        const historyData = historyByIp[profile.ip] || [];
         const location = locationMap[profile.ip];
         
         return {
@@ -212,13 +226,13 @@ function ComparePageContent() {
             city: location.city,
             provider: location.provider
           } : undefined,
-          history: historyData?.history?.map((h: any) => ({
+          history: historyData.map((h: any) => ({
             timestamp: h.timestamp,
             credits: h.credits || 0,
             uptime: h.uptime || 0,
             storage_committed: h.storage_committed || 0,
             storage_used: h.storage_used || 0
-          })) || []
+          }))
         };
       }));
       
@@ -274,23 +288,34 @@ function ComparePageContent() {
       setShowResults(true);
       setIsComparing(false);
       
-      // Fetch historical data in background for charts
-      const historyPromises = profiles.map(async (profile) => {
-        try {
-          const statsRes = await fetch(`/api/node-history?ip=${profile.ip}&type=stats&hours=168`);
-          const statsData = statsRes.ok ? await statsRes.json() : { stats: [] };
-          
-          return {
-            ip: profile.ip,
-            history: statsData.stats || []
-          };
-        } catch {
-          return { ip: profile.ip, history: [] };
+      // Fetch historical data in background using batch endpoint (single DB query)
+      const ips = profiles.map(p => p.ip);
+      
+      let historyByIp: Record<string, any[]> = {};
+      try {
+        const batchRes = await fetch(`/api/node-history?type=batch-stats&ips=${ips.join(',')}&hours=168&network=${network}`);
+        if (batchRes.ok) {
+          const batchData = await batchRes.json();
+          historyByIp = batchData.results || {};
+        } else {
+          // Fallback to individual requests if batch fails
+          const historyPromises = profiles.map(async (profile) => {
+            try {
+              const statsRes = await fetch(`/api/node-history?ip=${profile.ip}&type=stats&hours=168&network=${network}`);
+              const statsData = statsRes.ok ? await statsRes.json() : { stats: [] };
+              return { ip: profile.ip, history: statsData.stats || [] };
+            } catch {
+              return { ip: profile.ip, history: [] };
+            }
+          });
+          const results = await Promise.all(historyPromises);
+          results.forEach(r => { historyByIp[r.ip] = r.history; });
         }
-      });
+      } catch {
+        // Fall back to empty history on error
+      }
       
       // Fetch locations in batch
-      const ips = profiles.map(p => p.ip);
       let locationMap: Record<string, any> = {};
       try {
         const locationRes = await fetch('/api/geolocation', {
@@ -306,10 +331,8 @@ function ComparePageContent() {
       }
       
       // Update profiles with historical data when ready
-      const historyResults = await Promise.all(historyPromises);
-      
       setNodeProfiles(prev => prev.map(profile => {
-        const historyData = historyResults.find(h => h.ip === profile.ip);
+        const historyData = historyByIp[profile.ip] || [];
         const location = locationMap[profile.ip];
         
         return {
@@ -319,13 +342,13 @@ function ComparePageContent() {
             city: location.city,
             provider: location.provider
           } : undefined,
-          history: historyData?.history?.map((h: any) => ({
+          history: historyData.map((h: any) => ({
             timestamp: h.timestamp,
             credits: h.credits || 0,
             uptime: h.uptime || 0,
             storage_committed: h.storage_committed || 0,
             storage_used: h.storage_used || 0
-          })) || []
+          }))
         };
       }));
       
@@ -333,7 +356,7 @@ function ComparePageContent() {
       toast.error('Failed to compare nodes');
       setIsComparing(false);
     }
-  }, [selectedPubkeys, allNodes, serverTimestamp, getNodeStatus]);
+  }, [selectedPubkeys, allNodes, serverTimestamp, getNodeStatus, network]);
 
   const handleReset = useCallback(() => {
     setSelectedPubkeys([]);

@@ -14,9 +14,9 @@
   "scope": "/",
   "icons": [
     {
-      "src": "/favicon.ico",
+      "src": "/icon.png",
       "sizes": "48x48",
-      "type": "image/x-icon"
+      "type": "image/png"
     },
     {
       "src": "/icon.png",

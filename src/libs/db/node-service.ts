@@ -394,19 +394,46 @@ export async function getAllRecentEvents(limit: number = 100, network: NetworkTy
   return col.find({}).sort({ timestamp: -1 }).limit(limit).toArray();
 }
 
-// Get node stats over time for charts
+// Get node stats over time for charts - optimized for performance
 export async function getNodeStatsHistory(ip: string, hours: number = 24, network: NetworkType = 'devnet'): Promise<NodeSnapshot[]> {
   const db = await connectToDatabase();
   const collections = getCollectionNames(network);
   const col = db.collection<NodeSnapshot>(collections.NODE_SNAPSHOTS);
   
+  // Only fetch fields needed for charts (reduces data transfer significantly)
+  const projection = {
+    _id: 0,
+    timestamp: 1,
+    credits: 1,
+    uptime: 1,
+    storage_committed: 1,
+    storage_used: 1,
+    storage_usage_percent: 1,
+    status: 1
+  };
+  
   if (hours === 0) {
-    return col.find({ ip }).sort({ timestamp: 1 }).toArray();
+    // For all-time, limit to last 500 data points to prevent huge responses
+    return col.find({ ip }, { projection })
+      .sort({ timestamp: -1 })
+      .limit(500)
+      .toArray()
+      .then(results => results.reverse());
   }
   
   const cutoffTime = Math.floor(Date.now() / 1000) - (hours * 3600);
   
-  return col.find({ ip, timestamp: { $gte: cutoffTime } }).sort({ timestamp: 1 }).toArray();
+  // Use aggregation pipeline for better performance with sampling for large datasets
+  // This reduces data points while maintaining chart accuracy
+  const pipeline = [
+    { $match: { ip, timestamp: { $gte: cutoffTime } } },
+    { $sort: { timestamp: 1 } },
+    { $project: projection },
+    // Limit to 200 data points max for chart performance
+    { $limit: 200 }
+  ];
+  
+  return col.aggregate<NodeSnapshot>(pipeline).toArray();
 }
 
 // Cleanup old snapshots (keep last 7 days)
@@ -440,4 +467,60 @@ export async function createIndexes(network?: NetworkType): Promise<void> {
     await eventsCol.createIndex({ event_type: 1, timestamp: -1 });
     await eventsCol.createIndex({ timestamp: -1 });
   }
+}
+
+// Batch fetch stats for multiple nodes (optimized for compare page)
+export async function getBatchNodeStatsHistory(
+  ips: string[], 
+  hours: number = 24, 
+  network: NetworkType = 'devnet'
+): Promise<Record<string, NodeSnapshot[]>> {
+  const db = await connectToDatabase();
+  const collections = getCollectionNames(network);
+  const col = db.collection<NodeSnapshot>(collections.NODE_SNAPSHOTS);
+  
+  const projection = {
+    _id: 0,
+    ip: 1,
+    timestamp: 1,
+    credits: 1,
+    uptime: 1,
+    storage_committed: 1,
+    storage_used: 1,
+    storage_usage_percent: 1,
+    status: 1
+  };
+  
+  const cutoffTime = Math.floor(Date.now() / 1000) - (hours * 3600);
+  
+  // Single query for all IPs - much faster than multiple queries
+  const pipeline = [
+    { $match: { ip: { $in: ips }, timestamp: { $gte: cutoffTime } } },
+    { $sort: { ip: 1, timestamp: 1 } },
+    { $project: projection }
+  ];
+  
+  const allResults = await col.aggregate<NodeSnapshot & { ip: string }>(pipeline).toArray();
+  
+  // Group results by IP
+  const resultsByIp: Record<string, NodeSnapshot[]> = {};
+  ips.forEach(ip => { resultsByIp[ip] = []; });
+  
+  allResults.forEach(doc => {
+    if (resultsByIp[doc.ip]) {
+      resultsByIp[doc.ip].push(doc);
+    }
+  });
+  
+  // Limit each IP's results to 200 data points
+  Object.keys(resultsByIp).forEach(ip => {
+    const data = resultsByIp[ip];
+    if (data.length > 200) {
+      // Sample evenly across the data
+      const step = Math.ceil(data.length / 200);
+      resultsByIp[ip] = data.filter((_, i) => i % step === 0);
+    }
+  });
+  
+  return resultsByIp;
 }

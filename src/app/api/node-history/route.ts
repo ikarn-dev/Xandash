@@ -4,21 +4,35 @@ import {
   getNodeEvents, 
   getLatestNodeSnapshot,
   getNodeStatsHistory,
-  getAllRecentEvents 
+  getAllRecentEvents,
+  getBatchNodeStatsHistory
 } from '@/libs/db/node-service';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const ip = searchParams.get('ip');
-    const type = searchParams.get('type') || 'history'; // history, events, latest, stats, all-events
+    const ips = searchParams.get('ips'); // Comma-separated IPs for batch fetch
+    const type = searchParams.get('type') || 'history'; // history, events, latest, stats, batch-stats, all-events
     const limit = parseInt(searchParams.get('limit') || '100');
     const hours = parseInt(searchParams.get('hours') || '24');
+    const network = (searchParams.get('network') || 'devnet') as 'devnet' | 'mainnet';
 
     // Get all recent events (no IP required)
     if (type === 'all-events') {
-      const events = await getAllRecentEvents(limit);
+      const events = await getAllRecentEvents(limit, network);
       return NextResponse.json({ events });
+    }
+
+    // Batch stats fetch for multiple nodes (used by compare page)
+    if (type === 'batch-stats' && ips) {
+      const ipList = ips.split(',').filter(Boolean).slice(0, 4); // Max 4 nodes
+      const results = await getBatchNodeStatsHistory(ipList, hours, network);
+      return NextResponse.json({ 
+        results,
+        hours,
+        network
+      });
     }
 
     if (!ip) {
@@ -27,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     switch (type) {
       case 'history': {
-        const history = await getNodeHistory(ip, limit);
+        const history = await getNodeHistory(ip, limit, network);
         return NextResponse.json({ 
           ip, 
           history,
@@ -36,7 +50,7 @@ export async function GET(request: NextRequest) {
       }
       
       case 'events': {
-        const events = await getNodeEvents(ip, limit);
+        const events = await getNodeEvents(ip, limit, network);
         return NextResponse.json({ 
           ip, 
           events,
@@ -45,7 +59,7 @@ export async function GET(request: NextRequest) {
       }
       
       case 'latest': {
-        const snapshot = await getLatestNodeSnapshot(ip);
+        const snapshot = await getLatestNodeSnapshot(ip, network);
         return NextResponse.json({ 
           ip, 
           snapshot 
@@ -53,7 +67,7 @@ export async function GET(request: NextRequest) {
       }
       
       case 'stats': {
-        const stats = await getNodeStatsHistory(ip, hours);
+        const stats = await getNodeStatsHistory(ip, hours, network);
         return NextResponse.json({ 
           ip, 
           stats,
