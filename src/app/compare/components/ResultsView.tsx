@@ -209,7 +209,7 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
 
       <div className="space-y-6">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-white">Historical Trends (7 Days)</h3>
+          <h3 className="text-sm font-medium text-white">Historical Trends (3 Days)</h3>
         </div>
         <ComparisonChart 
           title="Credits Over Time" 

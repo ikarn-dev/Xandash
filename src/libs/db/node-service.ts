@@ -400,36 +400,58 @@ export async function getNodeStatsHistory(ip: string, hours: number = 24, networ
   const collections = getCollectionNames(network);
   const col = db.collection<NodeSnapshot>(collections.NODE_SNAPSHOTS);
   
-  // Only fetch fields needed for charts (reduces data transfer significantly)
-  const projection = {
-    _id: 0,
-    timestamp: 1,
-    credits: 1,
-    uptime: 1,
-    storage_committed: 1,
-    storage_used: 1,
-    storage_usage_percent: 1,
-    status: 1
-  };
-  
   if (hours === 0) {
-    // For all-time, limit to last 500 data points to prevent huge responses
+    // For all-time, get last 168 data points with simple query
+    const projection = {
+      _id: 0,
+      timestamp: 1,
+      credits: 1,
+      uptime: 1,
+      storage_committed: 1,
+      storage_used: 1,
+      storage_usage_percent: 1,
+      status: 1
+    };
+    
     return col.find({ ip }, { projection })
       .sort({ timestamp: -1 })
-      .limit(500)
+      .limit(168)
       .toArray()
       .then(results => results.reverse());
   }
   
   const cutoffTime = Math.floor(Date.now() / 1000) - (hours * 3600);
   
-  // Use aggregation pipeline for better performance with sampling for large datasets
-  // This reduces data points while maintaining chart accuracy
+  // For longer time ranges, bucket data to reduce points
+  const bucketSeconds = hours > 48 ? 3600 : hours > 12 ? 1800 : 900;
+  
   const pipeline = [
     { $match: { ip, timestamp: { $gte: cutoffTime } } },
+    {
+      $group: {
+        _id: { $subtract: ['$timestamp', { $mod: ['$timestamp', bucketSeconds] }] },
+        timestamp: { $first: '$timestamp' },
+        credits: { $avg: '$credits' },
+        uptime: { $max: '$uptime' },
+        storage_committed: { $avg: '$storage_committed' },
+        storage_used: { $avg: '$storage_used' },
+        storage_usage_percent: { $avg: '$storage_usage_percent' },
+        status: { $first: '$status' }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        timestamp: '$_id',
+        credits: { $round: ['$credits', 0] },
+        uptime: 1,
+        storage_committed: { $round: ['$storage_committed', 0] },
+        storage_used: { $round: ['$storage_used', 0] },
+        storage_usage_percent: { $round: ['$storage_usage_percent', 2] },
+        status: 1
+      }
+    },
     { $sort: { timestamp: 1 } },
-    { $project: projection },
-    // Limit to 200 data points max for chart performance
     { $limit: 200 }
   ];
   
@@ -458,9 +480,11 @@ export async function createIndexes(network?: NetworkType): Promise<void> {
     const collections = getCollectionNames(net);
     
     const snapshotsCol = db.collection(collections.NODE_SNAPSHOTS);
+    // Compound index for efficient time-range queries per IP
     await snapshotsCol.createIndex({ ip: 1, timestamp: -1 });
+    // Index for batch queries with multiple IPs
+    await snapshotsCol.createIndex({ timestamp: -1, ip: 1 });
     await snapshotsCol.createIndex({ pubkey: 1 });
-    await snapshotsCol.createIndex({ timestamp: -1 });
     
     const eventsCol = db.collection(collections.NODE_EVENTS);
     await eventsCol.createIndex({ ip: 1, timestamp: -1 });
@@ -479,25 +503,47 @@ export async function getBatchNodeStatsHistory(
   const collections = getCollectionNames(network);
   const col = db.collection<NodeSnapshot>(collections.NODE_SNAPSHOTS);
   
-  const projection = {
-    _id: 0,
-    ip: 1,
-    timestamp: 1,
-    credits: 1,
-    uptime: 1,
-    storage_committed: 1,
-    storage_used: 1,
-    storage_usage_percent: 1,
-    status: 1
-  };
-  
   const cutoffTime = Math.floor(Date.now() / 1000) - (hours * 3600);
   
-  // Single query for all IPs - much faster than multiple queries
+  // For 7 days of data, bucket into hourly averages to reduce data points
+  // This dramatically improves performance while maintaining chart accuracy
+  const bucketSeconds = hours > 48 ? 3600 : hours > 12 ? 1800 : 900; // 1h, 30m, or 15m buckets
+  
   const pipeline = [
-    { $match: { ip: { $in: ips }, timestamp: { $gte: cutoffTime } } },
-    { $sort: { ip: 1, timestamp: 1 } },
-    { $project: projection }
+    { 
+      $match: { 
+        ip: { $in: ips }, 
+        timestamp: { $gte: cutoffTime } 
+      } 
+    },
+    {
+      // Bucket data by time intervals
+      $group: {
+        _id: {
+          ip: '$ip',
+          bucket: { $subtract: ['$timestamp', { $mod: ['$timestamp', bucketSeconds] }] }
+        },
+        timestamp: { $first: '$timestamp' },
+        credits: { $avg: '$credits' },
+        uptime: { $max: '$uptime' },
+        storage_committed: { $avg: '$storage_committed' },
+        storage_used: { $avg: '$storage_used' },
+        storage_usage_percent: { $avg: '$storage_usage_percent' }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        ip: '$_id.ip',
+        timestamp: '$_id.bucket',
+        credits: { $round: ['$credits', 0] },
+        uptime: 1,
+        storage_committed: { $round: ['$storage_committed', 0] },
+        storage_used: { $round: ['$storage_used', 0] },
+        storage_usage_percent: { $round: ['$storage_usage_percent', 2] }
+      }
+    },
+    { $sort: { ip: 1, timestamp: 1 } }
   ];
   
   const allResults = await col.aggregate<NodeSnapshot & { ip: string }>(pipeline).toArray();
@@ -509,16 +555,6 @@ export async function getBatchNodeStatsHistory(
   allResults.forEach(doc => {
     if (resultsByIp[doc.ip]) {
       resultsByIp[doc.ip].push(doc);
-    }
-  });
-  
-  // Limit each IP's results to 200 data points
-  Object.keys(resultsByIp).forEach(ip => {
-    const data = resultsByIp[ip];
-    if (data.length > 200) {
-      // Sample evenly across the data
-      const step = Math.ceil(data.length / 200);
-      resultsByIp[ip] = data.filter((_, i) => i % step === 0);
     }
   });
   
