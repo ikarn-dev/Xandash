@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
 
 interface ValidatorLocation {
   id: string;
@@ -24,22 +23,29 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
   const regionLayersRef = useRef<any[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [L, setL] = useState<any>(null);
+  const [mapReady, setMapReady] = useState(false);
 
-  // Ensure we're on the client side
+  // Load Leaflet JS on client side
   useEffect(() => {
     setIsClient(true);
     
-    // Dynamically import Leaflet and its CSS only on client side
     const loadLeaflet = async () => {
-      // Load CSS via link tag to avoid TypeScript issues
-      if (!document.querySelector('link[href*="leaflet.css"]')) {
+      // Ensure Leaflet CSS is loaded
+      if (!document.getElementById('leaflet-css')) {
         const link = document.createElement('link');
+        link.id = 'leaflet-css';
         link.rel = 'stylesheet';
         link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
         link.crossOrigin = '';
         document.head.appendChild(link);
+        
+        // Wait for CSS to load
+        await new Promise((resolve) => {
+          link.onload = resolve;
+          link.onerror = resolve;
+        });
       }
+      
       const leaflet = await import('leaflet');
       setL(leaflet.default);
     };
@@ -47,12 +53,13 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
     loadLeaflet();
   }, []);
 
+  // Initialize map
   useEffect(() => {
     if (!isClient || !L || !mapRef.current || mapInstanceRef.current) return;
 
     // Initialize the map
     const map = L.map(mapRef.current, {
-      center: [20, 0], // Center of the world
+      center: [20, 0],
       zoom: 2,
       minZoom: 1,
       maxZoom: 6,
@@ -76,36 +83,59 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
 
     mapInstanceRef.current = map;
 
+    // Force map to recalculate its size and mark as ready
+    setTimeout(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+        setMapReady(true);
+      }
+    }, 100);
+
+    // Also invalidate on window resize
+    const handleResize = () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    };
+    window.addEventListener('resize', handleResize);
+
     return () => {
+      window.removeEventListener('resize', handleResize);
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
+        setMapReady(false);
       }
     };
   }, [isClient, L]);
 
+  // Add markers - only when map is ready
   useEffect(() => {
-    if (!isClient || !L || !mapInstanceRef.current) return;
+    if (!isClient || !L || !mapInstanceRef.current || !mapReady) return;
 
     // Clear existing markers and regions
     markersRef.current.forEach(marker => {
-      mapInstanceRef.current?.removeLayer(marker);
+      try {
+        mapInstanceRef.current?.removeLayer(marker);
+      } catch (e) {}
     });
     regionLayersRef.current.forEach(region => {
-      mapInstanceRef.current?.removeLayer(region);
+      try {
+        mapInstanceRef.current?.removeLayer(region);
+      } catch (e) {}
     });
     markersRef.current = [];
     regionLayersRef.current = [];
 
     // Add new markers
     validators.forEach(validator => {
-      if (!mapInstanceRef.current) return;
+      if (!mapInstanceRef.current || !validator.lat || !validator.lng) return;
 
       const size = Math.min(Math.max(16 + validator.count * 0.3, 20), 35);
       
       // Create region highlight circle (initially hidden)
       const regionHighlight = L.circle([validator.lat, validator.lng], {
-        radius: 800000, // 800km radius
+        radius: 800000,
         fillColor: '#ffffff',
         fillOpacity: 0,
         color: '#ffffff',
@@ -131,7 +161,6 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
             cursor: pointer;
             transition: all 0.2s ease;
             position: relative;
-            z-index: 20;
             text-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
           ">${validator.count}</div>
         `,
@@ -203,7 +232,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
       regionLayersRef.current.push(regionHighlight);
       markersRef.current.push(marker);
     });
-  }, [validators, isClient, L]);
+  }, [validators, isClient, L, mapReady]);
 
   // Show loading state while Leaflet is loading
   if (!isClient || !L) {
@@ -220,39 +249,110 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
     <div className={`relative w-full h-full min-h-[400px] ${className}`}>
       <div 
         ref={mapRef} 
-        className="w-full h-full rounded-lg overflow-hidden"
+        className="w-full h-full rounded-lg overflow-hidden leaflet-map-container"
         style={{ minHeight: '400px', zIndex: 1 }}
       />
       <style jsx global>{`
+        /* Critical Leaflet CSS - ensures tiles render correctly */
+        .leaflet-map-container .leaflet-pane,
+        .leaflet-map-container .leaflet-tile,
+        .leaflet-map-container .leaflet-marker-icon,
+        .leaflet-map-container .leaflet-marker-shadow,
+        .leaflet-map-container .leaflet-tile-container,
+        .leaflet-map-container .leaflet-pane > svg,
+        .leaflet-map-container .leaflet-pane > canvas,
+        .leaflet-map-container .leaflet-zoom-box,
+        .leaflet-map-container .leaflet-image-layer,
+        .leaflet-map-container .leaflet-layer {
+          position: absolute;
+          left: 0;
+          top: 0;
+        }
+        .leaflet-map-container .leaflet-container {
+          overflow: hidden;
+          background: #111827 !important;
+        }
+        .leaflet-map-container .leaflet-tile,
+        .leaflet-map-container .leaflet-marker-icon,
+        .leaflet-map-container .leaflet-marker-shadow {
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          user-select: none;
+          -webkit-user-drag: none;
+        }
+        .leaflet-map-container .leaflet-tile {
+          filter: inherit;
+          visibility: inherit;
+        }
+        .leaflet-map-container .leaflet-tile-container {
+          pointer-events: none;
+        }
+        .leaflet-map-container .leaflet-tile-loaded {
+          visibility: inherit !important;
+        }
+        .leaflet-map-container .leaflet-map-pane {
+          z-index: 2;
+        }
+        .leaflet-map-container .leaflet-tile-pane {
+          z-index: 2;
+        }
+        .leaflet-map-container .leaflet-overlay-pane {
+          z-index: 4;
+        }
+        .leaflet-map-container .leaflet-shadow-pane {
+          z-index: 5;
+        }
+        .leaflet-map-container .leaflet-marker-pane {
+          z-index: 6;
+        }
+        .leaflet-map-container .leaflet-tooltip-pane {
+          z-index: 7;
+        }
+        .leaflet-map-container .leaflet-popup-pane {
+          z-index: 8;
+        }
+        .leaflet-map-container .leaflet-control {
+          position: relative;
+          z-index: 10;
+          pointer-events: visiblePainted;
+          pointer-events: auto;
+        }
+        .leaflet-map-container .leaflet-top,
+        .leaflet-map-container .leaflet-bottom {
+          position: absolute;
+          z-index: 10;
+          pointer-events: none;
+        }
+        .leaflet-map-container .leaflet-top {
+          top: 0;
+        }
+        .leaflet-map-container .leaflet-right {
+          right: 0;
+        }
+        .leaflet-map-container .leaflet-bottom {
+          bottom: 0;
+        }
+        .leaflet-map-container .leaflet-left {
+          left: 0;
+        }
+        /* Custom styles */
         .leaflet-tooltip.custom-tooltip {
           background: transparent !important;
           border: none !important;
           box-shadow: none !important;
           padding: 0 !important;
-          z-index: 20 !important;
         }
         .leaflet-tooltip.custom-tooltip::before {
           display: none !important;
         }
-        .leaflet-container {
-          background: #111827 !important;
-          z-index: 1 !important;
-        }
         .custom-marker {
           background: transparent !important;
           border: none !important;
-          z-index: 20 !important;
-        }
-        .leaflet-marker-pane {
-          z-index: 20 !important;
         }
         .validator-marker:hover {
           transform: scale(1.15) !important;
           box-shadow: 0 0 18px rgba(255, 255, 255, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
           border-color: rgba(255, 255, 255, 1) !important;
-        }
-        .leaflet-tooltip-pane {
-          z-index: 20 !important;
         }
         .leaflet-control-zoom {
           border: none !important;
@@ -263,24 +363,16 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
           border: 1px solid rgba(255, 255, 255, 0.2) !important;
           color: white !important;
           font-weight: bold !important;
-          transition: all 0.2s ease !important;
+          width: 30px !important;
+          height: 30px !important;
+          line-height: 30px !important;
+          text-align: center !important;
+          text-decoration: none !important;
+          display: block !important;
         }
         .leaflet-control-zoom a:hover {
           background-color: rgba(0, 0, 0, 0.9) !important;
           border-color: rgba(255, 255, 255, 0.4) !important;
-          box-shadow: 0 0 8px rgba(255, 255, 255, 0.3) !important;
-        }
-        .leaflet-control-zoom a:first-child {
-          border-bottom: none !important;
-        }
-        .leaflet-control-zoom a:last-child {
-          border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-        }
-        .leaflet-pane {
-          z-index: 10 !important;
-        }
-        .leaflet-top, .leaflet-bottom {
-          z-index: 20 !important;
         }
       `}</style>
     </div>

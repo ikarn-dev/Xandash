@@ -317,13 +317,29 @@
 }
 
 /* Hide scrollbars globally while maintaining scroll functionality */
-* {
+html, body, div, main, section, article, aside, nav, header, footer {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
 
-*::-webkit-scrollbar {
+html::-webkit-scrollbar, 
+body::-webkit-scrollbar, 
+div::-webkit-scrollbar, 
+main::-webkit-scrollbar, 
+section::-webkit-scrollbar, 
+article::-webkit-scrollbar, 
+aside::-webkit-scrollbar, 
+nav::-webkit-scrollbar, 
+header::-webkit-scrollbar, 
+footer::-webkit-scrollbar {
   display: none;  /* Chrome, Safari, Opera */
+}
+
+/* Ensure Leaflet elements are not affected by scrollbar hiding */
+.leaflet-container,
+.leaflet-container * {
+  -ms-overflow-style: auto;
+  scrollbar-width: auto;
 }
 
 /* Safe area insets for mobile devices with notches/home indicators */
@@ -383,49 +399,128 @@
   animation: beam-vertical 2s ease-in-out infinite;
 }
 
-/* Leaflet Map Z-Index Fixes for Mobile Navbar Overlap */
+/* Leaflet Map - Critical CSS for proper tile rendering */
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
 .leaflet-container {
-  z-index: 10 !important;
-  position: relative;
+  overflow: hidden;
+  background: #111827 !important;
+  outline-offset: 1px;
 }
 
-.leaflet-pane {
-  z-index: 10 !important;
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
-.leaflet-control-zoom {
-  z-index: 15 !important;
+.leaflet-tile {
+  filter: inherit;
+  visibility: inherit;
+}
+
+.leaflet-tile-container {
+  pointer-events: none;
+}
+
+.leaflet-tile-loaded {
+  visibility: inherit !important;
+}
+
+.leaflet-map-pane {
+  z-index: 2 !important;
+}
+
+.leaflet-tile-pane {
+  z-index: 2 !important;
+}
+
+.leaflet-overlay-pane {
+  z-index: 4 !important;
+}
+
+.leaflet-shadow-pane {
+  z-index: 5 !important;
+}
+
+.leaflet-marker-pane {
+  z-index: 6 !important;
+}
+
+.leaflet-tooltip-pane {
+  z-index: 7 !important;
+}
+
+.leaflet-popup-pane {
+  z-index: 8 !important;
 }
 
 .leaflet-control {
-  z-index: 15 !important;
-}
-
-.leaflet-popup {
-  z-index: 20 !important;
-}
-
-.leaflet-tooltip {
-  z-index: 20 !important;
-}
-
-.leaflet-shadow {
+  position: relative;
   z-index: 10 !important;
+  pointer-events: auto;
 }
 
-.leaflet-marker {
+.leaflet-top,
+.leaflet-bottom {
+  position: absolute;
   z-index: 10 !important;
+  pointer-events: none;
 }
 
-/* Ensure navbar stays on top */
-@media (max-width: 1024px) {
-  .leaflet-container {
-    z-index: 10 !important;
-  }
-  
-  .leaflet-control-zoom {
-    z-index: 15 !important;
-  }
+.leaflet-top {
+  top: 0;
+}
+
+.leaflet-right {
+  right: 0;
+}
+
+.leaflet-bottom {
+  bottom: 0;
+}
+
+.leaflet-left {
+  left: 0;
+}
+
+.leaflet-control-zoom {
+  border: none !important;
+}
+
+.leaflet-control-zoom a {
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  text-decoration: none;
+  display: block;
+}
+
+.leaflet-fade-anim .leaflet-popup {
+  opacity: 1;
+  transition: opacity 0.2s linear;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  will-change: transform;
+  transition: transform 0.25s cubic-bezier(0, 0, 0.25, 1);
 }
 /* Hide scrollbars while maintaining functionality */
 .scrollbar-hide {

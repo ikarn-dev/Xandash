@@ -270,7 +270,10 @@ export const CombinedTokenCard: React.FC = () => {
               type="number"
               scale="linear"
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip 
+              content={<CustomTooltip />} 
+              cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+            />
             <Bar 
               dataKey="price" 
               radius={[8, 8, 8, 8]}

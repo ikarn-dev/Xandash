@@ -21,10 +21,27 @@ export const CountryMap = ({ nodes, countryName }: CountryMapProps) => {
 
   useEffect(() => {
     setIsClient(true);
+    
     const loadLeaflet = async () => {
+      // Ensure Leaflet CSS is loaded
+      if (!document.getElementById('leaflet-css')) {
+        const link = document.createElement('link');
+        link.id = 'leaflet-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        link.crossOrigin = '';
+        document.head.appendChild(link);
+        
+        await new Promise((resolve) => {
+          link.onload = resolve;
+          link.onerror = resolve;
+        });
+      }
+      
       const leaflet = await import('leaflet');
       setL(leaflet.default);
     };
+    
     loadLeaflet();
   }, []);
 
@@ -92,6 +109,13 @@ export const CountryMap = ({ nodes, countryName }: CountryMapProps) => {
 
     mapInstanceRef.current = map;
 
+    // Force map to recalculate its size
+    setTimeout(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    }, 100);
+
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
@@ -112,6 +136,7 @@ export const CountryMap = ({ nodes, countryName }: CountryMapProps) => {
     <>
       <div ref={mapRef} className="w-full h-full min-h-[250px] rounded-lg overflow-hidden" />
       <style jsx global>{`
+        .leaflet-container { background: #111827 !important; }
         .custom-node-marker { background: transparent !important; border: none !important; }
         .leaflet-tooltip.custom-tooltip {
           background: transparent !important;

@@ -47,6 +47,46 @@ const COUNTRY_COORDS: Record<string, { lat: number; lon: number }> = {
   'FI': { lat: 61.9241, lon: 25.7482 },
   'SE': { lat: 60.1282, lon: 18.6435 },
   'PL': { lat: 51.9194, lon: 19.1451 },
+  'NG': { lat: 9.0820, lon: 8.6753 },
+  'BR': { lat: -14.2350, lon: -51.9253 },
+  'RU': { lat: 61.5240, lon: 105.3188 },
+  'CN': { lat: 35.8617, lon: 104.1954 },
+  'KR': { lat: 35.9078, lon: 127.7669 },
+  'ES': { lat: 40.4637, lon: -3.7492 },
+  'IT': { lat: 41.8719, lon: 12.5674 },
+  'CH': { lat: 46.8182, lon: 8.2275 },
+  'AT': { lat: 47.5162, lon: 14.5501 },
+  'BE': { lat: 50.5039, lon: 4.4699 },
+  'IE': { lat: 53.1424, lon: -7.6921 },
+  'PT': { lat: 39.3999, lon: -8.2245 },
+  'NO': { lat: 60.4720, lon: 8.4689 },
+  'DK': { lat: 56.2639, lon: 9.5018 },
+  'CZ': { lat: 49.8175, lon: 15.4730 },
+  'RO': { lat: 45.9432, lon: 24.9668 },
+  'HU': { lat: 47.1625, lon: 19.5033 },
+  'UA': { lat: 48.3794, lon: 31.1656 },
+  'ZA': { lat: -30.5595, lon: 22.9375 },
+  'MX': { lat: 23.6345, lon: -102.5528 },
+  'AR': { lat: -38.4161, lon: -63.6167 },
+  'CL': { lat: -35.6751, lon: -71.5430 },
+  'CO': { lat: 4.5709, lon: -74.2973 },
+  'TH': { lat: 15.8700, lon: 100.9925 },
+  'VN': { lat: 14.0583, lon: 108.2772 },
+  'MY': { lat: 4.2105, lon: 101.9758 },
+  'ID': { lat: -0.7893, lon: 113.9213 },
+  'PH': { lat: 12.8797, lon: 121.7740 },
+  'NZ': { lat: -40.9006, lon: 174.8860 },
+  'AE': { lat: 23.4241, lon: 53.8478 },
+  'SA': { lat: 23.8859, lon: 45.0792 },
+  'IL': { lat: 31.0461, lon: 34.8516 },
+  'TR': { lat: 38.9637, lon: 35.2433 },
+  'GR': { lat: 39.0742, lon: 21.8243 },
+  'BG': { lat: 42.7339, lon: 25.4858 },
+  'HR': { lat: 45.1000, lon: 15.2000 },
+  'SK': { lat: 48.6690, lon: 19.6990 },
+  'LT': { lat: 55.1694, lon: 23.8813 },
+  'LV': { lat: 56.8796, lon: 24.6032 },
+  'EE': { lat: 58.5953, lon: 25.0136 },
 };
 
 export const GeoLocationCard: React.FC = () => {
@@ -130,28 +170,28 @@ export const GeoLocationCard: React.FC = () => {
         location = locations[ip];
       }
       
-      if (location && (location.lat || isMainnet)) {
+      // Get coordinates - either from location data or from country lookup
+      const countryCode = location?.country_code?.toUpperCase() || '';
+      const lat = location?.lat || COUNTRY_COORDS[countryCode]?.lat || 0;
+      const lon = location?.lon || COUNTRY_COORDS[countryCode]?.lon || 0;
+      
+      if (location && lat !== 0 && lon !== 0) {
         // Group by city/country for map markers
         const locationKey = isMainnet 
           ? `${location.country}-center`
           : `${location.city}-${location.country}`;
         const existing = locationGroups.get(locationKey);
         
-        const lat = location.lat || COUNTRY_COORDS[location.country_code?.toUpperCase()]?.lat || 0;
-        const lon = location.lon || COUNTRY_COORDS[location.country_code?.toUpperCase()]?.lon || 0;
-        
-        if (lat && lon) {
-          if (existing) {
-            existing.count++;
-          } else {
-            locationGroups.set(locationKey, {
-              lat,
-              lng: lon,
-              city: location.city || location.country,
-              country: location.country,
-              count: 1
-            });
-          }
+        if (existing) {
+          existing.count++;
+        } else {
+          locationGroups.set(locationKey, {
+            lat,
+            lng: lon,
+            city: location.city || location.country,
+            country: location.country,
+            count: 1
+          });
         }
       }
       
