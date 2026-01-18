@@ -32,6 +32,7 @@ export interface DevnetNodeData {
   country?: string;
   country_code?: string;
   provider?: string;
+  active_streams?: number;
 }
 
 export interface DevnetExternalData {
