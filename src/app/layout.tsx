@@ -11,20 +11,23 @@ import { AppCaptchaGate } from "@/components/ui/AppCaptchaGate";
 import { AIAssistantLoader } from "@/components/ui/AIAssistantLoader";
 
 // Optimize font loading - swap ensures text is visible immediately
+// Only preload the main font, defer mono font
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
   display: "swap",
   preload: true,
   adjustFontFallback: true,
+  fallback: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
-  preload: false,
+  preload: false, // Defer mono font - not critical for LCP
   adjustFontFallback: true,
+  fallback: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
 });
 
 export const metadata: Metadata = {
@@ -115,6 +118,7 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   themeColor: "#000000",
+  viewportFit: "cover", // Better mobile viewport handling
 };
 
 export default function RootLayout({
@@ -150,6 +154,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://challenges.cloudflare.com" />
         <link rel="preconnect" href="https://www.xandash.online" />
+        <link rel="preconnect" href="https://unpkg.com" />
 
         {/* DNS prefetch for API endpoints - reduces DNS lookup time */}
         <link rel="dns-prefetch" href="https://api.coingecko.com" />
@@ -157,12 +162,17 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://flagcdn.com" />
         <link rel="dns-prefetch" href="https://podcredits.xandeum.network" />
         <link rel="dns-prefetch" href="https://ipwho.is" />
+        <link rel="dns-prefetch" href="https://a.basemaps.cartocdn.com" />
+        <link rel="dns-prefetch" href="https://b.basemaps.cartocdn.com" />
+        <link rel="dns-prefetch" href="https://c.basemaps.cartocdn.com" />
+        <link rel="dns-prefetch" href="https://d.basemaps.cartocdn.com" />
 
-        {/* Leaflet Map - preconnect to tile server and load CSS */}
-        <link rel="preconnect" href="https://a.basemaps.cartocdn.com" />
-        <link rel="preconnect" href="https://b.basemaps.cartocdn.com" />
-        <link rel="preconnect" href="https://c.basemaps.cartocdn.com" />
-        <link rel="preconnect" href="https://d.basemaps.cartocdn.com" />
+        {/* Leaflet Map - async load CSS */}
+        <link
+          rel="preload"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          as="style"
+        />
         <link
           rel="stylesheet"
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -170,15 +180,17 @@ export default function RootLayout({
           crossOrigin=""
         />
 
-        {/* Critical CSS inline - prevents render blocking (620ms savings) */}
+        {/* Critical CSS inline - prevents render blocking */}
         <style dangerouslySetInnerHTML={{
           __html: `
-          html,body{background:#000!important;margin:0;padding:0;min-height:100vh}
+          *{box-sizing:border-box}
+          html,body{background:#000!important;margin:0;padding:0;min-height:100vh;font-family:system-ui,-apple-system,sans-serif}
           .gradient-bg{background:radial-gradient(ellipse at center top,#2a2a2a 0%,#222 15%,#1a1a1a 35%,#111 60%,#0a0a0a 80%,#000 100%);background-attachment:fixed;min-height:100vh}
           .dark{color-scheme:dark}
           html,body,div,main,section{-ms-overflow-style:none;scrollbar-width:none}
           html::-webkit-scrollbar,body::-webkit-scrollbar,div::-webkit-scrollbar,main::-webkit-scrollbar,section::-webkit-scrollbar{display:none}
           .leaflet-container,.leaflet-container *{-ms-overflow-style:auto;scrollbar-width:auto}
+          @media(max-width:640px){body{font-size:14px}.container{padding-left:12px;padding-right:12px}}
         `.replace(/\s+/g, '')
         }} />
 

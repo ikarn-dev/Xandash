@@ -24,6 +24,11 @@ export function generateRobots(): MetadataRoute.Robots {
         allow: '/',
         crawlDelay: 1,
       },
+      // Block aggressive crawlers and scrapers
+      {
+        userAgent: ['AhrefsBot', 'SemrushBot', 'MJ12bot', 'DotBot', 'BLEXBot'],
+        disallow: ['/'],
+      },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
     host: baseUrl,

@@ -357,7 +357,7 @@ export const DashboardNodesCard: React.FC = () => {
                     {isMainnet && <td className="px-3 py-3 text-xs"><span className={`${getNodeName(node.pubkey) !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>{getNodeName(node.pubkey)}</span></td>}
                     <td className="px-3 py-3 text-xs">
                       <div className="flex items-center space-x-2 min-w-0">
-                        {displayLocation?.country_code ? <img src={getCountryFlagUrl(displayLocation.country_code)} alt={displayLocation.country} className="w-4 h-3 object-cover rounded-sm flex-shrink-0" onError={(e) => { e.currentTarget.style.display = 'none'; }} /> : <Globe className="w-4 h-3 text-white/40 flex-shrink-0" />}
+                        {displayLocation?.country_code ? <img src={getCountryFlagUrl(displayLocation.country_code)} alt={displayLocation.country} className="w-4 h-3 object-cover rounded-sm flex-shrink-0" loading="lazy" decoding="async" width="16" height="12" onError={(e) => { e.currentTarget.style.display = 'none'; }} /> : <Globe className="w-4 h-3 text-white/40 flex-shrink-0" />}
                         <span className="text-white/80 truncate max-w-[120px]">{formatLocation(displayLocation)}</span>
                       </div>
                     </td>

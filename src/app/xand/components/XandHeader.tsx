@@ -21,7 +21,7 @@ export function XandHeader({ data, refreshing, canRefresh, cooldownRemaining, on
       
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3 sm:gap-4">
-          <img src={data.image.large} alt={data.name} className="w-10 h-10 sm:w-14 sm:h-14 rounded-full"/>
+          <img src={data.image.large} alt={data.name} className="w-10 h-10 sm:w-14 sm:h-14 rounded-full" loading="lazy" decoding="async" width="56" height="56"/>
           <div>
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <h1 className="text-xl sm:text-2xl font-bold text-white">{data.name}</h1>

@@ -11,8 +11,8 @@ const formatUptime = (hours: number): string => {
   return `${hours.toFixed(1)}h`;
 };
 
-// Format node count
-const formatCount = (value: number): string => value.toLocaleString();
+// Format node count - whole numbers only
+const formatCount = (value: number): string => Math.round(value).toLocaleString();
 
 // AI Summary component
 const AISummary: React.FC<{ 
@@ -191,6 +191,33 @@ const AISummary: React.FC<{
 export const NodesTrendSection: React.FC = () => {
   const { nodes, stats, isLoading, dataFetchTime } = useNodesData();
   const { network } = useNetwork();
+  
+  // Store historical node counts in component state
+  const [nodeCountHistory, setNodeCountHistory] = useState<Array<{ timestamp: number; value: number; label: string }>>([]);
+  const maxHistoryPoints = 10; // Keep last 10 data points
+
+  // Update node count history when stats change
+  useEffect(() => {
+    if (stats.total > 0 && dataFetchTime) {
+      setNodeCountHistory(prev => {
+        const newPoint = {
+          timestamp: dataFetchTime,
+          value: stats.total,
+          label: `${stats.total} nodes`
+        };
+        
+        // Check if this is a new data point (different timestamp)
+        const lastPoint = prev[prev.length - 1];
+        if (!lastPoint || lastPoint.timestamp !== dataFetchTime) {
+          const updated = [...prev, newPoint];
+          // Keep only the last N points
+          return updated.slice(-maxHistoryPoints);
+        }
+        
+        return prev;
+      });
+    }
+  }, [stats.total, dataFetchTime]);
 
   // Generate trend data from current snapshot
   const { 
@@ -308,7 +335,20 @@ export const NodesTrendSection: React.FC = () => {
     };
   }, [nodes, dataFetchTime]);
 
-  // Calculate average uptime distribution for chart
+  // Node count trend data - use real-time history
+  const nodeCountData = useMemo(() => {
+    if (nodeCountHistory.length === 0) {
+      // If no history yet, create initial point from current stats
+      return [{
+        timestamp: dataFetchTime || Math.floor(Date.now() / 1000),
+        value: stats.total,
+        label: `${stats.total} nodes`
+      }];
+    }
+    return nodeCountHistory;
+  }, [nodeCountHistory, stats.total, dataFetchTime]);
+
+  // Calculate uptime percentiles for chart - show as distribution
   const avgUptimeData = useMemo(() => {
     if (!nodes || nodes.length === 0) return [];
     
@@ -321,14 +361,17 @@ export const NodesTrendSection: React.FC = () => {
     if (uptimeValues.length === 0) return [];
     
     uptimeValues.sort((a, b) => a - b);
+    
+    // Calculate percentiles: 10th, 25th, 50th (median), 75th, 90th
     const percentiles = [10, 25, 50, 75, 90];
     
     return percentiles.map((p, i) => {
       const idx = Math.floor((p / 100) * uptimeValues.length);
+      const value = uptimeValues[Math.min(idx, uptimeValues.length - 1)];
       return {
-        timestamp: now - (percentiles.length - 1 - i) * 3600, // Reversed: start from oldest
-        value: uptimeValues[Math.min(idx, uptimeValues.length - 1)],
-        label: `${p}th percentile`
+        timestamp: now + i * 3600, // Spread across time for visualization
+        value: value,
+        label: `${p}th`
       };
     });
   }, [nodes, dataFetchTime]);
@@ -371,17 +414,17 @@ export const NodesTrendSection: React.FC = () => {
           />
         </div>
 
-        {/* Average Uptime Trend */}
+        {/* Node Count Trend */}
         <div className="overflow-visible">
           <TrendLineChart
-            data={avgUptimeData}
-            title="Uptime Percentiles"
-            subtitle={`90th percentile: ${avgUptimeData.find(d => d.label === '90th percentile')?.value ? formatUptime(avgUptimeData.find(d => d.label === '90th percentile')!.value) : 'N/A'}`}
+            data={nodeCountData}
+            title="Total Nodes Trend"
+            subtitle={`Current: ${stats.total} nodes (${stats.onlinePercentage.toFixed(1)}% online)`}
             color="#10b981"
-            valueFormatter={formatUptime}
+            valueFormatter={formatCount}
             height={180}
             isLoading={isLoading}
-            emptyMessage="No uptime data"
+            emptyMessage="No node data"
           />
         </div>
       </div>

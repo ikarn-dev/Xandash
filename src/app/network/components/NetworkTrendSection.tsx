@@ -74,42 +74,45 @@ export const NetworkTrendSection: React.FC<NetworkTrendSectionProps> = ({
       .map(([provider, count]) => ({ provider, count }));
   }, [nodes, geoData]);
 
-  // Calculate top countries by uptime
+  // Calculate top countries by uptime - show as ranking progression
   const uptimeData = useMemo(() => {
     if (!countryDetailedStats || countryDetailedStats.length === 0) return [];
 
-    const now = Math.floor(Date.now() / 1000);
-    
+    // Get top 5 countries by average uptime
     const sorted = [...countryDetailedStats]
       .filter(c => c.avgUptime > 0)
-      .sort((a, b) => b.avgUptime - a.avgUptime)
+      .sort((a, b) => b.avgUptime - a.avgUptime) // Descending: highest first
       .slice(0, 5);
 
-    return sorted.map((country, i) => ({
-      timestamp: now - (sorted.length - 1 - i) * 3600, // Reversed: start from oldest
-      value: country.avgUptime / 3600,
+    // Create data points showing the ranking (5th to 1st place)
+    // This creates an upward trend showing improvement in ranking
+    return sorted.reverse().map((country, i) => ({
+      timestamp: Date.now() / 1000 + i * 3600, // Spread across time for visualization
+      value: country.avgUptime / 3600, // Convert to hours/days
       label: country.country
     }));
   }, [countryDetailedStats]);
 
-  // Calculate top countries by storage
+  // Calculate top countries by storage - show as ranking progression
   const storageData = useMemo(() => {
     if (!countryDetailedStats || countryDetailedStats.length === 0) return [];
 
-    const now = Math.floor(Date.now() / 1000);
-    
+    // Get top 5 countries by total storage
     const sorted = [...countryDetailedStats]
       .filter(c => c.totalStorage > 0)
-      .sort((a, b) => b.totalStorage - a.totalStorage)
+      .sort((a, b) => b.totalStorage - a.totalStorage) // Descending: highest first
       .slice(0, 5);
 
-    return sorted.map((country, i) => ({
-      timestamp: now - (sorted.length - 1 - i) * 3600, // Reversed: start from oldest
-      value: country.totalStorage / (1024 ** 4),
+    // Create data points showing the ranking (5th to 1st place)
+    // This creates an upward trend showing improvement in ranking
+    return sorted.reverse().map((country, i) => ({
+      timestamp: Date.now() / 1000 + i * 3600, // Spread across time for visualization
+      value: country.totalStorage / (1024 ** 4), // Convert to TB
       label: country.country
     }));
   }, [countryDetailedStats]);
 
+  // Get the top country (last in reversed array = highest value)
   const topUptimeCountry = uptimeData.length > 0 ? uptimeData[uptimeData.length - 1]?.label : '';
   const topStorageCountry = storageData.length > 0 ? storageData[storageData.length - 1]?.label : '';
 
@@ -130,8 +133,8 @@ export const NetworkTrendSection: React.FC<NetworkTrendSectionProps> = ({
 
         <TrendLineChart
           data={uptimeData}
-          title="Countries by Uptime"
-          subtitle={topUptimeCountry ? `Top: ${topUptimeCountry}` : 'Average uptime'}
+          title="Top 5 Countries by Uptime"
+          subtitle={topUptimeCountry ? `#1: ${topUptimeCountry}` : 'Ranked by average uptime'}
           color="#10b981"
           valueFormatter={formatUptime}
           height={180}
@@ -141,8 +144,8 @@ export const NetworkTrendSection: React.FC<NetworkTrendSectionProps> = ({
 
         <TrendLineChart
           data={storageData}
-          title="Countries by Storage"
-          subtitle={topStorageCountry ? `Top: ${topStorageCountry}` : 'Total storage'}
+          title="Top 5 Countries by Storage"
+          subtitle={topStorageCountry ? `#1: ${topStorageCountry}` : 'Ranked by total storage'}
           color="#06b6d4"
           valueFormatter={formatStorage}
           height={180}

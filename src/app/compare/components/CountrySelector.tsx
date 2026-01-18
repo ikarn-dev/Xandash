@@ -46,12 +46,12 @@ const formatUptime = (seconds: number) => {
 
 const COUNTRY_COLORS = ['#10b981', '#3b82f6', '#a855f7', '#f59e0b'];
 
-export function CountrySelector({ 
-  countries, 
-  selectedCountries, 
-  onToggle, 
+export function CountrySelector({
+  countries,
+  selectedCountries,
+  onToggle,
   maxCountries = 4,
-  isLoading = false 
+  isLoading = false
 }: CountrySelectorProps) {
   const [search, setSearch] = useState('');
 
@@ -60,8 +60,8 @@ export function CountrySelector({
     if (!search.trim()) return countries.slice(0, 50);
     const query = search.toLowerCase();
     return countries
-      .filter(c => 
-        c.country.toLowerCase().includes(query) || 
+      .filter(c =>
+        c.country.toLowerCase().includes(query) ||
         c.country_code?.toLowerCase().includes(query)
       )
       .slice(0, 50);
@@ -93,10 +93,10 @@ export function CountrySelector({
           {selectedCountries.map((code, index) => {
             const country = countries.find(c => c.country_code === code);
             return (
-              <div 
+              <div
                 key={code}
                 className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition-all"
-                style={{ 
+                style={{
                   backgroundColor: `${COUNTRY_COLORS[index % COUNTRY_COLORS.length]}15`,
                   borderColor: `${COUNTRY_COLORS[index % COUNTRY_COLORS.length]}50`,
                   color: COUNTRY_COLORS[index % COUNTRY_COLORS.length],
@@ -104,14 +104,14 @@ export function CountrySelector({
                 }}
               >
                 {country?.country_code && (
-                  <img 
+                  <img
                     src={`https://flagcdn.com/16x12/${country.country_code.toLowerCase()}.png`}
                     alt=""
                     className="w-4 h-3 object-cover rounded-sm"
                   />
                 )}
                 <span>{country?.country || code}</span>
-                <button 
+                <button
                   onClick={() => onToggle(code)}
                   className="ml-1 hover:opacity-70 transition-opacity"
                 >
@@ -138,29 +138,27 @@ export function CountrySelector({
               const isSelected = selectedCountries.includes(country.country_code);
               const selectedIndex = selectedCountries.indexOf(country.country_code);
               const canSelect = selectedCountries.length < maxCountries || isSelected;
-              
+
               return (
                 <button
                   key={country.country_code}
                   onClick={() => canSelect && onToggle(country.country_code)}
                   disabled={!canSelect}
-                  className={`w-full flex items-center justify-between p-3 transition-all ${
-                    isSelected 
-                      ? 'bg-white/5' 
-                      : canSelect 
-                        ? 'hover:bg-white/5' 
+                  className={`w-full flex items-center justify-between p-3 transition-all ${isSelected
+                      ? 'bg-white/5'
+                      : canSelect
+                        ? 'hover:bg-white/5'
                         : 'opacity-40 cursor-not-allowed'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     {/* Checkbox */}
-                    <div 
-                      className={`w-5 h-5 border-2 flex items-center justify-center transition-all ${
-                        isSelected 
-                          ? 'border-purple-500 bg-purple-500' 
+                    <div
+                      className={`w-5 h-5 border-2 flex items-center justify-center transition-all ${isSelected
+                          ? 'border-purple-500 bg-purple-500'
                           : 'border-white/20'
-                      }`}
-                      style={isSelected ? { 
+                        }`}
+                      style={isSelected ? {
                         backgroundColor: COUNTRY_COLORS[selectedIndex % COUNTRY_COLORS.length],
                         borderColor: COUNTRY_COLORS[selectedIndex % COUNTRY_COLORS.length]
                       } : {}}
@@ -171,10 +169,10 @@ export function CountrySelector({
                         </svg>
                       )}
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       {country.country_code && (
-                        <img 
+                        <img
                           src={`https://flagcdn.com/24x18/${country.country_code.toLowerCase()}.png`}
                           alt=""
                           className="w-6 h-4 object-cover rounded-sm"
@@ -188,7 +186,7 @@ export function CountrySelector({
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <span className="text-xs text-blue-400 font-mono">
@@ -197,7 +195,7 @@ export function CountrySelector({
                       <div className="text-[10px] text-white/30">uptime</div>
                     </div>
                     <div className="text-right">
-                      <span className="text-xs text-purple-400 font-mono">
+                      <span className="text-[11px] text-purple-400 font-mono whitespace-nowrap">
                         {formatStorage(country.totalStorage)}
                       </span>
                       <div className="text-[10px] text-white/30">storage</div>
@@ -215,7 +213,7 @@ export function CountrySelector({
           </div>
         )}
       </div>
-      
+
       <div className="text-[10px] text-white/30 text-center">
         {filteredCountries.length} countries available • Select up to {maxCountries} to compare
       </div>

@@ -166,6 +166,10 @@ const nextConfig: NextConfig = {
   experimental: {
     // CSS optimization
     optimizeCss: true,
+    // Optimize server components
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
     // Package imports optimization - reduces bundle size
     optimizePackageImports: [
       'lucide-react',
@@ -186,8 +190,11 @@ const nextConfig: NextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 31536000,
-    deviceSizes: [640, 750, 828, 1080, 1200],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'inline',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 
   // Modular imports for smaller bundles
@@ -205,10 +212,13 @@ const nextConfig: NextConfig = {
       config.optimization = {
         ...config.optimization,
         moduleIds: 'deterministic',
+        runtimeChunk: 'single', // Better caching for mobile
         splitChunks: {
           chunks: 'all',
           minSize: 20000,
-          maxSize: 244000,
+          maxSize: 200000, // Smaller chunks for mobile
+          maxAsyncRequests: 30,
+          maxInitialRequests: 25,
           cacheGroups: {
             // Vendor chunk for node_modules
             vendor: {
@@ -224,18 +234,18 @@ const nextConfig: NextConfig = {
               chunks: 'all',
               priority: 30,
             },
-            // Charts library (heavy)
+            // Charts library (heavy) - lazy load
             charts: {
               test: /[\\/]node_modules[\\/](recharts|d3-.*)[\\/]/,
               name: 'charts',
-              chunks: 'all',
+              chunks: 'async',
               priority: 25,
             },
-            // Map library (heavy)
+            // Map library (heavy) - lazy load
             maps: {
               test: /[\\/]node_modules[\\/](leaflet)[\\/]/,
               name: 'maps',
-              chunks: 'all',
+              chunks: 'async',
               priority: 25,
             },
             // Common chunks

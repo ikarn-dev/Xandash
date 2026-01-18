@@ -51,6 +51,45 @@ const DollarIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   </svg>
 );
 
+// Custom icons for earning factors
+const PNodeIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+    <line x1="8" y1="21" x2="16" y2="21"/>
+    <line x1="12" y1="17" x2="12" y2="21"/>
+    <circle cx="7" cy="9" r="1.5" fill="currentColor"/>
+    <circle cx="12" cy="9" r="1.5" fill="currentColor"/>
+    <circle cx="17" cy="9" r="1.5" fill="currentColor"/>
+    <path d="M7 9v3M12 9v3M17 9v3"/>
+  </svg>
+);
+
+const StorageBoxIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+    <line x1="12" y1="22.08" x2="12" y2="12"/>
+    <line x1="12" y1="12" x2="12" y2="12.01"/>
+  </svg>
+);
+
+const PerformanceIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M12 9v3l2 2"/>
+  </svg>
+);
+
+const StakeIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M12 6v6l4 2"/>
+    <circle cx="12" cy="12" r="2" fill="currentColor"/>
+    <path d="M8.5 8.5L6 6M15.5 8.5L18 6M8.5 15.5L6 18M15.5 15.5L18 18"/>
+  </svg>
+);
+
 // Corner Accent Component for consistent styling
 const CornerAccents = ({ color = "white" }: { color?: string }) => {
   const colorClass = color === "emerald" ? "group-hover:bg-emerald-400 group-hover:shadow-[0_0_8px_rgba(16,185,129,0.6)]" : "group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)]";
@@ -547,7 +586,7 @@ const BoostFactorSelector: React.FC<BoostFactorSelectorProps> = ({
       if (selectedFactors.length < pNodeCount) {
         onChange([...selectedFactors, factor]);
       } else {
-        toast.error(`You can only select up to ${pNodeCount} boost factors (one per pNode)`);
+        toast.error(`You can only select up to ${pNodeCount} boost factor${pNodeCount !== 1 ? 's' : ''} (one per pNode)`);
       }
     }
   };
@@ -560,33 +599,70 @@ const BoostFactorSelector: React.FC<BoostFactorSelectorProps> = ({
       <div
         key={factor.id}
         onClick={() => handleFactorToggle(factor)}
-        className={`relative p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
+        className={`relative p-4 rounded-lg border cursor-pointer transition-all duration-300 group ${
           isSelected
-            ? 'border-emerald-500/50 bg-emerald-500/10'
-            : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
+            ? 'border-emerald-500/50 bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 shadow-lg shadow-emerald-500/10'
+            : 'border-white/10 bg-gradient-to-br from-white/5 to-transparent hover:border-emerald-500/30 hover:from-emerald-500/10 hover:to-transparent'
         }`}
       >
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="text-white font-medium text-sm">{factor.name}</h4>
-          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-            isSelected ? 'border-emerald-500 bg-emerald-500' : 'border-white/30'
+        {/* Corner accents for selected state */}
+        {isSelected && (
+          <>
+            <div className="absolute top-0 left-0 w-3 h-3">
+              <div className="absolute top-0 left-0 w-2 h-px bg-emerald-400"></div>
+              <div className="absolute top-0 left-0 w-px h-2 bg-emerald-400"></div>
+            </div>
+            <div className="absolute top-0 right-0 w-3 h-3">
+              <div className="absolute top-0 right-0 w-2 h-px bg-emerald-400"></div>
+              <div className="absolute top-0 right-0 w-px h-2 bg-emerald-400"></div>
+            </div>
+            <div className="absolute bottom-0 left-0 w-3 h-3">
+              <div className="absolute bottom-0 left-0 w-2 h-px bg-emerald-400"></div>
+              <div className="absolute bottom-0 left-0 w-px h-2 bg-emerald-400"></div>
+            </div>
+            <div className="absolute bottom-0 right-0 w-3 h-3">
+              <div className="absolute bottom-0 right-0 w-2 h-px bg-emerald-400"></div>
+              <div className="absolute bottom-0 right-0 w-px h-2 bg-emerald-400"></div>
+            </div>
+          </>
+        )}
+        
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1">
+            <h4 className={`font-medium text-sm mb-1 transition-colors ${
+              isSelected ? 'text-emerald-400' : 'text-white group-hover:text-emerald-400'
+            }`}>
+              {factor.name}
+            </h4>
+            <div className="text-white/40 text-xs">
+              {factor.description}
+            </div>
+          </div>
+          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ml-2 transition-all ${
+            isSelected 
+              ? 'border-emerald-500 bg-emerald-500 scale-110' 
+              : 'border-white/30 group-hover:border-emerald-500/50'
           }`}>
             {isSelected && (
-              <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
             )}
           </div>
         </div>
-        <div className="space-y-1">
-          <div className="text-emerald-400 font-mono text-lg">
+        
+        <div className="flex items-center justify-between">
+          <div className={`font-mono text-xl font-bold transition-colors ${
+            isSelected ? 'text-emerald-400' : 'text-white/70 group-hover:text-emerald-400'
+          }`}>
             {factor.multiplier}x
           </div>
-          <div className="text-emerald-400 text-xs">
-            +{boostPercentage}% boost
-          </div>
-          <div className="text-white/40 text-xs">
-            {factor.description}
+          <div className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+            isSelected 
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+              : 'bg-white/5 text-white/60 border border-white/10 group-hover:bg-emerald-500/10 group-hover:text-emerald-400 group-hover:border-emerald-500/20'
+          }`}>
+            +{boostPercentage}%
           </div>
         </div>
       </div>
@@ -594,77 +670,167 @@ const BoostFactorSelector: React.FC<BoostFactorSelectorProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      {/* Header with stats */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 className="text-white font-medium">Boost Factors</h3>
-          <p className="text-white/40 text-sm">
+          <h3 className="text-white font-semibold text-lg">Boost Factors</h3>
+          <p className="text-white/50 text-sm mt-0.5">
             Select up to {pNodeCount} boost factor{pNodeCount !== 1 ? 's' : ''} (one per pNode)
           </p>
         </div>
-        <div className="text-white/40 text-sm">
-          {selectedFactors.length}/{pNodeCount} selected
+        <div className="flex items-center gap-3">
+          <div className={`px-3 py-1.5 border rounded-lg ${
+            selectedFactors.length >= pNodeCount 
+              ? 'bg-emerald-500/20 border-emerald-500/30' 
+              : 'bg-white/5 border-white/10'
+          }`}>
+            <div className={`text-xs font-medium ${
+              selectedFactors.length >= pNodeCount ? 'text-emerald-400' : 'text-white/70'
+            }`}>
+              {selectedFactors.length}/{pNodeCount} Selected
+            </div>
+          </div>
+          {selectedFactors.length > 1 && (
+            <div className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg">
+              <div className="text-white/70 text-xs font-mono">
+                {calculateGeometricMean(selectedFactors).toFixed(3)}x Total
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex space-x-1 bg-white/5 rounded-lg p-1">
+      <div className="relative flex space-x-2 bg-black/50 border border-white/10 rounded-lg p-1.5">
         <button
           onClick={() => setActiveTab('nft')}
-          className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+          className={`relative flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-300 ${
             activeTab === 'nft'
-              ? 'bg-emerald-500/20 text-emerald-400'
-              : 'text-white/60 hover:text-white'
+              ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 text-emerald-400 shadow-lg shadow-emerald-500/10'
+              : 'text-white/60 hover:text-white hover:bg-white/5'
           }`}
         >
-          NFT Boosts
+          <div className="flex items-center justify-center gap-2">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7"/>
+              <rect x="14" y="3" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/>
+            </svg>
+            <span>NFT Boosts</span>
+          </div>
+          {activeTab === 'nft' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400"></div>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('era')}
-          className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+          className={`relative flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-300 ${
             activeTab === 'era'
-              ? 'bg-emerald-500/20 text-emerald-400'
-              : 'text-white/60 hover:text-white'
+              ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 text-emerald-400 shadow-lg shadow-emerald-500/10'
+              : 'text-white/60 hover:text-white hover:bg-white/5'
           }`}
         >
-          Purchase Era Boosts
+          <div className="flex items-center justify-center gap-2">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span>Purchase Era Boosts</span>
+          </div>
+          {activeTab === 'era' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400"></div>
+          )}
         </button>
       </div>
 
       {/* Boost Factor Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {(activeTab === 'nft' ? NFT_BOOST_FACTORS : ERA_BOOST_FACTORS).map(renderFactorCard)}
       </div>
 
       {/* Selected Factors Summary */}
       {selectedFactors.length > 0 && (
-        <div className="bg-white/5 rounded-lg p-4">
-          <div className="text-white/60 text-sm font-mono mb-2">// SELECTED BOOSTS</div>
-          <div className="flex flex-wrap gap-2">
-            {selectedFactors.map((factor) => (
-              <div
-                key={factor.id}
-                className="flex items-center gap-2 px-3 py-1 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-400 text-xs"
-              >
-                <span>{factor.name}</span>
-                <span className="font-mono">{factor.multiplier}x</span>
-                <button
-                  onClick={() => handleFactorToggle(factor)}
-                  className="hover:text-emerald-300 transition-colors"
-                >
-                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </button>
-              </div>
-            ))}
+        <div className="relative bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/30 rounded-lg p-5 overflow-hidden">
+          {/* Background pattern */}
+          <div className="absolute inset-0 opacity-5">
+            <div className="absolute inset-0" style={{
+              backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(16, 185, 129, 0.3) 1px, transparent 0)',
+              backgroundSize: '24px 24px'
+            }}></div>
           </div>
-          {selectedFactors.length > 1 && (
-            <div className="mt-2 text-white/40 text-xs">
-              Geometric mean: {calculateGeometricMean(selectedFactors).toFixed(3)}x
+          
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <span className="text-white/70 text-sm font-mono">// ACTIVE BOOSTS</span>
+              </div>
+              <button
+                onClick={() => onChange([])}
+                className="text-xs text-white/50 hover:text-red-400 transition-colors flex items-center gap-1"
+              >
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+                Clear All
+              </button>
             </div>
-          )}
+            
+            <div className="flex flex-wrap gap-2 mb-4">
+              {selectedFactors.map((factor) => (
+                <div
+                  key={factor.id}
+                  className="group flex items-center gap-2 px-3 py-2 bg-black/50 border border-emerald-500/30 rounded-lg hover:border-emerald-500/50 transition-all"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
+                    <span className="text-white text-sm">{factor.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 pl-2 border-l border-white/10">
+                    <span className="font-mono text-emerald-400 text-sm font-medium">{factor.multiplier}x</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleFactorToggle(factor);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 hover:text-red-400 text-white/50 transition-all"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {selectedFactors.length > 1 && (
+              <div className="flex items-center justify-between p-3 bg-black/30 border border-white/10 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                  </svg>
+                  <span className="text-white/70 text-sm">Combined Geometric Mean:</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-emerald-400 text-lg font-bold">
+                    {calculateGeometricMean(selectedFactors).toFixed(3)}x
+                  </span>
+                  <span className="text-emerald-400/70 text-xs">
+                    (+{((calculateGeometricMean(selectedFactors) - 1) * 100).toFixed(1)}%)
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -1019,34 +1185,161 @@ export function StoincCalculatorClient() {
       </div>
 
       {/* About STOINC Section */}
-      <div className="relative bg-black border border-white/10 p-4 sm:p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden">
+      <div className="relative bg-black border border-white/10 overflow-hidden group hover:border-white/20 transition-all duration-300">
         <CornerAccents />
-        <div className="flex items-center gap-2 mb-3">
-          <InfoIcon className="w-4 h-4 text-emerald-400" />
-          <span className="text-white/60 text-sm font-mono">// ABOUT STOINC</span>
+        
+        {/* Background pattern */}
+        <div className="absolute inset-0 opacity-[0.02]">
+          <div className="absolute inset-0" style={{
+            backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.15) 1px, transparent 0)',
+            backgroundSize: '32px 32px'
+          }}></div>
         </div>
-        <div className="space-y-3 text-white/70 text-sm leading-relaxed">
-          <p>
-            <strong className="text-white">STOINC (Storage Income)</strong> is the revenue you can earn by running pNodes, 
-            funded by fees from sedApps (storage-enabled dApps). Your earnings depend on four key factors: 
-            number of pNodes, storage space provided, performance score, and XAND staked.
-          </p>
-          <p>
-            Boost factors from NFTs or early pNode purchases can significantly increase your earnings through 
-            geometric mean calculation. The formula ensures fair distribution based on your contribution to the network.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            <div className="flex items-center gap-2 text-xs">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-              <span>94% goes to pNode operators</span>
+
+        <div className="relative p-4 sm:p-6 lg:p-8">
+          {/* Header */}
+          <div className="flex items-start gap-3 mb-6">
+            <div className="w-10 h-10 bg-emerald-500/20 border border-emerald-500/30 rounded-lg flex items-center justify-center flex-shrink-0">
+              <InfoIcon className="w-5 h-5 text-emerald-400" />
             </div>
-            <div className="flex items-center gap-2 text-xs">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span>3% goes to XAND DAO</span>
+            <div className="flex-1">
+              <h2 className="text-white font-semibold text-lg sm:text-xl mb-1">About STOINC</h2>
+              <p className="text-white/50 text-xs sm:text-sm font-mono">// Storage Income Protocol</p>
             </div>
-            <div className="flex items-center gap-2 text-xs">
-              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-              <span>3% goes to Preferred Investors</span>
+          </div>
+
+          {/* Main content */}
+          <div className="space-y-6">
+            {/* Description cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* What is STOINC */}
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 hover:border-emerald-500/30 transition-colors">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                  <h3 className="text-white font-medium text-sm">What is STOINC?</h3>
+                </div>
+                <p className="text-white/70 text-sm leading-relaxed">
+                  <span className="text-emerald-400 font-semibold">STOINC (Storage Income)</span> is the revenue you earn by running pNodes, 
+                  funded by fees from sedApps (storage-enabled dApps). Your earnings depend on four key factors: 
+                  number of pNodes, storage space provided, performance score, and XAND staked.
+                </p>
+              </div>
+
+              {/* How it works */}
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 hover:border-emerald-500/30 transition-colors">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400"></div>
+                  <h3 className="text-white font-medium text-sm">How Boost Factors Work</h3>
+                </div>
+                <p className="text-white/70 text-sm leading-relaxed">
+                  Boost factors from NFTs or early pNode purchases can significantly increase your earnings through 
+                  geometric mean calculation. The formula ensures fair distribution based on your contribution to the network.
+                </p>
+              </div>
+            </div>
+
+            {/* Revenue distribution */}
+            <div className="bg-gradient-to-br from-white/5 to-transparent border border-white/10 rounded-lg p-4 sm:p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <svg className="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
+                <h3 className="text-white font-medium text-sm">Revenue Distribution</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* pNode Operators */}
+                <div className="relative bg-black/50 border border-emerald-500/30 rounded-lg p-4 overflow-hidden group/card hover:border-emerald-500/50 transition-colors">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-emerald-400"></div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                      <span className="text-white/60 text-xs">pNode Operators</span>
+                    </div>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-bold text-emerald-400 font-mono mb-1">94%</div>
+                  <p className="text-white/40 text-xs">Primary revenue share</p>
+                </div>
+
+                {/* XAND DAO */}
+                <div className="relative bg-black/50 border border-blue-500/30 rounded-lg p-4 overflow-hidden group/card hover:border-blue-500/50 transition-colors">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-blue-400"></div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                      <span className="text-white/60 text-xs">XAND DAO</span>
+                    </div>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-bold text-blue-400 font-mono mb-1">3%</div>
+                  <p className="text-white/40 text-xs">Governance & development</p>
+                </div>
+
+                {/* Preferred Investors */}
+                <div className="relative bg-black/50 border border-purple-500/30 rounded-lg p-4 overflow-hidden group/card hover:border-purple-500/50 transition-colors">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-purple-400"></div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                      <span className="text-white/60 text-xs">Preferred Investors</span>
+                    </div>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-bold text-purple-400 font-mono mb-1">3%</div>
+                  <p className="text-white/40 text-xs">Early supporter rewards</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Key factors */}
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4 sm:p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <svg className="w-4 h-4 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+                <h3 className="text-white font-medium text-sm">Earning Factors</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="flex items-start gap-3 p-3 bg-black/30 border border-white/10 rounded-lg hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all group/factor">
+                  <div className="w-8 h-8 bg-emerald-500/20 border border-emerald-500/30 rounded flex items-center justify-center flex-shrink-0 group-hover/factor:bg-emerald-500/30 transition-colors">
+                    <PNodeIcon className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <div className="text-white text-sm font-medium mb-0.5 group-hover/factor:text-emerald-400 transition-colors">pNodes</div>
+                    <div className="text-white/50 text-xs">Number of nodes</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-black/30 border border-white/10 rounded-lg hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all group/factor">
+                  <div className="w-8 h-8 bg-cyan-500/20 border border-cyan-500/30 rounded flex items-center justify-center flex-shrink-0 group-hover/factor:bg-cyan-500/30 transition-colors">
+                    <StorageBoxIcon className="w-4 h-4 text-cyan-400" />
+                  </div>
+                  <div>
+                    <div className="text-white text-sm font-medium mb-0.5 group-hover/factor:text-cyan-400 transition-colors">Storage</div>
+                    <div className="text-white/50 text-xs">Space provided</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-black/30 border border-white/10 rounded-lg hover:border-blue-500/30 hover:bg-blue-500/5 transition-all group/factor">
+                  <div className="w-8 h-8 bg-blue-500/20 border border-blue-500/30 rounded flex items-center justify-center flex-shrink-0 group-hover/factor:bg-blue-500/30 transition-colors">
+                    <PerformanceIcon className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <div className="text-white text-sm font-medium mb-0.5 group-hover/factor:text-blue-400 transition-colors">Performance</div>
+                    <div className="text-white/50 text-xs">Reliability score</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-black/30 border border-white/10 rounded-lg hover:border-purple-500/30 hover:bg-purple-500/5 transition-all group/factor">
+                  <div className="w-8 h-8 bg-purple-500/20 border border-purple-500/30 rounded flex items-center justify-center flex-shrink-0 group-hover/factor:bg-purple-500/30 transition-colors">
+                    <StakeIcon className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <div>
+                    <div className="text-white text-sm font-medium mb-0.5 group-hover/factor:text-purple-400 transition-colors">XAND Stake</div>
+                    <div className="text-white/50 text-xs">Tokens staked</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

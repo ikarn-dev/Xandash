@@ -50,47 +50,38 @@ async function fetchTokenData() {
 // Hardcoded credits URL for devnet
 const DEVNET_CREDITS_URL = 'https://podcredits.xandeum.network/api/pods-credits';
 
-// Fetch specific node by IP or pubkey (tries both mainnet external API and native RPC)
+// Fetch specific node by IP or pubkey (tries both mainnet and devnet)
 async function fetchNodeByIdentifier(identifier: string) {
   try {
     let node = null;
     let isMainnet = false;
     
-    // First try mainnet external API
-    try {
-      const mainnetRes = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000'}/api/mainnet-rpc`, {
-        method: 'GET',
-        cache: 'no-store',
+    // First try mainnet
+    const mainnetData = await getMainnetData();
+    if (mainnetData.nodes.length > 0) {
+      node = mainnetData.nodes.find((n: any) => {
+        const nodeIp = n.address?.split(':')[0];
+        return nodeIp === identifier || 
+               n.pubkey === identifier || 
+               n.pubkey?.startsWith(identifier) ||
+               n.address === identifier;
       });
       
-      if (mainnetRes.ok) {
-        const mainnetData = await mainnetRes.json();
-        const mainnetNodes = mainnetData.nodes || [];
-        
-        node = mainnetNodes.find((n: any) => {
-          const nodeIp = n.address?.split(':')[0];
-          return nodeIp === identifier || 
-                 n.pubkey === identifier || 
-                 n.pubkey?.startsWith(identifier) ||
-                 n.address === identifier;
-        });
-        
-        if (node) {
-          isMainnet = true;
-          // Enrich with geo data if available
-          const ip = node.address?.split(':')[0];
-          const geo = mainnetData.geo?.[ip];
-          if (geo) {
-            node.credits = geo.credits;
-            node.country = geo.country;
-          }
+      if (node) {
+        isMainnet = true;
+        // Enrich with geo data if available
+        const ip = node.address?.split(':')[0];
+        const geo = mainnetData.geo?.[ip];
+        if (geo && !node.credits) {
+          node.credits = geo.credits;
+        }
+        if (geo && !node.country) {
+          node.country = geo.country;
         }
       }
-    } catch {
-      // Mainnet API not available, trying devnet
     }
     
-    // If not found in mainnet, try devnet API
+    // If not found in mainnet, try devnet
     if (!node) {
       const devnetData = await getDevnetData();
       if (devnetData.nodes.length > 0) {
@@ -268,20 +259,11 @@ async function fetchNetworkSummary(networkType: 'mainnet' | 'devnet' = 'devnet')
     let nodes: any[] = [];
     
     if (networkType === 'mainnet') {
-      // Fetch mainnet data
-      try {
-        const mainnetRes = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000'}/api/mainnet-rpc`, {
-          method: 'GET',
-          cache: 'no-store',
-        });
-        
-        if (mainnetRes.ok) {
-          const mainnetData = await mainnetRes.json();
-          if (mainnetData.nodes && mainnetData.nodes.length > 0) {
-            nodes = mainnetData.nodes;
-          }
-        }
-      } catch {}
+      // Fetch mainnet data directly from service
+      const mainnetData = await getMainnetData();
+      if (mainnetData.nodes && mainnetData.nodes.length > 0) {
+        nodes = mainnetData.nodes;
+      }
     } else {
       // Fetch devnet data
       const devnetData = await getDevnetData();
@@ -329,39 +311,29 @@ async function fetchNetworkSummary(networkType: 'mainnet' | 'devnet' = 'devnet')
 // Fetch credits summary - supports both mainnet and devnet
 async function fetchCreditsSummary(networkType: 'mainnet' | 'devnet' = 'devnet') {
   try {
-    // For mainnet, get credits from external data sources
+    // For mainnet, get credits from mainnet data service
     if (networkType === 'mainnet') {
-      try {
-        const mainnetRes = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000'}/api/mainnet-rpc`, {
-          method: 'GET',
-          cache: 'no-store',
-        });
-        
-        if (mainnetRes.ok) {
-          const mainnetData = await mainnetRes.json();
-          const nodes = mainnetData.nodes || [];
-          
-          // Extract credits from nodes
-          const creditsData = nodes
-            .filter((n: any) => n.pubkey && (n.credits !== null && n.credits !== undefined))
-            .map((n: any) => ({ pod_id: n.pubkey, credits: n.credits || 0 }));
-          
-          const total = creditsData.reduce((s: number, c: any) => s + (c.credits || 0), 0);
-          const sorted = [...creditsData].sort((a: any, b: any) => (b.credits || 0) - (a.credits || 0));
-          
-          return {
-            network: 'mainnet',
-            totalCredits: total,
-            avgCredits: creditsData.length > 0 ? Math.round(total / creditsData.length) : 0,
-            totalPods: creditsData.length,
-            topEarners: sorted.slice(0, 5).map((c: any) => ({
-              pubkey: c.pod_id?.slice(0, 8) + '...',
-              credits: c.credits,
-            })),
-          };
-        }
-      } catch {}
-      return { network: 'mainnet', totalCredits: 0, avgCredits: 0, totalPods: 0, topEarners: [], message: 'Mainnet credits data unavailable' };
+      const mainnetData = await getMainnetData();
+      const nodes = mainnetData.nodes || [];
+      
+      // Extract credits from nodes
+      const creditsData = nodes
+        .filter((n: any) => n.pubkey && (n.credits !== null && n.credits !== undefined))
+        .map((n: any) => ({ pod_id: n.pubkey, credits: n.credits || 0 }));
+      
+      const total = creditsData.reduce((s: number, c: any) => s + (c.credits || 0), 0);
+      const sorted = [...creditsData].sort((a: any, b: any) => (b.credits || 0) - (a.credits || 0));
+      
+      return {
+        network: 'mainnet',
+        totalCredits: total,
+        avgCredits: creditsData.length > 0 ? Math.round(total / creditsData.length) : 0,
+        totalPods: creditsData.length,
+        topEarners: sorted.slice(0, 5).map((c: any) => ({
+          pubkey: c.pod_id?.slice(0, 8) + '...',
+          credits: c.credits,
+        })),
+      };
     }
     
     // For devnet, use credits API

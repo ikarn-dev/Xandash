@@ -137,158 +137,220 @@ interface StoragePieChartProps {
   committed: number;
   avgPerPod: number;
   isLoading?: boolean;
+  idPrefix?: string;
 }
 
-const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgPerPod, isLoading }) => {
+const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgPerPod, isLoading, idPrefix = 'chart' }) => {
   const [hoveredSegment, setHoveredSegment] = React.useState<string | null>(null);
+  const [animated, setAnimated] = React.useState(false);
 
   // Show loading state
   if (isLoading) {
     return <StoragePieChartLoading />;
   }
 
+  React.useEffect(() => {
+    if (committed > 0) {
+      const timer = setTimeout(() => {
+        setAnimated(false);
+        const animTimer = setTimeout(() => setAnimated(true), 50);
+        return () => clearTimeout(animTimer);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [committed]);
+
   const usedPercentage = committed > 0 ? Math.min((used / committed) * 100, 100) : 0;
   const available = Math.max(committed - used, 0);
+  const availablePercentage = 100 - usedPercentage;
 
   const usedFormatted = formatStorage(used);
   const availableFormatted = formatStorage(available);
-  const avgFormatted = formatStorage(avgPerPod);
 
-  const getTooltipContent = () => {
-    switch (hoveredSegment) {
-      case 'used':
-        return `Used: ${usedFormatted.value} ${usedFormatted.unit} (${usedPercentage.toFixed(1)}%)`;
-      case 'available':
-        return `Available: ${availableFormatted.value} ${availableFormatted.unit}`;
-      case 'avg':
-        return `Avg/Pod: ${avgFormatted.value} ${avgFormatted.unit}`;
-      default:
-        return null;
+  // Define segments with colors
+  const usedColor = '#00ffff'; // Bright cyan
+  const availableColor = '#39ff14'; // Bright green
+
+  const segments = React.useMemo(() => {
+    if (committed === 0) return [];
+    
+    const radius = 42;
+    const gapPercent = hoveredSegment !== null ? 4 : 1;
+    const circumference = 2 * Math.PI * radius;
+    const minVisiblePercent = 3; // Minimum 3% to ensure visibility even for small storage like 1GB
+    
+    const segmentsList = [];
+    
+    // Used segment - always show if there's any used storage, with minimum visibility
+    if (used > 0) {
+      const rawPercent = Math.max(usedPercentage, minVisiblePercent);
+      const percent = Math.max(minVisiblePercent, rawPercent - gapPercent);
+      const dashArray = (percent / 100) * circumference;
+      const dashOffset = -(gapPercent / 2 / 100) * circumference;
+      
+      segmentsList.push({
+        type: 'used',
+        color: usedColor,
+        dashArray,
+        dashOffset,
+        percentage: usedPercentage,
+        circumference,
+      });
     }
-  };
+    
+    // Available segment - adjust to account for minimum used visibility
+    if (availablePercentage > 0) {
+      const usedDisplayPercent = used > 0 ? Math.max(usedPercentage, minVisiblePercent) : 0;
+      const availableDisplayPercent = 100 - usedDisplayPercent;
+      const percent = Math.max(0, availableDisplayPercent - gapPercent);
+      const dashArray = (percent / 100) * circumference;
+      const dashOffset = -((usedDisplayPercent + gapPercent / 2) / 100) * circumference;
+      
+      segmentsList.push({
+        type: 'available',
+        color: availableColor,
+        dashArray,
+        dashOffset,
+        percentage: availablePercentage,
+        circumference,
+      });
+    }
+    
+    return segmentsList;
+  }, [usedPercentage, availablePercentage, hoveredSegment, used]);
 
-  // Modern radial gauge design
   const size = 120;
-  const center = size / 2;
-  const radius = 50;
-  const strokeWidth = 8;
-  const innerRadius = radius - strokeWidth;
-  const circumference = 2 * Math.PI * innerRadius;
-  const usedOffset = circumference - (usedPercentage / 100) * circumference;
 
   return (
     <div className="flex flex-col items-center">
-      {/* Radial Gauge Chart */}
+      {/* Donut Chart - Similar to Version Distribution */}
       <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {/* Gradient definitions */}
-          <defs>
-            <linearGradient id="usedGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#22d3ee" />
-              <stop offset="100%" stopColor="#06b6d4" />
-            </linearGradient>
-            <linearGradient id="availableGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#a855f7" />
-              <stop offset="100%" stopColor="#7c3aed" />
-            </linearGradient>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-              <feMerge>
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-
-          {/* Background track */}
+        <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90" style={{ overflow: 'visible' }}>
+          {/* Background circle */}
           <circle
-            cx={center}
-            cy={center}
-            r={innerRadius}
+            cx="50"
+            cy="50"
+            r={42}
             fill="none"
-            stroke="url(#availableGradient)"
-            strokeWidth={strokeWidth}
-            className={`transition-all duration-200 cursor-pointer ${hoveredSegment === 'available' ? 'opacity-100 drop-shadow-[0_0_6px_rgba(168,85,247,0.6)]' : 'opacity-40'}`}
-            onMouseEnter={() => setHoveredSegment('available')}
-            onMouseLeave={() => setHoveredSegment(null)}
+            stroke="rgba(255,255,255,0.08)"
+            strokeWidth={8}
           />
-
-          {/* Used arc */}
-          <circle
-            cx={center}
-            cy={center}
-            r={innerRadius}
-            fill="none"
-            stroke="url(#usedGradient)"
-            strokeWidth={strokeWidth}
-            strokeDasharray={circumference}
-            strokeDashoffset={usedOffset}
-            strokeLinecap="round"
-            transform={`rotate(-90 ${center} ${center})`}
-            className={`transition-all duration-300 cursor-pointer ${hoveredSegment === 'used' ? 'filter drop-shadow-[0_0_6px_rgba(34,211,238,0.6)]' : ''}`}
-            onMouseEnter={() => setHoveredSegment('used')}
-            onMouseLeave={() => setHoveredSegment(null)}
-          />
-
-          {/* Center content */}
-          <g>
-            {/* Center circle background */}
-            <circle
-              cx={center}
-              cy={center}
-              r={radius - strokeWidth - 6}
-              fill="rgba(0,0,0,0.5)"
-            />
-
-            {/* Value display */}
-            <text
-              x={center}
-              y={center - 4}
-              textAnchor="middle"
-              className="fill-cyan-400 font-bold drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]"
-              style={{ fontSize: '11px' }}
-            >
-              {usedFormatted.value} {usedFormatted.unit}
-            </text>
-            <text
-              x={center}
-              y={center + 12}
-              textAnchor="middle"
-              className="fill-white/50"
-              style={{ fontSize: '9px' }}
-            >
-              USED
-            </text>
-          </g>
-
-          {/* Decorative dots at ends */}
-          {usedPercentage > 0 && (
-            <>
-              {/* Start dot */}
+          
+          {/* Cylindrical shadow layer - rendered behind main segments */}
+          {segments.map((segment) => {
+            const isHovered = hoveredSegment === segment.type;
+            
+            return (
               <circle
-                cx={center}
-                cy={center - innerRadius}
-                r={3}
-                fill="#22d3ee"
-                className="transition-all duration-200"
+                key={`shadow-${segment.type}`}
+                cx="50"
+                cy="51"
+                r={42}
+                fill="none"
+                stroke="rgba(0,0,0,0.3)"
+                strokeWidth={isHovered ? 10 : 8}
+                strokeDasharray={`${animated ? segment.dashArray : 0} ${segment.circumference}`}
+                strokeDashoffset={segment.dashOffset}
+                strokeLinecap="round"
+                style={{
+                  opacity: animated ? 0.6 : 0,
+                  transition: 'opacity 0.15s ease, stroke-width 0.2s ease, stroke-dasharray 0.4s ease-out',
+                }}
               />
-              {/* End dot */}
+            );
+          })}
+          
+          {/* Glow layer - rendered behind main segments */}
+          {segments.map((segment) => {
+            const isHovered = hoveredSegment === segment.type;
+            if (!isHovered || !animated) return null;
+            
+            return (
               <circle
-                cx={center + innerRadius * Math.sin((usedPercentage / 100) * 2 * Math.PI)}
-                cy={center - innerRadius * Math.cos((usedPercentage / 100) * 2 * Math.PI)}
-                r={3}
-                fill="#22d3ee"
-                filter={hoveredSegment === 'used' ? 'url(#glow)' : undefined}
-                className="transition-all duration-200"
+                key={`glow-${segment.type}`}
+                cx="50"
+                cy="50"
+                r={42}
+                fill="none"
+                stroke={segment.color}
+                strokeWidth={14}
+                strokeDasharray={`${segment.dashArray} ${segment.circumference}`}
+                strokeDashoffset={segment.dashOffset}
+                strokeLinecap="round"
+                style={{
+                  opacity: 0.3,
+                  filter: 'blur(6px)',
+                }}
               />
-            </>
-          )}
+            );
+          })}
+          
+          {/* Main segments layer */}
+          {segments.map((segment) => {
+            const isHovered = hoveredSegment === segment.type;
+            const isDimmed = hoveredSegment !== null && hoveredSegment !== segment.type;
+            
+            return (
+              <circle
+                key={segment.type}
+                cx="50"
+                cy="50"
+                r={42}
+                fill="none"
+                stroke={segment.color}
+                strokeWidth={isHovered ? 10 : 8}
+                strokeDasharray={`${animated ? segment.dashArray : 0} ${segment.circumference}`}
+                strokeDashoffset={segment.dashOffset}
+                strokeLinecap="round"
+                className="cursor-pointer"
+                style={{
+                  opacity: animated ? (isDimmed ? 0.2 : 1) : 0,
+                  transition: 'opacity 0.15s ease, stroke-width 0.2s ease, stroke-dasharray 0.4s ease-out',
+                  filter: isHovered ? `drop-shadow(0 0 8px ${segment.color})` : 'none',
+                }}
+                onMouseEnter={() => setHoveredSegment(segment.type)}
+                onMouseLeave={() => setHoveredSegment(null)}
+              />
+            );
+          })}
+          
+          {/* Highlight layer - rendered on top for better visibility */}
+          {segments.map((segment) => {
+            const isHovered = hoveredSegment === segment.type;
+            if (!isHovered || !animated) return null;
+            
+            return (
+              <circle
+                key={`highlight-${segment.type}`}
+                cx="50"
+                cy="49"
+                r={42}
+                fill="none"
+                stroke="rgba(255,255,255,0.4)"
+                strokeWidth={1.5}
+                strokeDasharray={`${segment.dashArray} ${segment.circumference}`}
+                strokeDashoffset={segment.dashOffset}
+                strokeLinecap="round"
+                style={{
+                  opacity: 0.8,
+                }}
+              />
+            );
+          })}
         </svg>
-
-        {/* Tooltip */}
+        
+        {/* Center content - only show when hovered */}
         {hoveredSegment && (
-          <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/95 border border-white/20 px-2.5 py-1.5 rounded-lg text-[10px] text-white whitespace-nowrap z-10 shadow-lg">
-            {getTooltipContent()}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="text-white text-sm font-bold font-mono leading-tight text-center">
+              {hoveredSegment === 'used' ? `${usedFormatted.value} ${usedFormatted.unit}` : `${availableFormatted.value} ${availableFormatted.unit}`}
+            </div>
+            <div className="text-white/60 text-[7px] font-mono mt-0.5 text-center leading-tight">
+              {hoveredSegment === 'used' ? 'Used' : 'Free'}
+            </div>
+            <div className="text-white/40 text-[6px] mt-0.5 text-center leading-tight">
+              {hoveredSegment === 'used' ? `${usedPercentage.toFixed(1)}%` : `${availablePercentage.toFixed(1)}%`}
+            </div>
           </div>
         )}
       </div>
@@ -297,19 +359,55 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
       <div className="flex items-center gap-4 mt-3">
         <div
           className="flex items-center gap-1.5 cursor-pointer group"
+          style={{
+            opacity: animated ? (hoveredSegment !== null && hoveredSegment !== 'used' ? 0.2 : 1) : 0,
+            transition: 'opacity 0.15s ease',
+          }}
           onMouseEnter={() => setHoveredSegment('used')}
           onMouseLeave={() => setHoveredSegment(null)}
         >
-          <div className="w-2 h-2 rounded-full bg-cyan-400 group-hover:shadow-[0_0_6px_rgba(34,211,238,0.6)] transition-all" />
-          <span className="text-white/50 text-[9px] group-hover:text-white/70 transition-colors">Used</span>
+          <div
+            className="w-2 h-2 rounded-full border border-white/20"
+            style={{
+              backgroundColor: usedColor,
+              boxShadow: hoveredSegment === 'used' ? `0 0 6px ${usedColor}` : 'none',
+              transition: 'box-shadow 0.15s ease',
+            }}
+          />
+          <span
+            className="text-[9px] transition-colors"
+            style={{
+              color: hoveredSegment === 'used' ? usedColor : 'rgba(255,255,255,0.8)',
+            }}
+          >
+            Used
+          </span>
         </div>
         <div
           className="flex items-center gap-1.5 cursor-pointer group"
+          style={{
+            opacity: animated ? (hoveredSegment !== null && hoveredSegment !== 'available' ? 0.2 : 1) : 0,
+            transition: 'opacity 0.15s ease',
+          }}
           onMouseEnter={() => setHoveredSegment('available')}
           onMouseLeave={() => setHoveredSegment(null)}
         >
-          <div className="w-2 h-2 rounded-full bg-purple-500 group-hover:shadow-[0_0_6px_rgba(168,85,247,0.6)] transition-all" />
-          <span className="text-white/50 text-[9px] group-hover:text-white/70 transition-colors">Free</span>
+          <div
+            className="w-2 h-2 rounded-full border border-white/20"
+            style={{
+              backgroundColor: availableColor,
+              boxShadow: hoveredSegment === 'available' ? `0 0 6px ${availableColor}` : 'none',
+              transition: 'box-shadow 0.15s ease',
+            }}
+          />
+          <span
+            className="text-[9px] transition-colors"
+            style={{
+              color: hoveredSegment === 'available' ? availableColor : 'rgba(255,255,255,0.8)',
+            }}
+          >
+            Free
+          </span>
         </div>
       </div>
     </div>
@@ -426,6 +524,7 @@ export const NetworkStatsCardSSR: React.FC = () => {
               committed={storageStats.storage_committed}
               avgPerPod={storageStats.avg_storage_per_pod}
               isLoading={isLoading}
+              idPrefix="desktop"
             />
           </div>
         </div>
@@ -462,6 +561,7 @@ export const NetworkStatsCardSSR: React.FC = () => {
             committed={storageStats.storage_committed}
             avgPerPod={storageStats.avg_storage_per_pod}
             isLoading={isLoading}
+            idPrefix="mobile"
           />
         </div>
       </div>
