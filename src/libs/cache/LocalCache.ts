@@ -199,7 +199,7 @@ class LocalCache {
 }
 
 // Singleton instance
-export const localCache = new LocalCache(2000); // Increased size for better performance
+export const localCache = new LocalCache(10000); // Increased size for production performance
 
 // Cache key generators
 export const cacheKeys = {

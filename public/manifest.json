@@ -1,7 +1,7 @@
 {
   "name": "XanDash - Xandeum Dashboard",
   "short_name": "XanDash",
-  "description": "XanDash is the official Xandeum dashboard for monitoring pNodes. Track node performance, uptime, storage, and credits in real-time.",
+  "description": "XanDash is a comprehensive Xandeum dashboard for monitoring pNodes. Track node performance, uptime, storage, and credits in real-time.",
   "start_url": "/",
   "id": "/",
   "display": "standalone",

@@ -105,20 +105,20 @@ async function fetchAllProposals(): Promise<Proposal[]> {
     return cachedProposals;
   }
 
-  console.log(`[Proposals API] Fetching proposals...`);
+
   const proposals: Proposal[] = [...KNOWN_PROPOSALS];
 
   try {
     const result = await rpcCall('getProgramAccounts', [
       GOVERNANCE_PROGRAM_ID,
-      { 
+      {
         encoding: 'base64',
         filters: [{ memcmp: { offset: 1, bytes: DAO_ADDRESS } }]
       }
     ]) as Array<{ pubkey: string; account: { data: [string, string] } }> | null;
 
     if (result && result.length > 0) {
-      console.log(`[Proposals API] Found ${result.length} accounts`);
+
 
       for (const acc of result) {
         try {
@@ -126,11 +126,11 @@ async function fetchAllProposals(): Promise<Proposal[]> {
           if (data[0] !== 6) continue;
           // Skip if already in known proposals
           if (proposals.find(p => p.pubkey === acc.pubkey)) continue;
-          
+
           const stateNum = data[97];
           const state = PROPOSAL_STATES[stateNum] || 'Unknown';
           const name = parseProposalName(data) || `Proposal ${acc.pubkey.slice(0, 8)}...`;
-          
+
           let createdAt = Date.now() - 30 * 24 * 60 * 60 * 1000;
           for (const offset of [140, 148, 156, 164, 172, 180]) {
             try {
@@ -141,14 +141,14 @@ async function fetchAllProposals(): Promise<Proposal[]> {
                   break;
                 }
               }
-            } catch {}
+            } catch { }
           }
-          
+
           proposals.push({ pubkey: acc.pubkey, name, state, voteType: 'Single-choice', createdAt });
         } catch { continue; }
       }
-      
-      console.log(`[Proposals API] Parsed ${proposals.length} proposals`);
+
+
     }
   } catch (error) {
     console.error(`[Proposals API] Error:`, error);
@@ -156,34 +156,34 @@ async function fetchAllProposals(): Promise<Proposal[]> {
 
   // Generate additional fallback proposals to reach 151 total - ALL COMPLETED
   if (proposals.length < 151) {
-    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const types = ['DevNet vNode payouts', 'DevNet pNode payments', 'MainNet validator rewards', 'Community grant'];
     const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-    
+
     let daysAgo = 30;
-    
+
     // Generate proposals to reach 151 total - all Completed
     for (let year = 2025; year >= 2023; year--) {
       for (let month = 11; month >= 0; month--) {
         for (const type of types) {
           if (proposals.length >= 151) break;
-          
+
           const name = `${months[month]} ${year} ${type}`;
           if (proposals.find(p => p.name === name)) continue;
-          
+
           // Generate deterministic pubkey
           let pk = '';
           for (let i = 0; i < 44; i++) {
             pk += chars[(name.charCodeAt(i % name.length) + i * year + month) % chars.length];
           }
-          
+
           daysAgo += Math.floor(Math.random() * 5) + 1;
-          proposals.push({ 
-            pubkey: pk, 
-            name, 
-            state: 'Completed', 
-            voteType: 'Single-choice', 
-            createdAt: Date.now() - daysAgo * 24 * 60 * 60 * 1000 
+          proposals.push({
+            pubkey: pk,
+            name,
+            state: 'Completed',
+            voteType: 'Single-choice',
+            createdAt: Date.now() - daysAgo * 24 * 60 * 60 * 1000
           });
         }
       }

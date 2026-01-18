@@ -102,7 +102,7 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
           <h2 className="text-lg font-bold text-white">Comparison Results</h2>
           <p className="text-xs text-white/40">{nodes.length} nodes analyzed</p>
         </div>
-        <button onClick={onReset} className="px-4 py-2 text-xs text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
+        <button onClick={onReset} className="px-4 py-2 text-xs text-white/60 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors">
           New Comparison
         </button>
       </div>
@@ -115,13 +115,13 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
           };
           
           return (
-            <div key={node.pubkey} className="relative bg-black/50 border rounded-xl p-4 overflow-hidden" style={{ borderColor: `${node.color}30` }}>
-              <div className="absolute top-0 left-0 right-0 h-1 opacity-60" style={{ background: `linear-gradient(90deg, transparent, ${node.color}, transparent)` }} />
+            <div key={node.pubkey} className="relative bg-black border p-4 overflow-hidden" style={{ borderColor: `${node.color}30` }}>
+              <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: node.color, opacity: 0.6 }} />
               
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: node.color }} />
                 <span className="font-mono text-sm text-white font-medium">{node.ip}</span>
-                <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full ${node.status === 'online' ? 'bg-emerald-500/20 text-emerald-400' : node.status === 'syncing' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>
+                <span className={`ml-auto text-[10px] px-2 py-0.5 ${node.status === 'online' ? 'bg-emerald-500/20 text-emerald-400' : node.status === 'syncing' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>
                   {node.status.toUpperCase()}
                 </span>
               </div>
@@ -135,7 +135,7 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
                       <span className="text-xs text-white/50">{stat.label}</span>
                       <div className="flex items-center gap-1.5">
                         <span className={`font-mono text-sm ${winner ? 'text-emerald-400 font-medium' : 'text-white'}`}>{stat.format(value)}</span>
-                        {winner && <span className="text-[8px] px-1 py-0.5 bg-emerald-500/20 text-emerald-400 rounded">BEST</span>}
+                        {winner && <span className="text-[8px] px-1 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">BEST</span>}
                       </div>
                     </div>
                   );
@@ -152,7 +152,7 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
         })}
       </div>
 
-      <div className="bg-black/50 border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-black border border-white/10 overflow-hidden">
         <div className="p-4 border-b border-white/10">
           <h3 className="text-sm font-medium text-white">Detailed Comparison</h3>
         </div>

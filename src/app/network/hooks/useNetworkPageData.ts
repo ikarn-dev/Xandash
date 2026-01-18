@@ -57,6 +57,7 @@ export interface CountryDetailedStats {
   totalStorage: number;
   totalStorageUsed: number;
   avgUptime: number;
+  totalCredits: number;
 }
 
 // Approximate lat/lon for countries (for map display when exact coords not available)
@@ -122,6 +123,7 @@ export function useNetworkPageData(network: string) {
   const { nodes: sharedNodes, geoData: sharedGeoData, isLoading: sharedLoading } = useNodesData();
   
   const [locations, setLocations] = useState<{ [ip: string]: LocationData | null }>({});
+  const [creditsMap, setCreditsMap] = useState<Map<string, number>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const isMainnet = network === 'mainnet';
 
@@ -142,6 +144,31 @@ export function useNetworkPageData(network: string) {
       provider: node.provider,
     }));
   }, [sharedNodes]);
+
+  // Fetch credits for all nodes (needed for devnet since context doesn't include credits)
+  useEffect(() => {
+    if (sharedNodes.length === 0) return;
+    
+    const fetchCredits = async () => {
+      try {
+        const res = await fetch(`/api/pod-credits?network=${network}`);
+        if (res.ok) {
+          const data = await res.json();
+          const newCreditsMap = new Map<string, number>();
+          (data.pods_credits || []).forEach((c: any) => {
+            if (c.pod_id && c.credits !== null && c.credits !== undefined) {
+              newCreditsMap.set(c.pod_id, c.credits);
+            }
+          });
+          setCreditsMap(newCreditsMap);
+        }
+      } catch (err) {
+        console.error('Failed to fetch credits:', err);
+      }
+    };
+
+    fetchCredits();
+  }, [network, sharedNodes.length]);
 
   // Fetch geolocation for devnet nodes
   useEffect(() => {
@@ -193,8 +220,26 @@ export function useNetworkPageData(network: string) {
           lat: coords?.lat,
           lon: coords?.lon,
         };
+      } else if (isMainnet) {
+        // For mainnet nodes without geo data, use "Unknown" as fallback
+        location = {
+          country: 'Unknown',
+          country_code: '',
+          city: '',
+          region: '',
+          provider: node.provider || 'Unknown',
+          ip,
+        };
       } else {
-        location = locations[ip];
+        // For devnet, use fetched location data or fallback to "Unknown"
+        location = locations[ip] || {
+          country: 'Unknown',
+          country_code: '',
+          city: '',
+          region: '',
+          provider: 'Unknown',
+          ip,
+        };
       }
       
       if (location?.country) {
@@ -245,12 +290,18 @@ export function useNetworkPageData(network: string) {
     const countryDetailedStats: CountryDetailedStats[] = Array.from(countryDetailedMap.values())
       .map(({ country, country_code, nodes: countryNodes }) => {
         let onlineNodes = 0, syncingNodes = 0, offlineNodes = 0;
+        let totalCredits = 0;
         
         countryNodes.forEach(n => {
           const status = getNodeStatus(n.last_seen_timestamp || 0, now);
           if (status === 'online') onlineNodes++;
           else if (status === 'syncing') syncingNodes++;
           else offlineNodes++;
+          
+          // Get credits from the fetched credits map first, then fallback to shared node data
+          const nodeCredits = creditsMap.get(n.pubkey || '') || 0;
+          const sharedNode = sharedNodes.find(sn => sn.pubkey === n.pubkey);
+          totalCredits += nodeCredits || sharedNode?.credits || 0;
         });
 
         const totalStorage = countryNodes.reduce((sum, n) => sum + (n.storage_committed || 0), 0);
@@ -258,12 +309,12 @@ export function useNetworkPageData(network: string) {
         const totalUptime = countryNodes.reduce((sum, n) => sum + (n.uptime || 0), 0);
         const avgUptime = countryNodes.length > 0 ? totalUptime / countryNodes.length : 0;
 
-        return { country, country_code, totalNodes: countryNodes.length, onlineNodes, syncingNodes, offlineNodes, totalStorage, totalStorageUsed, avgUptime };
+        return { country, country_code, totalNodes: countryNodes.length, onlineNodes, syncingNodes, offlineNodes, totalStorage, totalStorageUsed, avgUptime, totalCredits };
       })
       .sort((a, b) => b.totalNodes - a.totalNodes);
 
     return { mapValidators, countryStats, countryDetailedStats, totalNodes: nodes.length, locatedNodes: validNodes };
-  }, [nodes, locations, isMainnet]);
+  }, [nodes, locations, isMainnet, sharedNodes, creditsMap]);
 
   return { ...processedData, loading: sharedLoading, error };
 }

@@ -26,9 +26,13 @@ export const Marquee = ({ className = '' }: MarqueeProps) => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    const stored = localStorage.getItem(STORAGE_KEY);
-    setIsHidden(stored === 'true');
+    // Use setTimeout to avoid setState in effect
+    const timer = setTimeout(() => {
+      setMounted(true);
+      const stored = localStorage.getItem(STORAGE_KEY);
+      setIsHidden(stored === 'true');
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const toggleVisibility = () => {

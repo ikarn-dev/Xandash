@@ -34,20 +34,74 @@ export const EndpointCard = ({
 
   return (
     <div 
-      className={`relative bg-white/5 border rounded-lg overflow-hidden transition-all duration-300 ${
-        result?.success ? 'border-green-500/30' : 
-        result && !result.success ? 'border-red-500/30' : 
+      className={`relative bg-black border transition-all duration-300 group ${
+        result?.success ? 'border-emerald-500/30 hover:border-emerald-500/50' : 
+        result && !result.success ? 'border-red-500/30 hover:border-red-500/50' : 
         'border-white/10 hover:border-white/20'
       }`}
+      style={{ 
+        height: isExpanded && result ? 'auto' : 'auto',
+        minHeight: isExpanded && result ? '300px' : 'auto'
+      }}
     >
-      <div className="p-3 sm:p-4">
+      {/* Corner accents */}
+      <div className="absolute top-0 left-0 w-3 h-3 z-20">
+        <div className={`absolute top-0 left-0 w-1.5 h-px transition-all duration-300 ${
+          result?.success ? 'bg-emerald-500/30 group-hover:bg-emerald-500/50' : 
+          result && !result.success ? 'bg-red-500/30 group-hover:bg-red-500/50' : 
+          'bg-white/20 group-hover:bg-white/40'
+        }`} />
+        <div className={`absolute top-0 left-0 w-px h-1.5 transition-all duration-300 ${
+          result?.success ? 'bg-emerald-500/30 group-hover:bg-emerald-500/50' : 
+          result && !result.success ? 'bg-red-500/30 group-hover:bg-red-500/50' : 
+          'bg-white/20 group-hover:bg-white/40'
+        }`} />
+      </div>
+      <div className="absolute top-0 right-0 w-3 h-3 z-20">
+        <div className={`absolute top-0 right-0 w-1.5 h-px transition-all duration-300 ${
+          result?.success ? 'bg-emerald-500/30 group-hover:bg-emerald-500/50' : 
+          result && !result.success ? 'bg-red-500/30 group-hover:bg-red-500/50' : 
+          'bg-white/20 group-hover:bg-white/40'
+        }`} />
+        <div className={`absolute top-0 right-0 w-px h-1.5 transition-all duration-300 ${
+          result?.success ? 'bg-emerald-500/30 group-hover:bg-emerald-500/50' : 
+          result && !result.success ? 'bg-red-500/30 group-hover:bg-red-500/50' : 
+          'bg-white/20 group-hover:bg-white/40'
+        }`} />
+      </div>
+      <div className="absolute bottom-0 left-0 w-3 h-3 z-20">
+        <div className={`absolute bottom-0 left-0 w-1.5 h-px transition-all duration-300 ${
+          result?.success ? 'bg-emerald-500/30 group-hover:bg-emerald-500/50' : 
+          result && !result.success ? 'bg-red-500/30 group-hover:bg-red-500/50' : 
+          'bg-white/20 group-hover:bg-white/40'
+        }`} />
+        <div className={`absolute bottom-0 left-0 w-px h-1.5 transition-all duration-300 ${
+          result?.success ? 'bg-emerald-500/30 group-hover:bg-emerald-500/50' : 
+          result && !result.success ? 'bg-red-500/30 group-hover:bg-red-500/50' : 
+          'bg-white/20 group-hover:bg-white/40'
+        }`} />
+      </div>
+      <div className="absolute bottom-0 right-0 w-3 h-3 z-20">
+        <div className={`absolute bottom-0 right-0 w-1.5 h-px transition-all duration-300 ${
+          result?.success ? 'bg-emerald-500/30 group-hover:bg-emerald-500/50' : 
+          result && !result.success ? 'bg-red-500/30 group-hover:bg-red-500/50' : 
+          'bg-white/20 group-hover:bg-white/40'
+        }`} />
+        <div className={`absolute bottom-0 right-0 w-px h-1.5 transition-all duration-300 ${
+          result?.success ? 'bg-emerald-500/30 group-hover:bg-emerald-500/50' : 
+          result && !result.success ? 'bg-red-500/30 group-hover:bg-red-500/50' : 
+          'bg-white/20 group-hover:bg-white/40'
+        }`} />
+      </div>
+
+      <div className="p-3 sm:p-4 relative z-10 flex flex-col h-full">
         {/* Method Header */}
         <div className="flex items-center justify-between mb-2">
-          <span className="text-white font-medium text-xs sm:text-sm">{method.name}</span>
+          <span className="text-white font-medium text-xs sm:text-sm font-mono">{method.name}</span>
           
           {/* Test Button or Cooldown */}
           {onCooldown ? (
-            <div className="flex items-center space-x-1.5 px-2 py-1 bg-white/5 rounded text-white/40 text-[10px] sm:text-xs">
+            <div className="flex items-center space-x-1.5 px-2 py-1 bg-white/5 border border-white/10 text-white/40 text-[10px] sm:text-xs">
               <Clock className="w-3 h-3" />
               <span>{cooldownTime}s</span>
             </div>
@@ -55,14 +109,33 @@ export const EndpointCard = ({
             <button
               onClick={onTest}
               disabled={isTesting || isGlobalTesting}
-              className="flex items-center space-x-1 px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-[10px] sm:text-xs hover:bg-white/20 hover:border-white/30 transition-all disabled:opacity-50"
+              className="relative group flex items-center space-x-1 px-2 py-1 bg-black border border-emerald-400/30 text-emerald-400 text-[10px] sm:text-xs hover:border-emerald-400/50 hover:bg-emerald-400/10 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer overflow-hidden"
             >
-              {isTesting ? (
-                <Loader className="w-3 h-3 animate-spin" />
-              ) : (
-                <Play className="w-3 h-3" />
-              )}
-              <span>Test</span>
+              {/* Mini corner accents */}
+              <div className="absolute top-0 left-0 w-1 h-1">
+                <div className="absolute top-0 left-0 w-0.5 h-px bg-emerald-400/30 group-hover:bg-emerald-400/50 transition-all duration-300" />
+                <div className="absolute top-0 left-0 w-px h-0.5 bg-emerald-400/30 group-hover:bg-emerald-400/50 transition-all duration-300" />
+              </div>
+              <div className="absolute top-0 right-0 w-1 h-1">
+                <div className="absolute top-0 right-0 w-0.5 h-px bg-emerald-400/30 group-hover:bg-emerald-400/50 transition-all duration-300" />
+                <div className="absolute top-0 right-0 w-px h-0.5 bg-emerald-400/30 group-hover:bg-emerald-400/50 transition-all duration-300" />
+              </div>
+              <div className="absolute bottom-0 left-0 w-1 h-1">
+                <div className="absolute bottom-0 left-0 w-0.5 h-px bg-emerald-400/30 group-hover:bg-emerald-400/50 transition-all duration-300" />
+                <div className="absolute bottom-0 left-0 w-px h-0.5 bg-emerald-400/30 group-hover:bg-emerald-400/50 transition-all duration-300" />
+              </div>
+              <div className="absolute bottom-0 right-0 w-1 h-1">
+                <div className="absolute bottom-0 right-0 w-0.5 h-px bg-emerald-400/30 group-hover:bg-emerald-400/50 transition-all duration-300" />
+                <div className="absolute bottom-0 right-0 w-px h-0.5 bg-emerald-400/30 group-hover:bg-emerald-400/50 transition-all duration-300" />
+              </div>
+              <div className="relative z-10 flex items-center space-x-1">
+                {isTesting ? (
+                  <Loader className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Play className="w-3 h-3" />
+                )}
+                <span className="font-mono">Test</span>
+              </div>
             </button>
           )}
         </div>
@@ -75,14 +148,14 @@ export const EndpointCard = ({
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
             <div className="flex items-center space-x-2">
               {result.success ? (
-                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-400" />
+                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-400" />
               ) : (
                 <XCircle className="w-3 h-3 sm:w-4 sm:h-4 text-red-400" />
               )}
-              <span className={`text-[10px] sm:text-xs ${result.success ? 'text-green-400' : 'text-red-400'}`}>
+              <span className={`text-[10px] sm:text-xs font-mono ${result.success ? 'text-emerald-400' : 'text-red-400'}`}>
                 {result.success ? 'Success' : 'Failed'}
               </span>
-              <span className="text-white/40 text-[10px] sm:text-xs">
+              <span className="text-white/40 text-[10px] sm:text-xs font-mono">
                 {result.responseTime}ms
               </span>
             </div>
@@ -90,14 +163,14 @@ export const EndpointCard = ({
             <div className="flex items-center space-x-1">
               <button
                 onClick={onCopy}
-                className="p-1 sm:p-1.5 hover:bg-white/10 rounded transition-colors"
+                className="p-1 sm:p-1.5 hover:bg-white/10 transition-colors cursor-pointer"
                 title="Copy result"
               >
-                <Copy className={`w-3 h-3 ${isCopying ? 'text-green-400' : 'text-white/40 hover:text-white'}`} />
+                <Copy className={`w-3 h-3 ${isCopying ? 'text-emerald-400' : 'text-white/40 hover:text-white'}`} />
               </button>
               <button
                 onClick={onToggleExpand}
-                className="p-1 sm:p-1.5 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-white"
+                className="p-1 sm:p-1.5 hover:bg-white/10 transition-colors text-white/40 hover:text-white cursor-pointer"
                 title={isExpanded ? 'Collapse' : 'Expand'}
               >
                 <svg 
@@ -111,7 +184,7 @@ export const EndpointCard = ({
               </button>
               <button
                 onClick={onClear}
-                className="p-1 sm:p-1.5 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-red-400"
+                className="p-1 sm:p-1.5 hover:bg-white/10 transition-colors text-white/40 hover:text-red-400 cursor-pointer"
                 title="Clear result"
               >
                 <Trash2 className="w-3 h-3" />
@@ -119,21 +192,23 @@ export const EndpointCard = ({
             </div>
           </div>
         )}
-      </div>
 
-      {/* Expanded Result */}
-      {result && isExpanded && (
-        <div className="border-t border-white/10 bg-black/30 p-2 sm:p-3 max-h-48 sm:max-h-64 overflow-auto scrollbar-hide">
-          {result.error && (
-            <div className="mb-2 p-2 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-[10px] sm:text-xs">
-              {result.error}
+        {/* Expanded Result - Inline */}
+        {result && isExpanded && (
+          <div className="mt-3 pt-3 border-t border-white/10 flex-1 min-h-0">
+            {result.error && (
+              <div className="mb-2 p-2 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] sm:text-xs">
+                {result.error}
+              </div>
+            )}
+            <div className="h-48 overflow-auto scrollbar-hide">
+              <pre className="text-white/60 text-[8px] sm:text-[10px] font-mono whitespace-pre-wrap break-all">
+                {JSON.stringify(result.rawResponse || result, null, 2)}
+              </pre>
             </div>
-          )}
-          <pre className="text-white/60 text-[8px] sm:text-[10px] font-mono whitespace-pre-wrap break-all">
-            {JSON.stringify(result.rawResponse || result, null, 2)}
-          </pre>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
       {/* Cooldown Progress Bar */}
       {onCooldown && (

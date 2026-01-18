@@ -18,6 +18,7 @@ const navItems: NavItem[] = [
   { title: 'Analytics', href: '/', category: 'main' },
   { title: 'pNodes', href: '/nodes', category: 'main' },
   { title: 'Network', href: '/network', category: 'main' },
+  { title: 'Managers', href: '/managers', category: 'main' },
   { title: 'Leaderboard', href: '/leaderboard', category: 'main' },
   { title: 'Governance', href: '/governance', category: 'main' },
   { title: 'Compare', href: '/compare', category: 'tools' },
@@ -63,7 +64,7 @@ const MobileNetworkSelector: React.FC = () => {
     refreshRef.current();
     try {
       await fetch('/api/mainnet-rpc?refresh=true', { cache: 'no-store' });
-    } catch {}
+    } catch { }
     setTimeLeft(30);
     setTimeout(() => setIsRefreshing(false), 500);
   }, []);
@@ -76,13 +77,13 @@ const MobileNetworkSelector: React.FC = () => {
           onClick={() => setNetwork('devnet')}
           className={cn(
             'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[10px] font-medium',
-            !isMainnet 
-              ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400' 
+            !isMainnet
+              ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400'
               : 'bg-white/5 border border-transparent text-white/40 active:bg-white/10'
           )}
         >
           <div className={cn(
-            'w-1.5 h-1.5 rounded-full', 
+            'w-1.5 h-1.5 rounded-full',
             !isMainnet ? 'bg-emerald-400' : 'bg-white/30'
           )} />
           Devnet
@@ -91,19 +92,19 @@ const MobileNetworkSelector: React.FC = () => {
           onClick={() => setNetwork('mainnet')}
           className={cn(
             'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[10px] font-medium',
-            isMainnet 
-              ? 'bg-blue-500/20 border border-blue-500/40 text-blue-400' 
+            isMainnet
+              ? 'bg-blue-500/20 border border-blue-500/40 text-blue-400'
               : 'bg-white/5 border border-transparent text-white/40 active:bg-white/10'
           )}
         >
           <div className={cn(
-            'w-1.5 h-1.5 rounded-full', 
+            'w-1.5 h-1.5 rounded-full',
             isMainnet ? 'bg-blue-400' : 'bg-white/30'
           )} />
           Mainnet
         </button>
       </div>
-      
+
       {/* Refresh Timer */}
       <div className="flex items-center gap-1.5 pl-2 border-l border-white/10">
         <span className="font-mono text-white/50 text-[10px] tabular-nums w-[18px] text-center">{timeLeft}s</span>
@@ -164,7 +165,7 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
     refreshRef.current();
     try {
       await fetch('/api/mainnet-rpc?refresh=true', { cache: 'no-store' });
-    } catch {}
+    } catch { }
     setTimeLeft(30);
     setTimeout(() => setIsRefreshing(false), 500);
   }, []);
@@ -227,27 +228,27 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
           'text-white/40',
           compact ? 'w-2.5 h-2.5' : 'w-2.5 h-2.5 sm:w-3 sm:h-3',
           isOpen && 'rotate-180'
-        )} 
-        style={{ transition: 'transform 150ms ease-out' }}
+        )}
+          style={{ transition: 'transform 150ms ease-out' }}
         />
       </button>
 
       {/* Dropdown - Fast animation */}
       {isOpen && (
-        <div 
+        <div
           className="absolute top-full right-0 mt-2 w-32 sm:w-36 py-1 rounded-xl overflow-hidden bg-black/95 backdrop-blur-xl border border-white/10 shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-right"
         >
           <button
             onClick={() => { setNetwork('devnet'); setIsOpen(false); }}
             className={cn(
               'w-full flex items-center gap-2 px-3 py-2 text-[11px] sm:text-xs',
-              !isMainnet 
-                ? 'bg-emerald-500/10 text-emerald-400' 
+              !isMainnet
+                ? 'bg-emerald-500/10 text-emerald-400'
                 : 'text-white/60 hover:bg-white/5 hover:text-white active:bg-white/10'
             )}
           >
             <div className={cn(
-              'w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full', 
+              'w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full',
               !isMainnet ? 'bg-emerald-400' : 'bg-white/20'
             )} />
             <span>Devnet</span>
@@ -257,13 +258,13 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
             onClick={() => { setNetwork('mainnet'); setIsOpen(false); }}
             className={cn(
               'w-full flex items-center gap-2 px-3 py-2 text-[11px] sm:text-xs',
-              isMainnet 
-                ? 'bg-blue-500/10 text-blue-400' 
+              isMainnet
+                ? 'bg-blue-500/10 text-blue-400'
                 : 'text-white/60 hover:bg-white/5 hover:text-white active:bg-white/10'
             )}
           >
             <div className={cn(
-              'w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full', 
+              'w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full',
               isMainnet ? 'bg-blue-400' : 'bg-white/20'
             )} />
             <span>Mainnet</span>
@@ -323,7 +324,9 @@ export const Navbar: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    setMobileOpen(false);
+    // Use setTimeout to avoid setState in effect
+    const timer = setTimeout(() => setMobileOpen(false), 0);
+    return () => clearTimeout(timer);
   }, [pathname]);
 
   // Prevent body scroll when mobile menu is open

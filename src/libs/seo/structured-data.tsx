@@ -19,7 +19,7 @@ export function StructuredData() {
       "height": 512
     },
     "image": `${baseUrl}/icon.png`,
-    "description": "XanDash is the official Xandeum dashboard for monitoring pNodes in real-time."
+    "description": "XanDash is a comprehensive Xandeum dashboard for monitoring pNodes in real-time."
   };
 
   // WebSite schema - for site search and sitelinks
@@ -29,7 +29,7 @@ export function StructuredData() {
     "name": "XanDash",
     "alternateName": ["Xandeum Dashboard", "pNode Dashboard", "Xandeum pNode Dashboard", "XanDash Dashboard"],
     "url": baseUrl,
-    "description": "XanDash is the official Xandeum dashboard for monitoring pNodes. Track node performance, uptime, storage, and credits in real-time.",
+    "description": "XanDash is a comprehensive Xandeum dashboard for monitoring pNodes. Track node performance, uptime, storage, and credits in real-time.",
     "publisher": {
       "@type": "Organization",
       "name": "XanDash",
@@ -54,7 +54,7 @@ export function StructuredData() {
     "@context": "https://schema.org",
     "@type": "WebPage",
     "name": "XanDash - Xandeum Dashboard | pNode Monitor & Network Analytics",
-    "description": "XanDash is the official Xandeum dashboard for monitoring pNodes. Track node performance, uptime, storage, credits, and network statistics in real-time.",
+    "description": "XanDash is a comprehensive Xandeum dashboard for monitoring pNodes. Track node performance, uptime, storage, credits, and network statistics in real-time.",
     "url": baseUrl,
     "isPartOf": {
       "@type": "WebSite",
@@ -88,7 +88,7 @@ export function StructuredData() {
       "price": "0",
       "priceCurrency": "USD"
     },
-    "description": "XanDash is the official Xandeum dashboard for monitoring pNodes. Track node performance, uptime, storage, and credits in real-time with AI-powered analytics.",
+    "description": "XanDash is a comprehensive Xandeum dashboard for monitoring pNodes. Track node performance, uptime, storage, and credits in real-time with AI-powered analytics.",
     "url": baseUrl,
     "image": `${baseUrl}/icon.png`,
     "screenshot": `${baseUrl}/icon.png`,
@@ -153,7 +153,7 @@ export function StructuredData() {
         "name": "What is XanDash?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "XanDash is the official Xandeum dashboard for monitoring pNodes in real-time. It provides comprehensive analytics including node performance, uptime, storage metrics, credits tracking, and AI-powered insights for the Xandeum decentralized storage network."
+          "text": "XanDash is a comprehensive Xandeum dashboard for monitoring pNodes in real-time. It provides comprehensive analytics including node performance, uptime, storage metrics, credits tracking, and AI-powered insights for the Xandeum decentralized storage network."
         }
       },
       {
@@ -161,7 +161,7 @@ export function StructuredData() {
         "name": "What is Xandeum?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Xandeum is a decentralized storage network built on Solana that provides scalable, secure, and cost-effective data storage solutions using pNodes (storage nodes). XanDash is the official dashboard for monitoring the Xandeum network."
+          "text": "Xandeum is a decentralized storage network built on Solana that provides scalable, secure, and cost-effective data storage solutions using pNodes (storage nodes). XanDash is a comprehensive dashboard for monitoring the Xandeum network."
         }
       },
       {

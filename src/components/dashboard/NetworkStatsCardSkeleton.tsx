@@ -2,21 +2,21 @@ import React from 'react';
 
 const CornerEdges: React.FC = () => (
   <>
-    <div className="absolute top-0 left-0 w-6 h-6">
-      <div className="absolute top-0 left-0 w-3 h-0.5 bg-white/30"></div>
-      <div className="absolute top-0 left-0 w-0.5 h-3 bg-white/30"></div>
+    <div className="absolute top-0 left-0 w-4 h-4">
+      <div className="absolute top-0 left-0 w-2 h-px bg-white/20"></div>
+      <div className="absolute top-0 left-0 w-px h-2 bg-white/20"></div>
     </div>
-    <div className="absolute top-0 right-0 w-6 h-6">
-      <div className="absolute top-0 right-0 w-3 h-0.5 bg-white/30"></div>
-      <div className="absolute top-0 right-0 w-0.5 h-3 bg-white/30"></div>
+    <div className="absolute top-0 right-0 w-4 h-4">
+      <div className="absolute top-0 right-0 w-2 h-px bg-white/20"></div>
+      <div className="absolute top-0 right-0 w-px h-2 bg-white/20"></div>
     </div>
-    <div className="absolute bottom-0 left-0 w-6 h-6">
-      <div className="absolute bottom-0 left-0 w-3 h-0.5 bg-white/30"></div>
-      <div className="absolute bottom-0 left-0 w-0.5 h-3 bg-white/30"></div>
+    <div className="absolute bottom-0 left-0 w-4 h-4">
+      <div className="absolute bottom-0 left-0 w-2 h-px bg-white/20"></div>
+      <div className="absolute bottom-0 left-0 w-px h-2 bg-white/20"></div>
     </div>
-    <div className="absolute bottom-0 right-0 w-6 h-6">
-      <div className="absolute bottom-0 right-0 w-3 h-0.5 bg-white/30"></div>
-      <div className="absolute bottom-0 right-0 w-0.5 h-3 bg-white/30"></div>
+    <div className="absolute bottom-0 right-0 w-4 h-4">
+      <div className="absolute bottom-0 right-0 w-2 h-px bg-white/20"></div>
+      <div className="absolute bottom-0 right-0 w-px h-2 bg-white/20"></div>
     </div>
   </>
 );

@@ -1,11 +1,57 @@
+'use client';
+
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { VersionCardSSR } from './VersionCardSSR';
 import { NetworkStatsCardSSR } from './NetworkStatsCardSSR';
-import { GeoLocationCard, CombinedTokenCard, DashboardNodesCard } from './';
+import { VersionDistributionCard, RegionDistributionCard, GovernanceStatsCardSkeleton } from './';
 import { VersionCardSkeleton } from './VersionCardSkeleton';
 import { NetworkStatsCardSkeleton } from './NetworkStatsCardSkeleton';
 
 import { DashboardInteractive } from './DashboardInteractive';
+
+// Lazy load heavy below-fold components to reduce initial bundle size
+// These components are loaded on-demand, improving First Paint and LCP
+
+const GeoLocationCard = dynamic(
+  () => import('./GeoLocationCard').then(mod => ({ default: mod.GeoLocationCard })),
+  {
+    loading: () => (
+      <div className="w-full min-h-[300px] sm:min-h-[400px] md:min-h-[500px] bg-white/5 rounded-xl border border-white/10 animate-pulse flex items-center justify-center">
+        <span className="text-white/30 text-sm">Loading map...</span>
+      </div>
+    ),
+    ssr: false
+  }
+);
+
+const CombinedTokenCard = dynamic(
+  () => import('./CombinedTokenCard').then(mod => ({ default: mod.CombinedTokenCard })),
+  {
+    loading: () => (
+      <div className="w-full h-48 bg-white/5 rounded-xl border border-white/10 animate-pulse" />
+    ),
+    ssr: false
+  }
+);
+
+const GovernanceStatsCard = dynamic(
+  () => import('./GovernanceStatsCard').then(mod => ({ default: mod.GovernanceStatsCard })),
+  {
+    loading: () => <GovernanceStatsCardSkeleton />,
+    ssr: false
+  }
+);
+
+const DashboardNodesCard = dynamic(
+  () => import('./DashboardNodesCard').then(mod => ({ default: mod.DashboardNodesCard })),
+  {
+    loading: () => (
+      <div className="w-full h-96 bg-white/5 rounded-xl border border-white/10 animate-pulse" />
+    ),
+    ssr: false
+  }
+);
 
 // Server Component - No loading animations, just static render
 export const DashboardSSR: React.FC = () => {
@@ -26,6 +72,12 @@ export const DashboardSSR: React.FC = () => {
         </div>
       </div>
 
+      {/* Distribution Cards Row - Version and Region */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <VersionDistributionCard />
+        <RegionDistributionCard />
+      </div>
+
       {/* Combined Token Details */}
       <div className="w-full">
         <CombinedTokenCard />
@@ -36,7 +88,12 @@ export const DashboardSSR: React.FC = () => {
         <GeoLocationCard />
       </div>
 
-      {/* pNodes Card - Below map */}
+      {/* Governance Stats - Below map */}
+      <div className="w-full">
+        <GovernanceStatsCard />
+      </div>
+
+      {/* pNodes Card - Below governance */}
       <div className="w-full">
         <DashboardNodesCard />
       </div>
@@ -61,11 +118,22 @@ export const DashboardSkeleton: React.FC = () => {
         </div>
       </div>
 
+      {/* Distribution Cards Skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="h-64 bg-white/5 rounded-xl border border-white/10"></div>
+        <div className="h-64 bg-white/5 rounded-xl border border-white/10"></div>
+      </div>
+
       {/* Combined Token Details Skeleton */}
       <div className="w-full h-48 bg-white/5 rounded-xl border border-white/10"></div>
 
       {/* Map Skeleton */}
       <div className="w-full min-h-[300px] sm:min-h-[400px] md:min-h-[500px] bg-white/5 rounded-xl border border-white/10"></div>
+
+      {/* Governance Stats Skeleton */}
+      <div className="w-full">
+        <GovernanceStatsCardSkeleton />
+      </div>
 
       {/* pNodes Card Skeleton */}
       <div className="w-full h-96 bg-white/5 rounded-xl border border-white/10"></div>

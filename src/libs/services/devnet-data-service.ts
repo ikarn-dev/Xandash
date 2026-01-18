@@ -6,6 +6,7 @@
  */
 
 import { cache } from '@/libs/cache/LocalCache';
+import { monitoredFetch } from './rpc-status-monitor';
 
 // Get URL from environment variable - NEVER hardcode
 const DEVNET_API_URL = process.env.DEVNET_API_URL || '';
@@ -67,8 +68,9 @@ async function fetchFromDevnetApi(): Promise<DevnetNodeData[] | null> {
   }
 
   try {
-    const response = await fetch(DEVNET_API_URL, {
+    const response = await monitoredFetch(DEVNET_API_URL, {
       method: 'GET',
+      network: 'devnet',
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -112,7 +114,7 @@ export async function getDevnetData(forceRefresh: boolean = false): Promise<Devn
   const canFetchNow = await canFetch();
   
   // Get cached data
-  let cachedData = await cache.get(CACHE_KEY_DEVNET) as DevnetExternalData | null;
+  const cachedData = await cache.get(CACHE_KEY_DEVNET) as DevnetExternalData | null;
   
   // Try to fetch fresh data if allowed
   if (canFetchNow || forceRefresh) {

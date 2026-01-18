@@ -53,24 +53,24 @@ const DollarIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
 
 // Corner Accent Component for consistent styling
 const CornerAccents = ({ color = "white" }: { color?: string }) => {
-  const colorClass = color === "emerald" ? "group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.8)]" : "group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)]";
+  const colorClass = color === "emerald" ? "group-hover:bg-emerald-400 group-hover:shadow-[0_0_8px_rgba(16,185,129,0.6)]" : "group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)]";
   return (
     <>
-      <div className="absolute top-0 left-0 w-6 h-6">
-        <div className={`absolute top-0 left-0 w-3 h-0.5 bg-white/30 ${colorClass} transition-all duration-300`}></div>
-        <div className={`absolute top-0 left-0 w-0.5 h-3 bg-white/30 ${colorClass} transition-all duration-300`}></div>
+      <div className="absolute top-0 left-0 w-4 h-4">
+        <div className={`absolute top-0 left-0 w-2 h-px bg-white/20 ${colorClass} transition-all duration-300`}></div>
+        <div className={`absolute top-0 left-0 w-px h-2 bg-white/20 ${colorClass} transition-all duration-300`}></div>
       </div>
-      <div className="absolute top-0 right-0 w-6 h-6">
-        <div className={`absolute top-0 right-0 w-3 h-0.5 bg-white/30 ${colorClass} transition-all duration-300`}></div>
-        <div className={`absolute top-0 right-0 w-0.5 h-3 bg-white/30 ${colorClass} transition-all duration-300`}></div>
+      <div className="absolute top-0 right-0 w-4 h-4">
+        <div className={`absolute top-0 right-0 w-2 h-px bg-white/20 ${colorClass} transition-all duration-300`}></div>
+        <div className={`absolute top-0 right-0 w-px h-2 bg-white/20 ${colorClass} transition-all duration-300`}></div>
       </div>
-      <div className="absolute bottom-0 left-0 w-6 h-6">
-        <div className={`absolute bottom-0 left-0 w-3 h-0.5 bg-white/30 ${colorClass} transition-all duration-300`}></div>
-        <div className={`absolute bottom-0 left-0 w-0.5 h-3 bg-white/30 ${colorClass} transition-all duration-300`}></div>
+      <div className="absolute bottom-0 left-0 w-4 h-4">
+        <div className={`absolute bottom-0 left-0 w-2 h-px bg-white/20 ${colorClass} transition-all duration-300`}></div>
+        <div className={`absolute bottom-0 left-0 w-px h-2 bg-white/20 ${colorClass} transition-all duration-300`}></div>
       </div>
-      <div className="absolute bottom-0 right-0 w-6 h-6">
-        <div className={`absolute bottom-0 right-0 w-3 h-0.5 bg-white/30 ${colorClass} transition-all duration-300`}></div>
-        <div className={`absolute bottom-0 right-0 w-0.5 h-3 bg-white/30 ${colorClass} transition-all duration-300`}></div>
+      <div className="absolute bottom-0 right-0 w-4 h-4">
+        <div className={`absolute bottom-0 right-0 w-2 h-px bg-white/20 ${colorClass} transition-all duration-300`}></div>
+        <div className={`absolute bottom-0 right-0 w-px h-2 bg-white/20 ${colorClass} transition-all duration-300`}></div>
       </div>
     </>
   );

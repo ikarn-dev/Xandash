@@ -20,38 +20,44 @@ export const AnimatedValue: React.FC<AnimatedValueProps> = ({ value, className }
     if (isFirstRender.current) {
       isFirstRender.current = false;
       prevValueRef.current = stringValue;
-      setDisplayValue(stringValue);
-      return;
+      // Use setTimeout to avoid setState in effect
+      const timer = setTimeout(() => setDisplayValue(stringValue), 0);
+      return () => clearTimeout(timer);
     }
 
     // Only animate if value actually changed
     if (prevValueRef.current !== stringValue) {
-      // Start exit animation
-      setAnimationState('exit');
-      
-      // After exit animation, update value and start enter animation
-      const exitTimer = setTimeout(() => {
-        setDisplayValue(stringValue);
-        setAnimationState('enter');
-        prevValueRef.current = stringValue;
-      }, 150);
-      
-      // Reset to idle after enter animation
-      const enterTimer = setTimeout(() => {
-        setAnimationState('idle');
-      }, 300);
-      
-      return () => {
-        clearTimeout(exitTimer);
-        clearTimeout(enterTimer);
-      };
+      // Use setTimeout to avoid setState in effect
+      const timer = setTimeout(() => {
+        setAnimationState('exit');
+        
+        // After exit animation, update value and start enter animation
+        const exitTimer = setTimeout(() => {
+          setDisplayValue(stringValue);
+          setAnimationState('enter');
+          prevValueRef.current = stringValue;
+        }, 150);
+        
+        // Reset to idle after enter animation
+        const enterTimer = setTimeout(() => {
+          setAnimationState('idle');
+        }, 300);
+        
+        return () => {
+          clearTimeout(exitTimer);
+          clearTimeout(enterTimer);
+        };
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [stringValue]);
 
   // Update display value immediately if it's the same (no animation needed)
   useEffect(() => {
     if (animationState === 'idle' && displayValue !== stringValue) {
-      setDisplayValue(stringValue);
+      // Use setTimeout to avoid setState in effect
+      const timer = setTimeout(() => setDisplayValue(stringValue), 0);
+      return () => clearTimeout(timer);
     }
   }, [stringValue, animationState, displayValue]);
 

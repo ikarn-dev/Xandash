@@ -6,4 +6,5 @@ export * from './CountryOverview';
 export * from './CountryStatsCards';
 export * from './CountryCharts';
 export * from './CountryNodesTable';
+export * from './CountryVPSProviders';
 export * from './utils';

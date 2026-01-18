@@ -48,13 +48,13 @@ export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: n
     );
 
     const paginated = paginateValidators(filtered, currentPage, pageSize);
-    
+
     // Count nodes that are duplicates (have duplicateCount > 0)
     const duplicateCount = allValidators.filter(v => v.duplicateCount && v.duplicateCount > 0).length;
     // Total is just the number of unique validators (matching API response)
     const total = allValidators.length;
     const referenceTime = dataFetchTime;
-    
+
     const calculatedStats = hasActiveFilters ? {
       total: total,
       online: filtered.filter(v => {
@@ -92,7 +92,7 @@ export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: n
       const parseVersion = (version: string) => version.split('.').map(num => parseInt(num, 10));
       const versionA = parseVersion(a);
       const versionB = parseVersion(b);
-      
+
       for (let i = 0; i < Math.max(versionA.length, versionB.length); i++) {
         const partA = versionA[i] || 0;
         const partB = versionB[i] || 0;
@@ -113,13 +113,13 @@ export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: n
       quickStats: { ...calculatedStats, duplicates: duplicateCount, syncing: calculatedStats.syncing || 0 },
       availableVersions: uniqueVersions
     };
-  }, [allValidators, searchQuery, selectedFilters, sortBy, currentPage, pageSize, hasActiveFilters, dataFetchTime, network]);
+  }, [allValidators, searchQuery, selectedFilters, versionFilter, sortBy, currentPage, pageSize, hasActiveFilters, dataFetchTime, network]);
 
   const handleFilterChange = (filterKey: keyof FilterState) => {
     startTransition(() => {
       setSelectedFilters(prev => {
         const newFilters = { ...prev };
-        
+
         if (filterKey === 'onlyOnline' && !prev.onlyOnline) {
           newFilters.onlyInactive = false;
           newFilters.onlySyncing = false;
@@ -135,7 +135,7 @@ export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: n
         } else {
           newFilters[filterKey] = !prev[filterKey];
         }
-        
+
         return newFilters;
       });
       setCurrentPage(1);

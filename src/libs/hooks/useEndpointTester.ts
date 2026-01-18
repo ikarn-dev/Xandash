@@ -65,13 +65,17 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
         };
         
         workerRef.current = worker;
-        setIsSupported(true);
+        // Use setTimeout to avoid setState in effect
+        const timer = setTimeout(() => setIsSupported(true), 0);
+        return () => clearTimeout(timer);
       } catch (error) {
         console.warn('Web Worker not supported:', error);
-        setIsSupported(false);
+        const timer = setTimeout(() => setIsSupported(false), 0);
+        return () => clearTimeout(timer);
       }
     } else {
-      setIsSupported(false);
+      const timer = setTimeout(() => setIsSupported(false), 0);
+      return () => clearTimeout(timer);
     }
 
     return () => {
@@ -137,7 +141,7 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
       // Determine HTTP method and body based on endpoint
-      let httpMethod = 'GET';
+      const httpMethod = 'GET';
       let body: string | undefined;
       
 
@@ -202,7 +206,7 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
       const timeoutId = setTimeout(() => controller.abort(), 15000);
       
       // Determine HTTP method and body based on endpoint
-      let httpMethod = 'GET';
+      const httpMethod = 'GET';
       let body: string | undefined;
       
 

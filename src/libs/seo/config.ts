@@ -3,9 +3,9 @@ export const SEO_CONFIG = {
   baseUrl: 'https://www.xandash.online',
   siteName: 'XanDash',
   defaultTitle: 'XanDash - Xandeum Dashboard | pNode Monitor & Network Analytics',
-  defaultDescription: 'XanDash is the official Xandeum dashboard for monitoring pNodes in real-time. Track node performance, uptime, storage, credits, and network statistics with AI-powered analytics.',
+  defaultDescription: 'XanDash is a comprehensive Xandeum dashboard for monitoring pNodes in real-time. Track node performance, uptime, storage, credits, and network statistics with AI-powered analytics.',
   twitterHandle: '@xandeum',
-  
+
   // Open Graph defaults
   ogImage: {
     url: 'https://www.xandash.online/icon.png',
@@ -13,23 +13,28 @@ export const SEO_CONFIG = {
     height: 512,
     alt: 'XanDash - Xandeum Network Dashboard',
   },
-  
+
   // Keywords - optimized for search (primary keywords first)
   defaultKeywords: [
     // Primary search terms (what users search for)
     'xandeum dashboard',
+    'xandash dashboard',
+    'xandeum pnodes dashboard',
     'pnode dashboard',
     'xandeum pnode dashboard',
     'xandash',
-    'xandash dashboard',
+    'xandash pnode',
+    'xandeum pnodes',
     // Brand keywords
     'XanDash',
     'Xandeum',
     'Xandeum network',
+    'Xandeum network dashboard',
     'Xandeum monitor',
     'Xandeum analytics',
     'Xandeum explorer',
-    // Node keywords
+    'Xandeum network monitor',
+    // Node keywords - comprehensive
     'pNodes',
     'pNode monitor',
     'pNode tracker',
@@ -41,28 +46,44 @@ export const SEO_CONFIG = {
     'Xandeum pNodes',
     'Xandeum validators',
     'Xandeum nodes',
+    'xandeum node status',
+    'xandeum node tracker',
+    'xandeum node monitor',
+    // Dashboard search terms
+    'xandeum network analytics',
+    'xandeum network stats',
+    'xandeum stats dashboard',
+    'pnode stats',
+    'pnode statistics',
     // Network keywords
     'network monitoring',
     'network dashboard',
     'network analytics',
     'node distribution',
+    'real-time node monitoring',
     // Blockchain keywords
     'blockchain dashboard',
     'blockchain analytics',
     'crypto dashboard',
+    'web3 dashboard',
     // Storage keywords
     'storage network',
     'decentralized storage',
     'STOINC',
     'STOINC calculator',
+    'xandeum storage',
     // Token keywords
     'XAND',
     'XAND token',
+    'XAND price',
+    'xandeum token',
     // Technical keywords
     'validators',
     'node tracker',
     'devnet',
     'mainnet',
+    'xandeum devnet',
+    'xandeum mainnet',
   ],
 } as const;
 
@@ -82,7 +103,7 @@ export function generateSEOMetadata({
 }) {
   const url = `${SEO_CONFIG.baseUrl}${path}`;
   const ogImage = image || SEO_CONFIG.ogImage;
-  
+
   return {
     title,
     description,

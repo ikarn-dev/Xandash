@@ -32,21 +32,25 @@ export function AppCaptchaGate({ children }: AppCaptchaGateProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      // Skip on localhost
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        setIsLocalhost(true);
-        setIsVerified(true);
-        return;
+    // Use setTimeout to avoid setState in effect
+    const timer = setTimeout(() => {
+      setMounted(true);
+      if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        // Skip on localhost
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+          setIsLocalhost(true);
+          setIsVerified(true);
+          return;
+        }
+        // Check session storage (persists until browser/tab closes)
+        const verified = sessionStorage.getItem(SESSION_KEY);
+        if (verified === 'true') {
+          setIsVerified(true);
+        }
       }
-      // Check session storage (persists until browser/tab closes)
-      const verified = sessionStorage.getItem(SESSION_KEY);
-      if (verified === 'true') {
-        setIsVerified(true);
-      }
-    }
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleVerify = useCallback(async (token: string) => {

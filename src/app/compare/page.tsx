@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout';
 import { useNetwork } from '@/libs/context/network-context';
+import { useNetworkPageData } from '@/app/network/hooks/useNetworkPageData';
 import { NodeSelector } from './components/NodeSelector';
+import { CountrySelector } from './components/CountrySelector';
 import { CompareButton } from './components/CompareButton';
 import { ResultsView } from './components/ResultsView';
+import { CountryResultsView } from './components/CountryResultsView';
+import { CompareTypeSwitcher } from './components/CompareTypeSwitcher';
+import { CornerAccents } from '@/components/ui';
 import { toast } from 'sonner';
 
 interface NodeData {
@@ -18,6 +23,7 @@ interface NodeData {
   storage_used?: number;
   version?: string;
   last_seen_timestamp?: number;
+  country_code?: string;
 }
 
 interface NodeProfile {
@@ -34,11 +40,50 @@ interface NodeProfile {
   history?: Array<{ timestamp: number; credits: number; uptime: number; storage_committed: number; storage_used: number }>;
 }
 
+interface CountryData {
+  country: string;
+  country_code: string;
+  totalNodes: number;
+  onlineNodes: number;
+  syncingNodes: number;
+  offlineNodes: number;
+  totalStorage: number;
+  totalStorageUsed: number;
+  avgUptime: number;
+  totalCredits: number;
+}
+
+interface CountryProfile extends CountryData {
+  color: string;
+  onlinePercent: number;
+  storageEfficiency: number;
+}
+
 const NODE_COLORS = ['#10b981', '#3b82f6', '#a855f7', '#f59e0b'];
+const COUNTRY_COLORS = ['#10b981', '#3b82f6', '#a855f7', '#f59e0b'];
+
+// Icons for feature cards
+const NodesIcon = () => (
+  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <rect x="2" y="3" width="20" height="14" rx="2" />
+    <path d="M8 21h8M12 17v4" />
+  </svg>
+);
+
+const CountriesIcon = () => (
+  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+  </svg>
+);
+
 
 function ComparePageContent() {
   const { network } = useNetwork();
   const searchParams = useSearchParams();
+  const { countryDetailedStats, loading: countryLoading } = useNetworkPageData(network);
+  
+  const [compareType, setCompareType] = useState<'nodes' | 'countries'>('nodes');
   const [allNodes, setAllNodes] = useState<NodeData[]>([]);
   const [serverTimestamp, setServerTimestamp] = useState<number>(0);
   const [selectedPubkeys, setSelectedPubkeys] = useState<string[]>([]);
@@ -47,22 +92,52 @@ function ComparePageContent() {
   const [isComparing, setIsComparing] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [autoCompareTriggered, setAutoCompareTriggered] = useState(false);
+  const [selectedCountryCodes, setSelectedCountryCodes] = useState<string[]>([]);
+  const [countryProfiles, setCountryProfiles] = useState<CountryProfile[]>([]);
+  const [showCountryResults, setShowCountryResults] = useState(false);
+  const [autoCountryCompareTriggered, setAutoCountryCompareTriggered] = useState(false);
 
-  // Calculate node status from last_seen_timestamp
-  const getNodeStatus = useCallback((lastSeen: number, timestamp: number) => {
+  // Use countryDetailedStats from the network page hook (already has geo data and credits)
+  // Sort alphabetically
+  const countryStats = useMemo(() => {
+    return countryDetailedStats
+      .map(c => ({
+        country: c.country,
+        country_code: c.country_code,
+        totalNodes: c.totalNodes,
+        onlineNodes: c.onlineNodes,
+        syncingNodes: c.syncingNodes,
+        offlineNodes: c.offlineNodes,
+        totalStorage: c.totalStorage,
+        totalStorageUsed: c.totalStorageUsed,
+        avgUptime: c.avgUptime,
+        totalCredits: c.totalCredits || 0,
+      }))
+      .sort((a, b) => a.country.localeCompare(b.country));
+  }, [countryDetailedStats]);
+
+  const getNodeStatusLocal = useCallback((lastSeen: number, timestamp: number) => {
     const timeDiff = timestamp - lastSeen;
     if (timeDiff < 300) return 'online';
     if (timeDiff < 3600) return 'syncing';
     return 'offline';
   }, []);
 
-  // Fetch all nodes with full data
   useEffect(() => {
-    // Reset state when network changes
     setSelectedPubkeys([]);
     setNodeProfiles([]);
     setShowResults(false);
     setAutoCompareTriggered(false);
+    setSelectedCountryCodes([]);
+    setCountryProfiles([]);
+    setShowCountryResults(false);
+    setAutoCountryCompareTriggered(false);
+    
+    // Check for countries URL param
+    const countriesParam = searchParams.get('countries');
+    if (countriesParam) {
+      setCompareType('countries');
+    }
     
     const fetchNodes = async () => {
       setIsLoading(true);
@@ -75,361 +150,316 @@ function ComparePageContent() {
         if (nodesRes.ok && creditsRes.ok) {
           const nodesData = await nodesRes.json();
           const creditsData = await creditsRes.json();
-          
-          // Store server timestamp for status calculation
           const srvTimestamp = nodesData.serverTimestamp || Math.floor(Date.now() / 1000);
           setServerTimestamp(srvTimestamp);
           
           const creditsMap = new Map<string, number>();
-          (creditsData.pods_credits || []).forEach((c: any) => {
-            creditsMap.set(c.pod_id, c.credits);
-          });
+          (creditsData.pods_credits || []).forEach((c: any) => creditsMap.set(c.pod_id, c.credits));
           
-          // Store full node data including uptime, storage, version
           const nodes = (nodesData.nodes || [])
             .map((n: any) => ({
-              pubkey: n.pubkey,
-              address: n.address,
-              credits: creditsMap.get(n.pubkey) || 0,
-              uptime: n.uptime || 0,
-              storage_committed: n.storage_committed || 0,
-              storage_used: n.storage_used || 0,
-              version: n.version || '',
+              pubkey: n.pubkey, address: n.address, credits: creditsMap.get(n.pubkey) || 0,
+              uptime: n.uptime || 0, storage_committed: n.storage_committed || 0,
+              storage_used: n.storage_used || 0, version: n.version || '',
               last_seen_timestamp: n.last_seen_timestamp || 0,
+              country_code: (n.country_code || '').toLowerCase(),
             }))
             .sort((a: NodeData, b: NodeData) => (b.credits || 0) - (a.credits || 0));
           
           setAllNodes(nodes);
           
-          // Check for URL params - auto-compare if 'auto=true' is present
           const nodesParam = searchParams.get('nodes');
           const autoParam = searchParams.get('auto');
           
           if (nodesParam) {
             const pubkeysFromUrl = nodesParam.split(',').filter(Boolean);
-            const validPubkeys = pubkeysFromUrl.filter(pk => 
-              nodes.some((n: NodeData) => n.pubkey === pk)
-            ).slice(0, 4);
-            
+            const validPubkeys = pubkeysFromUrl.filter(pk => nodes.some((n: NodeData) => n.pubkey === pk)).slice(0, 4);
             if (validPubkeys.length >= 2) {
               setSelectedPubkeys(validPubkeys);
-              
-              // Auto-compare if auto=true param is present
-              if (autoParam === 'true') {
-                // Trigger auto-compare with the fetched data
-                triggerAutoCompare(validPubkeys, nodes, srvTimestamp);
-              }
+              if (autoParam === 'true') triggerAutoCompare(validPubkeys, nodes, srvTimestamp);
             } else if (validPubkeys.length > 0) {
               setSelectedPubkeys(validPubkeys);
             }
           }
         }
-      } catch (err) {
-        toast.error('Failed to load nodes');
-      } finally {
-        setIsLoading(false);
-      }
+      } catch { toast.error('Failed to load nodes'); }
+      finally { setIsLoading(false); }
     };
-    
     fetchNodes();
   }, [network, searchParams]);
 
-  // Auto-compare function that runs immediately with fetched data
+  // Handle countries URL param auto-compare
+  useEffect(() => {
+    if (countryLoading || countryStats.length === 0 || autoCountryCompareTriggered) return;
+    
+    const countriesParam = searchParams.get('countries');
+    const autoParam = searchParams.get('auto');
+    
+    if (countriesParam && autoParam === 'true') {
+      const codesFromUrl = countriesParam.split(',').filter(Boolean);
+      const validCodes = codesFromUrl.filter(code => 
+        countryStats.some(c => c.country_code === code)
+      ).slice(0, 4);
+      
+      if (validCodes.length >= 2) {
+        setAutoCountryCompareTriggered(true);
+        setSelectedCountryCodes(validCodes);
+        
+        // Auto-compare countries
+        const profiles: CountryProfile[] = validCodes.map((code, i) => {
+          const country = countryStats.find(c => c.country_code === code);
+          if (!country) return null;
+          return {
+            ...country, color: COUNTRY_COLORS[i % COUNTRY_COLORS.length],
+            onlinePercent: country.totalNodes > 0 ? (country.onlineNodes / country.totalNodes) * 100 : 0,
+            storageEfficiency: country.totalStorage > 0 ? (country.totalStorageUsed / country.totalStorage) * 100 : 0,
+          };
+        }).filter(Boolean) as CountryProfile[];
+        
+        setCountryProfiles(profiles);
+        setShowCountryResults(true);
+      } else if (validCodes.length > 0) {
+        setSelectedCountryCodes(validCodes);
+      }
+    }
+  }, [countryStats, countryLoading, searchParams, autoCountryCompareTriggered]);
+
+
   const triggerAutoCompare = async (pubkeys: string[], nodes: NodeData[], timestamp: number) => {
     if (pubkeys.length < 2 || autoCompareTriggered) return;
-    
     setAutoCompareTriggered(true);
     setIsComparing(true);
     
     try {
-      // Build profiles from fetched data
-      const profiles: NodeProfile[] = [];
-      
-      for (let i = 0; i < pubkeys.length; i++) {
-        const pubkey = pubkeys[i];
+      const profiles: NodeProfile[] = pubkeys.map((pubkey, i) => {
         const node = nodes.find(n => n.pubkey === pubkey);
-        if (!node) continue;
-        
-        const ip = node.address?.split(':')[0] || '';
-        
-        profiles.push({
-          ip,
-          pubkey,
-          color: NODE_COLORS[i % NODE_COLORS.length],
-          status: getNodeStatus(node.last_seen_timestamp || 0, timestamp),
-          uptime: node.uptime || 0,
-          credits: node.credits || 0,
-          storage_committed: node.storage_committed || 0,
-          storage_used: node.storage_used || 0,
-          version: node.version || '',
-          location: undefined,
-          history: []
-        });
-      }
+        if (!node) return null;
+        return {
+          ip: node.address?.split(':')[0] || '', pubkey, color: NODE_COLORS[i % NODE_COLORS.length],
+          status: getNodeStatusLocal(node.last_seen_timestamp || 0, timestamp),
+          uptime: node.uptime || 0, credits: node.credits || 0,
+          storage_committed: node.storage_committed || 0, storage_used: node.storage_used || 0,
+          version: node.version || '', location: undefined, history: []
+        };
+      }).filter(Boolean) as NodeProfile[];
       
-      // Show results immediately
       setNodeProfiles(profiles);
       setShowResults(true);
       setIsComparing(false);
       
-      // Fetch historical data in background (168 hours = 7 days)
       const ips = profiles.map(p => p.ip);
-      
-      // Use batch fetch for all nodes at once (single DB query with bucketing)
       let historyByIp: Record<string, any[]> = {};
       try {
         const batchRes = await fetch(`/api/node-history?type=batch-stats&ips=${ips.join(',')}&hours=168&network=${network}`);
-        if (batchRes.ok) {
-          const batchData = await batchRes.json();
-          historyByIp = batchData.results || {};
-        } else {
-          // Fallback to individual requests if batch fails
-          const historyPromises = profiles.map(async (profile) => {
-            try {
-              const statsRes = await fetch(`/api/node-history?ip=${profile.ip}&type=stats&hours=168&network=${network}`);
-              const statsData = statsRes.ok ? await statsRes.json() : { stats: [] };
-              return { ip: profile.ip, history: statsData.stats || [] };
-            } catch {
-              return { ip: profile.ip, history: [] };
-            }
-          });
-          const results = await Promise.all(historyPromises);
-          results.forEach(r => { historyByIp[r.ip] = r.history; });
-        }
-      } catch {
-        // Fall back to empty history on error
-      }
+        if (batchRes.ok) historyByIp = (await batchRes.json()).results || {};
+      } catch {}
       
-      // Fetch locations in batch
       let locationMap: Record<string, any> = {};
       try {
-        const locationRes = await fetch('/api/geolocation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ips })
-        });
-        if (locationRes.ok) {
-          locationMap = await locationRes.json();
-        }
-      } catch {
-        // Location is optional
-      }
+        const locationRes = await fetch('/api/geolocation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ips }) });
+        if (locationRes.ok) locationMap = await locationRes.json();
+      } catch {}
       
-      setNodeProfiles(prev => prev.map(profile => {
-        const historyData = historyByIp[profile.ip] || [];
-        const location = locationMap[profile.ip];
-        
-        return {
-          ...profile,
-          location: location ? {
-            country: location.country,
-            city: location.city,
-            provider: location.provider
-          } : undefined,
-          history: historyData.map((h: any) => ({
-            timestamp: h.timestamp,
-            credits: h.credits || 0,
-            uptime: h.uptime || 0,
-            storage_committed: h.storage_committed || 0,
-            storage_used: h.storage_used || 0
-          }))
-        };
-      }));
-      
-    } catch (err) {
-      toast.error('Failed to compare nodes');
-      setIsComparing(false);
-    }
+      setNodeProfiles(prev => prev.map(profile => ({
+        ...profile,
+        location: locationMap[profile.ip] ? { country: locationMap[profile.ip].country, city: locationMap[profile.ip].city, provider: locationMap[profile.ip].provider } : undefined,
+        history: (historyByIp[profile.ip] || []).map((h: any) => ({ timestamp: h.timestamp, credits: h.credits || 0, uptime: h.uptime || 0, storage_committed: h.storage_committed || 0, storage_used: h.storage_used || 0 }))
+      })));
+    } catch { toast.error('Failed to compare nodes'); setIsComparing(false); }
   };
 
   const handleToggleNode = useCallback((pubkey: string) => {
-    setSelectedPubkeys(prev => {
-      if (prev.includes(pubkey)) {
-        return prev.filter(p => p !== pubkey);
-      }
-      if (prev.length >= 4) return prev;
-      return [...prev, pubkey];
-    });
+    setSelectedPubkeys(prev => prev.includes(pubkey) ? prev.filter(p => p !== pubkey) : prev.length >= 4 ? prev : [...prev, pubkey]);
   }, []);
 
-  const handleCompare = useCallback(async () => {
+  const handleToggleCountry = useCallback((countryCode: string) => {
+    setSelectedCountryCodes(prev => prev.includes(countryCode) ? prev.filter(c => c !== countryCode) : prev.length >= 4 ? prev : [...prev, countryCode]);
+  }, []);
+
+  const handleCompareNodes = useCallback(async () => {
     if (selectedPubkeys.length < 2) return;
-    
     setIsComparing(true);
     
     try {
-      // Build profiles from pre-fetched data (instant)
-      const profiles: NodeProfile[] = [];
-      
-      for (let i = 0; i < selectedPubkeys.length; i++) {
-        const pubkey = selectedPubkeys[i];
+      const profiles: NodeProfile[] = selectedPubkeys.map((pubkey, i) => {
         const node = allNodes.find(n => n.pubkey === pubkey);
-        if (!node) continue;
-        
-        const ip = node.address?.split(':')[0] || '';
-        
-        profiles.push({
-          ip,
-          pubkey,
-          color: NODE_COLORS[i % NODE_COLORS.length],
-          status: getNodeStatus(node.last_seen_timestamp || 0, serverTimestamp),
-          uptime: node.uptime || 0,
-          credits: node.credits || 0,
-          storage_committed: node.storage_committed || 0,
-          storage_used: node.storage_used || 0,
-          version: node.version || '',
-          location: undefined,
-          history: []
-        });
-      }
+        if (!node) return null;
+        return {
+          ip: node.address?.split(':')[0] || '', pubkey, color: NODE_COLORS[i % NODE_COLORS.length],
+          status: getNodeStatusLocal(node.last_seen_timestamp || 0, serverTimestamp),
+          uptime: node.uptime || 0, credits: node.credits || 0,
+          storage_committed: node.storage_committed || 0, storage_used: node.storage_used || 0,
+          version: node.version || '', location: undefined, history: []
+        };
+      }).filter(Boolean) as NodeProfile[];
       
-      // Show results immediately with pre-fetched data
       setNodeProfiles(profiles);
       setShowResults(true);
       setIsComparing(false);
       
-      // Fetch historical data in background (168 hours = 7 days)
       const ips = profiles.map(p => p.ip);
-      
       let historyByIp: Record<string, any[]> = {};
       try {
         const batchRes = await fetch(`/api/node-history?type=batch-stats&ips=${ips.join(',')}&hours=168&network=${network}`);
-        if (batchRes.ok) {
-          const batchData = await batchRes.json();
-          historyByIp = batchData.results || {};
-        } else {
-          // Fallback to individual requests if batch fails
-          const historyPromises = profiles.map(async (profile) => {
-            try {
-              const statsRes = await fetch(`/api/node-history?ip=${profile.ip}&type=stats&hours=168&network=${network}`);
-              const statsData = statsRes.ok ? await statsRes.json() : { stats: [] };
-              return { ip: profile.ip, history: statsData.stats || [] };
-            } catch {
-              return { ip: profile.ip, history: [] };
-            }
-          });
-          const results = await Promise.all(historyPromises);
-          results.forEach(r => { historyByIp[r.ip] = r.history; });
-        }
-      } catch {
-        // Fall back to empty history on error
-      }
+        if (batchRes.ok) historyByIp = (await batchRes.json()).results || {};
+      } catch {}
       
-      // Fetch locations in batch
       let locationMap: Record<string, any> = {};
       try {
-        const locationRes = await fetch('/api/geolocation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ips })
-        });
-        if (locationRes.ok) {
-          locationMap = await locationRes.json();
-        }
-      } catch {
-        // Location is optional, continue without it
-      }
+        const locationRes = await fetch('/api/geolocation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ips }) });
+        if (locationRes.ok) locationMap = await locationRes.json();
+      } catch {}
       
-      // Update profiles with historical data when ready
-      setNodeProfiles(prev => prev.map(profile => {
-        const historyData = historyByIp[profile.ip] || [];
-        const location = locationMap[profile.ip];
-        
-        return {
-          ...profile,
-          location: location ? {
-            country: location.country,
-            city: location.city,
-            provider: location.provider
-          } : undefined,
-          history: historyData.map((h: any) => ({
-            timestamp: h.timestamp,
-            credits: h.credits || 0,
-            uptime: h.uptime || 0,
-            storage_committed: h.storage_committed || 0,
-            storage_used: h.storage_used || 0
-          }))
-        };
-      }));
-      
-    } catch (err) {
-      toast.error('Failed to compare nodes');
-      setIsComparing(false);
-    }
-  }, [selectedPubkeys, allNodes, serverTimestamp, getNodeStatus, network]);
+      setNodeProfiles(prev => prev.map(profile => ({
+        ...profile,
+        location: locationMap[profile.ip] ? { country: locationMap[profile.ip].country, city: locationMap[profile.ip].city, provider: locationMap[profile.ip].provider } : undefined,
+        history: (historyByIp[profile.ip] || []).map((h: any) => ({ timestamp: h.timestamp, credits: h.credits || 0, uptime: h.uptime || 0, storage_committed: h.storage_committed || 0, storage_used: h.storage_used || 0 }))
+      })));
+    } catch { toast.error('Failed to compare nodes'); setIsComparing(false); }
+  }, [selectedPubkeys, allNodes, serverTimestamp, getNodeStatusLocal, network]);
 
-  const handleReset = useCallback(() => {
-    setSelectedPubkeys([]);
-    setNodeProfiles([]);
-    setShowResults(false);
-  }, []);
+  const handleCompareCountries = useCallback(() => {
+    if (selectedCountryCodes.length < 2) return;
+    setIsComparing(true);
+    
+    const profiles: CountryProfile[] = selectedCountryCodes.map((code, i) => {
+      const country = countryStats.find(c => c.country_code === code);
+      if (!country) return null;
+      return {
+        ...country, color: COUNTRY_COLORS[i % COUNTRY_COLORS.length],
+        onlinePercent: country.totalNodes > 0 ? (country.onlineNodes / country.totalNodes) * 100 : 0,
+        storageEfficiency: country.totalStorage > 0 ? (country.totalStorageUsed / country.totalStorage) * 100 : 0,
+      };
+    }).filter(Boolean) as CountryProfile[];
+    
+    setCountryProfiles(profiles);
+    setShowCountryResults(true);
+    setIsComparing(false);
+  }, [selectedCountryCodes, countryStats]);
+
+  const handleResetNodes = useCallback(() => { setSelectedPubkeys([]); setNodeProfiles([]); setShowResults(false); }, []);
+  const handleResetCountries = useCallback(() => { setSelectedCountryCodes([]); setCountryProfiles([]); setShowCountryResults(false); }, []);
+  const handleTypeChange = useCallback((type: 'nodes' | 'countries') => { setCompareType(type); handleResetNodes(); handleResetCountries(); }, [handleResetNodes, handleResetCountries]);
+
+  const showNodeResults = compareType === 'nodes' && showResults;
+  const showCountryResultsView = compareType === 'countries' && showCountryResults;
+  const showSelector = !showNodeResults && !showCountryResultsView;
+
 
   return (
     <div className="space-y-6">
-      {!showResults ? (
+      {showSelector ? (
         <>
-          {/* Header */}
-          <div className="text-center py-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Node Compare</h1>
-            <p className="text-white/40 text-sm max-w-md mx-auto">
-              Select up to 4 nodes to compare their performance, uptime, and storage metrics side by side
-            </p>
-            
-            {/* Network Badge */}
-            <div className="inline-flex items-center gap-2 mt-4 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-              <div className={`w-2 h-2 rounded-full ${network === 'mainnet' ? 'bg-blue-400' : 'bg-emerald-400'}`} />
-              <span className="text-xs text-white/60 uppercase tracking-wider">{network}</span>
+          {/* Feature Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Node Comparison Card */}
+            <div 
+              onClick={() => handleTypeChange('nodes')}
+              className={`relative bg-black border p-5 sm:p-6 cursor-pointer transition-all duration-300 group ${
+                compareType === 'nodes' 
+                  ? 'border-emerald-500/50' 
+                  : 'border-white/10 hover:border-white/20'
+              }`}
+            >
+              <CornerAccents />
+              <div className="flex items-start gap-4">
+                <div className={`p-3 rounded-lg ${compareType === 'nodes' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-white/40'}`}>
+                  <NodesIcon />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-medium mb-1">Node Comparison</h3>
+                  <p className="text-white/40 text-xs leading-relaxed">
+                    Compare individual PNodes by credits, uptime, storage, and performance metrics
+                  </p>
+                </div>
+                {compareType === 'nodes' && (
+                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                )}
+              </div>
+              <div className="mt-4 pt-4 border-t border-white/5">
+                <div className="flex flex-wrap gap-2">
+                  {['Credits', 'Uptime', 'Storage', 'History'].map(tag => (
+                    <span key={tag} className="px-2 py-1 text-[10px] bg-white/5 text-white/50 rounded">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Country Comparison Card */}
+            <div 
+              onClick={() => handleTypeChange('countries')}
+              className={`relative bg-black border p-5 sm:p-6 cursor-pointer transition-all duration-300 group ${
+                compareType === 'countries' 
+                  ? 'border-purple-500/50' 
+                  : 'border-white/10 hover:border-white/20'
+              }`}
+            >
+              <CornerAccents />
+              <div className="flex items-start gap-4">
+                <div className={`p-3 rounded-lg ${compareType === 'countries' ? 'bg-purple-500/20 text-purple-400' : 'bg-white/5 text-white/40'}`}>
+                  <CountriesIcon />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-medium mb-1">Country Comparison</h3>
+                  <p className="text-white/40 text-xs leading-relaxed">
+                    Compare regions by node distribution, total credits, and network health
+                  </p>
+                </div>
+                {compareType === 'countries' && (
+                  <div className="w-2 h-2 rounded-full bg-purple-500" />
+                )}
+              </div>
+              <div className="mt-4 pt-4 border-t border-white/5">
+                <div className="flex flex-wrap gap-2">
+                  {['Nodes', 'Credits', 'Storage', 'Uptime'].map(tag => (
+                    <span key={tag} className="px-2 py-1 text-[10px] bg-white/5 text-white/50 rounded">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Selection Panel */}
-          <div className="bg-black/50 border border-white/10 rounded-2xl p-4 sm:p-6">
+          {/* Type Switcher */}
+          <CompareTypeSwitcher activeType={compareType} onTypeChange={handleTypeChange} />
+
+          {/* Selector Card */}
+          <div className="relative bg-black border border-white/10 p-4 sm:p-6">
+            <CornerAccents />
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-medium text-white">Select Nodes</h2>
-              {selectedPubkeys.length > 0 && (
-                <button
-                  onClick={() => setSelectedPubkeys([])}
-                  className="text-xs text-white/40 hover:text-white/60 transition-colors"
-                >
+              <h2 className="text-sm font-medium text-white">
+                {compareType === 'nodes' ? 'Select Nodes' : 'Select Countries'}
+              </h2>
+              {(compareType === 'nodes' ? selectedPubkeys.length : selectedCountryCodes.length) > 0 && (
+                <button onClick={compareType === 'nodes' ? () => setSelectedPubkeys([]) : () => setSelectedCountryCodes([])} className="text-xs text-white/40 hover:text-white/60 transition-colors">
                   Clear all
                 </button>
               )}
             </div>
             
-            <NodeSelector
-              nodes={allNodes}
-              selectedNodes={selectedPubkeys}
-              onToggle={handleToggleNode}
-              maxNodes={4}
-              isLoading={isLoading}
-            />
+            {compareType === 'nodes' ? (
+              <NodeSelector nodes={allNodes} selectedNodes={selectedPubkeys} onToggle={handleToggleNode} maxNodes={4} isLoading={isLoading} />
+            ) : (
+              <CountrySelector countries={countryStats} selectedCountries={selectedCountryCodes} onToggle={handleToggleCountry} maxCountries={4} isLoading={countryLoading} />
+            )}
           </div>
 
-          {/* Compare Button */}
           <CompareButton
-            count={selectedPubkeys.length}
+            count={compareType === 'nodes' ? selectedPubkeys.length : selectedCountryCodes.length}
             minRequired={2}
-            onClick={handleCompare}
+            onClick={compareType === 'nodes' ? handleCompareNodes : handleCompareCountries}
             isLoading={isComparing}
+            itemType={compareType}
           />
-
-          {/* Tips */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              { title: 'Multi-Select', desc: 'Click checkboxes to select multiple nodes at once' },
-              { title: 'Search', desc: 'Filter by IP address or Pod ID to find specific nodes' },
-              { title: 'Compare', desc: 'View detailed stats, charts, and historical data' },
-            ].map((tip, i) => (
-              <div key={i} className="p-3 bg-white/5 rounded-xl border border-white/5">
-                <div className="text-xs font-medium text-white/60 mb-1">{tip.title}</div>
-                <div className="text-[10px] text-white/30">{tip.desc}</div>
-              </div>
-            ))}
-          </div>
         </>
-      ) : (
-        <ResultsView nodes={nodeProfiles} onReset={handleReset} network={network} />
-      )}
+      ) : showNodeResults ? (
+        <ResultsView nodes={nodeProfiles} onReset={handleResetNodes} network={network} />
+      ) : showCountryResultsView ? (
+        <CountryResultsView countries={countryProfiles} onReset={handleResetCountries} network={network} />
+      ) : null}
     </div>
   );
 }

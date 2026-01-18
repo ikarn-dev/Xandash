@@ -8,6 +8,7 @@ import {
   CountryCharts,
   CountryNodesTable,
   CountryMap,
+  CountryVPSProviders,
   MapPinIcon
 } from './components';
 
@@ -104,6 +105,13 @@ export function CountryProfileClient({ countryCode }: CountryProfileClientProps)
         totalCredits={stats.totalCredits}
         avgStorageUsage={stats.avgStorageUsage}
         onlineNodes={stats.onlineNodes}
+      />
+
+      {/* VPS Providers */}
+      <CountryVPSProviders
+        nodes={nodes}
+        locations={locations}
+        isLoading={loading}
       />
 
       {/* Nodes Table */}

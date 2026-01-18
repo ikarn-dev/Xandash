@@ -8,6 +8,28 @@ interface PNodeUptimeCardProps {
   className?: string;
 }
 
+// CornerAccents component defined outside render
+const CornerAccents = () => (
+  <>
+    <div className="absolute top-0 left-0 w-4 h-4">
+      <div className="absolute top-0 left-0 w-2 h-px bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+      <div className="absolute top-0 left-0 w-px h-2 bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+    </div>
+    <div className="absolute top-0 right-0 w-4 h-4">
+      <div className="absolute top-0 right-0 w-2 h-px bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+      <div className="absolute top-0 right-0 w-px h-2 bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+    </div>
+    <div className="absolute bottom-0 left-0 w-4 h-4">
+      <div className="absolute bottom-0 left-0 w-2 h-px bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+      <div className="absolute bottom-0 left-0 w-px h-2 bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+    </div>
+    <div className="absolute bottom-0 right-0 w-4 h-4">
+      <div className="absolute bottom-0 right-0 w-2 h-px bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+      <div className="absolute bottom-0 right-0 w-px h-2 bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+    </div>
+  </>
+);
+
 export const PNodeUptimeCard: React.FC<PNodeUptimeCardProps> = ({ className = "" }) => {
   // Use shared nodes data context - single source of truth
   const { nodes, stats, isLoading } = useNodesData();
@@ -59,27 +81,6 @@ export const PNodeUptimeCard: React.FC<PNodeUptimeCardProps> = ({ className = ""
     return `${hours}h`;
   };
 
-  const CornerAccents = () => (
-    <>
-      <div className="absolute top-0 left-0 w-6 h-6">
-        <div className="absolute top-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        <div className="absolute top-0 left-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-      </div>
-      <div className="absolute top-0 right-0 w-6 h-6">
-        <div className="absolute top-0 right-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        <div className="absolute top-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-      </div>
-      <div className="absolute bottom-0 left-0 w-6 h-6">
-        <div className="absolute bottom-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        <div className="absolute bottom-0 left-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-      </div>
-      <div className="absolute bottom-0 right-0 w-6 h-6">
-        <div className="absolute bottom-0 right-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        <div className="absolute bottom-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-      </div>
-    </>
-  );
-
   if (isLoading && nodes.length === 0) {
     return (
       <div className={`relative bg-black border border-white/10 p-6 h-full group hover:border-white/20 transition-all duration-300 overflow-hidden ${className}`}>
@@ -99,7 +100,7 @@ export const PNodeUptimeCard: React.FC<PNodeUptimeCardProps> = ({ className = ""
 
       {/* Content */}
       <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
-        <div className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider mb-2 sm:mb-3">// AVG UPTIME</div>
+        <div className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider mb-2 sm:mb-3">{/* AVG UPTIME */}</div>
         <div className="text-blue-400 text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1">
           <AnimatedValue value={formatUptime(uptimeStats.averageUptime)} />
         </div>

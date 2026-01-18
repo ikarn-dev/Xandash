@@ -16,6 +16,7 @@ import { useNetwork } from '@/libs/context/network-context';
 import { LeaderboardTabs, type LeaderboardType } from './components/LeaderboardTabs';
 import { RankingTable, type NodeData } from './components/RankingTable';
 import { BookmarksTable } from './components/BookmarksTable';
+import { LeaderboardTrendSection } from './components/LeaderboardTrendSection';
 
 const BOOKMARKS_STORAGE_KEY = 'leaderboard_bookmarks';
 
@@ -276,6 +277,12 @@ function LeaderboardPageContent() {
         <LeaderboardDistributionCard />
         <LeaderboardTopPodCard />
       </div>
+
+      {/* Leaderboard Trends */}
+      <LeaderboardTrendSection 
+        data={mergedData}
+        isLoading={isLoading || nodesLoading}
+      />
 
       <SearchBox 
         onSearch={handleSearch}

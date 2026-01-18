@@ -66,6 +66,11 @@ export async function GET(request: NextRequest) {
       ...result,
       network,
       source: 'credits-api',
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        'CDN-Cache-Control': 'public, s-maxage=120'
+      }
     });
     
   } catch (error) {

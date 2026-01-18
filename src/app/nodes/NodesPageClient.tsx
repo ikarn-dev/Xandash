@@ -15,15 +15,16 @@ import { filterAndSortValidators } from '@/libs/server';
 import type { ValidatorData } from '@/libs/server';
 
 // Import extracted components and hooks
-import { 
-  NodesPageHeader, 
-  NodesStats, 
-  NodesFilters, 
-  ResponsiveNodesTable 
+import {
+  NodesPageHeader,
+  NodesStats,
+  NodesFilters,
+  ResponsiveNodesTable,
+  NodesTrendSection
 } from './components';
-import { 
-  useNodesFilters, 
-  useNodesLocation, 
+import {
+  useNodesFilters,
+  useNodesLocation,
   useNodesCredits,
 } from './hooks';
 import { CustomDropdown, CaptchaGate } from '@/components/ui';
@@ -31,7 +32,7 @@ import { CustomDropdown, CaptchaGate } from '@/components/ui';
 // Compare icon
 const CompareIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/>
+    <path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
   </svg>
 );
 
@@ -51,8 +52,8 @@ interface NodesPageClientProps {
   };
 }
 
-export function NodesPageClientRefactored({ 
-  allValidators: initialValidators, 
+export function NodesPageClientRefactored({
+  allValidators: initialValidators,
   initialPagination,
   initialStats
 }: NodesPageClientProps) {
@@ -69,7 +70,7 @@ export function NodesPageClientRefactored({
 
   // Use shared nodes data context - single source of truth for all components
   const { nodes: sharedNodes, geoData, stats: sharedStats, isLoading: isLoadingShared, dataFetchTime: sharedDataFetchTime } = useSharedNodesData();
-  
+
   // Transform shared nodes to ValidatorData format with duplicate detection
   const allValidators = useMemo((): ValidatorData[] => {
     // First pass: group nodes by pubkey to find duplicates
@@ -96,7 +97,7 @@ export function NodesPageClientRefactored({
     return sharedNodes.map((node, index) => {
       const pubkey = node.pubkey || `node-${index}`;
       const hasDuplicate = duplicatePubkeys.has(pubkey);
-      
+
       return {
         address: node.address || '',
         pubkey: pubkey,
@@ -138,13 +139,13 @@ export function NodesPageClientRefactored({
   const mergedLocations = useMemo(() => {
     if (isMainnet) {
       const merged: Record<string, any> = {};
-      
+
       for (const [ip, loc] of Object.entries(locations)) {
         if (loc) {
           merged[ip] = { ...loc };
         }
       }
-      
+
       // Then, enrich with geo data from Source B (has provider info)
       if (Object.keys(geoData).length > 0) {
         for (const [ip, data] of Object.entries(geoData)) {
@@ -170,7 +171,7 @@ export function NodesPageClientRefactored({
           }
         }
       }
-      
+
       return merged;
     }
     return locations;
@@ -179,7 +180,7 @@ export function NodesPageClientRefactored({
   // For both mainnet and devnet, use credits from useNodesCredits hook (fetches from pod-credits API)
   // The credits hook already handles network-specific API endpoints
   const mergedCredits = credits;
-  
+
   // Filters and pagination
   const {
     validators,
@@ -256,11 +257,11 @@ export function NodesPageClientRefactored({
     const ip = extractIPFromAddress(address);
     if (ip) {
       if (nodeId) setClickedNodeId(nodeId);
-      
-      toast.loading('Loading node profile...', { 
+
+      toast.loading('Loading node profile...', {
         id: 'node-profile-loading'
       });
-      
+
       navigateToProfile(ip);
       setTimeout(() => setClickedNodeId(null), 2000);
     }
@@ -292,25 +293,25 @@ export function NodesPageClientRefactored({
     );
 
     const headers = ['Location', 'IP', 'Country', 'City', 'Pubkey', 'Public', 'Storage (GB)', 'Usage %', 'Version', 'Uptime', 'Last Seen', 'Credits', 'Status'];
-    
+
     const rows = filteredData.map(validator => {
       const ip = extractIPFromAddress(validator.address || '');
       const location = locations[ip];
       const nodeCredits = validator.pubkey ? credits[validator.pubkey] : null;
-      
-      const storageGB = validator.storage_committed ? (validator.storage_committed / (1024**3)).toFixed(1) : '0';
+
+      const storageGB = validator.storage_committed ? (validator.storage_committed / (1024 ** 3)).toFixed(1) : '0';
       const usagePercent = validator.storage_usage_percent ? (validator.storage_usage_percent * 100).toFixed(4) : '0.0000';
       const uptimeHours = Math.floor(validator.uptime / 3600);
       const uptimeDays = Math.floor(uptimeHours / 24);
       const uptimeDisplay = uptimeDays > 0 ? `${uptimeDays}d` : `${uptimeHours}h`;
-      
+
       const timeDiff = dataFetchTime - validator.last_seen_timestamp;
       let lastSeenDisplay = '';
       if (timeDiff < 60) lastSeenDisplay = `${timeDiff}s`;
       else if (timeDiff < 3600) lastSeenDisplay = `${Math.floor(timeDiff / 60)}m`;
       else if (timeDiff < 86400) lastSeenDisplay = `${Math.floor(timeDiff / 3600)}h`;
       else lastSeenDisplay = `${Math.floor(timeDiff / 86400)}d`;
-      
+
       return [
         location ? `${location.city}, ${location.country}` : 'Unknown',
         ip || 'Unknown',
@@ -327,28 +328,28 @@ export function NodesPageClientRefactored({
         validator.status === 'online' ? 'ACTIVE' : validator.status === 'syncing' ? 'SYNCING' : 'OFFLINE'
       ];
     });
-    
+
     const csvContent = [headers, ...rows]
       .map(row => row.map(cell => `"${cell}"`).join(','))
       .join('\n');
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `pnodes-filtered-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
-    
+
     toast.success(`Exported ${filteredData.length} pNodes to CSV`);
   };
 
   const getSortIcon = (column: typeof sortBy) => {
     if (sortBy !== column) return null;
-    
+
     return (
       <span className="ml-1 text-blue-400">
         <svg className="w-3 h-3 inline" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M15 8l-5 5-5-5h10z"/>
+          <path d="M15 8l-5 5-5-5h10z" />
         </svg>
       </span>
     );
@@ -380,120 +381,123 @@ export function NodesPageClientRefactored({
       description="Please verify you're human to access the pNodes monitoring dashboard."
       cacheKey="nodes-dashboard"
     >
-      <div className="space-y-6 max-w-full overflow-hidden">
+      <div className="space-y-6 max-w-full">
         <NodesPageHeader />
         <NodesStats />
 
-      <div className="space-y-4">
-        <SearchBox 
-          onSearch={handleSearchChange}
-          placeholder="Search pNodes..."
-        />
+        <div className="overflow-visible">
+          <NodesTrendSection />
+        </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-          <NodesFilters
-            selectedFilters={selectedFilters}
-            versionFilter={versionFilter}
-            availableVersions={availableVersions}
-            quickStats={quickStats}
-            onFilterChange={handleFilterChange}
-            onVersionFilterChange={handleVersionFilterChange}
+        <div className="space-y-4">
+          <SearchBox
+            onSearch={handleSearchChange}
+            placeholder="Search pNodes..."
           />
 
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            <button
-              onClick={exportToCSV}
-              className="flex items-center space-x-1 sm:space-x-2 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm transition-colors"
-            >
-              <Download className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">Export CSV</span>
-            </button>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <NodesFilters
+              selectedFilters={selectedFilters}
+              versionFilter={versionFilter}
+              availableVersions={availableVersions}
+              quickStats={quickStats}
+              onFilterChange={handleFilterChange}
+              onVersionFilterChange={handleVersionFilterChange}
+            />
+
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              <button
+                onClick={exportToCSV}
+                className="flex items-center space-x-1 sm:space-x-2 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm transition-colors"
+              >
+                <Download className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Export CSV</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Loading state for network switch */}
-      {(isLoadingShared && allValidators.length === 0) ? (
-        <ValidatorTableSkeleton count={10} />
-      ) : (
-        <>
-          {/* Responsive Table */}
-          <div>
-            <ResponsiveNodesTable
-              validators={validators}
-              locations={mergedLocations}
-              credits={mergedCredits}
-              dataFetchTime={dataFetchTime}
-              clickedNodeId={clickedNodeId}
-              shouldAnimate={shouldAnimate}
-              onNavigate={navigateToNodeProfile}
-              onPrefetch={prefetchNodeProfile}
-              onCopy={copyToClipboard}
-              extractIP={extractIPFromAddress}
-              formatLocation={formatLocation}
-              getCountryFlagUrl={getCountryFlagUrl}
-              getSortIcon={(column: string) => getSortIcon(column as any)}
-              handleSort={(column: string) => handleSort(column as any)}
-              sortBy={sortBy}
-              selectedForCompare={selectedForCompare}
-              onToggleCompare={handleToggleCompare}
-              network={network}
-            />
-          </div>
-
-          {/* Floating Compare Button - rendered via portal to escape overflow:hidden */}
-          {selectedForCompare.length > 0 && typeof document !== 'undefined' && createPortal(
-            <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2 sm:gap-3 bg-black/95 border border-emerald-500/30 rounded-full px-4 sm:px-5 py-2.5 sm:py-3 shadow-lg shadow-emerald-500/20 backdrop-blur-xl safe-area-bottom">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="flex -space-x-1.5">
-                  {selectedForCompare.slice(0, 4).map((_, i) => (
-                    <div 
-                      key={i} 
-                      className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-[10px] sm:text-xs text-emerald-400 font-bold"
-                    >
-                      {i + 1}
-                    </div>
-                  ))}
-                </div>
-                <span className="text-white/60 text-sm">{selectedForCompare.length} selected</span>
-              </div>
-              <div className="w-px h-6 sm:h-7 bg-white/10" />
-              <button
-                onClick={handleClearCompare}
-                className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-colors"
-              >
-                Clear
-              </button>
-              <button
-                onClick={handleCompareSelected}
-                disabled={selectedForCompare.length < 2}
-                className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm font-medium transition-all ${
-                  selectedForCompare.length >= 2
-                    ? 'bg-emerald-500 text-white hover:bg-emerald-400'
-                    : 'bg-white/10 text-white/40 cursor-not-allowed'
-                }`}
-              >
-                <CompareIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span>Compare</span>
-              </button>
-            </div>,
-            document.body
-          )}
-
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex justify-center">
-              <Pagination
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                hasNext={pagination.hasNext}
-                hasPrev={pagination.hasPrev}
-                onPageChange={handlePageChange}
+        {/* Loading state for network switch */}
+        {(isLoadingShared && allValidators.length === 0) ? (
+          <ValidatorTableSkeleton count={10} />
+        ) : (
+          <>
+            {/* Responsive Table */}
+            <div>
+              <ResponsiveNodesTable
+                validators={validators}
+                locations={mergedLocations}
+                credits={mergedCredits}
+                dataFetchTime={dataFetchTime}
+                clickedNodeId={clickedNodeId}
+                shouldAnimate={shouldAnimate}
+                onNavigate={navigateToNodeProfile}
+                onPrefetch={prefetchNodeProfile}
+                onCopy={copyToClipboard}
+                extractIP={extractIPFromAddress}
+                formatLocation={formatLocation}
+                getCountryFlagUrl={getCountryFlagUrl}
+                getSortIcon={(column: string) => getSortIcon(column as any)}
+                handleSort={(column: string) => handleSort(column as any)}
+                sortBy={sortBy}
+                selectedForCompare={selectedForCompare}
+                onToggleCompare={handleToggleCompare}
+                network={network}
               />
             </div>
-          )}
-        </>
-      )}
+
+            {/* Floating Compare Button - rendered via portal to escape overflow:hidden */}
+            {selectedForCompare.length > 0 && typeof document !== 'undefined' && createPortal(
+              <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2 sm:gap-3 bg-black/95 border border-emerald-500/30 rounded-full px-4 sm:px-5 py-2.5 sm:py-3 shadow-lg shadow-emerald-500/20 backdrop-blur-xl safe-area-bottom">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="flex -space-x-1.5">
+                    {selectedForCompare.slice(0, 4).map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-[10px] sm:text-xs text-emerald-400 font-bold"
+                      >
+                        {i + 1}
+                      </div>
+                    ))}
+                  </div>
+                  <span className="text-white/60 text-sm">{selectedForCompare.length} selected</span>
+                </div>
+                <div className="w-px h-6 sm:h-7 bg-white/10" />
+                <button
+                  onClick={handleClearCompare}
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={handleCompareSelected}
+                  disabled={selectedForCompare.length < 2}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm font-medium transition-all ${selectedForCompare.length >= 2
+                    ? 'bg-emerald-500 text-white hover:bg-emerald-400'
+                    : 'bg-white/10 text-white/40 cursor-not-allowed'
+                    }`}
+                >
+                  <CompareIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span>Compare</span>
+                </button>
+              </div>,
+              document.body
+            )}
+
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <div className="flex justify-center">
+                <Pagination
+                  currentPage={pagination.currentPage}
+                  totalPages={pagination.totalPages}
+                  hasNext={pagination.hasNext}
+                  hasPrev={pagination.hasPrev}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            )}
+          </>
+        )}
       </div>
     </CaptchaGate>
   );

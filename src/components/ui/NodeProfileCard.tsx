@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { CopyBtn } from './CopyBtn';
 
 interface NodeData {
@@ -98,9 +98,9 @@ const PublicIcon = () => (
 );
 
 // Animated bar chart component
-const AnimatedBar: React.FC<{ 
-  value: number; 
-  max: number; 
+const AnimatedBar: React.FC<{
+  value: number;
+  max: number;
   color: string;
   delay?: number;
 }> = ({ value, max, color, delay = 0 }) => {
@@ -114,7 +114,7 @@ const AnimatedBar: React.FC<{
 
   return (
     <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-      <div 
+      <div
         className="h-full rounded-full transition-all duration-1000 ease-out"
         style={{ width: `${width}%`, backgroundColor: color }}
       />
@@ -128,7 +128,7 @@ const MiniSparkline: React.FC<{ sent: number; received: number; color: string }>
   const total = sent + received;
   const height = 24;
   const width = 60;
-  
+
   // Create a simple wave pattern
   const points = [];
   for (let i = 0; i <= 10; i++) {
@@ -152,10 +152,10 @@ const MiniSparkline: React.FC<{ sent: number; received: number; color: string }>
   );
 };
 
-export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({ 
-  node, 
+export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
+  node,
   onCopy,
-  className = "" 
+  className = ""
 }) => {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -168,7 +168,7 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    
+
     if (days > 0) return `${days}d ${hours}h ${minutes}m`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
@@ -214,7 +214,7 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
   };
 
   // Determine online status from last_seen_timestamp
-  const getOnlineStatus = () => {
+  const getOnlineStatus = useMemo(() => {
     if (node.last_seen_timestamp) {
       const now = Math.floor(Date.now() / 1000);
       const timeDiff = now - node.last_seen_timestamp;
@@ -223,22 +223,22 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
       return 'offline';
     }
     return node.status || 'offline';
-  };
+  }, [node.last_seen_timestamp, node.status]);
 
-  const actualStatus = getOnlineStatus();
+  const actualStatus = getOnlineStatus;
 
   // Get actual storage percentage from API data
   // storage_usage_percent from API is a decimal (e.g., 0.0001 = 0.01%)
-  const storagePercent = node.storage_usage_percent 
+  const storagePercent = node.storage_usage_percent
     ? node.storage_usage_percent * 100 // Convert decimal to percentage
-    : (node.storage_committed && node.storage_used 
-        ? (node.storage_used / node.storage_committed) * 100 
-        : 0);
+    : (node.storage_committed && node.storage_used
+      ? (node.storage_used / node.storage_committed) * 100
+      : 0);
 
   // Calculate storage used from percentage if not directly available
-  const storageUsed = node.storage_used ?? 
-    (node.storage_committed && node.storage_usage_percent 
-      ? node.storage_committed * node.storage_usage_percent 
+  const storageUsed = node.storage_used ??
+    (node.storage_committed && node.storage_usage_percent
+      ? node.storage_committed * node.storage_usage_percent
       : 0);
 
   // Check if we have network data available
@@ -251,10 +251,9 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
   const maxPackets = Math.max(packetsSent, packetsReceived, 1);
 
   return (
-    <div 
-      className={`relative bg-black/40 backdrop-blur-sm border border-white/20 rounded-xl overflow-hidden transition-all duration-500 ${
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-      } ${className}`}
+    <div
+      className={`relative bg-black/40 backdrop-blur-sm border border-white/20 rounded-xl overflow-hidden transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        } ${className}`}
     >
       {/* Corner accents - WHITE */}
       <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-white/50 rounded-tl-xl" />
@@ -266,7 +265,7 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
         {/* Header - Only show IP and status indicator, no "Unknown" text */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <div 
+            <div
               className="w-3 h-3 rounded-full animate-pulse"
               style={{ backgroundColor: getStatusColor(actualStatus) }}
             />
@@ -304,7 +303,7 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
             <div className="text-white/50 text-[10px]">Uptime</div>
             <div className="text-white text-xs font-bold">{formatUptime(node.uptime || 0)}</div>
           </div>
-          
+
           <div className="bg-white/5 rounded-lg p-2 text-center group hover:bg-purple-500/10 transition-colors">
             <div className="flex justify-center mb-1 text-purple-400 group-hover:scale-110 transition-transform">
               <StorageIcon />
@@ -312,7 +311,7 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
             <div className="text-white/50 text-[10px]">Storage</div>
             <div className="text-white text-xs font-bold">{formatBytes(node.storage_committed || 0)}</div>
           </div>
-          
+
           <div className="bg-white/5 rounded-lg p-2 text-center group hover:bg-green-500/10 transition-colors">
             <div className="flex justify-center mb-1 text-green-400 group-hover:scale-110 transition-transform">
               <VersionIcon />
@@ -320,7 +319,7 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
             <div className="text-white/50 text-[10px]">Version</div>
             <div className="text-white text-xs font-bold">{node.version || 'N/A'}</div>
           </div>
-          
+
           <div className="bg-white/5 rounded-lg p-2 text-center group hover:bg-orange-500/10 transition-colors">
             <div className="flex justify-center mb-1 text-orange-400 group-hover:scale-110 transition-transform">
               <PortIcon />
@@ -343,10 +342,10 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
           </div>
           <div className="flex items-center space-x-3">
             <div className="flex-1">
-              <AnimatedBar 
-                value={storagePercent} 
-                max={100} 
-                color="#a855f7" 
+              <AnimatedBar
+                value={storagePercent}
+                max={100}
+                color="#a855f7"
                 delay={100}
               />
             </div>

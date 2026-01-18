@@ -6,30 +6,86 @@ import { useEndpointTester } from '@/libs/hooks/useEndpointTester';
 import { EndpointCategory, TestResult, EndpointStats } from '../components/types';
 
 const COOLDOWN_DURATION = 60000; // 1 minute
+const COOLDOWNS_STORAGE_KEY = 'endpoint-test-cooldowns';
+
+// Helper to load cooldowns from localStorage
+function loadCooldownsFromStorage(): Record<string, number> {
+  if (typeof window === 'undefined') return {};
+
+  try {
+    const stored = localStorage.getItem(COOLDOWNS_STORAGE_KEY);
+    if (!stored) return {};
+
+    const parsed = JSON.parse(stored) as Record<string, number>;
+    const now = Date.now();
+
+    // Only return cooldowns that haven't expired yet
+    const validCooldowns: Record<string, number> = {};
+    Object.entries(parsed).forEach(([method, endTime]) => {
+      if (endTime > now) {
+        validCooldowns[method] = endTime;
+      }
+    });
+
+    return validCooldowns;
+  } catch {
+    return {};
+  }
+}
+
+// Helper to save cooldowns to localStorage
+function saveCooldownsToStorage(cooldowns: Record<string, number>): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    // Only save cooldowns that haven't expired
+    const now = Date.now();
+    const validCooldowns: Record<string, number> = {};
+    Object.entries(cooldowns).forEach(([method, endTime]) => {
+      if (endTime > now) {
+        validCooldowns[method] = endTime;
+      }
+    });
+
+    if (Object.keys(validCooldowns).length > 0) {
+      localStorage.setItem(COOLDOWNS_STORAGE_KEY, JSON.stringify(validCooldowns));
+    } else {
+      localStorage.removeItem(COOLDOWNS_STORAGE_KEY);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 export function useEndpointTests(endpoints: EndpointCategory[]) {
   const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
   const [testing, setTesting] = useState(false);
   const [individualTesting, setIndividualTesting] = useState<Record<string, boolean>>({});
-  const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
+  // Initialize cooldowns from localStorage
+  const [cooldowns, setCooldowns] = useState<Record<string, number>>(() => loadCooldownsFromStorage());
   const [, forceUpdate] = useState(0);
   const [copyingStates, setCopyingStates] = useState<Record<string, boolean>>({});
   const [expandedResults, setExpandedResults] = useState<Record<string, boolean>>({});
   const [isPending, startTransition] = useTransition();
   const { testSingle, isSupported: workerSupported } = useEndpointTester();
 
+  // Save cooldowns to localStorage whenever they change
+  useEffect(() => {
+    saveCooldownsToStorage(cooldowns);
+  }, [cooldowns]);
+
   // Update cooldown display every second
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
       let hasActiveCooldowns = false;
-      
+
       Object.values(cooldowns).forEach(endTime => {
         if (endTime > now) hasActiveCooldowns = true;
       });
-      
+
       if (hasActiveCooldowns) forceUpdate(n => n + 1);
-      
+
       setCooldowns(prev => {
         const updated: Record<string, number> = {};
         Object.entries(prev).forEach(([method, endTime]) => {
@@ -113,7 +169,7 @@ export function useEndpointTests(endpoints: EndpointCategory[]) {
       };
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      const errorMessage = error instanceof Error 
+      const errorMessage = error instanceof Error
         ? (error.name === 'AbortError' ? 'Request timeout (10s)' : error.message)
         : 'Unknown error';
       return { success: false, error: errorMessage, timestamp: new Date().toISOString(), responseTime };
@@ -127,14 +183,14 @@ export function useEndpointTests(endpoints: EndpointCategory[]) {
       toast.error(`${method} is on cooldown. Wait ${remaining}s`);
       return;
     }
-    
+
     if (individualTesting[method] || testing) return;
-    
+
     setIndividualTesting(prev => ({ ...prev, [method]: true }));
-    
+
     try {
       let result: TestResult;
-      
+
       if (workerSupported) {
         const testType: 'rpc' | 'api' = method === 'pod-credits' ? 'api' : 'rpc';
         result = await testSingle({
@@ -144,7 +200,7 @@ export function useEndpointTests(endpoints: EndpointCategory[]) {
           endpoint: testType !== 'rpc' ? endpoint : undefined,
         });
       } else {
-        result = method === 'pod-credits' 
+        result = method === 'pod-credits'
           ? await testApiEndpoint(method, endpoint)
           : await testRpcMethod(method);
       }
@@ -170,24 +226,24 @@ export function useEndpointTests(endpoints: EndpointCategory[]) {
 
   const testAllMethods = useCallback(async () => {
     if (testing) return;
-    
+
     const now = Date.now();
     const availableMethods = endpoints.flatMap(cat => cat.methods).filter(m => {
       const endTime = cooldowns[m.name];
       return !endTime || endTime <= now;
     });
-    
+
     if (availableMethods.length === 0) {
       toast.error('All endpoints are on cooldown');
       return;
     }
-    
+
     setTesting(true);
     toast.info(`Testing ${availableMethods.length} available endpoints...`);
-    
+
     try {
       const results: Record<string, TestResult> = {};
-      
+
       for (const method of availableMethods) {
         const result = method.name === 'pod-credits'
           ? await testApiEndpoint(method.name, method.endpoint)
@@ -195,14 +251,14 @@ export function useEndpointTests(endpoints: EndpointCategory[]) {
         results[method.name] = result;
         setCooldowns(prev => ({ ...prev, [method.name]: Date.now() + COOLDOWN_DURATION }));
       }
-      
+
       startTransition(() => {
         setTestResults(prev => ({ ...prev, ...results }));
       });
 
       const successful = Object.values(results).filter(r => r.success).length;
       const failed = Object.values(results).filter(r => !r.success).length;
-      
+
       if (failed === 0) {
         toast.success(`All ${successful} tests passed!`);
       } else {
@@ -260,7 +316,7 @@ export function useEndpointTests(endpoints: EndpointCategory[]) {
       totalMethods: endpoints.flatMap(cat => cat.methods).length,
       successfulTests: results.filter(r => r.success).length,
       failedTests: results.filter(r => !r.success).length,
-      avgResponseTime: results.length > 0 
+      avgResponseTime: results.length > 0
         ? Math.round(results.reduce((sum, r) => sum + (r.responseTime || 0), 0) / results.length)
         : 0
     };

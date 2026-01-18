@@ -249,9 +249,33 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
             uptime: node.uptime || 0,
             last_seen_timestamp: node.last_seen_timestamp || 0,
             status,
+            country: node.country,
+            country_code: node.country_code,
+            provider: node.provider,
           };
         });
         setNodes(fetchedNodes);
+        
+        // Fetch geo data for devnet nodes that don't have it
+        const nodesWithoutGeo = fetchedNodes.filter(n => !n.country || !n.country_code);
+        if (nodesWithoutGeo.length > 0) {
+          const ips = nodesWithoutGeo.map(n => n.address.split(':')[0]).filter(Boolean);
+          const uniqueIps = [...new Set(ips)];
+          
+          // Fetch geo data in background (don't block)
+          fetch('/api/geolocation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ips: uniqueIps }),
+          })
+            .then(res => res.ok ? res.json() : {})
+            .then(geoResults => {
+              if (mountedRef.current && Object.keys(geoResults).length > 0) {
+                setGeoData(prev => ({ ...prev, ...geoResults }));
+              }
+            })
+            .catch(() => {});
+        }
       }
       
       setDataFetchTime(serverTime);
@@ -346,7 +370,7 @@ export function useNodesData() {
       stats: { total: 0, online: 0, syncing: 0, offline: 0, public: 0, onlinePercentage: 0 },
       isLoading: true,
       lastFetchTime: 0,
-      dataFetchTime: Math.floor(Date.now() / 1000),
+      dataFetchTime: 0, // Will be set when data is actually fetched
       source: '',
       refreshData: async () => {},
     };

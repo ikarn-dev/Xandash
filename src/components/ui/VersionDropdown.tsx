@@ -48,7 +48,7 @@ export function CustomDropdown({
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
-        buttonRef.current && 
+        buttonRef.current &&
         !buttonRef.current.contains(event.target as Node) &&
         dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node)
@@ -61,11 +61,15 @@ export function CustomDropdown({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Close dropdown on scroll
+  // Close dropdown on scroll (but not when scrolling inside the dropdown)
   useEffect(() => {
     if (!isOpen) return;
 
-    function handleScroll() {
+    function handleScroll(event: Event) {
+      // Don't close if scrolling inside the dropdown
+      if (dropdownRef.current && dropdownRef.current.contains(event.target as Node)) {
+        return;
+      }
       setIsOpen(false);
     }
 
@@ -119,16 +123,16 @@ export function CustomDropdown({
         )}
       >
         <span>{displayValue}</span>
-        <ChevronDown 
+        <ChevronDown
           className={cn(
             'w-3 h-3 transition-transform',
             isOpen && 'rotate-180'
-          )} 
+          )}
         />
       </button>
 
       {isOpen && typeof document !== 'undefined' && createPortal(
-        <div 
+        <div
           ref={dropdownRef}
           className="fixed bg-black border border-white/20 rounded-lg shadow-xl backdrop-blur-sm max-w-[200px]"
           style={{

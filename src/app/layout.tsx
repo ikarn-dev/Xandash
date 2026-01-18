@@ -32,8 +32,8 @@ export const metadata: Metadata = {
     default: "XanDash - Xandeum Dashboard | pNode Monitor & Network Analytics",
     template: "%s | XanDash"
   },
-  description: "XanDash is the official Xandeum dashboard for monitoring pNodes. Track node performance, uptime, storage, credits, and network statistics in real-time with AI-powered analytics.",
-  keywords: ["xandeum dashboard", "pnode dashboard", "xandeum pnode dashboard", "xandash", "XanDash", "Xandeum", "pNodes", "pNode monitor", "pNode tracker", "Xandeum network", "Xandeum monitor", "blockchain dashboard", "node tracker", "XAND token", "STOINC"],
+  description: "XanDash is a comprehensive Xandeum dashboard for monitoring pNodes. Track node performance, uptime, storage, credits, and network statistics in real-time with AI-powered analytics.",
+  keywords: ["xandeum dashboard", "xandash dashboard", "xandeum pnodes dashboard", "pnode dashboard", "xandeum pnode dashboard", "xandash", "xandash pnode", "xandeum pnodes", "XanDash", "Xandeum", "Xandeum network", "Xandeum network dashboard", "pNodes", "pNode monitor", "pNode tracker", "Xandeum monitor", "Xandeum analytics", "blockchain dashboard", "node tracker", "XAND token", "STOINC", "xandeum node status", "pnode stats", "xandeum mainnet", "xandeum devnet"],
   applicationName: "XanDash",
   authors: [{ name: "XanDash", url: "https://www.xandash.online" }],
   generator: "Next.js",
@@ -80,7 +80,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "XanDash - Xandeum Dashboard | pNode Monitor",
-    description: "XanDash is the official Xandeum dashboard. Monitor pNodes in real-time, track performance, uptime, storage, and credits with AI-powered analytics.",
+    description: "XanDash is a comprehensive Xandeum dashboard. Monitor pNodes in real-time, track performance, uptime, storage, and credits with AI-powered analytics.",
     type: "website",
     locale: "en_US",
     url: "https://www.xandash.online",
@@ -129,7 +129,7 @@ export default function RootLayout({
         <link rel="icon" href="/icon.png" type="image/png" sizes="32x32" />
         <link rel="icon" href="/icon.png" type="image/png" sizes="192x192" />
         <link rel="apple-touch-icon" href="/icon.png" sizes="180x180" />
-        
+
         <link rel="manifest" href="/manifest.json" />
         <link rel="canonical" href="https://www.xandash.online" />
         <meta name="theme-color" content="#000000" />
@@ -144,42 +144,44 @@ export default function RootLayout({
         <meta property="og:type" content="website" />
         <meta property="og:locale" content="en_US" />
         <meta name="format-detection" content="telephone=no" />
-        
+
         {/* Preconnect to critical origins - reduces connection latency */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://challenges.cloudflare.com" />
         <link rel="preconnect" href="https://www.xandash.online" />
-        
+
         {/* DNS prefetch for API endpoints - reduces DNS lookup time */}
         <link rel="dns-prefetch" href="https://api.coingecko.com" />
         <link rel="dns-prefetch" href="https://stats.xandeum.network" />
         <link rel="dns-prefetch" href="https://flagcdn.com" />
         <link rel="dns-prefetch" href="https://podcredits.xandeum.network" />
         <link rel="dns-prefetch" href="https://ipwho.is" />
-        
+
         {/* Leaflet Map - preconnect to tile server and load CSS */}
         <link rel="preconnect" href="https://a.basemaps.cartocdn.com" />
         <link rel="preconnect" href="https://b.basemaps.cartocdn.com" />
         <link rel="preconnect" href="https://c.basemaps.cartocdn.com" />
         <link rel="preconnect" href="https://d.basemaps.cartocdn.com" />
-        <link 
-          rel="stylesheet" 
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+        <link
+          rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossOrigin=""
         />
-        
+
         {/* Critical CSS inline - prevents render blocking (620ms savings) */}
-        <style dangerouslySetInnerHTML={{ __html: `
+        <style dangerouslySetInnerHTML={{
+          __html: `
           html,body{background:#000!important;margin:0;padding:0;min-height:100vh}
           .gradient-bg{background:radial-gradient(ellipse at center top,#2a2a2a 0%,#222 15%,#1a1a1a 35%,#111 60%,#0a0a0a 80%,#000 100%);background-attachment:fixed;min-height:100vh}
           .dark{color-scheme:dark}
           html,body,div,main,section{-ms-overflow-style:none;scrollbar-width:none}
           html::-webkit-scrollbar,body::-webkit-scrollbar,div::-webkit-scrollbar,main::-webkit-scrollbar,section::-webkit-scrollbar{display:none}
           .leaflet-container,.leaflet-container *{-ms-overflow-style:auto;scrollbar-width:auto}
-        `.replace(/\s+/g, '') }} />
-        
+        `.replace(/\s+/g, '')
+        }} />
+
         <StructuredData />
       </head>
       <body
@@ -197,8 +199,8 @@ export default function RootLayout({
             </NetworkProvider>
           </RPCProvider>
         </QueryProvider>
-        <Toaster 
-          theme="dark" 
+        <Toaster
+          theme="dark"
           position="bottom-right"
           duration={2000}
           toastOptions={{

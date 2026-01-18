@@ -1,3 +1,4 @@
 export * from './CountryCard';
 export * from './CountryCardSkeleton';
 export * from './NetworkMap';
+export * from './NetworkTrendSection';

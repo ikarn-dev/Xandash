@@ -39,23 +39,27 @@ export function CaptchaGate({ children, title, description, cacheKey }: CaptchaG
   const sessionKey = cacheKey ? `${SESSION_KEY_PREFIX}${cacheKey}` : null;
 
   useEffect(() => {
-    setMounted(true);
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        setIsLocalhost(true);
-        setIsVerified(true);
-        return;
-      }
-      
-      // Check session storage for cached verification (if cacheKey is provided)
-      if (sessionKey) {
-        const verified = sessionStorage.getItem(sessionKey);
-        if (verified === 'true') {
+    // Use setTimeout to avoid setState in effect
+    const timer = setTimeout(() => {
+      setMounted(true);
+      if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+          setIsLocalhost(true);
           setIsVerified(true);
+          return;
+        }
+        
+        // Check session storage for cached verification (if cacheKey is provided)
+        if (sessionKey) {
+          const verified = sessionStorage.getItem(sessionKey);
+          if (verified === 'true') {
+            setIsVerified(true);
+          }
         }
       }
-    }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [sessionKey]);
 
   const handleVerify = useCallback(async (token: string) => {

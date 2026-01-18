@@ -9,30 +9,31 @@ interface PNodeOnlineCardProps {
   className?: string;
 }
 
+// CornerAccents component defined outside render
+const CornerAccents = () => (
+  <>
+    <div className="absolute top-0 left-0 w-4 h-4">
+      <div className="absolute top-0 left-0 w-2 h-px bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+      <div className="absolute top-0 left-0 w-px h-2 bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+    </div>
+    <div className="absolute top-0 right-0 w-4 h-4">
+      <div className="absolute top-0 right-0 w-2 h-px bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+      <div className="absolute top-0 right-0 w-px h-2 bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+    </div>
+    <div className="absolute bottom-0 left-0 w-4 h-4">
+      <div className="absolute bottom-0 left-0 w-2 h-px bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+      <div className="absolute bottom-0 left-0 w-px h-2 bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+    </div>
+    <div className="absolute bottom-0 right-0 w-4 h-4">
+      <div className="absolute bottom-0 right-0 w-2 h-px bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+      <div className="absolute bottom-0 right-0 w-px h-2 bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+    </div>
+  </>
+);
+
 export const PNodeOnlineCard: React.FC<PNodeOnlineCardProps> = ({ className = "" }) => {
   // Use shared nodes data context - single source of truth
   const { stats, isLoading } = useNodesData();
-
-  const CornerAccents = () => (
-    <>
-      <div className="absolute top-0 left-0 w-6 h-6">
-        <div className="absolute top-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        <div className="absolute top-0 left-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-      </div>
-      <div className="absolute top-0 right-0 w-6 h-6">
-        <div className="absolute top-0 right-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        <div className="absolute top-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-      </div>
-      <div className="absolute bottom-0 left-0 w-6 h-6">
-        <div className="absolute bottom-0 left-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        <div className="absolute bottom-0 left-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-      </div>
-      <div className="absolute bottom-0 right-0 w-6 h-6">
-        <div className="absolute bottom-0 right-0 w-3 h-0.5 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-        <div className="absolute bottom-0 right-0 w-0.5 h-3 bg-white/30 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"></div>
-      </div>
-    </>
-  );
 
   if (isLoading && stats.total === 0) {
     return (
@@ -57,7 +58,7 @@ export const PNodeOnlineCard: React.FC<PNodeOnlineCardProps> = ({ className = ""
 
       {/* Content */}
       <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
-        <div className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider mb-2 sm:mb-3">// ONLINE RATE</div>
+        <div className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider mb-2 sm:mb-3">{/* ONLINE RATE */}</div>
         <div className="text-green-400 text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1">
           <AnimatedValue value={`${stats.onlinePercentage.toFixed(1)}%`} />
         </div>

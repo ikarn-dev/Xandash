@@ -52,16 +52,16 @@ const nextConfig: NextConfig = {
   // Performance optimizations
   compress: true,
   poweredByHeader: false,
-  
+
   // Trailing slash handling for consistent URLs
   trailingSlash: false,
-  
+
   // Strict mode for better debugging
   reactStrictMode: true,
-  
+
   // Enable Turbopack (Next.js 16 default) - empty config to acknowledge webpack coexistence
   turbopack: {},
-  
+
   // CDN and caching headers
   async headers() {
     return [
@@ -76,7 +76,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=0, s-maxage=60, stale-while-revalidate=300',
+            value: 'public, max-age=0, s-maxage=60, stale-while-revalidate=120',
           },
         ],
       },
@@ -85,7 +85,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, s-maxage=30, stale-while-revalidate=300',
+            value: 'public, s-maxage=30, stale-while-revalidate=120',
           },
           {
             key: 'CDN-Cache-Control',
@@ -161,7 +161,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  
+
   // Experimental features for better performance
   experimental: {
     // CSS optimization
@@ -170,16 +170,18 @@ const nextConfig: NextConfig = {
     optimizePackageImports: [
       'lucide-react',
       '@tanstack/react-query',
+      '@tanstack/react-query-devtools',
       'recharts',
       'sonner',
       'gsap',
-      'react-leaflet',
       'leaflet',
       'clsx',
       'tailwind-merge',
+      'class-variance-authority',
+      '@lottiefiles/dotlottie-react',
     ],
   },
-  
+
   // Image optimization
   images: {
     formats: ['image/avif', 'image/webp'],
@@ -187,14 +189,14 @@ const nextConfig: NextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
-  
+
   // Modular imports for smaller bundles
   modularizeImports: {
     'lucide-react': {
       transform: 'lucide-react/dist/esm/icons/{{kebabCase member}}',
     },
   },
-  
+
   // Webpack configuration for optimization
   webpack: (config, { dev, isServer }) => {
     // Production optimizations only
@@ -231,7 +233,7 @@ const nextConfig: NextConfig = {
             },
             // Map library (heavy)
             maps: {
-              test: /[\\/]node_modules[\\/](leaflet|react-leaflet)[\\/]/,
+              test: /[\\/]node_modules[\\/](leaflet)[\\/]/,
               name: 'maps',
               chunks: 'all',
               priority: 25,
@@ -246,7 +248,7 @@ const nextConfig: NextConfig = {
         },
       };
     }
-    
+
     return config;
   },
 };

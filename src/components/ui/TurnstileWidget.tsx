@@ -43,7 +43,11 @@ export function TurnstileWidget({
     }
 
     window.onTurnstileLoad = () => setIsLoaded(true);
-    if (window.turnstile) setIsLoaded(true);
+    // Use setTimeout to avoid setState in effect
+    if (window.turnstile) {
+      const timer = setTimeout(() => setIsLoaded(true), 0);
+      return () => clearTimeout(timer);
+    }
 
     return () => {
       if (widgetIdRef.current && window.turnstile) {

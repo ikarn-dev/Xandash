@@ -11,6 +11,10 @@ export { PNodeOnlineCard } from './PNodeOnlineCard';
 export { PNodeStorageCard } from './PNodeStorageCard';
 export { PNodeUptimeCard } from './PNodeUptimeCard';
 export { PNodeVersionCard } from './PNodeVersionCard';
+export { VersionDistributionCard } from './VersionDistributionCard';
+export { RegionDistributionCard } from './RegionDistributionCard';
+
+export { GovernanceStatsCard, GovernanceStatsCardSkeleton } from './GovernanceStatsCard';
 
 export { CombinedTokenCard } from './CombinedTokenCard';
 

@@ -6,6 +6,9 @@ import type { CountryDetailedStats } from '../hooks/useNetworkPageData';
 
 interface CountryCardProps {
   country: CountryDetailedStats;
+  isSelected?: boolean;
+  canSelect?: boolean;
+  onToggleCompare?: (countryCode: string) => void;
 }
 
 const formatStorage = (bytes: number) => {
@@ -23,23 +26,54 @@ const formatUptime = (seconds: number) => {
   return `${hours}h`;
 };
 
-export function CountryCard({ country }: CountryCardProps) {
+export function CountryCard({ country, isSelected = false, canSelect = true, onToggleCompare }: CountryCardProps) {
   const router = useRouter();
   const onlinePercent = country.totalNodes > 0 ? (country.onlineNodes / country.totalNodes) * 100 : 0;
   const totalBars = 45;
   const greenBars = Math.round((country.onlineNodes / country.totalNodes) * totalBars);
   const yellowBars = Math.round((country.syncingNodes / country.totalNodes) * totalBars);
 
+  const profileUrl = `/country/${encodeURIComponent(country.country_code ? country.country_code.toLowerCase() : 'unknown')}`;
+
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onToggleCompare && country.country_code) {
+      onToggleCompare(country.country_code);
+    }
+  };
+
   return (
     <div 
-      onClick={() => router.push(`/country/${encodeURIComponent(country.country_code.toLowerCase())}`)}
-      className="relative bg-black border border-white/10 p-3 sm:p-4 md:p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden cursor-pointer"
+      onClick={() => router.push(profileUrl)}
+      className={`relative bg-black border p-3 sm:p-4 md:p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden cursor-pointer ${
+        isSelected ? 'border-purple-500/50 bg-purple-500/5' : 'border-white/10'
+      }`}
     >
       <CornerAccents />
 
       {/* Header */}
       <div className="flex items-center justify-between mb-3 sm:mb-4 relative z-10">
         <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* Compare Checkbox */}
+          {onToggleCompare && (
+            <button
+              onClick={handleCheckboxClick}
+              disabled={!canSelect && !isSelected}
+              className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all flex-shrink-0 ${
+                isSelected 
+                  ? 'border-purple-500 bg-purple-500' 
+                  : canSelect 
+                    ? 'border-white/20 hover:border-purple-500/50' 
+                    : 'border-white/10 opacity-40 cursor-not-allowed'
+              }`}
+            >
+              {isSelected && (
+                <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </button>
+          )}
           {country.country_code ? (
             <img 
               src={`${process.env.NEXT_PUBLIC_FLAG_CDN_URL || 'https://flagcdn.com'}/24x18/${country.country_code.toLowerCase()}.png`}
@@ -50,7 +84,7 @@ export function CountryCard({ country }: CountryCardProps) {
           ) : (
             <div className="w-5 h-3.5 sm:w-6 sm:h-4 bg-gray-600 rounded-sm" />
           )}
-          <span className="text-white font-medium text-sm sm:text-base truncate max-w-[120px] sm:max-w-none">{country.country}</span>
+          <span className="text-white font-medium text-sm sm:text-base truncate max-w-[100px] sm:max-w-none">{country.country}</span>
         </div>
         <div className="text-right">
           <div className="text-white text-xl sm:text-2xl font-bold font-mono">{country.totalNodes}</div>
@@ -109,6 +143,16 @@ export function CountryCard({ country }: CountryCardProps) {
           <span className="text-white/50 text-[10px] sm:text-xs">Avg Uptime</span>
           <span className="text-white font-mono text-xs sm:text-sm">{formatUptime(country.avgUptime)}</span>
         </div>
+      </div>
+
+      {/* View Profile Badge */}
+      <div className="relative z-10 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5 flex justify-end">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 text-[10px] sm:text-xs font-medium bg-white/5 border border-white/15 text-white/60 rounded group-hover:bg-white/10 group-hover:border-white/30 group-hover:text-white group-hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-all duration-300">
+          View Details
+          <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </span>
       </div>
     </div>
   );

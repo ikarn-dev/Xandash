@@ -4,21 +4,21 @@ export const VersionCardSkeleton: React.FC = () => {
   return (
     <div className="relative bg-black border border-white/10 p-4 sm:p-6 h-full">
       {/* Corner accents */}
-      <div className="absolute top-0 left-0 w-4 sm:w-6 h-4 sm:h-6">
-        <div className="absolute top-0 left-0 w-2 sm:w-3 h-0.5 bg-white/20"></div>
-        <div className="absolute top-0 left-0 w-0.5 h-2 sm:h-3 bg-white/20"></div>
+      <div className="absolute top-0 left-0 w-3 sm:w-4 h-3 sm:h-4">
+        <div className="absolute top-0 left-0 w-1.5 sm:w-2 h-px bg-white/20"></div>
+        <div className="absolute top-0 left-0 w-px h-1.5 sm:h-2 bg-white/20"></div>
       </div>
-      <div className="absolute top-0 right-0 w-4 sm:w-6 h-4 sm:h-6">
-        <div className="absolute top-0 right-0 w-2 sm:w-3 h-0.5 bg-white/20"></div>
-        <div className="absolute top-0 right-0 w-0.5 h-2 sm:h-3 bg-white/20"></div>
+      <div className="absolute top-0 right-0 w-3 sm:w-4 h-3 sm:h-4">
+        <div className="absolute top-0 right-0 w-1.5 sm:w-2 h-px bg-white/20"></div>
+        <div className="absolute top-0 right-0 w-px h-1.5 sm:h-2 bg-white/20"></div>
       </div>
-      <div className="absolute bottom-0 left-0 w-4 sm:w-6 h-4 sm:h-6">
-        <div className="absolute bottom-0 left-0 w-2 sm:w-3 h-0.5 bg-white/20"></div>
-        <div className="absolute bottom-0 left-0 w-0.5 h-2 sm:h-3 bg-white/20"></div>
+      <div className="absolute bottom-0 left-0 w-3 sm:w-4 h-3 sm:h-4">
+        <div className="absolute bottom-0 left-0 w-1.5 sm:w-2 h-px bg-white/20"></div>
+        <div className="absolute bottom-0 left-0 w-px h-1.5 sm:h-2 bg-white/20"></div>
       </div>
-      <div className="absolute bottom-0 right-0 w-4 sm:w-6 h-4 sm:h-6">
-        <div className="absolute bottom-0 right-0 w-2 sm:w-3 h-0.5 bg-white/20"></div>
-        <div className="absolute bottom-0 right-0 w-0.5 h-2 sm:h-3 bg-white/20"></div>
+      <div className="absolute bottom-0 right-0 w-3 sm:w-4 h-3 sm:h-4">
+        <div className="absolute bottom-0 right-0 w-1.5 sm:w-2 h-px bg-white/20"></div>
+        <div className="absolute bottom-0 right-0 w-px h-1.5 sm:h-2 bg-white/20"></div>
       </div>
 
       <div className="flex flex-col h-full">

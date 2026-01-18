@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useCallback, useState } from 'react';
+import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
+import { useRpcMonitorInit } from '@/libs/hooks/useRpcMonitorInit';
 
 interface RPCContextType {
   refreshAll: () => void;
@@ -16,8 +17,16 @@ const RPCContext = createContext<RPCContextType | null>(null);
 
 export const RPCProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const refreshFunctionsRef = React.useRef<Map<string, () => void>>(new Map());
-  const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
+  const [lastRefreshTime, setLastRefreshTime] = useState(0);
   const interval = 30000; // 30 seconds in milliseconds
+
+  // Initialize lastRefreshTime with current time
+  React.useEffect(() => {
+    setLastRefreshTime(Date.now());
+  }, []);
+
+  // Initialize RPC monitor
+  useRpcMonitorInit();
 
   const registerRefresh = useCallback((id: string, refreshFn: () => void) => {
     refreshFunctionsRef.current.set(id, refreshFn);

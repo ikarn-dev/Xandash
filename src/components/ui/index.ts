@@ -14,3 +14,6 @@ export * from './CaptchaGate';
 export * from './CornerAccents';
 export * from './SlotNumber';
 export * from './Marquee';
+export * from './ViewProfileBadge';
+export * from './TrendLineChart';
+export * from './VPSProvidersChart';

@@ -504,7 +504,7 @@ async function buildContext(msg: string, requestNetwork?: 'mainnet' | 'devnet') 
   return ctx;
 }
 
-const SYSTEM = `You are XanDash AI, the intelligent assistant for XanDash - the official monitoring dashboard for Xandeum network. You provide comprehensive, detailed, and insightful analysis.
+const SYSTEM = `You are XanDash AI, the intelligent assistant for XanDash - a comprehensive monitoring dashboard for Xandeum network. You provide comprehensive, detailed, and insightful analysis.
 
 ABOUT XANDEUM:
 - Xandeum is a decentralized storage network built on Solana blockchain

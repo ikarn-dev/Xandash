@@ -11,6 +11,7 @@
  */
 
 import { cache } from '@/libs/cache/LocalCache';
+import { monitoredFetch } from './rpc-status-monitor';
 
 // Get URLs from environment variables for RPC (sensitive)
 const MAINNET_RPC_URL = process.env.MAINNET_RPC_DIRECT_URL || '';
@@ -108,8 +109,9 @@ async function makeRpcCall<T>(method: string): Promise<T | null> {
   }
 
   try {
-    const response = await fetch(MAINNET_RPC_URL, {
+    const response = await monitoredFetch(MAINNET_RPC_URL, {
       method: 'POST',
+      network: 'mainnet',
       headers: {
         'X-API-Key': MAINNET_RPC_KEY,
         'Content-Type': 'application/json',

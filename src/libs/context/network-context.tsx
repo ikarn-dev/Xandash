@@ -20,15 +20,19 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   // Load network preference from localStorage on mount
   useEffect(() => {
-    setMounted(true);
-    try {
-      const stored = localStorage.getItem(NETWORK_STORAGE_KEY);
-      if (stored === 'mainnet' || stored === 'devnet') {
-        setNetworkState(stored);
+    // Use setTimeout to avoid setState in effect
+    const timer = setTimeout(() => {
+      setMounted(true);
+      try {
+        const stored = localStorage.getItem(NETWORK_STORAGE_KEY);
+        if (stored === 'mainnet' || stored === 'devnet') {
+          setNetworkState(stored);
+        }
+      } catch (err) {
+        // Silently handle localStorage errors
       }
-    } catch (err) {
-      // Silently handle localStorage errors
-    }
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   // Save network preference to localStorage

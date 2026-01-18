@@ -69,13 +69,13 @@ async function fetchAllMembers(): Promise<Member[]> {
     return cachedMembers;
   }
 
-  console.log(`[Members API] Fetching members...`);
+
   const members: Member[] = [];
 
   try {
     const result = await rpcCall('getProgramAccounts', [
       GOVERNANCE_PROGRAM_ID,
-      { 
+      {
         encoding: 'base64',
         filters: [
           { memcmp: { offset: 1, bytes: DAO_ADDRESS } },
@@ -85,27 +85,27 @@ async function fetchAllMembers(): Promise<Member[]> {
     ]) as Array<{ pubkey: string; account: { data: [string, string] } }> | null;
 
     if (result && result.length > 0) {
-      console.log(`[Members API] Found ${result.length} token owner records`);
+
 
       for (const acc of result) {
         try {
           const data = Buffer.from(acc.account.data[0], 'base64');
           if (data[0] !== 1) continue;
-          
+
           const ownerBytes = data.slice(65, 97);
           const owner = bs58Encode(ownerBytes);
-          
+
           if (members.find(m => m.address === owner)) continue;
-          
+
           const votingPower = Number(data.readBigUInt64LE(97)) / 1e9;
-          
+
           if (votingPower > 0) {
             members.push({ address: owner, votingPower, votes: 0, proposals: 0 });
           }
         } catch { continue; }
       }
-      
-      console.log(`[Members API] Parsed ${members.length} members`);
+
+
     }
   } catch (error) {
     console.error(`[Members API] Error:`, error);
@@ -114,7 +114,7 @@ async function fetchAllMembers(): Promise<Member[]> {
   // Generate fallback members to reach 321 total (matching Realms count)
   if (members.length < 321) {
     const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-    
+
     // Known top members from Realms
     const knownMembers = [
       { address: 'G9WnFE63RCS8tMxumc7M8eExYnvj2iehTEMLgV89EGg7', votingPower: 94990000 },
@@ -128,14 +128,14 @@ async function fetchAllMembers(): Promise<Member[]> {
       { address: 'BxKLRqNfgzdZqoH7G3JhkvYLqDqyLhsBLqPTWmKfxJBr', votingPower: 8500000 },
       { address: 'DvpEqNLQiMYpsg8MNPsKoHqZrRgVMWasg4nnGdBqWKHp', votingPower: 7200000 },
     ];
-    
+
     // Add known members if not already present
     for (const km of knownMembers) {
       if (!members.find(m => m.address === km.address)) {
         members.push({ address: km.address, votingPower: km.votingPower, votes: 0, proposals: 0 });
       }
     }
-    
+
     // Generate additional members with decreasing voting power
     let votingPower = 5000000;
     for (let i = members.length; i < 321; i++) {
@@ -144,15 +144,15 @@ async function fetchAllMembers(): Promise<Member[]> {
       for (let j = 0; j < 44; j++) {
         addr += chars[(i * 17 + j * 31) % chars.length];
       }
-      
+
       // Decrease voting power with some randomness
       votingPower = Math.max(1000, votingPower * (0.92 + Math.random() * 0.05));
-      
-      members.push({ 
-        address: addr, 
-        votingPower: Math.floor(votingPower), 
-        votes: Math.floor(Math.random() * 20), 
-        proposals: Math.floor(Math.random() * 3) 
+
+      members.push({
+        address: addr,
+        votingPower: Math.floor(votingPower),
+        votes: Math.floor(Math.random() * 20),
+        proposals: Math.floor(Math.random() * 3)
       });
     }
   }

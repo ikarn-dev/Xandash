@@ -299,7 +299,7 @@ export function ComparisonChart({
   return (
     <div 
       ref={containerRef} 
-      className="bg-[#0a0a0a] rounded-xl border border-white/10 overflow-hidden"
+      className="bg-[#0a0a0a] border border-white/10 overflow-hidden"
       onTouchStart={(e) => {
         // Check if touch is on a bar area - if not, dismiss tooltip
         const target = e.target as HTMLElement;
@@ -387,7 +387,7 @@ export function ComparisonChart({
                       } : undefined}
                     >
                       {isHovered && (
-                        <div className="absolute inset-0 bg-white/[0.03] rounded-t" />
+                        <div className="absolute inset-0 bg-white/[0.03]" />
                       )}
                       
                       {bar.values.map((val, dataIdx) => {
@@ -424,7 +424,7 @@ export function ComparisonChart({
               {/* Tooltip */}
               {tooltip && tooltip.values.length > 0 && (
                 <div 
-                  className="absolute z-30 bg-gray-900/95 backdrop-blur-md border border-white/20 rounded-lg sm:rounded-xl px-2 sm:px-4 py-2 sm:py-3 pointer-events-none shadow-2xl"
+                  className="absolute z-30 bg-gray-900/95 backdrop-blur-md border border-white/20 px-2 sm:px-4 py-2 sm:py-3 pointer-events-none shadow-2xl"
                   style={{ 
                     left: Math.min(Math.max(tooltip.x, isMobile ? 70 : 100), (chartRef.current?.clientWidth || 300) - (isMobile ? 70 : 100)),
                     top: isMobile ? 8 : 12,

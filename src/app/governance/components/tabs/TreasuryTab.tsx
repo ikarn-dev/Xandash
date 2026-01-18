@@ -1,9 +1,44 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { GovernanceData, TreasuryToken, TreasuryWallet } from '../../hooks/useGovernance';
 import { formatNumber, formatExactNumber, formatUsd, shortenAddress } from '../../utils/helpers';
 import { AddressDisplay } from '../AddressDisplay';
+
+// Token logo mapping
+const TOKEN_LOGOS: Record<string, string> = {
+  'XAND': '/logo/XandToken.jfif',
+  'xandSOL': '/logo/xandSol.png',
+  'SOL': '/logo/SolanaToken.jfif',
+};
+
+function TokenLogo({ symbol, size = 24, className = '' }: { symbol: string; size?: number; className?: string }) {
+  const logoSrc = TOKEN_LOGOS[symbol];
+  
+  if (!logoSrc) {
+    return (
+      <div 
+        className={`rounded-full flex items-center justify-center bg-white/10 ${className}`}
+        style={{ width: size, height: size }}
+      >
+        <span className="font-bold text-white/70" style={{ fontSize: size * 0.4 }}>
+          {symbol[0]}
+        </span>
+      </div>
+    );
+  }
+  
+  return (
+    <Image
+      src={logoSrc}
+      alt={`${symbol} logo`}
+      width={size}
+      height={size}
+      className={`rounded-full object-cover ${className}`}
+    />
+  );
+}
 
 export function TreasuryTab({ data }: { data: GovernanceData }) {
   const tokens = data.dao.treasury.tokens || [];
@@ -103,21 +138,25 @@ function DonutChart({ tokens, totalValue }: { tokens: TreasuryToken[]; totalValu
     return () => clearTimeout(timer);
   }, []);
 
-  // Calculate segments
-  const radius = 40;
-  const strokeWidth = 16;
+  // Calculate segments - thin cylindrical design with gaps on hover
+  const radius = 42;
+  const strokeWidth = 8; // Made thinner
+  const gapPercent = hoveredIndex !== null ? 3 : 0.5; // Larger gaps on hover
   const circumference = 2 * Math.PI * radius;
   
   let cumulativePercent = 0;
   const segments = tokens.map((token, index) => {
-    const percent = totalValue > 0 ? (token.value / totalValue) * 100 : 0;
+    const rawPercent = totalValue > 0 ? (token.value / totalValue) * 100 : 0;
+    // Reduce segment size to create gaps
+    const percent = Math.max(0, rawPercent - gapPercent);
     const dashArray = (percent / 100) * circumference;
-    const dashOffset = -(cumulativePercent / 100) * circumference;
-    cumulativePercent += percent;
+    // Add half gap offset to center the gap
+    const dashOffset = -((cumulativePercent + gapPercent / 2) / 100) * circumference;
+    cumulativePercent += rawPercent;
     
     return {
       token,
-      percent,
+      percent: rawPercent,
       dashArray,
       dashOffset,
       index,
@@ -128,7 +167,7 @@ function DonutChart({ tokens, totalValue }: { tokens: TreasuryToken[]; totalValu
 
   return (
     <div className="relative w-48 h-48 sm:w-56 sm:h-56">
-      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90" style={{ overflow: 'visible' }}>
         {/* Background circle */}
         <circle
           cx="50"
@@ -139,38 +178,111 @@ function DonutChart({ tokens, totalValue }: { tokens: TreasuryToken[]; totalValu
           strokeWidth={strokeWidth}
         />
         
-        {/* Token segments */}
-        {segments.map(({ token, dashArray, dashOffset, index, percent }) => (
-          <circle
-            key={token.symbol}
-            cx="50"
-            cy="50"
-            r={radius}
-            fill="none"
-            stroke={token.color}
-            strokeWidth={hoveredIndex === index ? strokeWidth + 4 : strokeWidth}
-            strokeDasharray={`${animated ? dashArray : 0} ${circumference}`}
-            strokeDashoffset={dashOffset}
-            strokeLinecap="round"
-            className="transition-all duration-1000 ease-out cursor-pointer"
-            style={{
-              filter: hoveredIndex === index ? `drop-shadow(0 0 8px ${token.color})` : 'none',
-              opacity: hoveredIndex !== null && hoveredIndex !== index ? 0.4 : 1,
-            }}
-            onMouseEnter={() => setHoveredIndex(index)}
-            onMouseLeave={() => setHoveredIndex(null)}
-          />
-        ))}
+        {/* Cylindrical shadow layer - rendered behind main segments */}
+        {segments.map(({ token, dashArray, dashOffset, index, percent }) => {
+          const isHovered = hoveredIndex === index;
+          return (
+            <circle
+              key={`shadow-${token.symbol}`}
+              cx="50"
+              cy="51" // Slightly offset for 3D effect
+              r={radius}
+              fill="none"
+              stroke="rgba(0,0,0,0.3)"
+              strokeWidth={isHovered ? strokeWidth + 2 : strokeWidth}
+              strokeDasharray={`${animated ? dashArray : 0} ${circumference}`}
+              strokeDashoffset={dashOffset}
+              strokeLinecap="round"
+              style={{
+                opacity: animated ? 0.6 : 0,
+                transition: 'opacity 0.15s ease, stroke-width 0.2s ease, stroke-dasharray 0.4s ease-out',
+              }}
+            />
+          );
+        })}
+        
+        {/* Glow layer for hovered segments */}
+        {segments.map(({ token, dashArray, dashOffset, index, percent }) => {
+          const isHovered = hoveredIndex === index;
+          if (!isHovered || !animated) return null;
+          
+          return (
+            <circle
+              key={`glow-${token.symbol}`}
+              cx="50"
+              cy="50"
+              r={radius}
+              fill="none"
+              stroke={token.color}
+              strokeWidth={strokeWidth + 4}
+              strokeDasharray={`${dashArray} ${circumference}`}
+              strokeDashoffset={dashOffset}
+              strokeLinecap="round"
+              style={{
+                opacity: 0.3,
+                filter: 'blur(6px)',
+              }}
+            />
+          );
+        })}
+        
+        {/* Token segments - main layer */}
+        {segments.map(({ token, dashArray, dashOffset, index, percent }) => {
+          const isHovered = hoveredIndex === index;
+          const isDimmed = hoveredIndex !== null && hoveredIndex !== index;
+          return (
+            <circle
+              key={token.symbol}
+              cx="50"
+              cy="50"
+              r={radius}
+              fill="none"
+              stroke={token.color}
+              strokeWidth={isHovered ? strokeWidth + 2 : strokeWidth}
+              strokeDasharray={`${animated ? dashArray : 0} ${circumference}`}
+              strokeDashoffset={dashOffset}
+              strokeLinecap="round"
+              className="transition-all duration-300 ease-out cursor-pointer"
+              style={{
+                filter: isHovered ? `drop-shadow(0 0 8px ${token.color})` : 'none',
+                opacity: animated ? (isDimmed ? 0.3 : 1) : 0,
+              }}
+              onMouseEnter={() => setHoveredIndex(index)}
+              onMouseLeave={() => setHoveredIndex(null)}
+            />
+          );
+        })}
+        
+        {/* Highlight layer - rendered on top for better visibility */}
+        {segments.map(({ token, dashArray, dashOffset, index, percent }) => {
+          const isHovered = hoveredIndex === index;
+          if (!isHovered || !animated) return null;
+          
+          return (
+            <circle
+              key={`highlight-${token.symbol}`}
+              cx="50"
+              cy="49" // Slightly offset upward for 3D highlight effect
+              r={radius}
+              fill="none"
+              stroke="rgba(255,255,255,0.4)"
+              strokeWidth={1.5}
+              strokeDasharray={`${dashArray} ${circumference}`}
+              strokeDashoffset={dashOffset}
+              strokeLinecap="round"
+              style={{
+                opacity: 0.8,
+              }}
+            />
+          );
+        })}
       </svg>
       
       {/* Center content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
         {hoveredToken ? (
           <>
-            <div 
-              className="w-3 h-3 rounded-full mb-1"
-              style={{ backgroundColor: hoveredToken.color }}
-            />
+            <TokenLogo symbol={hoveredToken.symbol} size={24} className="mb-1" />
             <p className="text-white font-bold text-sm">{hoveredToken.symbol}</p>
             <p className="text-lg sm:text-xl font-bold text-white font-mono">
               {formatUsd(hoveredToken.value)}
@@ -190,23 +302,41 @@ function DonutChart({ tokens, totalValue }: { tokens: TreasuryToken[]; totalValu
         )}
       </div>
 
-      {/* Legend */}
-      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex gap-4">
-        {tokens.map((token, index) => (
-          <div 
-            key={token.symbol}
-            className="flex items-center gap-1.5 cursor-pointer transition-opacity"
-            style={{ opacity: hoveredIndex !== null && hoveredIndex !== index ? 0.4 : 1 }}
-            onMouseEnter={() => setHoveredIndex(index)}
-            onMouseLeave={() => setHoveredIndex(null)}
-          >
+      {/* Legend with color indicators */}
+      <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex gap-6">
+        {tokens.map((token, index) => {
+          const isHovered = hoveredIndex === index;
+          const isDimmed = hoveredIndex !== null && hoveredIndex !== index;
+          
+          return (
             <div 
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: token.color }}
-            />
-            <span className="text-white/70 text-[10px]">{token.symbol}</span>
-          </div>
-        ))}
+              key={token.symbol}
+              className="flex items-center gap-2 cursor-pointer transition-opacity"
+              style={{ opacity: isDimmed ? 0.4 : 1 }}
+              onMouseEnter={() => setHoveredIndex(index)}
+              onMouseLeave={() => setHoveredIndex(null)}
+            >
+              <div
+                className="w-3 h-3 rounded-full border border-white/20 flex-shrink-0"
+                style={{ 
+                  backgroundColor: token.color,
+                  boxShadow: isHovered ? `0 0 6px ${token.color}` : 'none',
+                  transition: 'box-shadow 0.15s ease',
+                }}
+              />
+              <TokenLogo symbol={token.symbol} size={16} />
+              <span 
+                className="text-white/70 text-[10px] font-mono"
+                style={{ 
+                  color: isHovered ? token.color : 'rgba(255,255,255,0.7)',
+                  transition: 'color 0.15s ease',
+                }}
+              >
+                {token.symbol}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -218,10 +348,7 @@ function TokenBreakdownRow({ token, totalValue }: { token: TreasuryToken; totalV
   return (
     <div className="flex items-center justify-between p-3 bg-white/5 rounded hover:bg-white/10 transition-colors">
       <div className="flex items-center gap-3">
-        <div 
-          className="w-3 h-3 rounded-full"
-          style={{ backgroundColor: token.color }}
-        />
+        <TokenLogo symbol={token.symbol} size={20} />
         <span className="text-white text-sm">{token.symbol}</span>
       </div>
       <div className="text-right flex items-center gap-4">
@@ -243,14 +370,7 @@ function TokenHoldingCard({ token }: { token: TreasuryToken }) {
     <div className="p-4 bg-white/5 rounded hover:bg-white/10 transition-colors group">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div 
-            className="w-8 h-8 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: `${token.color}20` }}
-          >
-            <span className="font-bold text-sm" style={{ color: token.color }}>
-              {token.symbol[0]}
-            </span>
-          </div>
+          <TokenLogo symbol={token.symbol} size={32} />
           <div>
             <p className="text-white font-medium text-sm">{token.symbol}</p>
             <p className="text-white/40 text-[10px]">{token.name}</p>
@@ -327,14 +447,7 @@ function TokenAddressRow({ token }: { token: TreasuryToken }) {
     <tr className="border-b border-white/5 hover:bg-white/5 transition-colors">
       <td className="py-3 px-3">
         <div className="flex items-center gap-2">
-          <div 
-            className="w-6 h-6 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: `${token.color}20` }}
-          >
-            <span className="text-[10px] font-bold" style={{ color: token.color }}>
-              {token.symbol[0]}
-            </span>
-          </div>
+          <TokenLogo symbol={token.symbol} size={24} />
           <div>
             <span className="text-white text-sm font-medium">{token.symbol}</span>
             <div className="flex items-center gap-1">
