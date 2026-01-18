@@ -8,9 +8,9 @@ import { AddressDisplay } from '../AddressDisplay';
 
 // Token logo mapping
 const TOKEN_LOGOS: Record<string, string> = {
-  'XAND': '/logo/XandToken.jfif',
+  'XAND': '/logo/XandToken.png',
   'xandSOL': '/logo/xandSol.png',
-  'SOL': '/logo/SolanaToken.jfif',
+  'SOL': '/logo/SolanaToken.png',
 };
 
 function TokenLogo({ symbol, size = 24, className = '' }: { symbol: string; size?: number; className?: string }) {
