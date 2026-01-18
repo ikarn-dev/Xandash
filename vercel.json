@@ -4,12 +4,6 @@
       "maxDuration": 60
     }
   },
-  "crons": [
-    {
-      "path": "/api/cron/endpoint-health",
-      "schedule": "*/30 * * * * *"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
