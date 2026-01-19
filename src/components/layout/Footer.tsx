@@ -58,6 +58,7 @@ export const Footer: React.FC = () => {
     product: [
       { label: 'Analytics', href: '/' },
       { label: 'pNodes', href: '/nodes' },
+      { label: 'Managers', href: '/managers' },
       { label: 'Leaderboard', href: '/leaderboard' },
       { label: 'Network', href: '/network' },
       { label: 'Governance', href: '/governance' },

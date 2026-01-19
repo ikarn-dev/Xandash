@@ -49,7 +49,7 @@ function truncateAddress(address: string, start = 6, end = 4): string {
 const KNOWN_TOKENS: { [mint: string]: { name: string; symbol: string; logo: string } } = {
     'So11111111111111111111111111111111111111112': { name: 'Wrapped SOL', symbol: 'SOL', logo: '/logo/solanaToken.jpg' },
     // Add Xandeum token mint here
-    'XANDxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx': { name: 'Xandeum', symbol: 'XAND', logo: '/logo/xandSol.png' },
+    'XANDxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx': { name: 'Xandeum', symbol: 'XAND', logo: '/logo/XandToken.png' },
 };
 
 // Keywords to identify Xandeum-related NFTs
@@ -259,7 +259,7 @@ export const ManagerWalletAssets = ({ walletAddress }: ManagerWalletAssetsProps)
                             // Fallback based on symbol
                             if (!logoUrl) {
                                 if (symbol === 'SOL') logoUrl = '/logo/solanaToken.jpg';
-                                else if (symbol === 'XAND') logoUrl = '/logo/xandSol.png';
+                                else if (symbol === 'XAND') logoUrl = '/logo/XandToken.png';
                             }
 
                             const isXandeum = isXandeumToken(token);
@@ -347,7 +347,7 @@ export const ManagerWalletAssets = ({ walletAddress }: ManagerWalletAssetsProps)
                                     {isXandeum && (
                                         <div className="absolute top-1 right-1 z-10">
                                             <img
-                                                src="/logo/xandSol.png"
+                                                src="/logo/XandToken.png"
                                                 alt="Xandeum"
                                                 className="w-4 h-4 rounded-full"
                                             />

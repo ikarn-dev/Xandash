@@ -83,6 +83,24 @@ export function useGovernance() {
   const [cooldown, setCooldown] = useState(0);
 
   const REFRESH_COOLDOWN = 30; // 30 seconds cooldown
+  const STORAGE_KEY = 'governance-last-refresh';
+
+  // Load last refresh time from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const storedTime = parseInt(stored);
+        const now = Date.now();
+        const timeSinceRefresh = (now - storedTime) / 1000;
+        
+        if (timeSinceRefresh < REFRESH_COOLDOWN) {
+          setLastRefresh(storedTime);
+          setCooldown(Math.ceil(REFRESH_COOLDOWN - timeSinceRefresh));
+        }
+      }
+    }
+  }, []);
 
   // Cooldown timer
   useEffect(() => {
@@ -107,6 +125,11 @@ export function useGovernance() {
       setRefreshing(true);
       setLastRefresh(now);
       setCooldown(REFRESH_COOLDOWN);
+      
+      // Persist to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, now.toString());
+      }
     } else {
       setLoading(true);
     }

@@ -112,11 +112,59 @@ export const CombinedTokenCard: React.FC = () => {
     }
   };
 
+  // State for refresh cooldown
+  const [cooldown, setCooldown] = useState(0);
+  const [lastRefresh, setLastRefresh] = useState(0);
+
+  const REFRESH_COOLDOWN = 30; // 30 seconds cooldown
+  const STORAGE_KEY = 'token-card-last-refresh';
+
+  // Load last refresh time from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const storedTime = parseInt(stored);
+        const now = Date.now();
+        const timeSinceRefresh = (now - storedTime) / 1000;
+        
+        if (timeSinceRefresh < REFRESH_COOLDOWN) {
+          setLastRefresh(storedTime);
+          setCooldown(Math.ceil(REFRESH_COOLDOWN - timeSinceRefresh));
+        }
+      }
+    }
+  }, []);
+
+  // Cooldown timer
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown(prev => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
   // Fetch price data - REMOVED: No longer using XDORB API
 
   const handleManualRefresh = async () => {
+    const now = Date.now();
+    const timeSinceLastRefresh = (now - lastRefresh) / 1000;
+    
+    if (timeSinceLastRefresh < REFRESH_COOLDOWN) {
+      return; // Silently ignore if still in cooldown
+    }
+    
     setRefreshing(true);
     setShouldAnimateChart(true); // Allow animation on manual refresh
+    setLastRefresh(now);
+    setCooldown(REFRESH_COOLDOWN);
+    
+    // Persist to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, now.toString());
+    }
+    
     try {
       // Only fetch CoinGecko token info
       await fetchTokenInfo();
@@ -422,10 +470,13 @@ export const CombinedTokenCard: React.FC = () => {
         <div className="flex items-center space-x-3">
           <button
             onClick={handleManualRefresh}
-            disabled={refreshing}
-            className="group p-2 hover:bg-white/10 rounded-lg transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Refresh price data and chart"
+            disabled={refreshing || cooldown > 0}
+            className="group p-2 hover:bg-white/10 rounded-lg transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            title={cooldown > 0 ? `Wait ${cooldown}s` : "Refresh price data and chart"}
           >
+            {cooldown > 0 && (
+              <span className="text-[9px] font-mono text-white/40">{cooldown}s</span>
+            )}
             <RefreshIcon 
               className={`w-4 h-4 transition-all duration-300 ${
                 refreshing 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { CopyBtn as CopyButton } from '@/components/ui/CopyBtn';
 import { ServerIcon, ClockIcon, ExternalLinkIcon, CheckCircleIcon, XCircleIcon, CalendarIcon, ActivityIcon } from './ManagerProfileIcons';
 import { CornerAccents } from '@/components/ui';
+import { getCountryFlagUrl } from '@/libs/services/geolocation';
 import type { EnrichedNodeData } from './types';
 
 interface ManagerNodeCardProps {
@@ -42,13 +43,50 @@ function truncateAddress(address: string, start = 8, end = 6): string {
 
 export const ManagerNodeCard = ({ node, index }: ManagerNodeCardProps) => {
     const router = useRouter();
-    const { validator, isOnline, ip } = node;
+    const { validator, isOnline, ip, registered_time } = node;
 
     const handleViewProfile = () => {
         if (ip) {
             router.push(`/profile/${ip}`);
         }
     };
+
+    // Format registration date
+    const formatRegistrationDate = (dateString: string) => {
+        try {
+            const date = new Date(dateString);
+            return {
+                date: date.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                }),
+                time: date.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    hour12: true 
+                })
+            };
+        } catch {
+            return { date: 'Unknown', time: '' };
+        }
+    };
+
+    // Convert country code to flag emoji
+    const getCountryFlag = (countryCode: string): string => {
+        if (!countryCode || countryCode.length !== 2) return '';
+        return countryCode
+            .toUpperCase()
+            .split('')
+            .map(char => String.fromCodePoint(127397 + char.charCodeAt(0)))
+            .join('');
+    };
+
+    const registrationInfo = formatRegistrationDate(registered_time);
+    const location = validator?.country || 'Unknown';
+    const countryCode = validator?.country_code?.toUpperCase() || '';
+    const countryFlag = getCountryFlag(countryCode);
+    const flagUrl = countryCode ? getCountryFlagUrl(countryCode.toLowerCase()) : null;
 
     return (
         <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all duration-300 overflow-hidden">
@@ -70,9 +108,88 @@ export const ManagerNodeCard = ({ node, index }: ManagerNodeCardProps) => {
                                 <CopyButton text={node.pnode_pubkey} />
                             </div>
                             {ip && (
-                                <div className="text-white/40 text-[10px] sm:text-xs font-mono mt-0.5 sm:mt-1">
+                                <div className="text-white/50 text-[10px] sm:text-xs font-mono mt-0.5 sm:mt-1">
                                     {ip}
                                 </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Location and Registration Info */}
+                <div className="mt-3 pt-3 border-t border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {/* Location */}
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 text-white/50 text-[10px] sm:text-xs">
+                            <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                            <span className="text-white/40">Location:</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            {location === 'Unknown' ? (
+                                <div className="flex items-center gap-1">
+                                    <div className="w-2 h-2 bg-white/20 rounded-full animate-pulse"></div>
+                                    <span className="text-white/40 text-[10px] sm:text-xs">
+                                        Detecting...
+                                    </span>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="flex items-center gap-1.5">
+                                        {flagUrl && (
+                                            <img 
+                                                src={flagUrl}
+                                                alt={`${location} flag`}
+                                                className="w-4 h-3 sm:w-5 sm:h-4 object-cover rounded-sm border border-white/20 shadow-sm"
+                                                title={`${location} (${countryCode})`}
+                                                loading="lazy"
+                                                onError={(e) => {
+                                                    // Fallback to emoji if image fails to load
+                                                    const target = e.target as HTMLImageElement;
+                                                    target.style.display = 'none';
+                                                    const fallback = target.nextElementSibling as HTMLSpanElement;
+                                                    if (fallback) fallback.style.display = 'inline';
+                                                }}
+                                            />
+                                        )}
+                                        {countryFlag && (
+                                            <span 
+                                                className="text-sm sm:text-base hidden" 
+                                                title={`${location} (${countryCode})`}
+                                            >
+                                                {countryFlag}
+                                            </span>
+                                        )}
+                                        <span className="text-white text-[10px] sm:text-xs font-medium">
+                                            {location}
+                                        </span>
+                                    </div>
+                                    {countryCode && (
+                                        <span className="text-xs font-mono bg-white/10 px-1.5 py-0.5 rounded text-white/60 border border-white/10">
+                                            {countryCode}
+                                        </span>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Registration Date */}
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 text-white/50 text-[10px] sm:text-xs">
+                            <CalendarIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                            <span className="text-white/40">Registered:</span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-1.5">
+                            <span className="text-white text-[10px] sm:text-xs font-medium">
+                                {registrationInfo.date}
+                            </span>
+                            {registrationInfo.time && (
+                                <span className="text-white/50 text-[9px] sm:text-[10px]">
+                                    {registrationInfo.time}
+                                </span>
                             )}
                         </div>
                     </div>

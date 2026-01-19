@@ -99,6 +99,9 @@ export default async function ManagerProfilePage({ params }: PageProps) {
                 storage_used: node.storage_used || 0,
                 storage_usage_percent: node.storage_usage_percent || 0,
                 credits: node.credits || 0,
+                // Include location data from mainnet
+                country: node.country,
+                country_code: node.country_code,
             };
         });
     };

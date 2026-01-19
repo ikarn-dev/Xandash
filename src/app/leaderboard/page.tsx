@@ -41,7 +41,38 @@ function LeaderboardPageContent() {
   const [hasInitialData, setHasInitialData] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<LeaderboardType>('credits');
+  const [cooldown, setCooldown] = useState(0);
+  const [lastRefresh, setLastRefresh] = useState(0);
   const itemsPerPage = 25;
+
+  const REFRESH_COOLDOWN = 30; // 30 seconds cooldown
+  const STORAGE_KEY = 'leaderboard-last-refresh';
+
+  // Load last refresh time from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const storedTime = parseInt(stored);
+        const now = Date.now();
+        const timeSinceRefresh = (now - storedTime) / 1000;
+        
+        if (timeSinceRefresh < REFRESH_COOLDOWN) {
+          setLastRefresh(storedTime);
+          setCooldown(Math.ceil(REFRESH_COOLDOWN - timeSinceRefresh));
+        }
+      }
+    }
+  }, []);
+
+  // Cooldown timer
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown(prev => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   useEffect(() => {
     if (creditsData?.data && !hasInitialData) {
@@ -187,7 +218,24 @@ function LeaderboardPageContent() {
   }, [mergedData, bookmarkedPods]);
 
   const handleRefresh = useCallback(async () => {
+    const now = Date.now();
+    const timeSinceLastRefresh = (now - lastRefresh) / 1000;
+    
+    if (timeSinceLastRefresh < REFRESH_COOLDOWN) {
+      const remaining = Math.ceil(REFRESH_COOLDOWN - timeSinceLastRefresh);
+      toast.error(`Please wait ${remaining}s before refreshing again`);
+      return;
+    }
+    
     setIsRefreshing(true);
+    setLastRefresh(now);
+    setCooldown(REFRESH_COOLDOWN);
+    
+    // Persist to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, now.toString());
+    }
+    
     try {
       await refetch();
       const response = await fetch(`/api/nodes?includeAll=true&network=${selectedNetwork}`);
@@ -201,7 +249,7 @@ function LeaderboardPageContent() {
     } finally {
       setIsRefreshing(false);
     }
-  }, [refetch, selectedNetwork]);
+  }, [refetch, selectedNetwork, lastRefresh]);
 
   const toggleBookmark = useCallback((podId: string) => {
     setBookmarkedPods(prev => {
@@ -335,10 +383,13 @@ function LeaderboardPageContent() {
           </div>
           <button
             onClick={handleRefresh}
-            disabled={isRefreshing || isFetching}
-            className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg text-white/60 transition-all duration-300 disabled:opacity-50"
-            title="Refresh Leaderboard"
+            disabled={isRefreshing || isFetching || cooldown > 0}
+            className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg text-white/60 transition-all duration-300 disabled:opacity-50 flex items-center gap-1"
+            title={cooldown > 0 ? `Wait ${cooldown}s` : "Refresh Leaderboard"}
           >
+            {cooldown > 0 && (
+              <span className="text-[9px] font-mono text-white/40">{cooldown}s</span>
+            )}
             <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 transition-all duration-500 ${isRefreshing || isFetching ? 'animate-spin text-white/60' : 'hover:rotate-180'}`} />
           </button>
         </div>

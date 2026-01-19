@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ValidatorData } from '@/libs/server';
+import { getLocationsForIPs, extractIPFromAddress } from '@/libs/services/geolocation';
 import {
     Manager,
     EnrichedNodeData,
@@ -17,6 +18,17 @@ import {
 interface PodCredit {
     pod_id: string;
     credits: number;
+}
+
+interface LocationData {
+    country: string;
+    country_code: string;
+    city: string;
+    lat: number;
+    lon: number;
+    region: string;
+    provider: string;
+    ip: string;
 }
 
 interface ManagerProfileClientProps {
@@ -36,6 +48,8 @@ export function ManagerProfileClient({
 }: ManagerProfileClientProps) {
     const router = useRouter();
     const [credits, setCredits] = useState<{ [pubkey: string]: number }>({});
+    const [locations, setLocations] = useState<{ [ip: string]: LocationData | null }>({});
+    const [loadingLocations, setLoadingLocations] = useState(false);
 
     // Fetch credits data on mount
     useEffect(() => {
@@ -81,6 +95,37 @@ export function ManagerProfileClient({
         }
     }, [manager]);
 
+    // Fetch geolocation data for node IPs
+    useEffect(() => {
+        const fetchLocations = async () => {
+            if (!manager || allValidators.length === 0) return;
+
+            setLoadingLocations(true);
+            try {
+                // Get unique IPs from validators that match manager's nodes
+                const nodeIPs = manager.nodes
+                    .map(node => {
+                        const validator = allValidators.find(v => v.pubkey === node.pnode_pubkey);
+                        return validator?.address ? extractIPFromAddress(validator.address) : null;
+                    })
+                    .filter((ip): ip is string => ip !== null && ip !== undefined);
+
+                const uniqueIPs = Array.from(new Set(nodeIPs));
+
+                if (uniqueIPs.length > 0) {
+                    const locationData = await getLocationsForIPs(uniqueIPs);
+                    setLocations(locationData);
+                }
+            } catch (error) {
+                console.error('Failed to fetch geolocation data:', error);
+            } finally {
+                setLoadingLocations(false);
+            }
+        };
+
+        fetchLocations();
+    }, [manager, allValidators]);
+
     // Create pubkey → validator map for O(1) lookup
     const pubkeyToNode = useMemo(() => {
         const map = new Map<string, ValidatorData>();
@@ -90,7 +135,7 @@ export function ManagerProfileClient({
         return map;
     }, [allValidators]);
 
-    // Enrich nodes with validator data and credits
+    // Enrich nodes with validator data, credits, and location
     const enrichedNodes = useMemo((): EnrichedNodeData[] => {
         if (!manager) return [];
 
@@ -98,11 +143,17 @@ export function ManagerProfileClient({
             const validator = pubkeyToNode.get(node.pnode_pubkey);
             const ip = validator?.address?.split(':')[0];
 
+            // Get location data for this IP
+            const locationData = ip ? locations[ip] : null;
+
             // Merge credits data
             const nodeCredits = credits[node.pnode_pubkey] || validator?.credits || 0;
             const enrichedValidator = validator ? {
                 ...validator,
                 credits: nodeCredits,
+                // Add location data to validator
+                country: locationData?.country || validator.country,
+                country_code: locationData?.country_code || validator.country_code,
             } : undefined;
 
             return {
@@ -112,7 +163,7 @@ export function ManagerProfileClient({
                 ip,
             };
         });
-    }, [manager, pubkeyToNode, credits]);
+    }, [manager, pubkeyToNode, credits, locations]);
 
     // Calculate stats from enriched nodes
     const stats = useMemo((): ManagerStats => {

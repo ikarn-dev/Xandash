@@ -8,9 +8,9 @@ import { AddressDisplay } from '../AddressDisplay';
 
 // Token logo mapping
 const TOKEN_LOGOS: Record<string, string> = {
-  'XAND': '/logo/XandToken.jfif',
+  'XAND': '/logo/XandToken.png',
   'xandSOL': '/logo/xandSol.png',
-  'SOL': '/logo/SolanaToken.jfif',
+  'SOL': '/logo/SolanaToken.png',
 };
 
 function TokenLogo({ symbol, size = 24, className = '' }: { symbol: string; size?: number; className?: string }) {
@@ -36,6 +36,17 @@ function TokenLogo({ symbol, size = 24, className = '' }: { symbol: string; size
       width={size}
       height={size}
       className={`rounded-full object-cover ${className}`}
+      onError={(e) => {
+        // Fallback to letter avatar if image fails to load
+        const target = e.target as HTMLImageElement;
+        target.style.display = 'none';
+        const fallback = document.createElement('div');
+        fallback.className = `rounded-full flex items-center justify-center bg-white/10 ${className}`;
+        fallback.style.width = `${size}px`;
+        fallback.style.height = `${size}px`;
+        fallback.innerHTML = `<span class="font-bold text-white/70" style="font-size: ${size * 0.4}px">${symbol[0]}</span>`;
+        target.parentNode?.replaceChild(fallback, target);
+      }}
     />
   );
 }

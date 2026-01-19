@@ -11,17 +11,46 @@ export function useXandData() {
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
   const hasFetched = useRef(false);
 
+  const STORAGE_KEY = 'xand-data-last-refresh';
+
+  // Load last refresh time from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const storedTime = parseInt(stored);
+        const now = Date.now();
+        const timeSinceRefresh = now - storedTime;
+        
+        if (timeSinceRefresh < REFRESH_COOLDOWN) {
+          setLastFetchTime(storedTime);
+          setCooldownRemaining(REFRESH_COOLDOWN - timeSinceRefresh);
+        }
+      }
+    }
+  }, []);
+
   const fetchData = useCallback(async (isManualRefresh = false) => {
     try {
-      if (isManualRefresh) setRefreshing(true);
-      else setLoading(true);
+      if (isManualRefresh) {
+        setRefreshing(true);
+        const now = Date.now();
+        setLastFetchTime(now);
+        
+        // Persist to localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEY, now.toString());
+        }
+      } else {
+        setLoading(true);
+      }
       
       const response = await fetch('/api/xand-info');
       if (!response.ok) throw new Error('Failed to fetch XAND data');
       
       const xandData = await response.json();
       setData(xandData);
-      setLastFetchTime(Date.now());
+      if (!isManualRefresh) setLastFetchTime(Date.now());
       setError(null);
       toast.success(isManualRefresh ? 'XAND data refreshed' : 'XAND data loaded');
     } catch (err) {

@@ -18,6 +18,8 @@ export interface ValidatorData {
   isDuplicate?: boolean;
   duplicateCount?: number;
   credits?: number | null;
+  country?: string;
+  country_code?: string;
 }
 
 export interface ValidatorStats {
