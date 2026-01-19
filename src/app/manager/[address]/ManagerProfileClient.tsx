@@ -24,8 +24,8 @@ interface LocationData {
     country: string;
     country_code: string;
     city: string;
-    lat: number;
-    lon: number;
+    lat?: number;
+    lon?: number;
     region: string;
     provider: string;
     ip: string;
