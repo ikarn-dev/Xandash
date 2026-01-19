@@ -28,7 +28,7 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (stored === 'mainnet' || stored === 'devnet') {
           setNetworkState(stored);
         }
-      } catch (err) {
+      } catch (_err) {
         // Silently handle localStorage errors
       }
     }, 0);
@@ -40,7 +40,7 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
     setNetworkState(newNetwork);
     try {
       localStorage.setItem(NETWORK_STORAGE_KEY, newNetwork);
-    } catch (err) {
+    } catch (_err) {
       // Silently handle localStorage errors
     }
   };
@@ -73,7 +73,7 @@ export const useNetwork = () => {
     // Return default values if context is not available (e.g., during SSR or outside provider)
     return {
       network: 'devnet' as NetworkType,
-      setNetwork: () => {},
+      setNetwork: () => { },
       isMainnet: false,
     };
   }

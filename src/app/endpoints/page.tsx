@@ -69,6 +69,7 @@ function EndpointsPageContent() {
     loading: statusLoading,
     error: statusError,
     lastUpdate,
+    lastDataRefresh,
     refreshEndpoints
   } = useEndpointMonitoring();
 
@@ -97,6 +98,18 @@ function EndpointsPageContent() {
       }
     }
   }, []);
+
+  // Update timer whenever lastDataRefresh changes (auto-refresh or manual refresh)
+  React.useEffect(() => {
+    if (lastDataRefresh) {
+      const updateTime = new Date(lastDataRefresh);
+      setLastRefreshTime(updateTime);
+      // Persist to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('endpoints-last-refresh', updateTime.toISOString());
+      }
+    }
+  }, [lastDataRefresh]);
 
   const handleUptimeCalculated = React.useCallback((endpointName: string, uptime: number) => {
     setCalculatedUptimes(prev => {
@@ -138,12 +151,6 @@ function EndpointsPageContent() {
 
   // Handle refresh button click
   const handleRefreshClick = React.useCallback(() => {
-    const now = new Date();
-    setLastRefreshTime(now);
-    // Persist to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('endpoints-last-refresh', now.toISOString());
-    }
     refreshEndpoints();
   }, [refreshEndpoints]);
 
@@ -300,7 +307,8 @@ function EndpointsPageContent() {
                         {(calculatedUptimes[pNodeDevnet.name] ?? pNodeDevnet.uptime).toFixed(1)}%
                       </div>
                       <div className="text-white/40 text-xs">
-                        {pNodeDevnet.responseTime > 0 ? `${pNodeDevnet.responseTime}ms` : 'Checking...'}
+                        {pNodeDevnet.responseTime > 0 ? `${pNodeDevnet.responseTime}ms` : 
+                         pNodeDevnet.lastChecked ? 'Ready' : 'Initializing...'}
                       </div>
                     </>
                   ) : (
@@ -344,7 +352,8 @@ function EndpointsPageContent() {
                         {(calculatedUptimes[pNodeMainnet.name] ?? pNodeMainnet.uptime).toFixed(1)}%
                       </div>
                       <div className="text-white/40 text-xs">
-                        {pNodeMainnet.responseTime > 0 ? `${pNodeMainnet.responseTime}ms` : 'Checking...'}
+                        {pNodeMainnet.responseTime > 0 ? `${pNodeMainnet.responseTime}ms` : 
+                         pNodeMainnet.lastChecked ? 'Ready' : 'Initializing...'}
                       </div>
                     </>
                   ) : (

@@ -3,6 +3,8 @@
 import { useMemo } from 'react';
 import { ComparisonChart } from './ComparisonChart';
 import { AISummary } from '@/components/ui/AISummary';
+import { ManagerAssetData } from '@/app/nodes/hooks/useManagerAssets';
+import { ManagerBadge } from '@/components/ui/ManagerBadge';
 
 interface NodeProfile {
   ip: string;
@@ -16,19 +18,22 @@ interface NodeProfile {
   version: string;
   location?: { country: string; city: string; provider: string };
   history?: Array<{ timestamp: number; credits: number; uptime: number; storage_committed: number; storage_used: number }>;
+  manager_pubkey?: string;
 }
 
 interface ResultsViewProps {
   nodes: NodeProfile[];
   onReset: () => void;
   network?: string;
+  managerAssets?: Map<string, ManagerAssetData>;
+  isHistoryLoading?: boolean;
 }
 
-export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewProps) {
+export function ResultsView({ nodes, onReset, network = 'devnet', managerAssets, isHistoryLoading: isHistoryLoadingProp }: ResultsViewProps) {
   const isMainnet = network === 'mainnet';
-  
+
   // Check if historical data is still loading (history array is empty for all nodes)
-  const isHistoryLoading = nodes.length > 0 && nodes.every(n => !n.history || n.history.length === 0);
+  const isHistoryLoading = isHistoryLoadingProp ?? (nodes.length > 0 && nodes.every(n => !n.history || n.history.length === 0));
 
   const formatUptime = (s: number) => {
     const d = Math.floor(s / 86400);
@@ -53,25 +58,25 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
 
   const aiComparisonPrompt = useMemo(() => {
     if (nodes.length < 2) return '';
-    
+
     const formatStorageAI = (bytes: number) => {
       if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}GB`;
       if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
       return `${bytes}B`;
     };
-    
+
     const nodeDetails = nodes.map((n, i) => {
       const days = (n.uptime / 86400).toFixed(1);
       const storageCommitted = formatStorageAI(n.storage_committed);
       const storageUsed = formatStorageAI(n.storage_used);
-      
-      return `Node ${i+1} (${n.ip}): ${n.status}, ${n.credits.toLocaleString()} credits, ${days}d uptime, ${storageCommitted} committed (${storageUsed} used)`;
+
+      return `Node ${i + 1} (${n.ip}): ${n.status}, ${n.credits.toLocaleString()} credits, ${days}d uptime, ${storageCommitted} committed (${storageUsed} used)`;
     }).join('. ');
 
     return `Compare these ${nodes.length} Xandeum ${isMainnet ? 'mainnet' : 'devnet'} nodes. ${nodeDetails}. In 2-3 sentences: identify the best performer and note key differences. Do not provide any recommendations.`;
   }, [nodes, isMainnet]);
 
-  const creditsChartData = useMemo(() => 
+  const creditsChartData = useMemo(() =>
     nodes.map(p => ({
       label: p.ip,
       color: p.color,
@@ -79,7 +84,7 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
       currentValue: p.credits
     })), [nodes]);
 
-  const uptimeChartData = useMemo(() => 
+  const uptimeChartData = useMemo(() =>
     nodes.map(p => ({
       label: p.ip,
       color: p.color,
@@ -87,7 +92,7 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
       currentValue: p.uptime / 3600
     })), [nodes]);
 
-  const storageChartData = useMemo(() => 
+  const storageChartData = useMemo(() =>
     nodes.map(p => ({
       label: p.ip,
       color: p.color,
@@ -113,11 +118,11 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
             const stat = stats.find(s => s.key === key);
             return stat && (node[key as keyof NodeProfile] as number) === stat.best && nodes.length > 1;
           };
-          
+
           return (
             <div key={node.pubkey} className="relative bg-black border p-4 overflow-hidden" style={{ borderColor: `${node.color}30` }}>
               <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: node.color, opacity: 0.6 }} />
-              
+
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: node.color }} />
                 <span className="font-mono text-sm text-white font-medium">{node.ip}</span>
@@ -142,9 +147,33 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
                 })}
               </div>
 
+              {/* Manager Badge Section - Two Column Layout */}
+              {node.manager_pubkey && (
+                <div className="mt-3 pt-3 border-t border-white/5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-white/40 uppercase tracking-wider font-medium">Manager</span>
+                    <ManagerBadge
+                      managerPubkey={node.manager_pubkey}
+                      nftCount={managerAssets?.get(node.manager_pubkey)?.nft_count}
+                      sbtCount={managerAssets?.get(node.manager_pubkey)?.sbt_count}
+                      xenoBalance={managerAssets?.get(node.manager_pubkey)?.xeno_balance}
+                      nftNames={managerAssets?.get(node.manager_pubkey)?.nft_names}
+                      sbtNames={managerAssets?.get(node.manager_pubkey)?.sbt_names}
+                      nftPreviews={managerAssets?.get(node.manager_pubkey)?.nft_previews}
+                      sbtPreviews={managerAssets?.get(node.manager_pubkey)?.sbt_previews}
+                      size="sm"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Location Section - Two Column Layout */}
               {node.location && (
                 <div className="mt-3 pt-3 border-t border-white/5">
-                  <div className="text-[10px] text-white/30">{node.location.city}, {node.location.country}</div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-white/40 uppercase tracking-wider font-medium">Location</span>
+                    <span className="text-[10px] text-white/60">{node.location.city}, {node.location.country}</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -183,7 +212,7 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
                   </td>
                 ))}
               </tr>
-              
+
               {/* Other stats rows */}
               {[
                 { label: 'Credits', getValue: (n: NodeProfile) => `+${n.credits.toLocaleString()}`, isBest: (n: NodeProfile) => n.credits === getBest('credits') },
@@ -205,6 +234,31 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
                   })}
                 </tr>
               ))}
+              {/* Manager Row */}
+              <tr className="border-b border-white/5 hover:bg-white/5">
+                <td className="py-3 px-4 text-white/60 text-sm">Manager</td>
+                {nodes.map(node => (
+                  <td key={node.pubkey} className="py-3 px-4 text-center">
+                    <div className="flex justify-center">
+                      {node.manager_pubkey ? (
+                        <ManagerBadge
+                          managerPubkey={node.manager_pubkey}
+                          nftCount={managerAssets?.get(node.manager_pubkey)?.nft_count}
+                          sbtCount={managerAssets?.get(node.manager_pubkey)?.sbt_count}
+                          xenoBalance={managerAssets?.get(node.manager_pubkey)?.xeno_balance}
+                          nftNames={managerAssets?.get(node.manager_pubkey)?.nft_names}
+                          sbtNames={managerAssets?.get(node.manager_pubkey)?.sbt_names}
+                          nftPreviews={managerAssets?.get(node.manager_pubkey)?.nft_previews}
+                          sbtPreviews={managerAssets?.get(node.manager_pubkey)?.sbt_previews}
+                          size="sm"
+                        />
+                      ) : (
+                        <span className="text-white/30 text-xs">-</span>
+                      )}
+                    </div>
+                  </td>
+                ))}
+              </tr>
             </tbody>
           </table>
         </div>
@@ -214,26 +268,26 @@ export function ResultsView({ nodes, onReset, network = 'devnet' }: ResultsViewP
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-medium text-white">Historical Trends (7 Days)</h3>
         </div>
-        <ComparisonChart 
-          title="Credits Over Time" 
-          datasets={creditsChartData} 
-          valueFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}K` : v.toFixed(0)} 
+        <ComparisonChart
+          title="Credits Over Time"
+          datasets={creditsChartData}
+          valueFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}K` : v.toFixed(0)}
           startFromZero={true}
           height={320}
           isLoading={isHistoryLoading}
         />
-        <ComparisonChart 
-          title="Uptime (Hours)" 
-          datasets={uptimeChartData} 
-          valueFormatter={(v) => `${v.toFixed(0)}h`} 
+        <ComparisonChart
+          title="Uptime (Hours)"
+          datasets={uptimeChartData}
+          valueFormatter={(v) => `${v.toFixed(0)}h`}
           startFromZero={true}
           height={320}
           isLoading={isHistoryLoading}
         />
-        <ComparisonChart 
-          title="Storage (GB)" 
-          datasets={storageChartData} 
-          valueFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}TB` : `${v.toFixed(0)}GB`} 
+        <ComparisonChart
+          title="Storage (GB)"
+          datasets={storageChartData}
+          valueFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}TB` : `${v.toFixed(0)}GB`}
           startFromZero={true}
           height={320}
           isLoading={isHistoryLoading}

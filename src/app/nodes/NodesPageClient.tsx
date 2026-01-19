@@ -26,6 +26,7 @@ import {
   useNodesFilters,
   useNodesLocation,
   useNodesCredits,
+  useManagerAssets,
 } from './hooks';
 import { CustomDropdown, CaptchaGate } from '@/components/ui';
 
@@ -121,6 +122,13 @@ export function NodesPageClientRefactored({
         country: node.country,
         country_code: node.country_code,
         provider: node.provider,
+        // Manager data
+        manager_pubkey: node.manager_pubkey,
+        manager_nft_count: node.manager_nft_count,
+        manager_sbt_count: node.manager_sbt_count,
+        manager_xand_balance: node.manager_xand_balance,
+        manager_nft_names: node.manager_nft_names,
+        manager_sbt_names: node.manager_sbt_names,
       };
     });
   }, [sharedNodes]);
@@ -134,6 +142,7 @@ export function NodesPageClientRefactored({
 
   const { locations } = useNodesLocation(allValidators);
   const { credits } = useNodesCredits(allValidators, network);
+  const { managerAssets, fetchManagerAssets } = useManagerAssets();
 
   // For mainnet, merge external geo data with ip-api.com location data for city info
   const mergedLocations = useMemo(() => {
@@ -190,14 +199,16 @@ export function NodesPageClientRefactored({
     searchQuery,
     selectedFilters,
     versionFilter,
+    managerFilter,
     sortBy,
     isPending,
     handleFilterChange,
     handleSearchChange,
     handleVersionFilterChange,
+    handleManagerFilterChange,
     handleSort,
     handlePageChange,
-  } = useNodesFilters(allValidators, dataFetchTime, network);
+  } = useNodesFilters(allValidators, dataFetchTime, network, managerAssets);
 
   const { prefetchProfile, navigateToProfile } = usePrefetchProfile();
 
@@ -242,6 +253,18 @@ export function NodesPageClientRefactored({
       }
     }
   }, []);
+
+  // Fetch manager assets for nodes that have managers
+  useEffect(() => {
+    const nodesWithManagers = allValidators
+      .filter(node => node.manager_pubkey) // This filters out undefined values
+      .map(node => node.manager_pubkey!) // Now TypeScript knows these are defined, so we use !
+      .filter((address, index, arr) => arr.indexOf(address) === index); // unique addresses
+
+    if (nodesWithManagers.length > 0) {
+      fetchManagerAssets(nodesWithManagers);
+    }
+  }, [allValidators, fetchManagerAssets]);
 
   const copyToClipboard = async (text: string, type: string = 'text') => {
     try {
@@ -392,17 +415,19 @@ export function NodesPageClientRefactored({
         <div className="space-y-4">
           <SearchBox
             onSearch={handleSearchChange}
-            placeholder="Search pNodes..."
+            placeholder="Search by IP, pubkey, version, or manager address..."
           />
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <NodesFilters
               selectedFilters={selectedFilters}
               versionFilter={versionFilter}
+              managerFilter={managerFilter}
               availableVersions={availableVersions}
               quickStats={quickStats}
               onFilterChange={handleFilterChange}
               onVersionFilterChange={handleVersionFilterChange}
+              onManagerFilterChange={handleManagerFilterChange}
             />
 
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
@@ -428,6 +453,7 @@ export function NodesPageClientRefactored({
                 validators={validators}
                 locations={mergedLocations}
                 credits={mergedCredits}
+                managerAssets={managerAssets}
                 dataFetchTime={dataFetchTime}
                 clickedNodeId={clickedNodeId}
                 shouldAnimate={shouldAnimate}

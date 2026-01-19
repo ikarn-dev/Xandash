@@ -49,7 +49,8 @@ function truncateAddress(address: string, start = 6, end = 4): string {
 const KNOWN_TOKENS: { [mint: string]: { name: string; symbol: string; logo: string } } = {
     'So11111111111111111111111111111111111111112': { name: 'Wrapped SOL', symbol: 'SOL', logo: '/logo/solanaToken.jpg' },
     // Add Xandeum token mint here
-    'XANDxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx': { name: 'Xandeum', symbol: 'XAND', logo: '/logo/XandToken.png' },
+    'XANDuUoVoUqniKkpcKhrxmvYJybpJvUxJLr21Gaj3Hx': { name: 'Xandeum', symbol: 'XAND', logo: '/logo/XandToken.png' },
+    'G2bTxNndhA9zxxy4PZnHFcQo9wQQozrfcmN6AN9Heqoe': { name: 'XENO', symbol: 'XENO', logo: '/logo/XandToken.png' },
 };
 
 // Keywords to identify Xandeum-related NFTs
@@ -343,6 +344,7 @@ export const ManagerWalletAssets = ({ walletAddress }: ManagerWalletAssetsProps)
                                         ? 'border-purple-500/50 hover:border-purple-500'
                                         : 'border-white/10 hover:border-white/20'
                                         }`}
+                                    title={nft.content?.metadata?.name || 'NFT'}
                                 >
                                     {isXandeum && (
                                         <div className="absolute top-1 right-1 z-10">

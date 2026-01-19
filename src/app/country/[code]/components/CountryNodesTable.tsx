@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CopyBtn as CopyButton } from '@/components/ui/CopyBtn';
+import { ManagerBadge } from '@/components/ui/ManagerBadge';
 import { extractIPFromAddress } from '@/libs/services/geolocation';
 import { getNodeStatus } from '@/libs/utils/node-status';
 import { getNodeName, hasNodeName } from '@/libs/utils/node-names';
@@ -18,10 +19,25 @@ interface NodeData {
   last_seen_timestamp: number;
   credits?: number;
   rpc_port?: number;
+  manager_pubkey?: string;
+  manager_nft_count?: number;
+  manager_sbt_count?: number;
+  manager_nft_names?: string[];
+  manager_sbt_names?: string[];
 }
 
 interface LocationData {
   city?: string;
+}
+
+interface ManagerAssetData {
+  manager_pubkey: string;
+  nft_count: number;
+  sbt_count: number;
+  xand_balance: number;
+  last_updated: number;
+  nft_names: string[];
+  sbt_names: string[];
 }
 
 interface CountryNodesTableProps {
@@ -34,6 +50,38 @@ interface CountryNodesTableProps {
 export const CountryNodesTable = ({ nodes, locations, countryName, network = 'devnet' }: CountryNodesTableProps) => {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [managerAssets, setManagerAssets] = useState<Map<string, ManagerAssetData>>(new Map());
+
+  // Fetch manager assets for nodes with managers
+  useEffect(() => {
+    const managersToFetch = nodes
+      .filter(node => node.manager_pubkey)
+      .map(node => node.manager_pubkey!)
+      .filter((addr, i, arr) => arr.indexOf(addr) === i); // unique
+
+    if (managersToFetch.length === 0) return;
+
+    const fetchAssets = async () => {
+      try {
+        const response = await fetch('/api/manager-assets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ addresses: managersToFetch }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.managers) {
+            setManagerAssets(new Map(Object.entries(data.managers)));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch manager assets:', error);
+      }
+    };
+
+    fetchAssets();
+  }, [nodes]);
 
   const filteredNodes = useMemo(() => {
     if (!searchQuery) return nodes;
@@ -45,7 +93,8 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
         ip.includes(query) ||
         node.pubkey?.toLowerCase().includes(query) ||
         locations[ip]?.city?.toLowerCase().includes(query) ||
-        name.toLowerCase().includes(query)
+        name.toLowerCase().includes(query) ||
+        (node.manager_pubkey && node.manager_pubkey.toLowerCase().includes(query))
       );
     });
   }, [nodes, searchQuery, locations]);
@@ -82,11 +131,12 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
       </div>
 
       <div className="overflow-x-auto scrollbar-hide">
-        <table className="w-full min-w-[900px]">
+        <table className="w-full min-w-[1000px]">
           <thead>
             <tr className="border-b border-white/10 text-left">
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Name</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">IP Address</th>
+              <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Manager Assets</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Status</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">City</th>
               <th className="px-3 sm:px-4 py-2 sm:py-3 text-white/60 text-[10px] sm:text-xs font-medium uppercase tracking-wider whitespace-nowrap">Uptime</th>
@@ -98,7 +148,7 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
           <tbody>
             {filteredNodes.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 sm:px-4 py-6 sm:py-8 text-center text-white/40 text-xs sm:text-sm">
+                <td colSpan={9} className="px-3 sm:px-4 py-6 sm:py-8 text-center text-white/40 text-xs sm:text-sm">
                   {searchQuery ? 'No nodes match your search' : 'No nodes found in this country'}
                 </td>
               </tr>
@@ -110,9 +160,10 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
                 const status = getNodeStatus(node.last_seen_timestamp || 0, now);
                 const nodeName = getNodeName(node.pubkey);
                 const hasName = hasNodeName(node.pubkey);
+                const assets = node.manager_pubkey ? managerAssets.get(node.manager_pubkey) : null;
 
                 return (
-                  <tr 
+                  <tr
                     key={node.pubkey}
                     onClick={() => handleNodeClick(node)}
                     className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
@@ -130,14 +181,28 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
                         <CopyButton text={ip} />
                       </div>
                     </td>
+                    <td className="px-3 sm:px-4 py-2 sm:py-3" onClick={(e) => e.stopPropagation()}>
+                      {node.manager_pubkey ? (
+                        <ManagerBadge
+                          managerPubkey={node.manager_pubkey}
+                          nftCount={assets?.nft_count}
+                          sbtCount={assets?.sbt_count}
+                          nftNames={assets?.nft_names}
+                          sbtNames={assets?.sbt_names}
+                        />
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] bg-gray-500/20 text-gray-400 border border-gray-500/30 whitespace-nowrap">
+                          Not Registered
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 sm:px-4 py-2 sm:py-3">
-                      <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium whitespace-nowrap ${
-                        status === 'online' 
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                          : status === 'syncing'
+                      <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium whitespace-nowrap ${status === 'online'
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : status === 'syncing'
                           ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                           : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                      }`}>
+                        }`}>
                         {status === 'online' ? 'ACTIVE' : status === 'syncing' ? 'SYNCING' : 'OFFLINE'}
                       </span>
                     </td>
@@ -156,11 +221,10 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
                       </span>
                     </td>
                     <td className="px-3 sm:px-4 py-2 sm:py-3">
-                      <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs whitespace-nowrap ${
-                        node.is_public 
-                          ? 'bg-blue-500/20 text-blue-400' 
-                          : 'bg-white/10 text-white/40'
-                      }`}>
+                      <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs whitespace-nowrap ${node.is_public
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : 'bg-white/10 text-white/40'
+                        }`}>
                         {node.is_public ? 'PUBLIC' : 'PRIVATE'}
                       </span>
                     </td>

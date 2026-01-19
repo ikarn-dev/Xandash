@@ -339,20 +339,36 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
           })}
         </svg>
         
-        {/* Center content - only show when hovered */}
-        {hoveredSegment && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="text-white text-sm font-bold font-mono leading-tight text-center">
-              {hoveredSegment === 'used' ? `${usedFormatted.value} ${usedFormatted.unit}` : `${availableFormatted.value} ${availableFormatted.unit}`}
-            </div>
-            <div className="text-white/60 text-[7px] font-mono mt-0.5 text-center leading-tight">
-              {hoveredSegment === 'used' ? 'Used' : 'Free'}
-            </div>
-            <div className="text-white/40 text-[6px] mt-0.5 text-center leading-tight">
-              {hoveredSegment === 'used' ? `${usedPercentage.toFixed(1)}%` : `${availablePercentage.toFixed(1)}%`}
-            </div>
-          </div>
-        )}
+        {/* Center content - always visible with hover overlay */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-2">
+          {hoveredSegment ? (
+            // Hovered state - show specific segment info
+            <>
+              <div className="text-white text-xs font-bold font-mono leading-none text-center">
+                {hoveredSegment === 'used' ? `${usedFormatted.value} ${usedFormatted.unit}` : `${availableFormatted.value} ${availableFormatted.unit}`}
+              </div>
+              <div className="text-white/60 text-[8px] font-mono mt-1 text-center leading-none">
+                {hoveredSegment === 'used' ? 'Used' : 'Free'}
+              </div>
+              <div className="text-white/40 text-[7px] mt-0.5 text-center leading-none">
+                {hoveredSegment === 'used' ? `${usedPercentage.toFixed(1)}%` : `${availablePercentage.toFixed(1)}%`}
+              </div>
+            </>
+          ) : (
+            // Default state - show overall storage info
+            <>
+              <div className="text-white text-[9px] font-bold font-mono leading-none text-center whitespace-nowrap">
+                {usedFormatted.value} / {formatStorage(committed).value}
+              </div>
+              <div className="text-white/60 text-[7px] font-mono mt-1 text-center leading-none">
+                {formatStorage(committed).unit} Storage
+              </div>
+              <div className="text-white/40 text-[6px] mt-0.5 text-center leading-none">
+                {usedFormatted.value} {usedFormatted.unit} Used
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Legend with visual indicators */}

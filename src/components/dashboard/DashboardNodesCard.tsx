@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Globe, Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CopyBtn } from '@/components/ui/CopyBtn';
+import { ManagerBadge } from '@/components/ui/ManagerBadge';
 import { getLocationsForIPs, extractIPFromAddress, getCountryFlagUrl } from '@/libs/services/geolocation';
 import { usePrefetchProfile } from '@/libs/hooks/usePrefetchProfile';
 import { toast } from 'sonner';
@@ -16,7 +17,7 @@ import { formatStorage } from '@/libs/utils';
 // Compare icon
 const CompareIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/>
+    <path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
   </svg>
 );
 
@@ -60,14 +61,15 @@ export const DashboardNodesCard: React.FC = () => {
   const { network, isMainnet } = useNetwork();
   const router = useRouter();
   const { prefetchProfile, navigateToProfile } = usePrefetchProfile();
-  
+
   // Use shared nodes data context - single source of truth with high watermark logic
   const { nodes: sharedNodes, geoData: sharedGeoData, isLoading, dataFetchTime } = useNodesData();
-  
+
   const [locations, setLocations] = useState<{ [ip: string]: LocationData | null }>({});
   const [credits, setCredits] = useState<{ [pubkey: string]: number | null }>({});
   const [clickedNodeId, setClickedNodeId] = useState<string | null>(null);
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
+  const [managerAssets, setManagerAssets] = useState<Map<string, any>>(new Map());
 
   // Clear compare selection when network changes
   useEffect(() => {
@@ -77,7 +79,7 @@ export const DashboardNodesCard: React.FC = () => {
   // Transform shared nodes and get top 20 for display
   const nodes = useMemo(() => {
     if (sharedNodes.length === 0) return [];
-    
+
     // Sort: named nodes first (mainnet), then by last_seen_timestamp, then slice to 20
     return [...sharedNodes]
       .sort((a, b) => {
@@ -154,6 +156,37 @@ export const DashboardNodesCard: React.FC = () => {
     };
     fetchCredits();
   }, [nodes, network]);
+
+  // Fetch manager assets
+  useEffect(() => {
+    if (sharedNodes.length === 0) return;
+    const managersToFetch = sharedNodes
+      .filter(node => node.manager_pubkey)
+      .map(node => node.manager_pubkey!)
+      .filter((addr, i, arr) => arr.indexOf(addr) === i)
+      .slice(0, 30); // Limit to 30
+
+    if (managersToFetch.length === 0) return;
+
+    const fetchAssets = async () => {
+      try {
+        const response = await fetch('/api/manager-assets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ addresses: managersToFetch }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.managers) {
+            setManagerAssets(new Map(Object.entries(data.managers)));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch manager assets:', error);
+      }
+    };
+    fetchAssets();
+  }, [sharedNodes]);
 
   // Prefetch visible nodes
   useEffect(() => {
@@ -293,6 +326,7 @@ export const DashboardNodesCard: React.FC = () => {
                 </th>
                 {isMainnet && <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Name</th>}
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Location</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Manager Assets</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">IP Address</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Pubkey</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Public</th>
@@ -306,13 +340,13 @@ export const DashboardNodesCard: React.FC = () => {
             </thead>
             <tbody>
               {nodes.length === 0 ? (
-                <tr><td colSpan={isMainnet ? 12 : 11} className="px-6 py-12 text-center text-white/60 text-sm">No nodes found for {isMainnet ? 'mainnet' : 'devnet'}</td></tr>
+                <tr><td colSpan={isMainnet ? 13 : 12} className="px-6 py-12 text-center text-white/60 text-sm">No nodes found for {isMainnet ? 'mainnet' : 'devnet'}</td></tr>
               ) : nodes.map((node, index) => {
                 const ip = extractIPFromAddress(node.address || '');
                 const location = locations[ip];
                 const nodeCredits = node.pubkey ? credits[node.pubkey] : null;
                 const mainnetGeo = sharedGeoData[ip];
-                
+
                 // Merge location data
                 let displayLocation = location;
                 if (isMainnet) {
@@ -324,20 +358,20 @@ export const DashboardNodesCard: React.FC = () => {
                     displayLocation = { country: node.country || 'Unknown', country_code: node.country_code || '', city: '', region: '', provider: node.provider || 'Unknown', ip };
                   }
                 }
-                
+
                 const nodeId = `${node.pubkey}-${index}`;
                 const isSelected = selectedForCompare.includes(node.pubkey);
                 const canSelect = selectedForCompare.length < 4 || isSelected;
                 const timeDiff = dataFetchTime - node.last_seen_timestamp;
                 const isOnline = timeDiff < 1800;
                 const isSyncing = timeDiff >= 1800 && timeDiff < 3600;
-                
+
                 let lastSeenDisplay = '';
                 if (timeDiff < 60) lastSeenDisplay = `${timeDiff}s`;
                 else if (timeDiff < 3600) lastSeenDisplay = `${Math.floor(timeDiff / 60)}m`;
                 else if (timeDiff < 86400) lastSeenDisplay = `${Math.floor(timeDiff / 3600)}h`;
                 else lastSeenDisplay = `${Math.floor(timeDiff / 86400)}d`;
-                
+
                 const storageDisplay = formatStorage(node.storage_committed || 0);
                 const uptimeHours = Math.floor(node.uptime / 3600);
                 const uptimeDays = Math.floor(uptimeHours / 24);
@@ -360,6 +394,19 @@ export const DashboardNodesCard: React.FC = () => {
                         {displayLocation?.country_code ? <img src={getCountryFlagUrl(displayLocation.country_code)} alt={displayLocation.country} className="w-4 h-3 object-cover rounded-sm flex-shrink-0" loading="lazy" decoding="async" width="16" height="12" onError={(e) => { e.currentTarget.style.display = 'none'; }} /> : <Globe className="w-4 h-3 text-white/40 flex-shrink-0" />}
                         <span className="text-white/80 truncate max-w-[120px]">{formatLocation(displayLocation)}</span>
                       </div>
+                    </td>
+                    <td className="px-3 py-3 text-xs" onClick={(e) => e.stopPropagation()}>
+                      {node.manager_pubkey ? (
+                        <ManagerBadge
+                          managerPubkey={node.manager_pubkey}
+                          nftCount={managerAssets.get(node.manager_pubkey)?.nft_count}
+                          sbtCount={managerAssets.get(node.manager_pubkey)?.sbt_count}
+                          nftNames={managerAssets.get(node.manager_pubkey)?.nft_names}
+                          sbtNames={managerAssets.get(node.manager_pubkey)?.sbt_names}
+                        />
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] bg-gray-500/20 text-gray-400 border border-gray-500/30 whitespace-nowrap">Not Registered</span>
+                      )}
                     </td>
                     <td className="px-3 py-3 text-xs"><div className="flex items-center space-x-1 min-w-0"><span className="text-white/80 font-mono truncate max-w-[100px]">{ip || 'Unknown'}</span>{ip && <CopyBtn text={ip} type="IP" size="sm" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex-shrink-0" />}</div></td>
                     <td className="px-3 py-3 text-xs"><div className="flex items-center space-x-1 min-w-0"><span className="text-white/60 font-mono truncate max-w-[120px]">{node.pubkey || 'Unknown'}</span>{node.pubkey && <CopyBtn text={node.pubkey} type="Pubkey" size="sm" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex-shrink-0" />}</div></td>

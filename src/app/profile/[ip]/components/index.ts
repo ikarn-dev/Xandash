@@ -10,3 +10,4 @@ export * from './ProfileChartsSection';
 export * from './ProfileEventsTable';
 export * from './ProfileSnapshotsTable';
 export * from './ProfileSkeleton';
+export * from './ProfileManagerSection';

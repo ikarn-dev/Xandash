@@ -43,10 +43,10 @@ export async function connectToDatabase(): Promise<Db> {
 
     const client = await clientPromise;
     const db = client.db(DB_NAME);
-    
+
     // Cache the db instance
     global._mongoDb = db;
-    
+
     return db;
   } catch (error) {
     // Clear cache on error
@@ -59,7 +59,7 @@ export async function getCollection<T extends Document>(name: string): Promise<C
   if (!name || typeof name !== 'string') {
     throw new Error('Collection name must be a non-empty string');
   }
-  
+
   const database = await connectToDatabase();
   return database.collection<T>(name);
 }
@@ -73,7 +73,7 @@ export async function closeConnection(): Promise<void> {
     await client.close();
     global._mongoClientPromise = undefined;
     global._mongoDb = undefined;
-  } catch (error) {
+  } catch (_error) {
     // Ignore close errors in serverless
   }
 }
@@ -97,6 +97,14 @@ export interface NodeSnapshot {
   active_streams?: number;
   timestamp: number;
   created_at: Date;
+  // Manager NFT/SBT data
+  manager_pubkey?: string; // The manager's wallet address that owns this node
+  manager_nft_count?: number; // Number of Xandeum-related NFTs the manager holds
+  manager_sbt_count?: number; // Number of Xandeum-related SBTs the manager holds
+  manager_xand_balance?: number; // XAND token balance of the manager
+  manager_data_updated?: number; // Timestamp when manager data was last updated
+  manager_nft_names?: string[]; // Names of Xandeum-related NFTs
+  manager_sbt_names?: string[]; // Names of Xandeum-related SBTs
 }
 
 // Node event log - tracks all changes

@@ -129,7 +129,7 @@ async function makeRpcCall<T>(method: string): Promise<T | null> {
 
     const data = await response.json();
     return data;
-  } catch (err) {
+  } catch (_err) {
     return null;
   }
 }
@@ -139,12 +139,12 @@ async function makeRpcCall<T>(method: string): Promise<T | null> {
  */
 async function fetchPodsWithStats(): Promise<MainnetNodeData[] | null> {
   const data = await makeRpcCall<any>('get-pods-with-stats');
-  
+
   if (!data) return null;
 
   // Handle different response formats
   let pods: MainnetNodeData[] = [];
-  
+
   if (Array.isArray(data)) {
     pods = data;
   } else if (data.pods && Array.isArray(data.pods)) {
@@ -158,7 +158,7 @@ async function fetchPodsWithStats(): Promise<MainnetNodeData[] | null> {
   } else if (data.data && Array.isArray(data.data)) {
     pods = data.data;
   }
-  
+
   if (pods.length === 0) {
     return null;
   }
@@ -171,7 +171,7 @@ async function fetchPodsWithStats(): Promise<MainnetNodeData[] | null> {
  */
 async function fetchCreditsData(): Promise<Map<string, number>> {
   const creditsMap = new Map<string, number>();
-  
+
   try {
     const response = await fetch(MAINNET_CREDITS_URL, {
       headers: {
@@ -179,14 +179,14 @@ async function fetchCreditsData(): Promise<Map<string, number>> {
       },
       signal: AbortSignal.timeout(10000),
     });
-    
+
     if (!response.ok) {
       return creditsMap;
     }
-    
+
     const data = await response.json();
     const credits = data.pods_credits || [];
-    
+
     for (const entry of credits) {
       if (entry.pod_id && entry.credits !== null && entry.credits !== undefined) {
         creditsMap.set(entry.pod_id, entry.credits);
@@ -195,7 +195,7 @@ async function fetchCreditsData(): Promise<Map<string, number>> {
   } catch (err) {
     console.error('Credits fetch error:', err);
   }
-  
+
   return creditsMap;
 }
 
@@ -212,13 +212,13 @@ async function fetchGeoData(items: Array<{ ip: string; pubkey: string }>): Promi
   const geoData: Record<string, MainnetGeoData> = {};
   const ips = items.map(item => item.ip).filter(ip => ip);
   const uniqueIps = [...new Set(ips)];
-  
+
   if (uniqueIps.length === 0) return {};
-  
+
   // Fetch geo data from external APIs
   const externalGeo = await fetchExternalGeoData(uniqueIps);
   Object.assign(geoData, externalGeo);
-  
+
   return geoData;
 }
 
@@ -229,11 +229,11 @@ async function fetchGeoData(items: Array<{ ip: string; pubkey: string }>): Promi
  */
 async function fetchExternalGeoData(ips: string[]): Promise<Record<string, MainnetGeoData>> {
   const geoData: Record<string, MainnetGeoData> = {};
-  
+
   if (ips.length === 0) return geoData;
-  
+
   const uniqueIps = [...new Set(ips)].slice(0, 100);
-  
+
   // Step 1: Try ip-api.com batch endpoint first (most efficient for multiple IPs)
   try {
     const response = await fetch('http://ip-api.com/batch?fields=status,query,country,countryCode,regionName,city,lat,lon,isp', {
@@ -244,10 +244,10 @@ async function fetchExternalGeoData(ips: string[]): Promise<Record<string, Mainn
       body: JSON.stringify(uniqueIps),
       signal: AbortSignal.timeout(15000),
     });
-    
+
     if (response.ok) {
       const data = await response.json();
-      
+
       if (Array.isArray(data)) {
         for (const item of data) {
           if (item.status === 'success' && item.query) {
@@ -269,10 +269,10 @@ async function fetchExternalGeoData(ips: string[]): Promise<Record<string, Mainn
   } catch {
     // Silent fail - will use ipwho.is fallback
   }
-  
+
   // Step 2: For IPs not returned by batch, try ipwho.is individually
   const missingIps = uniqueIps.filter(ip => !geoData[ip]);
-  
+
   if (missingIps.length > 0) {
     // Limit concurrent requests to avoid rate limiting
     const fetchPromises = missingIps.slice(0, 30).map(async (ip) => {
@@ -280,7 +280,7 @@ async function fetchExternalGeoData(ips: string[]): Promise<Record<string, Mainn
         const response = await fetch(`https://ipwho.is/${ip}`, {
           signal: AbortSignal.timeout(5000),
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
@@ -305,16 +305,16 @@ async function fetchExternalGeoData(ips: string[]): Promise<Record<string, Mainn
       }
       return null;
     });
-    
+
     const results = await Promise.allSettled(fetchPromises);
-    
+
     for (const result of results) {
       if (result.status === 'fulfilled' && result.value) {
         geoData[result.value.ip] = result.value.data;
       }
     }
   }
-  
+
   return geoData;
 }
 
@@ -329,10 +329,10 @@ function enrichNodesWithGeoAndCredits(
   return nodes.map(node => {
     const ip = node.address?.split(':')[0] || '';
     const geo = geoData[ip];
-    
+
     // Get credits from credits API first, then fallback to node data, then geo data
     const credits = creditsMap.get(node.pubkey) ?? node.credits ?? geo?.credits ?? null;
-    
+
     if (geo) {
       return {
         ...node,
@@ -342,7 +342,7 @@ function enrichNodesWithGeoAndCredits(
         provider: node.provider || geo.provider,
       };
     }
-    
+
     return {
       ...node,
       credits,
@@ -355,43 +355,43 @@ function enrichNodesWithGeoAndCredits(
  */
 export async function getMainnetData(forceRefresh: boolean = false): Promise<MainnetExternalData> {
   const canFetch = await canCallApi();
-  
+
   let currentNodes = await cache.get(CACHE_KEY_NODES) as MainnetNodeData[] | null;
   let cachedGeo = await cache.get(CACHE_KEY_GEO) as Record<string, MainnetGeoData> | null;
   let cachedCredits = await cache.get(CACHE_KEY_CREDITS) as Map<string, number> | null;
   const cachedMerged = await cache.get(CACHE_KEY_MERGED) as MainnetExternalData | null;
-  
+
   let freshFetch = false;
 
   // Fetch fresh data if allowed or forced
   if (canFetch || forceRefresh || !currentNodes) {
     const freshNodes = await fetchPodsWithStats();
-    
+
     if (freshNodes && freshNodes.length > 0) {
       // Use fresh data directly - always reflect current API state
       currentNodes = freshNodes;
-      
+
       await cache.set(CACHE_KEY_NODES, currentNodes, CACHE_TTL_MS * 10);
       await cache.set(CACHE_KEY_LAST_FETCH, Date.now(), CACHE_TTL_MS * 2);
       freshFetch = true;
-      
+
       // Fetch geo data for new IPs only (geo data can be cached longer)
       const items = currentNodes.map(pod => ({
         ip: pod.address?.split(':')[0] || '',
         pubkey: pod.pubkey || '',
       })).filter(item => item.ip && item.pubkey);
-      
+
       // Only fetch geo for IPs we don't have
-      const newItems = cachedGeo 
+      const newItems = cachedGeo
         ? items.filter(item => !(cachedGeo as Record<string, MainnetGeoData>)[item.ip])
         : items;
-      
+
       if (newItems.length > 0) {
         const newGeoData = await fetchGeoData(newItems);
         cachedGeo = { ...(cachedGeo || {}), ...newGeoData };
         await cache.set(CACHE_KEY_GEO, cachedGeo, CACHE_TTL_MS * 10);
       }
-      
+
       // Fetch credits data from dedicated API
       const freshCredits = await fetchCreditsData();
       if (freshCredits.size > 0) {
@@ -402,7 +402,7 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
       }
     }
   }
-  
+
   // Convert cached credits object back to Map if needed
   let creditsMap = new Map<string, number>();
   if (cachedCredits) {
@@ -417,7 +417,7 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
   // Enrich nodes with geo data and credits
   let enrichedNodes = currentNodes || [];
   enrichedNodes = enrichNodesWithGeoAndCredits(enrichedNodes, cachedGeo || {}, creditsMap);
-  
+
   // Update merged cache if fresh data
   if (freshFetch && enrichedNodes.length > 0) {
     const result: MainnetExternalData = {
@@ -428,7 +428,7 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
       cached: false,
       timestamp: Date.now(),
     };
-    
+
     await cache.set(CACHE_KEY_MERGED, result, CACHE_TTL_MS);
     return result;
   }
@@ -491,21 +491,21 @@ export async function getMainnetNodeByPubkey(pubkey: string): Promise<MainnetNod
 export async function getMainnetCreditsMap(): Promise<Map<string, number>> {
   // Always fetch fresh credits directly from the API for sync operations
   const creditsMap = await fetchCreditsData();
-  
+
   // If direct fetch returned data, use it (even if some values are 0)
   if (creditsMap.size > 0) {
     return creditsMap;
   }
-  
+
   // If API completely failed, try to get from cached node data as fallback
   const data = await getMainnetData();
-  
+
   for (const node of data.nodes) {
     if (node.pubkey && node.credits !== null && node.credits !== undefined) {
       creditsMap.set(node.pubkey, node.credits);
     }
   }
-  
+
   return creditsMap;
 }
 

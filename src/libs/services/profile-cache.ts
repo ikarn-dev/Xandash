@@ -26,7 +26,7 @@ export class ProfileCacheService {
       if (!ip || typeof ip !== 'string') {
         throw new Error('Invalid IP address provided');
       }
-      
+
       if (!profileData) {
         throw new Error('No profile data provided to cache');
       }
@@ -36,7 +36,7 @@ export class ProfileCacheService {
         ...profileData,
         cachedAt: Date.now(),
       };
-      
+
       await cache.set(cacheKey, cachedData, PROFILE_CACHE_TTL);
     } catch (error) {
       throw new Error(`Failed to cache profile for ${ip}: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -54,13 +54,13 @@ export class ProfileCacheService {
 
       const cacheKey = `${PROFILE_CACHE_PREFIX}${ip}`;
       const cached = await cache.get(cacheKey);
-      
+
       if (cached) {
         return cached as CachedProfileData;
       }
-      
+
       return null;
-    } catch (error) {
+    } catch (_error) {
       // Return null on cache errors to allow fallback to fresh data
       return null;
     }
@@ -70,14 +70,14 @@ export class ProfileCacheService {
    * Pre-load profile data for multiple IPs using server-side functions
    */
   static async preloadProfilesServerSide(
-    ips: string[], 
+    ips: string[],
     getProfileDataFn: (ip: string) => Promise<any>
   ): Promise<void> {
     // Process in smaller batches to avoid overwhelming the system
     const batchSize = 5;
     for (let i = 0; i < ips.length; i += batchSize) {
       const batch = ips.slice(i, i + batchSize);
-      
+
       await Promise.all(
         batch.map(async (ip) => {
           try {
@@ -92,12 +92,12 @@ export class ProfileCacheService {
             if (profileData) {
               await this.cacheProfile(ip, profileData);
             }
-          } catch (error) {
+          } catch (_error) {
             // Silently handle individual profile loading errors
           }
         })
       );
-      
+
       // Small delay between batches
       if (i + batchSize < ips.length) {
         await new Promise(resolve => setTimeout(resolve, 50));

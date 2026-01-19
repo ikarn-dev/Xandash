@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { cn } from '@/libs';
 
 interface AnimatedValueProps {
@@ -30,19 +30,19 @@ export const AnimatedValue: React.FC<AnimatedValueProps> = ({ value, className }
       // Use setTimeout to avoid setState in effect
       const timer = setTimeout(() => {
         setAnimationState('exit');
-        
+
         // After exit animation, update value and start enter animation
         const exitTimer = setTimeout(() => {
           setDisplayValue(stringValue);
           setAnimationState('enter');
           prevValueRef.current = stringValue;
         }, 150);
-        
+
         // Reset to idle after enter animation
         const enterTimer = setTimeout(() => {
           setAnimationState('idle');
         }, 300);
-        
+
         return () => {
           clearTimeout(exitTimer);
           clearTimeout(enterTimer);
@@ -73,7 +73,7 @@ export const AnimatedValue: React.FC<AnimatedValueProps> = ({ value, className }
   };
 
   return (
-    <span 
+    <span
       className={cn(
         'inline-block transition-all duration-150 ease-out',
         getAnimationClasses(),
@@ -106,17 +106,17 @@ const SlotDigit: React.FC<SlotDigitProps> = ({ digit, delay }) => {
 
     if (prevDigitRef.current !== digit) {
       setIsRolling(true);
-      
+
       // Roll through random digits
       const isNumber = /\d/.test(digit);
       if (isNumber) {
         let count = 0;
         const maxRolls = 5;
-        
+
         const rollInterval = setInterval(() => {
           setCurrentDigit(String(Math.floor(Math.random() * 10)));
           count++;
-          
+
           if (count >= maxRolls) {
             clearInterval(rollInterval);
             setCurrentDigit(digit);
@@ -124,7 +124,7 @@ const SlotDigit: React.FC<SlotDigitProps> = ({ digit, delay }) => {
             prevDigitRef.current = digit;
           }
         }, 50);
-        
+
         return () => clearInterval(rollInterval);
       } else {
         // For non-digits, just flip
@@ -138,7 +138,7 @@ const SlotDigit: React.FC<SlotDigitProps> = ({ digit, delay }) => {
   }, [digit, delay]);
 
   return (
-    <span 
+    <span
       className={cn(
         'inline-block transition-transform duration-100',
         isRolling && 'text-white/70'
@@ -157,11 +157,11 @@ interface SlotNumberProps {
 export const SlotNumber: React.FC<SlotNumberProps> = ({ value, className }) => {
   const stringValue = String(value);
   const chars = stringValue.split('');
-  
+
   return (
     <span className={cn('inline-flex', className)}>
       {chars.map((char, index) => (
-        <SlotDigit 
+        <SlotDigit
           key={`slot-${index}`}
           digit={char}
           delay={index * 30}

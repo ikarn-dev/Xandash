@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition } from 'react';
 import { filterAndSortValidators, paginateValidators, type ValidatorData } from '@/libs/server';
+import { ManagerAssetData } from './useManagerAssets';
 
 interface FilterState {
   onlyPublic: boolean;
@@ -12,7 +13,12 @@ interface FilterState {
   onlySyncing: boolean;
 }
 
-export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: number, network: string = 'devnet') {
+export function useNodesFilters(
+  allValidators: ValidatorData[],
+  dataFetchTime: number,
+  network: string = 'devnet',
+  managerAssets: Map<string, ManagerAssetData> = new Map()
+) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(25);
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,14 +31,37 @@ export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: n
     onlySyncing: false,
   });
   const [versionFilter, setVersionFilter] = useState<string>('');
+  const [managerFilter, setManagerFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'address' | 'location' | 'pubkey' | 'public' | 'storage_committed' | 'storage_used' | 'usage_percent' | 'rpc_port' | 'version' | 'uptime' | 'last_seen' | 'status' | 'credits'>('last_seen');
   const [isPending, startTransition] = useTransition();
 
-  const hasActiveFilters = searchQuery !== '' || selectedFilters.onlyPublic || selectedFilters.hideHighStake || selectedFilters.showDuplicates || selectedFilters.onlyOnline || selectedFilters.onlyInactive || selectedFilters.onlySyncing || versionFilter !== '';
+  const hasActiveFilters = searchQuery !== '' || selectedFilters.onlyPublic || selectedFilters.hideHighStake || selectedFilters.showDuplicates || selectedFilters.onlyOnline || selectedFilters.onlyInactive || selectedFilters.onlySyncing || versionFilter !== '' || managerFilter !== 'all';
 
   const { validators, pagination, quickStats, availableVersions } = useMemo(() => {
+    // 1. Filter by Manager Status
+    let managerFilteredValidators = allValidators;
+    if (managerFilter !== 'all') {
+      managerFilteredValidators = allValidators.filter(v => {
+        const isRegistered = !!v.manager_pubkey;
+
+        // Use data from managerAssets map if available, otherwise fall back to validator data
+        const assets = v.manager_pubkey ? managerAssets.get(v.manager_pubkey) : undefined;
+
+        // Determine if there are NFTs or SBTs based on fetched assets
+        const hasNfts = (assets?.nft_count || 0) > 0 || (assets?.nft_names?.length || 0) > 0;
+        const hasSbts = (assets?.sbt_count || 0) > 0 || (assets?.sbt_names?.length || 0) > 0;
+        const hasAssets = hasNfts || hasSbts; // Combined check for any assets
+
+        if (managerFilter === 'registered') return isRegistered;
+        if (managerFilter === 'with_nfts') return isRegistered && hasAssets;
+        if (managerFilter === 'non_nft_registered') return isRegistered && !hasAssets;
+        if (managerFilter === 'non_registered') return !isRegistered;
+        return true;
+      });
+    }
+
     const filtered = filterAndSortValidators(
-      allValidators,
+      managerFilteredValidators,
       {
         search: searchQuery,
         onlyPublic: selectedFilters.onlyPublic,
@@ -113,7 +142,7 @@ export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: n
       quickStats: { ...calculatedStats, duplicates: duplicateCount, syncing: calculatedStats.syncing || 0 },
       availableVersions: uniqueVersions
     };
-  }, [allValidators, searchQuery, selectedFilters, versionFilter, sortBy, currentPage, pageSize, hasActiveFilters, dataFetchTime, network]);
+  }, [allValidators, searchQuery, selectedFilters, versionFilter, managerFilter, sortBy, currentPage, pageSize, hasActiveFilters, dataFetchTime, network, managerAssets]);
 
   const handleFilterChange = (filterKey: keyof FilterState) => {
     startTransition(() => {
@@ -156,6 +185,13 @@ export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: n
     });
   };
 
+  const handleManagerFilterChange = (filter: string) => {
+    startTransition(() => {
+      setManagerFilter(filter);
+      setCurrentPage(1);
+    });
+  };
+
   const handleSort = (column: typeof sortBy) => {
     startTransition(() => {
       setSortBy(column);
@@ -177,11 +213,13 @@ export function useNodesFilters(allValidators: ValidatorData[], dataFetchTime: n
     searchQuery,
     selectedFilters,
     versionFilter,
+    managerFilter,
     sortBy,
     isPending,
     handleFilterChange,
     handleSearchChange,
     handleVersionFilterChange,
+    handleManagerFilterChange,
     handleSort,
     handlePageChange,
   };

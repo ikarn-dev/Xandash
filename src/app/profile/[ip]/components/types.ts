@@ -54,12 +54,32 @@ export interface CurrentNodeData {
   credits?: number;
 }
 
+export interface ManagerData {
+  manager_address: string;
+  node_label: string;
+  registered_time: string;
+  total_nodes: number;
+  nft_count: number;
+  sbt_count: number;
+  xand_balance: number;
+  xeno_balance: number;
+  nft_previews: NFTPreview[];
+  sbt_previews: NFTPreview[];
+  last_updated: number | null;
+}
+
+export interface NFTPreview {
+  name: string;
+  image: string | null;
+}
+
 export interface NodeProfileData {
   ip: string;
   network?: string;
   location: LocationData | null;
   liveCredits?: any[];
   currentNode: CurrentNodeData | null;
+  manager?: ManagerData | null;
   dbHistory?: DbNodeSnapshot[];
   dbEvents?: NodeEventLog[];
 }

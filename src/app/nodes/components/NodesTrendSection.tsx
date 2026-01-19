@@ -4,6 +4,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { TrendLineChart } from '@/components/ui/TrendLineChart';
 import { useNodesData } from '@/libs/context/nodes-data-context';
 import { useNetwork } from '@/libs/context/network-context';
+import { useNodesTrend } from '../hooks/useNodesTrend';
 
 // Format uptime hours
 const formatUptime = (hours: number): string => {
@@ -192,32 +193,12 @@ export const NodesTrendSection: React.FC = () => {
   const { nodes, stats, isLoading, dataFetchTime } = useNodesData();
   const { network } = useNetwork();
   
-  // Store historical node counts in component state
-  const [nodeCountHistory, setNodeCountHistory] = useState<Array<{ timestamp: number; value: number; label: string }>>([]);
-  const maxHistoryPoints = 10; // Keep last 10 data points
-
-  // Update node count history when stats change
-  useEffect(() => {
-    if (stats.total > 0 && dataFetchTime) {
-      setNodeCountHistory(prev => {
-        const newPoint = {
-          timestamp: dataFetchTime,
-          value: stats.total,
-          label: `${stats.total} nodes`
-        };
-        
-        // Check if this is a new data point (different timestamp)
-        const lastPoint = prev[prev.length - 1];
-        if (!lastPoint || lastPoint.timestamp !== dataFetchTime) {
-          const updated = [...prev, newPoint];
-          // Keep only the last N points
-          return updated.slice(-maxHistoryPoints);
-        }
-        
-        return prev;
-      });
-    }
-  }, [stats.total, dataFetchTime]);
+  // Get historical node count trend from database
+  const { 
+    trendData: historicalTrendData, 
+    isLoading: trendLoading, 
+    error: trendError 
+  } = useNodesTrend(24); // Last 24 hours
 
   // Generate trend data from current snapshot
   const { 
@@ -335,18 +316,24 @@ export const NodesTrendSection: React.FC = () => {
     };
   }, [nodes, dataFetchTime]);
 
-  // Node count trend data - use real-time history
+  // Node count trend data - use historical data from database
   const nodeCountData = useMemo(() => {
-    if (nodeCountHistory.length === 0) {
-      // If no history yet, create initial point from current stats
+    if (trendError || historicalTrendData.length === 0) {
+      // Fallback to current stats if no historical data
       return [{
         timestamp: dataFetchTime || Math.floor(Date.now() / 1000),
         value: stats.total,
         label: `${stats.total} nodes`
       }];
     }
-    return nodeCountHistory;
-  }, [nodeCountHistory, stats.total, dataFetchTime]);
+    
+    // Transform historical data for the chart
+    return historicalTrendData.map(snapshot => ({
+      timestamp: snapshot.timestamp,
+      value: snapshot.total_nodes,
+      label: `${snapshot.total_nodes} nodes`
+    }));
+  }, [historicalTrendData, trendError, stats.total, dataFetchTime]);
 
   // Calculate uptime percentiles for chart - show as distribution
   const avgUptimeData = useMemo(() => {
@@ -423,8 +410,8 @@ export const NodesTrendSection: React.FC = () => {
             color="#10b981"
             valueFormatter={formatCount}
             height={180}
-            isLoading={isLoading}
-            emptyMessage="No node data"
+            isLoading={isLoading || trendLoading}
+            emptyMessage={trendError ? `Error: ${trendError}` : "No node data"}
           />
         </div>
       </div>

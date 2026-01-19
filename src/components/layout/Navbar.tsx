@@ -15,6 +15,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { title: 'About', href: '/about-xandash', category: 'main' },
   { title: 'Analytics', href: '/', category: 'main' },
   { title: 'pNodes', href: '/nodes', category: 'main' },
   { title: 'Network', href: '/network', category: 'main' },
@@ -25,7 +26,6 @@ const navItems: NavItem[] = [
   { title: 'XAND', href: '/xand', category: 'tools' },
   { title: 'STOINC', href: '/stoinc', category: 'tools' },
   { title: 'Endpoints', href: '/endpoints', category: 'tools' },
-  { title: 'About', href: '/about-xandash', category: 'info' },
   { title: 'Docs', href: '/docs', category: 'info' },
 ];
 

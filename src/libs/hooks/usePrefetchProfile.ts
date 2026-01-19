@@ -22,19 +22,19 @@ export function usePrefetchProfile() {
         method: 'GET',
         priority: 'low' as any, // Low priority to not block user interactions
       })
-      .then(response => response.json())
-      .then(data => {
-        // Cache the minimal data
-        if (data && !data.error) {
-          ProfileCacheService.cacheProfile(ip, data).catch(() => {
-            // Silently handle cache errors
-          });
-        }
-      })
-      .catch(() => {
-        // Silently fail - prefetch is optional
-      });
-    } catch (error) {
+        .then(response => response.json())
+        .then(data => {
+          // Cache the minimal data
+          if (data && !data.error) {
+            ProfileCacheService.cacheProfile(ip, data).catch(() => {
+              // Silently handle cache errors
+            });
+          }
+        })
+        .catch(() => {
+          // Silently fail - prefetch is optional
+        });
+    } catch (_error) {
       // Silently fail - prefetch is optional
     }
   }, []);

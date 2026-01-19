@@ -11,7 +11,7 @@ import BackgroundRpcMonitor from '@/libs/services/background-rpc-monitor';
 export const useRpcMonitorInit = () => {
   useEffect(() => {
     // Initialize the RPC status monitor
-    const monitor = RpcStatusMonitor.getInstance();
+    RpcStatusMonitor.getInstance();
 
     // Initialize and start background monitoring
     const backgroundMonitor = BackgroundRpcMonitor.getInstance();

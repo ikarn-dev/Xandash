@@ -44,22 +44,62 @@ export const Marquee = ({ className = '' }: MarqueeProps) => {
   if (!mounted) return null;
 
   const announcements = [
-    { text: 'MAINNET IS LIVE', color: 'text-blue-400', dot: 'bg-blue-400' },
-    { text: '•', color: 'text-white/20', dot: '' },
-    { text: 'DEVNET IS LIVE', color: 'text-emerald-400', dot: 'bg-emerald-400' },
-    { text: '•', color: 'text-white/20', dot: '' },
-    { text: 'NODE COMPARE', color: 'text-cyan-400', dot: 'bg-cyan-400' },
-    { text: '•', color: 'text-white/20', dot: '' },
-    { text: 'AI-POWERED ANALYSIS', color: 'text-purple-400', dot: 'bg-purple-400' },
-    { text: '•', color: 'text-white/20', dot: '' },
-    { text: 'MULTI-LEADERBOARDS', color: 'text-amber-400', dot: 'bg-amber-400' },
-    { text: '•', color: 'text-white/20', dot: '' },
-    { text: 'GOVERNANCE TRACKING', color: 'text-pink-400', dot: 'bg-pink-400' },
-    { text: '•', color: 'text-white/20', dot: '' },
-    { text: 'QUICK COMPARE FROM TABLES', color: 'text-teal-400', dot: 'bg-teal-400' },
-    { text: '•', color: 'text-white/20', dot: '' },
-    { text: 'REAL-TIME MONITORING', color: 'text-white/60', dot: 'bg-white/40' },
-    { text: '•', color: 'text-white/20', dot: '' },
+    { text: 'MAINNET + DEVNET SUPPORT', dot: true },
+    { text: '•', dot: false },
+    { text: 'REAL-TIME NODE MONITORING', dot: true },
+    { text: '•', dot: false },
+    { text: 'NODE COMPARE (UP TO 4)', dot: true },
+    { text: '•', dot: false },
+    { text: 'COUNTRY COMPARISON', dot: true },
+    { text: '•', dot: false },
+    { text: 'AI-POWERED ANALYSIS', dot: true },
+    { text: '•', dot: false },
+    { text: 'INTERACTIVE NETWORK MAP', dot: true },
+    { text: '•', dot: false },
+    { text: 'MULTI-LEADERBOARDS', dot: true },
+    { text: '•', dot: false },
+    { text: 'GOVERNANCE TRACKING', dot: true },
+    { text: '•', dot: false },
+    { text: 'HISTORICAL CHARTS', dot: true },
+    { text: '•', dot: false },
+    { text: 'NODE PROFILES', dot: true },
+    { text: '•', dot: false },
+    { text: 'MANAGER PROFILES', dot: true },
+    { text: '•', dot: false },
+    { text: 'ONCHAIN DATA', dot: true },
+    { text: '•', dot: false },
+    { text: 'NFT/SBT TRACKING', dot: true },
+    { text: '•', dot: false },
+    { text: 'XAND BALANCE DISPLAY', dot: true },
+    { text: '•', dot: false },
+    { text: 'COUNTRY ANALYTICS', dot: true },
+    { text: '•', dot: false },
+    { text: 'VPS PROVIDER STATS', dot: true },
+    { text: '•', dot: false },
+    { text: 'CREDITS TRACKING', dot: true },
+    { text: '•', dot: false },
+    { text: 'STORAGE ANALYTICS', dot: true },
+    { text: '•', dot: false },
+    { text: 'UPTIME MONITORING', dot: true },
+    { text: '•', dot: false },
+    { text: 'VERSION DISTRIBUTION', dot: true },
+    { text: '•', dot: false },
+    { text: 'XAND TOKEN INFO', dot: true },
+    { text: '•', dot: false },
+    { text: 'STOINC CALCULATOR', dot: true },
+    { text: '•', dot: false },
+    { text: 'RPC ENDPOINT TESTER', dot: true },
+    { text: '•', dot: false },
+    { text: 'API UPTIME GRAPHS', dot: true },
+    { text: '•', dot: false },
+    { text: 'SERVICE HEALTH MONITOR', dot: true },
+    { text: '•', dot: false },
+    { text: 'QUICK TABLE COMPARE', dot: true },
+    { text: '•', dot: false },
+    { text: 'NODE EVENT LOGS', dot: true },
+    { text: '•', dot: false },
+    { text: 'AUTO-REFRESH (30s)', dot: true },
+    { text: '•', dot: false },
   ];
 
   if (isHidden) {
@@ -96,9 +136,9 @@ export const Marquee = ({ className = '' }: MarqueeProps) => {
             {announcements.map((item, i) => (
               <div key={`${repeatIndex}-${i}`} className="flex items-center gap-2 shrink-0">
                 {item.dot && (
-                  <span className={`w-1.5 h-1.5 rounded-full ${item.dot} animate-pulse`} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
                 )}
-                <span className={`text-xs font-mono font-medium tracking-wider whitespace-nowrap ${item.color}`}>
+                <span className={`text-xs font-mono font-medium tracking-wider whitespace-nowrap ${item.dot ? 'text-white/70' : 'text-white/30'}`}>
                   {item.text}
                 </span>
               </div>
@@ -117,14 +157,14 @@ export const Marquee = ({ className = '' }: MarqueeProps) => {
           }
         }
         .animate-marquee {
-          animation: marquee 25s linear infinite;
+          animation: marquee 20s linear infinite;
         }
         .animate-marquee:hover {
           animation-play-state: paused;
         }
         @media (max-width: 640px) {
           .animate-marquee {
-            animation: marquee 12s linear infinite;
+            animation: marquee 15s linear infinite;
           }
         }
       `}</style>

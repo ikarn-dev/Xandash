@@ -20,6 +20,15 @@ export interface ValidatorData {
   credits?: number | null;
   country?: string;
   country_code?: string;
+  provider?: string;
+  // Manager NFT/SBT data
+  manager_pubkey?: string;
+  manager_nft_count?: number;
+  manager_sbt_count?: number;
+  manager_xand_balance?: number;
+  manager_data_updated?: number;
+  manager_nft_names?: string[];
+  manager_sbt_names?: string[];
 }
 
 export interface ValidatorStats {
@@ -37,7 +46,7 @@ export async function getValidatorsData(): Promise<{
 }> {
   try {
     const mainnetData = await getMainnetData();
-    
+
     if (mainnetData.nodes.length === 0) {
       return {
         validators: [],
@@ -52,12 +61,12 @@ export async function getValidatorsData(): Promise<{
     }
 
     const allValidators = mainnetData.nodes;
-    
+
     // Process and enrich validator data
     const now = Math.floor(Date.now() / 1000);
     const processedValidators: ValidatorData[] = allValidators.map((validator: any, index: number) => {
       const timeDiff = now - (validator.last_seen_timestamp || now);
-      
+
       // Simplified status logic similar to endpoint tester
       // Online: last seen < 30 minutes
       // Syncing: last seen 30-60 minutes
@@ -66,15 +75,15 @@ export async function getValidatorsData(): Promise<{
       if (timeDiff < 1800) status = 'online';        // Less than 30 minutes = online
       else if (timeDiff < 3600) status = 'syncing';  // 30-60 minutes = syncing
       else status = 'offline';                       // More than 60 minutes = offline
-      
+
       const isOnline = status === 'online'; // For score calculation
-      
+
       // Calculate score based on uptime, storage, and other factors
       const uptimeScore = Math.min((validator.uptime || 0) / (30 * 24 * 3600), 1) * 40; // Max 40 points for 30 days uptime
-      const storageScore = Math.min((validator.storage_committed || 0) / (100 * 1024**3), 1) * 30; // Max 30 points for 100GB
+      const storageScore = Math.min((validator.storage_committed || 0) / (100 * 1024 ** 3), 1) * 30; // Max 30 points for 100GB
       const onlineScore = isOnline ? 30 : 0; // 30 points for being online
       const totalScore = uptimeScore + storageScore + onlineScore;
-      
+
       return {
         pubkey: validator.pubkey || `validator-${index}-${Date.now()}-${Math.random()}`,
         address: validator.address || `unknown-${index}`,
@@ -98,7 +107,7 @@ export async function getValidatorsData(): Promise<{
     const uniqueValidators: ValidatorData[] = [];
     const pubkeyGroups = new Map<string, ValidatorData[]>();
     const addressGroups = new Map<string, ValidatorData[]>();
-    
+
     // Group by pubkey
     processedValidators.forEach(validator => {
       const pubkey = validator.pubkey;
@@ -107,7 +116,7 @@ export async function getValidatorsData(): Promise<{
       }
       pubkeyGroups.get(pubkey)!.push(validator);
     });
-    
+
     // Group by address  
     processedValidators.forEach(validator => {
       const address = validator.address;
@@ -119,17 +128,17 @@ export async function getValidatorsData(): Promise<{
 
     // Track which validators we've already processed
     const processedValidatorIds = new Set<string>();
-    
+
     // Process pubkey duplicates first
-    pubkeyGroups.forEach((validators, pubkey) => {
+    pubkeyGroups.forEach((validators, _pubkey) => {
       if (validators.length > 1) {
         // Sort by last_seen_timestamp (most recent first)
         validators.sort((a, b) => b.last_seen_timestamp - a.last_seen_timestamp);
-        
+
         // Keep the most recent one
         const mostRecent = validators[0];
         const validatorId = `${mostRecent.pubkey}-${mostRecent.address}`;
-        
+
         if (!processedValidatorIds.has(validatorId)) {
           mostRecent.isDuplicate = false;
           mostRecent.duplicateCount = validators.length - 1;
@@ -138,17 +147,17 @@ export async function getValidatorsData(): Promise<{
         }
       }
     });
-    
+
     // Process address duplicates
-    addressGroups.forEach((validators, address) => {
+    addressGroups.forEach((validators, _address) => {
       if (validators.length > 1) {
         // Sort by last_seen_timestamp (most recent first)
         validators.sort((a, b) => b.last_seen_timestamp - a.last_seen_timestamp);
-        
+
         // Keep the most recent one if not already processed
         const mostRecent = validators[0];
         const validatorId = `${mostRecent.pubkey}-${mostRecent.address}`;
-        
+
         if (!processedValidatorIds.has(validatorId)) {
           mostRecent.isDuplicate = false;
           mostRecent.duplicateCount = validators.length - 1;
@@ -163,14 +172,14 @@ export async function getValidatorsData(): Promise<{
         }
       }
     });
-    
+
     // Add validators that have no duplicates
     processedValidators.forEach(validator => {
       const validatorId = `${validator.pubkey}-${validator.address}`;
       if (!processedValidatorIds.has(validatorId)) {
         const pubkeyDuplicates = pubkeyGroups.get(validator.pubkey)?.length || 1;
         const addressDuplicates = addressGroups.get(validator.address)?.length || 1;
-        
+
         if (pubkeyDuplicates === 1 && addressDuplicates === 1) {
           validator.isDuplicate = false;
           validator.duplicateCount = 0;
@@ -189,8 +198,8 @@ export async function getValidatorsData(): Promise<{
     // Calculate stats
     const onlineValidators = uniqueValidators.filter(v => v.status === 'online').length;
     const publicValidators = uniqueValidators.filter(v => v.is_public).length;
-    const averageScore = uniqueValidators.length > 0 
-      ? uniqueValidators.reduce((sum, v) => sum + v.score, 0) / uniqueValidators.length 
+    const averageScore = uniqueValidators.length > 0
+      ? uniqueValidators.reduce((sum, v) => sum + v.score, 0) / uniqueValidators.length
       : 0;
 
     const stats: ValidatorStats = {
@@ -241,13 +250,14 @@ export function filterAndSortValidators(
   const isMainnet = network === 'mainnet';
   let filtered = [...validators];
 
-  // Apply search filter
+  // Apply search filter - search by address, pubkey, version, or manager_pubkey
   if (filters.search) {
     const searchLower = filters.search.toLowerCase();
-    filtered = filtered.filter(v => 
+    filtered = filtered.filter(v =>
       v.address.toLowerCase().includes(searchLower) ||
       v.pubkey.toLowerCase().includes(searchLower) ||
-      v.version.toLowerCase().includes(searchLower)
+      v.version.toLowerCase().includes(searchLower) ||
+      (v.manager_pubkey && v.manager_pubkey.toLowerCase().includes(searchLower))
     );
   }
 
@@ -306,14 +316,14 @@ export function filterAndSortValidators(
     if (isMainnet) {
       const aHasName = hasNodeName(a.pubkey);
       const bHasName = hasNodeName(b.pubkey);
-      
+
       if (aHasName && !bHasName) return -1;
       if (!aHasName && bHasName) return 1;
     }
-    
+
     // If both have names or both don't (or devnet), sort by the selected field
     let aVal: any, bVal: any;
-    
+
     switch (sort.field) {
       case 'address':
         aVal = a.address;

@@ -28,6 +28,13 @@ interface NodeData {
   country?: string;
   country_code?: string;
   provider?: string;
+  // Manager data
+  manager_pubkey?: string;
+  manager_nft_count?: number;
+  manager_sbt_count?: number;
+  manager_xand_balance?: number;
+  manager_nft_names?: string[];
+  manager_sbt_names?: string[];
 }
 
 interface GeoData {
@@ -71,14 +78,14 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [lastFetchTime, setLastFetchTime] = useState(0);
   const [dataFetchTime, setDataFetchTime] = useState(Math.floor(Date.now() / 1000));
   const [source, setSource] = useState('');
-  
+
   const lastNetworkRef = useRef(network);
   const fetchingRef = useRef(false);
   const mountedRef = useRef(true);
-  
+
   // High watermark for mainnet node count - keeps track of the highest node count seen
   const mainnetHighWatermarkRef = useRef<Map<string, NodeData>>(new Map());
-  
+
   // Get RPC context for registering refresh function
   let rpcContext: { registerRefresh: (id: string, fn: () => void) => void; unregisterRefresh: (id: string) => void } | null = null;
   try {
@@ -91,15 +98,15 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
   // Calculate stats from nodes
   const stats = useMemo((): NodesStats => {
     const serverTime = dataFetchTime;
-    
+
     let online = 0;
     let syncing = 0;
     let offline = 0;
     let publicCount = 0;
-    
+
     for (const node of nodes) {
       const timeDiff = serverTime - (node.last_seen_timestamp || 0);
-      
+
       if (timeDiff < 1800) {
         online++;
       } else if (timeDiff < 3600) {
@@ -107,15 +114,15 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
       } else {
         offline++;
       }
-      
+
       if (node.is_public) {
         publicCount++;
       }
     }
-    
+
     const total = nodes.length;
     const onlinePercentage = total > 0 ? (online / total) * 100 : 0;
-    
+
     return {
       total,
       online,
@@ -130,20 +137,20 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
   const fetchData = useCallback(async (force = false) => {
     // Prevent concurrent fetches
     if (fetchingRef.current) return;
-    
+
     // Respect minimum refresh interval unless forced
     if (!force && lastFetchTime > 0 && Date.now() - lastFetchTime < MIN_REFRESH_INTERVAL) {
       return;
     }
-    
+
     fetchingRef.current = true;
-    
+
     try {
       // Use the appropriate API endpoint based on network
-      const endpoint = isMainnet 
+      const endpoint = isMainnet
         ? '/api/mainnet-rpc'
         : `/api/nodes?includeAll=true&network=${network}&_t=${Date.now()}`;
-      
+
       const response = await fetch(endpoint, {
         cache: 'no-store',
         headers: {
@@ -151,27 +158,27 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
           'Pragma': 'no-cache',
         },
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (!mountedRef.current) return;
-      
+
       const serverTime = data.serverTimestamp || Math.floor(Date.now() / 1000);
-      
+
       // Transform nodes with consistent status calculation
       let fetchedNodes: NodeData[] = [];
-      
+
       if (isMainnet && data.nodes) {
         fetchedNodes = data.nodes.map((node: any) => {
           const timeDiff = serverTime - (node.last_seen_timestamp || 0);
           let status: 'online' | 'syncing' | 'offline' = 'offline';
           if (timeDiff < 1800) status = 'online';
           else if (timeDiff < 3600) status = 'syncing';
-          
+
           return {
             address: node.address || '',
             pubkey: node.pubkey || '',
@@ -188,15 +195,22 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
             country: node.country,
             country_code: node.country_code,
             provider: node.provider,
+            // Manager data
+            manager_pubkey: node.manager_pubkey,
+            manager_nft_count: node.manager_nft_count,
+            manager_sbt_count: node.manager_sbt_count,
+            manager_xand_balance: node.manager_xand_balance,
+            manager_nft_names: node.manager_nft_names,
+            manager_sbt_names: node.manager_sbt_names,
           };
         });
-        
+
         // High watermark logic for mainnet:
         // If new fetch has more nodes, replace everything
         // If new fetch has fewer/equal nodes, only update existing nodes' data
         // Use pubkey as the unique identifier
         const currentHighWatermark = mainnetHighWatermarkRef.current;
-        
+
         if (fetchedNodes.length > currentHighWatermark.size) {
           // New high watermark - replace all nodes
           currentHighWatermark.clear();
@@ -224,7 +238,7 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
           }
           setNodes(fetchedNodes);
         }
-        
+
         // Store geo data for mainnet
         if (data.geo) {
           setGeoData(prev => ({ ...prev, ...data.geo }));
@@ -236,7 +250,7 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
           let status: 'online' | 'syncing' | 'offline' = 'offline';
           if (timeDiff < 1800) status = 'online';
           else if (timeDiff < 3600) status = 'syncing';
-          
+
           return {
             address: node.address || '',
             pubkey: node.pubkey || '',
@@ -252,16 +266,23 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
             country: node.country,
             country_code: node.country_code,
             provider: node.provider,
+            // Manager data
+            manager_pubkey: node.manager_pubkey,
+            manager_nft_count: node.manager_nft_count,
+            manager_sbt_count: node.manager_sbt_count,
+            manager_xand_balance: node.manager_xand_balance,
+            manager_nft_names: node.manager_nft_names,
+            manager_sbt_names: node.manager_sbt_names,
           };
         });
         setNodes(fetchedNodes);
-        
+
         // Fetch geo data for devnet nodes that don't have it
         const nodesWithoutGeo = fetchedNodes.filter(n => !n.country || !n.country_code);
         if (nodesWithoutGeo.length > 0) {
           const ips = nodesWithoutGeo.map(n => n.address.split(':')[0]).filter(Boolean);
           const uniqueIps = [...new Set(ips)];
-          
+
           // Fetch geo data in background (don't block)
           fetch('/api/geolocation', {
             method: 'POST',
@@ -274,16 +295,16 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
                 setGeoData(prev => ({ ...prev, ...geoResults }));
               }
             })
-            .catch(() => {});
+            .catch(() => { });
         }
       }
-      
+
       setDataFetchTime(serverTime);
       setLastFetchTime(Date.now());
       setSource(data.source || 'api');
       setIsLoading(false);
-      
-    } catch (error) {
+
+    } catch (_error) {
       if (mountedRef.current) {
         setIsLoading(false);
       }
@@ -312,7 +333,7 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
   // Initial fetch and network change handling
   useEffect(() => {
     const networkChanged = lastNetworkRef.current !== network;
-    
+
     if (networkChanged) {
       lastNetworkRef.current = network;
       setIsLoading(true);
@@ -321,7 +342,7 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
       // Clear high watermark when switching networks
       mainnetHighWatermarkRef.current.clear();
     }
-    
+
     fetchData(networkChanged);
   }, [network, fetchData]);
 
@@ -330,7 +351,7 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
     const interval = setInterval(() => {
       fetchData(false);
     }, REFRESH_INTERVAL);
-    
+
     return () => clearInterval(interval);
   }, [fetchData]);
 
@@ -372,7 +393,7 @@ export function useNodesData() {
       lastFetchTime: 0,
       dataFetchTime: 0, // Will be set when data is actually fetched
       source: '',
-      refreshData: async () => {},
+      refreshData: async () => { },
     };
   }
   return context;

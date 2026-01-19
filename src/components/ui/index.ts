@@ -17,3 +17,5 @@ export * from './Marquee';
 export * from './ViewProfileBadge';
 export * from './TrendLineChart';
 export * from './VPSProvidersChart';
+export * from './ManagerBadge';
+export * from './NFTNamesList';

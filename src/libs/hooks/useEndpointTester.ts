@@ -38,19 +38,19 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
     if (typeof Worker !== 'undefined') {
       try {
         const worker = new Worker('/workers/endpoint-tester.js');
-        
+
         worker.onmessage = (event) => {
-          const { id, type, success, result, error, completed, total, results } = event.data;
-          
+          const { id, type, success, result, error, completed, total } = event.data;
+
           if (type === 'PROGRESS') {
             setProgress({ completed, total });
             return;
           }
-          
+
           const pendingRequest = pendingRequestsRef.current.get(id);
           if (pendingRequest) {
             pendingRequestsRef.current.delete(id);
-            
+
             if (success) {
               pendingRequest.resolve(result);
             } else {
@@ -58,12 +58,12 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
             }
           }
         };
-        
+
         worker.onerror = (error) => {
           console.error('Worker error:', error);
           setIsSupported(false);
         };
-        
+
         workerRef.current = worker;
         // Use setTimeout to avoid setState in effect
         const timer = setTimeout(() => setIsSupported(true), 0);
@@ -89,7 +89,7 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
   // Fallback implementations for when Web Workers aren't supported
   const fallbackTestRpc = async (method: string): Promise<TestResult> => {
     const startTime = performance.now();
-    
+
     try {
       const response = await fetch('/api/rpc', {
         method: 'POST',
@@ -103,7 +103,7 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
       });
 
       const responseTime = Math.round(performance.now() - startTime);
-      
+
       if (response.ok) {
         const rawResult = await response.json();
         return {
@@ -133,19 +133,19 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
     }
   };
 
-  const fallbackTestApi = async (endpoint: string, method?: string): Promise<TestResult> => {
+  const fallbackTestApi = async (endpoint: string, _method?: string): Promise<TestResult> => {
     const startTime = performance.now();
-    
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
+
       // Determine HTTP method and body based on endpoint
       const httpMethod = 'GET';
       let body: string | undefined;
-      
 
-      
+
+
       const response = await fetch(endpoint, {
         method: httpMethod,
         headers: {
@@ -180,7 +180,7 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
     } catch (error) {
       const responseTime = Math.round(performance.now() - startTime);
       let errorMessage = 'Unknown error';
-      
+
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
           errorMessage = 'Request timeout (10s)';
@@ -188,7 +188,7 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
           errorMessage = error.message;
         }
       }
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -200,17 +200,17 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
 
   const fallbackTestExternal = async (endpoint: string, headers?: Record<string, string>): Promise<TestResult> => {
     const startTime = performance.now();
-    
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
-      
+
       // Determine HTTP method and body based on endpoint
       const httpMethod = 'GET';
       let body: string | undefined;
-      
 
-      
+
+
       const fetchOptions: RequestInit = {
         method: httpMethod,
         headers: {
@@ -220,12 +220,12 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
         },
         signal: controller.signal
       };
-      
+
       if (body) {
         fetchOptions.body = body;
         (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json';
       }
-      
+
       const response = await fetch(endpoint, fetchOptions);
 
       clearTimeout(timeoutId);
@@ -252,7 +252,7 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
     } catch (error) {
       const responseTime = Math.round(performance.now() - startTime);
       let errorMessage = 'Unknown error';
-      
+
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
           errorMessage = 'Request timeout (15s)';
@@ -262,7 +262,7 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
           errorMessage = error.message;
         }
       }
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -328,7 +328,7 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
     if (!isSupported || !workerRef.current) {
       // Fallback: process sequentially on main thread
       const results: Record<string, TestResult> = {};
-      
+
       for (const request of requests) {
         try {
           results[request.name] = await testSingle(request);
@@ -341,7 +341,7 @@ export const useEndpointTester = (): UseEndpointTesterReturn => {
           };
         }
       }
-      
+
       return results;
     }
 

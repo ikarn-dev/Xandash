@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
+import React, { createContext, useContext, useCallback, useState } from 'react';
 import { useRpcMonitorInit } from '@/libs/hooks/useRpcMonitorInit';
 
 interface RPCContextType {
@@ -51,10 +51,10 @@ export const RPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const nextRefreshTime = lastRefreshTime + interval;
 
   return (
-    <RPCContext.Provider value={{ 
-      refreshAll, 
-      registerRefresh, 
-      unregisterRefresh, 
+    <RPCContext.Provider value={{
+      refreshAll,
+      registerRefresh,
+      unregisterRefresh,
       updateRefreshTime,
       lastRefreshTime,
       nextRefreshTime,

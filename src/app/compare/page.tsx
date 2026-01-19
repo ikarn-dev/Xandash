@@ -14,6 +14,8 @@ import { CompareTypeSwitcher } from './components/CompareTypeSwitcher';
 import { CornerAccents } from '@/components/ui';
 import { toast } from 'sonner';
 
+import { useManagerAssets } from '@/app/nodes/hooks/useManagerAssets';
+
 interface NodeData {
   pubkey: string;
   address: string;
@@ -24,6 +26,7 @@ interface NodeData {
   version?: string;
   last_seen_timestamp?: number;
   country_code?: string;
+  manager_pubkey?: string;
 }
 
 interface NodeProfile {
@@ -38,6 +41,7 @@ interface NodeProfile {
   version: string;
   location?: { country: string; city: string; provider: string };
   history?: Array<{ timestamp: number; credits: number; uptime: number; storage_committed: number; storage_used: number }>;
+  manager_pubkey?: string;
 }
 
 interface CountryData {
@@ -73,55 +77,39 @@ const NodesIcon = () => (
 const CountriesIcon = () => (
   <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
     <circle cx="12" cy="12" r="10" />
-    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10 15.3 15.3 0 0 1 4-10z" />
   </svg>
 );
 
+function getNodeStatusLocal(lastSeen: number, currentTimestamp: number): string {
+  if (!lastSeen) return 'offline';
+  const diff = currentTimestamp - lastSeen;
+  if (diff <= 150) return 'online';
+  if (diff <= 300) return 'syncing';
+  return 'offline';
+}
 
 function ComparePageContent() {
   const { network } = useNetwork();
   const searchParams = useSearchParams();
-  const { countryDetailedStats, loading: countryLoading } = useNetworkPageData(network);
-  
+  const { countryDetailedStats: countryStats, loading: countryLoading } = useNetworkPageData(network);
+
+  const { managerAssets, fetchManagerAssets } = useManagerAssets();
+
   const [compareType, setCompareType] = useState<'nodes' | 'countries'>('nodes');
-  const [allNodes, setAllNodes] = useState<NodeData[]>([]);
-  const [serverTimestamp, setServerTimestamp] = useState<number>(0);
   const [selectedPubkeys, setSelectedPubkeys] = useState<string[]>([]);
+  const [selectedCountryCodes, setSelectedCountryCodes] = useState<string[]>([]);
   const [nodeProfiles, setNodeProfiles] = useState<NodeProfile[]>([]);
+  const [countryProfiles, setCountryProfiles] = useState<CountryProfile[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [showCountryResults, setShowCountryResults] = useState(false);
+  const [autoCompareTriggered, setAutoCompareTriggered] = useState(false);
+  const [autoCountryCompareTriggered, setAutoCountryCompareTriggered] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isComparing, setIsComparing] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [autoCompareTriggered, setAutoCompareTriggered] = useState(false);
-  const [selectedCountryCodes, setSelectedCountryCodes] = useState<string[]>([]);
-  const [countryProfiles, setCountryProfiles] = useState<CountryProfile[]>([]);
-  const [showCountryResults, setShowCountryResults] = useState(false);
-  const [autoCountryCompareTriggered, setAutoCountryCompareTriggered] = useState(false);
-
-  // Use countryDetailedStats from the network page hook (already has geo data and credits)
-  // Sort alphabetically
-  const countryStats = useMemo(() => {
-    return countryDetailedStats
-      .map(c => ({
-        country: c.country,
-        country_code: c.country_code,
-        totalNodes: c.totalNodes,
-        onlineNodes: c.onlineNodes,
-        syncingNodes: c.syncingNodes,
-        offlineNodes: c.offlineNodes,
-        totalStorage: c.totalStorage,
-        totalStorageUsed: c.totalStorageUsed,
-        avgUptime: c.avgUptime,
-        totalCredits: c.totalCredits || 0,
-      }))
-      .sort((a, b) => a.country.localeCompare(b.country));
-  }, [countryDetailedStats]);
-
-  const getNodeStatusLocal = useCallback((lastSeen: number, timestamp: number) => {
-    const timeDiff = timestamp - lastSeen;
-    if (timeDiff < 300) return 'online';
-    if (timeDiff < 3600) return 'syncing';
-    return 'offline';
-  }, []);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [allNodes, setAllNodes] = useState<NodeData[]>([]);
+  const [serverTimestamp, setServerTimestamp] = useState<number>(0);
 
   useEffect(() => {
     setSelectedPubkeys([]);
@@ -132,13 +120,13 @@ function ComparePageContent() {
     setCountryProfiles([]);
     setShowCountryResults(false);
     setAutoCountryCompareTriggered(false);
-    
+
     // Check for countries URL param
     const countriesParam = searchParams.get('countries');
     if (countriesParam) {
       setCompareType('countries');
     }
-    
+
     const fetchNodes = async () => {
       setIsLoading(true);
       try {
@@ -146,16 +134,16 @@ function ComparePageContent() {
           fetch(`/api/nodes?includeAll=true&network=${network}`),
           fetch(`/api/pod-credits?network=${network}`)
         ]);
-        
+
         if (nodesRes.ok && creditsRes.ok) {
           const nodesData = await nodesRes.json();
           const creditsData = await creditsRes.json();
           const srvTimestamp = nodesData.serverTimestamp || Math.floor(Date.now() / 1000);
           setServerTimestamp(srvTimestamp);
-          
+
           const creditsMap = new Map<string, number>();
           (creditsData.pods_credits || []).forEach((c: any) => creditsMap.set(c.pod_id, c.credits));
-          
+
           const nodes = (nodesData.nodes || [])
             .map((n: any) => ({
               pubkey: n.pubkey, address: n.address, credits: creditsMap.get(n.pubkey) || 0,
@@ -163,14 +151,15 @@ function ComparePageContent() {
               storage_used: n.storage_used || 0, version: n.version || '',
               last_seen_timestamp: n.last_seen_timestamp || 0,
               country_code: (n.country_code || '').toLowerCase(),
+              manager_pubkey: n.manager_pubkey,
             }))
             .sort((a: NodeData, b: NodeData) => (b.credits || 0) - (a.credits || 0));
-          
+
           setAllNodes(nodes);
-          
+
           const nodesParam = searchParams.get('nodes');
           const autoParam = searchParams.get('auto');
-          
+
           if (nodesParam) {
             const pubkeysFromUrl = nodesParam.split(',').filter(Boolean);
             const validPubkeys = pubkeysFromUrl.filter(pk => nodes.some((n: NodeData) => n.pubkey === pk)).slice(0, 4);
@@ -188,48 +177,11 @@ function ComparePageContent() {
     fetchNodes();
   }, [network, searchParams]);
 
-  // Handle countries URL param auto-compare
-  useEffect(() => {
-    if (countryLoading || countryStats.length === 0 || autoCountryCompareTriggered) return;
-    
-    const countriesParam = searchParams.get('countries');
-    const autoParam = searchParams.get('auto');
-    
-    if (countriesParam && autoParam === 'true') {
-      const codesFromUrl = countriesParam.split(',').filter(Boolean);
-      const validCodes = codesFromUrl.filter(code => 
-        countryStats.some(c => c.country_code === code)
-      ).slice(0, 4);
-      
-      if (validCodes.length >= 2) {
-        setAutoCountryCompareTriggered(true);
-        setSelectedCountryCodes(validCodes);
-        
-        // Auto-compare countries
-        const profiles: CountryProfile[] = validCodes.map((code, i) => {
-          const country = countryStats.find(c => c.country_code === code);
-          if (!country) return null;
-          return {
-            ...country, color: COUNTRY_COLORS[i % COUNTRY_COLORS.length],
-            onlinePercent: country.totalNodes > 0 ? (country.onlineNodes / country.totalNodes) * 100 : 0,
-            storageEfficiency: country.totalStorage > 0 ? (country.totalStorageUsed / country.totalStorage) * 100 : 0,
-          };
-        }).filter(Boolean) as CountryProfile[];
-        
-        setCountryProfiles(profiles);
-        setShowCountryResults(true);
-      } else if (validCodes.length > 0) {
-        setSelectedCountryCodes(validCodes);
-      }
-    }
-  }, [countryStats, countryLoading, searchParams, autoCountryCompareTriggered]);
-
-
   const triggerAutoCompare = async (pubkeys: string[], nodes: NodeData[], timestamp: number) => {
     if (pubkeys.length < 2 || autoCompareTriggered) return;
     setAutoCompareTriggered(true);
     setIsComparing(true);
-    
+
     try {
       const profiles: NodeProfile[] = pubkeys.map((pubkey, i) => {
         const node = nodes.find(n => n.pubkey === pubkey);
@@ -239,33 +191,46 @@ function ComparePageContent() {
           status: getNodeStatusLocal(node.last_seen_timestamp || 0, timestamp),
           uptime: node.uptime || 0, credits: node.credits || 0,
           storage_committed: node.storage_committed || 0, storage_used: node.storage_used || 0,
-          version: node.version || '', location: undefined, history: []
+          version: node.version || '', location: undefined, history: [],
+          manager_pubkey: node.manager_pubkey,
         };
       }).filter(Boolean) as NodeProfile[];
-      
+
       setNodeProfiles(profiles);
       setShowResults(true);
       setIsComparing(false);
-      
+      setIsHistoryLoading(true);
+
+      // Fetch manager assets
+      const managerPubkeys = profiles.map(p => p.manager_pubkey).filter(Boolean) as string[];
+      if (managerPubkeys.length > 0) {
+        fetchManagerAssets([...new Set(managerPubkeys)]);
+      }
+
       const ips = profiles.map(p => p.ip);
       let historyByIp: Record<string, any[]> = {};
       try {
         const batchRes = await fetch(`/api/node-history?type=batch-stats&ips=${ips.join(',')}&hours=168&network=${network}`);
         if (batchRes.ok) historyByIp = (await batchRes.json()).results || {};
-      } catch {}
-      
+      } catch { }
+
       let locationMap: Record<string, any> = {};
       try {
         const locationRes = await fetch('/api/geolocation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ips }) });
         if (locationRes.ok) locationMap = await locationRes.json();
-      } catch {}
-      
+      } catch { }
+
       setNodeProfiles(prev => prev.map(profile => ({
         ...profile,
         location: locationMap[profile.ip] ? { country: locationMap[profile.ip].country, city: locationMap[profile.ip].city, provider: locationMap[profile.ip].provider } : undefined,
         history: (historyByIp[profile.ip] || []).map((h: any) => ({ timestamp: h.timestamp, credits: h.credits || 0, uptime: h.uptime || 0, storage_committed: h.storage_committed || 0, storage_used: h.storage_used || 0 }))
       })));
-    } catch { toast.error('Failed to compare nodes'); setIsComparing(false); }
+      setIsHistoryLoading(false);
+    } catch {
+      toast.error('Failed to compare nodes');
+      setIsComparing(false);
+      setIsHistoryLoading(false);
+    }
   };
 
   const handleToggleNode = useCallback((pubkey: string) => {
@@ -279,7 +244,7 @@ function ComparePageContent() {
   const handleCompareNodes = useCallback(async () => {
     if (selectedPubkeys.length < 2) return;
     setIsComparing(true);
-    
+
     try {
       const profiles: NodeProfile[] = selectedPubkeys.map((pubkey, i) => {
         const node = allNodes.find(n => n.pubkey === pubkey);
@@ -292,36 +257,48 @@ function ComparePageContent() {
           version: node.version || '', location: undefined, history: []
         };
       }).filter(Boolean) as NodeProfile[];
-      
+
       setNodeProfiles(profiles);
       setShowResults(true);
       setIsComparing(false);
-      
+      setIsHistoryLoading(true);
+
+      // Fetch manager assets
+      const managerPubkeys = profiles.map(p => p.manager_pubkey).filter(Boolean) as string[];
+      if (managerPubkeys.length > 0) {
+        fetchManagerAssets([...new Set(managerPubkeys)]);
+      }
+
       const ips = profiles.map(p => p.ip);
       let historyByIp: Record<string, any[]> = {};
       try {
         const batchRes = await fetch(`/api/node-history?type=batch-stats&ips=${ips.join(',')}&hours=168&network=${network}`);
         if (batchRes.ok) historyByIp = (await batchRes.json()).results || {};
-      } catch {}
-      
+      } catch { }
+
       let locationMap: Record<string, any> = {};
       try {
         const locationRes = await fetch('/api/geolocation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ips }) });
         if (locationRes.ok) locationMap = await locationRes.json();
-      } catch {}
-      
+      } catch { }
+
       setNodeProfiles(prev => prev.map(profile => ({
         ...profile,
         location: locationMap[profile.ip] ? { country: locationMap[profile.ip].country, city: locationMap[profile.ip].city, provider: locationMap[profile.ip].provider } : undefined,
         history: (historyByIp[profile.ip] || []).map((h: any) => ({ timestamp: h.timestamp, credits: h.credits || 0, uptime: h.uptime || 0, storage_committed: h.storage_committed || 0, storage_used: h.storage_used || 0 }))
       })));
-    } catch { toast.error('Failed to compare nodes'); setIsComparing(false); }
+      setIsHistoryLoading(false);
+    } catch {
+      toast.error('Failed to compare nodes');
+      setIsComparing(false);
+      setIsHistoryLoading(false);
+    }
   }, [selectedPubkeys, allNodes, serverTimestamp, getNodeStatusLocal, network]);
 
   const handleCompareCountries = useCallback(() => {
     if (selectedCountryCodes.length < 2) return;
     setIsComparing(true);
-    
+
     const profiles: CountryProfile[] = selectedCountryCodes.map((code, i) => {
       const country = countryStats.find(c => c.country_code === code);
       if (!country) return null;
@@ -331,7 +308,7 @@ function ComparePageContent() {
         storageEfficiency: country.totalStorage > 0 ? (country.totalStorageUsed / country.totalStorage) * 100 : 0,
       };
     }).filter(Boolean) as CountryProfile[];
-    
+
     setCountryProfiles(profiles);
     setShowCountryResults(true);
     setIsComparing(false);
@@ -353,13 +330,12 @@ function ComparePageContent() {
           {/* Feature Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Node Comparison Card */}
-            <div 
+            <div
               onClick={() => handleTypeChange('nodes')}
-              className={`relative bg-black border p-5 sm:p-6 cursor-pointer transition-all duration-300 group ${
-                compareType === 'nodes' 
-                  ? 'border-emerald-500/50' 
-                  : 'border-white/10 hover:border-white/20'
-              }`}
+              className={`relative bg-black border p-5 sm:p-6 cursor-pointer transition-all duration-300 group ${compareType === 'nodes'
+                ? 'border-emerald-500/50'
+                : 'border-white/10 hover:border-white/20'
+                }`}
             >
               <CornerAccents />
               <div className="flex items-start gap-4">
@@ -388,13 +364,12 @@ function ComparePageContent() {
             </div>
 
             {/* Country Comparison Card */}
-            <div 
+            <div
               onClick={() => handleTypeChange('countries')}
-              className={`relative bg-black border p-5 sm:p-6 cursor-pointer transition-all duration-300 group ${
-                compareType === 'countries' 
-                  ? 'border-purple-500/50' 
-                  : 'border-white/10 hover:border-white/20'
-              }`}
+              className={`relative bg-black border p-5 sm:p-6 cursor-pointer transition-all duration-300 group ${compareType === 'countries'
+                ? 'border-purple-500/50'
+                : 'border-white/10 hover:border-white/20'
+                }`}
             >
               <CornerAccents />
               <div className="flex items-start gap-4">
@@ -439,7 +414,7 @@ function ComparePageContent() {
                 </button>
               )}
             </div>
-            
+
             {compareType === 'nodes' ? (
               <NodeSelector nodes={allNodes} selectedNodes={selectedPubkeys} onToggle={handleToggleNode} maxNodes={4} isLoading={isLoading} />
             ) : (
@@ -456,7 +431,7 @@ function ComparePageContent() {
           />
         </>
       ) : showNodeResults ? (
-        <ResultsView nodes={nodeProfiles} onReset={handleResetNodes} network={network} />
+        <ResultsView nodes={nodeProfiles} onReset={handleResetNodes} network={network} managerAssets={managerAssets} isHistoryLoading={isHistoryLoading} />
       ) : showCountryResultsView ? (
         <CountryResultsView countries={countryProfiles} onReset={handleResetCountries} network={network} />
       ) : null}

@@ -47,6 +47,7 @@ interface UseEndpointMonitoringReturn {
   loading: boolean;
   error: string | null;
   lastUpdate: string | null;
+  lastDataRefresh: string | null; // Track actual data refresh time
   testingEndpoints: Set<string>;
   refreshEndpoints: (network?: 'devnet' | 'mainnet') => Promise<void>;
   testEndpoint: (endpointName: string) => Promise<void>;
@@ -74,6 +75,7 @@ export const useEndpointMonitoring = (): UseEndpointMonitoringReturn => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [lastDataRefresh, setLastDataRefresh] = useState<string | null>(null); // Track actual data refresh
   const [testingEndpoints, setTestingEndpoints] = useState<Set<string>>(new Set());
 
   const fetchEndpointStatus = useCallback(async (network?: 'devnet' | 'mainnet', refresh = false) => {
@@ -123,6 +125,7 @@ export const useEndpointMonitoring = (): UseEndpointMonitoringReturn => {
       }
       
       setLastUpdate(endpointData.lastUpdate || new Date().toISOString());
+      setLastDataRefresh(new Date().toISOString()); // Track actual data refresh time
       setError(null);
       
     } catch (err) {
@@ -240,6 +243,7 @@ export const useEndpointMonitoring = (): UseEndpointMonitoringReturn => {
     loading,
     error,
     lastUpdate,
+    lastDataRefresh, // Return actual data refresh time
     testingEndpoints,
     refreshEndpoints,
     testEndpoint

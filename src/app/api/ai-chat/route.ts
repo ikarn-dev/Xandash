@@ -18,10 +18,10 @@ async function fetchTokenData() {
     const apiKey = process.env.NEXT_PUBLIC_COINGECKO_API_KEY;
     const headers: Record<string, string> = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
     if (apiKey) headers['x-cg-demo-api-key'] = apiKey;
-    
+
     const res = await fetch(url, { headers });
     if (!res.ok) return null;
-    
+
     const data = await res.json();
     return {
       name: data.name,
@@ -42,7 +42,7 @@ async function fetchTokenData() {
         telegram: data.links?.telegram_channel_identifier,
       },
     };
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
@@ -55,18 +55,18 @@ async function fetchNodeByIdentifier(identifier: string) {
   try {
     let node = null;
     let isMainnet = false;
-    
+
     // First try mainnet
     const mainnetData = await getMainnetData();
     if (mainnetData.nodes.length > 0) {
       node = mainnetData.nodes.find((n: any) => {
         const nodeIp = n.address?.split(':')[0];
-        return nodeIp === identifier || 
-               n.pubkey === identifier || 
-               n.pubkey?.startsWith(identifier) ||
-               n.address === identifier;
+        return nodeIp === identifier ||
+          n.pubkey === identifier ||
+          n.pubkey?.startsWith(identifier) ||
+          n.address === identifier;
       });
-      
+
       if (node) {
         isMainnet = true;
         // Enrich with geo data if available
@@ -80,27 +80,27 @@ async function fetchNodeByIdentifier(identifier: string) {
         }
       }
     }
-    
+
     // If not found in mainnet, try devnet
     if (!node) {
       const devnetData = await getDevnetData();
       if (devnetData.nodes.length > 0) {
         node = devnetData.nodes.find((n: any) => {
           const nodeIp = n.address?.split(':')[0];
-          return nodeIp === identifier || 
-                 n.pubkey === identifier || 
-                 n.pubkey?.startsWith(identifier) ||
-                 n.address === identifier;
+          return nodeIp === identifier ||
+            n.pubkey === identifier ||
+            n.pubkey?.startsWith(identifier) ||
+            n.address === identifier;
         });
       }
     }
-    
+
     if (!node) return null;
-    
+
     const ip = node.address?.split(':')[0];
     const timeDiff = Math.floor(Date.now() / 1000) - (node.last_seen_timestamp || 0);
     const status = timeDiff < 300 ? 'online' : timeDiff < 3600 ? 'syncing' : 'offline';
-    
+
     // Get credits for this node (use existing credits from mainnet or fetch from devnet)
     let credits = node.credits || 0;
     if (!isMainnet && !credits) {
@@ -111,9 +111,9 @@ async function fetchNodeByIdentifier(identifier: string) {
           const creditEntry = creditsData.pods_credits?.find((c: any) => c.pod_id === node.pubkey);
           credits = creditEntry?.credits || 0;
         }
-      } catch {}
+      } catch { }
     }
-    
+
     // Get historical data from MongoDB
     let history = null;
     let events = null;
@@ -125,13 +125,13 @@ async function fetchNodeByIdentifier(identifier: string) {
         .sort({ timestamp: -1 })
         .limit(10)
         .toArray();
-      
+
       const nodeEvents = await db.collection<NodeEventLog>(collections.NODE_EVENTS)
         .find({ ip })
         .sort({ timestamp: -1 })
         .limit(5)
         .toArray();
-      
+
       if (snapshots.length > 1) {
         const oldest = snapshots[snapshots.length - 1];
         const newest = snapshots[0];
@@ -141,15 +141,15 @@ async function fetchNodeByIdentifier(identifier: string) {
           storageTrend: ((newest.storage_usage_percent - oldest.storage_usage_percent) * 100).toFixed(2) + '%',
         };
       }
-      
+
       if (nodeEvents.length > 0) {
         events = nodeEvents.map(e => ({
           type: e.event_type,
           time: new Date(e.timestamp * 1000).toLocaleString(),
         }));
       }
-    } catch {}
-    
+    } catch { }
+
     return {
       ip,
       pubkey: node.pubkey,
@@ -158,8 +158,8 @@ async function fetchNodeByIdentifier(identifier: string) {
       network: isMainnet ? 'mainnet' : 'devnet',
       uptimeHours: (node.uptime / 3600).toFixed(1),
       uptimeDays: (node.uptime / 86400).toFixed(1),
-      storageCommittedGB: (node.storage_committed / (1024**3)).toFixed(2),
-      storageUsedGB: (node.storage_used / (1024**3)).toFixed(2),
+      storageCommittedGB: (node.storage_committed / (1024 ** 3)).toFixed(2),
+      storageUsedGB: (node.storage_used / (1024 ** 3)).toFixed(2),
       storageUsagePercent: (node.storage_usage_percent * 100).toFixed(2),
       version: node.version,
       isPublic: node.is_public,
@@ -171,7 +171,7 @@ async function fetchNodeByIdentifier(identifier: string) {
       history,
       recentEvents: events,
     };
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
@@ -188,14 +188,14 @@ async function fetchCountryData(countryCode: string) {
       const devnetData = await getDevnetData();
       nodes = devnetData.nodes;
     }
-    
+
     if (nodes.length === 0) return null;
-    
+
     // Get geolocation for nodes
     const ips = nodes.map((n: any) => n.address?.split(':')[0]).filter(Boolean).slice(0, 100);
-    
+
     let geoData: Record<string, any> = {};
-    
+
     try {
       // Use ip-api.com batch endpoint (most reliable for server-side)
       const response = await fetch('http://ip-api.com/batch?fields=status,query,country,countryCode,city', {
@@ -204,7 +204,7 @@ async function fetchCountryData(countryCode: string) {
         body: JSON.stringify(ips.slice(0, 100)),
         signal: AbortSignal.timeout(10000),
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         if (Array.isArray(data)) {
@@ -220,16 +220,16 @@ async function fetchCountryData(countryCode: string) {
           }
         }
       }
-    } catch {}
-    
+    } catch { }
+
     // Filter nodes by country
     const countryNodes = nodes.filter((n: any) => {
       const ip = n.address?.split(':')[0];
       return geoData[ip]?.countryCode?.toLowerCase() === countryCode.toLowerCase();
     });
-    
+
     if (countryNodes.length === 0) return null;
-    
+
     const countryName = geoData[countryNodes[0].address?.split(':')[0]]?.country || countryCode;
     const totalStorage = countryNodes.reduce((s: number, n: any) => s + (n.storage_committed || 0), 0);
     const avgUptime = countryNodes.reduce((s: number, n: any) => s + (n.uptime || 0), 0) / countryNodes.length;
@@ -237,18 +237,18 @@ async function fetchCountryData(countryCode: string) {
       const timeDiff = Math.floor(Date.now() / 1000) - (n.last_seen_timestamp || 0);
       return timeDiff < 300;
     }).length;
-    
+
     return {
       country: countryName,
       countryCode: countryCode.toUpperCase(),
       totalNodes: countryNodes.length,
       onlineNodes: onlineCount,
       offlineNodes: countryNodes.length - onlineCount,
-      totalStorageGB: (totalStorage / (1024**3)).toFixed(2),
+      totalStorageGB: (totalStorage / (1024 ** 3)).toFixed(2),
       avgUptimeHours: (avgUptime / 3600).toFixed(1),
       cities: [...new Set(countryNodes.map((n: any) => geoData[n.address?.split(':')[0]]?.city).filter(Boolean))],
     };
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
@@ -257,7 +257,7 @@ async function fetchCountryData(countryCode: string) {
 async function fetchNetworkSummary(networkType: 'mainnet' | 'devnet' = 'devnet') {
   try {
     let nodes: any[] = [];
-    
+
     if (networkType === 'mainnet') {
       // Fetch mainnet data directly from service
       const mainnetData = await getMainnetData();
@@ -269,11 +269,11 @@ async function fetchNetworkSummary(networkType: 'mainnet' | 'devnet' = 'devnet')
       const devnetData = await getDevnetData();
       nodes = devnetData.nodes;
     }
-    
+
     if (nodes.length === 0) {
       return { network: networkType, totalNodes: 0, onlineNodes: 0, syncingNodes: 0, offlineNodes: 0, message: 'No nodes found' };
     }
-    
+
     const totalNodes = nodes.length;
     const now = Math.floor(Date.now() / 1000);
     const onlineNodes = nodes.filter((n: any) => {
@@ -284,14 +284,14 @@ async function fetchNetworkSummary(networkType: 'mainnet' | 'devnet' = 'devnet')
       const timeDiff = now - (n.last_seen_timestamp || 0);
       return timeDiff >= 300 && timeDiff < 3600;
     }).length;
-    
+
     const totalStorage = nodes.reduce((s: number, n: any) => s + (n.storage_committed || 0), 0);
     const usedStorage = nodes.reduce((s: number, n: any) => s + (n.storage_used || 0), 0);
     const avgUptime = totalNodes > 0 ? nodes.reduce((s: number, n: any) => s + (n.uptime || 0), 0) / totalNodes : 0;
-    
+
     const versions: Record<string, number> = {};
     nodes.forEach((n: any) => { versions[n.version || 'unknown'] = (versions[n.version || 'unknown'] || 0) + 1; });
-    
+
     return {
       network: networkType,
       totalNodes,
@@ -299,8 +299,8 @@ async function fetchNetworkSummary(networkType: 'mainnet' | 'devnet' = 'devnet')
       syncingNodes,
       offlineNodes: totalNodes - onlineNodes - syncingNodes,
       onlinePercent: totalNodes > 0 ? ((onlineNodes / totalNodes) * 100).toFixed(1) : '0',
-      totalStorageTB: (totalStorage / (1024**4)).toFixed(2),
-      usedStorageTB: (usedStorage / (1024**4)).toFixed(2),
+      totalStorageTB: (totalStorage / (1024 ** 4)).toFixed(2),
+      usedStorageTB: (usedStorage / (1024 ** 4)).toFixed(2),
       storageEfficiency: totalStorage > 0 ? ((usedStorage / totalStorage) * 100).toFixed(1) : '0',
       avgUptimeDays: (avgUptime / 86400).toFixed(1),
       versions,
@@ -315,15 +315,15 @@ async function fetchCreditsSummary(networkType: 'mainnet' | 'devnet' = 'devnet')
     if (networkType === 'mainnet') {
       const mainnetData = await getMainnetData();
       const nodes = mainnetData.nodes || [];
-      
+
       // Extract credits from nodes
       const creditsData = nodes
         .filter((n: any) => n.pubkey && (n.credits !== null && n.credits !== undefined))
         .map((n: any) => ({ pod_id: n.pubkey, credits: n.credits || 0 }));
-      
+
       const total = creditsData.reduce((s: number, c: any) => s + (c.credits || 0), 0);
       const sorted = [...creditsData].sort((a: any, b: any) => (b.credits || 0) - (a.credits || 0));
-      
+
       return {
         network: 'mainnet',
         totalCredits: total,
@@ -335,16 +335,16 @@ async function fetchCreditsSummary(networkType: 'mainnet' | 'devnet' = 'devnet')
         })),
       };
     }
-    
+
     // For devnet, use credits API
     const res = await fetch(DEVNET_CREDITS_URL, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
     if (!res.ok) return null;
-    
+
     const data = await res.json();
     const credits = data.pods_credits || [];
     const total = credits.reduce((s: number, c: any) => s + (c.credits || 0), 0);
     const sorted = [...credits].sort((a: any, b: any) => (b.credits || 0) - (a.credits || 0));
-    
+
     return {
       network: 'devnet',
       totalCredits: total,
@@ -363,12 +363,12 @@ async function buildContext(msg: string, requestNetwork?: 'mainnet' | 'devnet') 
   const lower = msg.toLowerCase();
   let ctx = '';
   let hints = '';
-  
+
   // Use network from request - this is the primary source of truth
   // Only fall back to message detection if no network provided
   const isMainnetQuery = /mainnet|main\s*net|production/.test(lower);
   const isDevnetQuery = /devnet|dev\s*net|testnet|test\s*net/.test(lower);
-  
+
   // Priority: request network > detected from message > default to devnet
   let networkType: 'mainnet' | 'devnet';
   if (requestNetwork) {
@@ -380,45 +380,45 @@ async function buildContext(msg: string, requestNetwork?: 'mainnet' | 'devnet') 
   } else {
     networkType = 'devnet'; // Default
   }
-  
+
   // Always add network context to response
   ctx += `\n[ACTIVE_NETWORK: ${networkType.toUpperCase()}] - All data below is from ${networkType.toUpperCase()} network.`;
-  
+
   // Token/XAND queries
   if (/xand|token|price|market|coin|crypto|supply|volume/.test(lower)) {
     const data = await fetchTokenData();
     if (data) ctx += `\nXAND TOKEN: ${JSON.stringify(data)}`;
     else hints += '\n[TOKEN_DATA_UNAVAILABLE]';
   }
-  
+
   // Check for partial/invalid IP patterns
   const partialIpMatch = msg.match(/\b(\d{1,3}\.\d{1,3}(?:\.\d{1,3})?)\b(?!\.\d)/);
   const fullIpMatch = msg.match(/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/);
-  
+
   if (partialIpMatch && !fullIpMatch) {
     hints += `\n[INVALID_IP: User entered "${partialIpMatch[1]}" - this is incomplete. Need full IP like "173.249.54.191"]`;
   }
-  
+
   // Specific node by IP
   if (fullIpMatch) {
     const data = await fetchNodeByIdentifier(fullIpMatch[1]);
     if (data) ctx += `\nNODE ${fullIpMatch[1]}: ${JSON.stringify(data)}`;
     else hints += `\n[NODE_NOT_FOUND: No node found with IP "${fullIpMatch[1]}". Verify the IP from the pNodes page.]`;
   }
-  
+
   // Specific node by pubkey (base58 format)
   const pubkeyMatch = msg.match(/\b([1-9A-HJ-NP-Za-km-z]{32,44})\b/);
   if (pubkeyMatch && !fullIpMatch) {
     const data = await fetchNodeByIdentifier(pubkeyMatch[1]);
-    if (data) ctx += `\nNODE ${pubkeyMatch[1].slice(0,8)}...: ${JSON.stringify(data)}`;
-    else hints += `\n[NODE_NOT_FOUND: No node found with pubkey "${pubkeyMatch[1].slice(0,12)}...". Verify from dashboard.]`;
+    if (data) ctx += `\nNODE ${pubkeyMatch[1].slice(0, 8)}...: ${JSON.stringify(data)}`;
+    else hints += `\n[NODE_NOT_FOUND: No node found with pubkey "${pubkeyMatch[1].slice(0, 12)}...". Verify from dashboard.]`;
   }
-  
+
   // Check if user is asking about a node but didn't provide identifier
   if (/\b(node|pod|server)\b/.test(lower) && !/network|nodes|all|total|how many/.test(lower) && !fullIpMatch && !pubkeyMatch) {
     hints += '\n[MISSING_NODE_ID: User asking about a specific node but no IP/pubkey provided. Ask for IP address (e.g., 173.249.54.191) or pubkey.]';
   }
-  
+
   // Country queries
   const countryNames: Record<string, string> = {
     germany: 'de', usa: 'us', us: 'us', uk: 'gb', 'united kingdom': 'gb', 'united states': 'us',
@@ -426,20 +426,20 @@ async function buildContext(msg: string, requestNetwork?: 'mainnet' | 'devnet') 
     netherlands: 'nl', singapore: 'sg', spain: 'es', italy: 'it', poland: 'pl', russia: 'ru',
     china: 'cn', korea: 'kr', 'south korea': 'kr', mexico: 'mx', argentina: 'ar'
   };
-  
+
   const countryCodeMatch = msg.match(/\b([a-zA-Z]{2})\b/g);
   const countryNameMatch = Object.keys(countryNames).find(name => lower.includes(name));
-  
+
   let countryCode: string | null = null;
   if (countryNameMatch) {
     countryCode = countryNames[countryNameMatch];
   } else if (countryCodeMatch) {
-    const validCode = countryCodeMatch.find(c => 
+    const validCode = countryCodeMatch.find(c =>
       ['de', 'us', 'gb', 'fr', 'in', 'jp', 'ca', 'au', 'br', 'nl', 'sg', 'es', 'it', 'pl', 'ru', 'cn', 'kr', 'mx', 'ar'].includes(c.toLowerCase())
     );
     if (validCode) countryCode = validCode.toLowerCase();
   }
-  
+
   if (/country|countries|region|location|where/.test(lower) || countryCode) {
     if (countryCode) {
       const data = await fetchCountryData(countryCode);
@@ -449,19 +449,19 @@ async function buildContext(msg: string, requestNetwork?: 'mainnet' | 'devnet') 
       hints += '\n[MISSING_COUNTRY: User asking about country but none specified. Ask for country name (Germany) or code (DE).]';
     }
   }
-  
+
   // Network overview
   if (/network|overview|nodes|status|total|how many|stats|all/.test(lower)) {
     const data = await fetchNetworkSummary(networkType);
     if (data) ctx += `\nNETWORK (${data.network?.toUpperCase() || 'DEVNET'}): ${JSON.stringify(data)}`;
   }
-  
+
   // Credits queries
   if (/credit|earn|reward|top|leader|rank/.test(lower)) {
     const data = await fetchCreditsSummary(networkType);
     if (data) ctx += `\nCREDITS (${data.network?.toUpperCase() || 'DEVNET'}): ${JSON.stringify(data)}`;
   }
-  
+
   // Health/analysis queries - get network data
   if (/health|analyze|analysis|performance|issue|problem|offline/.test(lower)) {
     if (!fullIpMatch && !pubkeyMatch) {
@@ -469,10 +469,10 @@ async function buildContext(msg: string, requestNetwork?: 'mainnet' | 'devnet') 
       if (data) ctx += `\nNETWORK (${data.network?.toUpperCase() || 'DEVNET'}): ${JSON.stringify(data)}`;
     }
   }
-  
+
   // Add hints if any
   if (hints) ctx += `\n\nVALIDATION HINTS:${hints}`;
-  
+
   return ctx;
 }
 
@@ -577,36 +577,36 @@ export async function POST(req: NextRequest) {
   try {
     const { messages, network: requestNetwork } = await req.json();
     if (!OPENROUTER_API_KEY) return new Response(JSON.stringify({ error: 'No API key' }), { status: 500 });
-    
+
     const lastMsg = messages[messages.length - 1]?.content || '';
-    
+
     // Use network from request if provided, otherwise detect from message
     const networkFromRequest = requestNetwork as 'mainnet' | 'devnet' | undefined;
     const ctx = await buildContext(lastMsg, networkFromRequest);
     const sysPrompt = SYSTEM + (ctx ? `\n\n--- LIVE DATA ---${ctx}\n--- END DATA ---` : '');
-    
+
     let response: Response | null = null;
     for (const model of MODELS) {
       try {
         const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
-          headers: { 
-            'Authorization': `Bearer ${OPENROUTER_API_KEY}`, 
-            'Content-Type': 'application/json', 
-            'HTTP-Referer': 'https://www.xandash.online' 
+          headers: {
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://www.xandash.online'
           },
-          body: JSON.stringify({ 
-            model, 
-            messages: [{ role: 'system', content: sysPrompt }, ...messages], 
-            stream: true 
+          body: JSON.stringify({
+            model,
+            messages: [{ role: 'system', content: sysPrompt }, ...messages],
+            stream: true
           }),
         });
         if (r.ok) { response = r; break; }
-      } catch {}
+      } catch { }
     }
-    
+
     if (!response) return new Response(JSON.stringify({ error: 'AI unavailable' }), { status: 500 });
-    
+
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(ctrl) {
@@ -621,16 +621,16 @@ export async function POST(req: NextRequest) {
               try {
                 const c = JSON.parse(line.slice(6)).choices?.[0]?.delta?.content;
                 if (c) ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ content: c })}\n\n`));
-              } catch {}
+              } catch { }
             }
           }
         }
         ctrl.close();
       },
     });
-    
+
     return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' } });
-  } catch (e) {
+  } catch (_e) {
     return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
   }
 }

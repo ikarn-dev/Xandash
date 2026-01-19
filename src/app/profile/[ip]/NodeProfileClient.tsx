@@ -15,7 +15,8 @@ import {
   ProfileChartsSection,
   ProfileEventsTable,
   ProfileSnapshotsTable,
-  ProfileSkeleton
+  ProfileSkeleton,
+  ProfileManagerSection
 } from './components';
 
 interface NodeProfileClientProps {
@@ -26,7 +27,7 @@ interface NodeProfileClientProps {
 export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
   const router = useRouter();
   const { network, isMainnet } = useNetwork();
-  
+
   const {
     loading,
     error,
@@ -46,24 +47,24 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
   // Generate AI summary prompt - includes node details in simple terms
   const aiSummaryPrompt = useMemo(() => {
     if (!node) return '';
-    
+
     const formatStorageAI = (bytes: number) => {
       if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)}GB`;
       if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)}MB`;
       if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)}KB`;
       return `${bytes}B`;
     };
-    
+
     const uptimeDays = (node.uptime / 86400).toFixed(1);
     const storageCommitted = formatStorageAI(node.storage_committed);
     const storageUsed = formatStorageAI(node.storage_used);
-    const efficiency = node.storage_committed > 0 
-      ? ((node.storage_used / node.storage_committed) * 100).toFixed(1) 
+    const efficiency = node.storage_committed > 0
+      ? ((node.storage_used / node.storage_committed) * 100).toFixed(1)
       : '0';
-    
+
     const credits = node.credits || 0;
     const networkName = isMainnet ? 'Mainnet' : 'Devnet';
-    
+
     return `Summarize this ${networkName} pNode data in 1-2 simple sentences. Just state the facts, do NOT provide any recommendations or suggestions. Data: IP=${ip}, Status=${node.status}, Uptime=${uptimeDays} days, Credits: ${credits.toLocaleString()}, Storage=${storageCommitted} committed (${storageUsed} used, ${efficiency}% utilization), Version=${node.version || 'N/A'}${location ? `, Location=${location.city}, ${location.country}` : ''}.`;
   }, [node, ip, location, isMainnet]);
 
@@ -83,21 +84,24 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
     >
       <div className="space-y-3 sm:space-y-4 px-2 sm:px-0">
         {/* Header */}
-        <ProfileHeader 
-          ip={ip} 
-          node={node || null} 
-          lastUpdate={lastUpdate} 
-          onRefresh={fetchData} 
+        <ProfileHeader
+          ip={ip}
+          node={node || null}
+          lastUpdate={lastUpdate}
+          onRefresh={fetchData}
         />
 
         {/* Map and Location */}
         <ProfileLocationSection location={location || null} node={node || null} />
 
         {/* Stats Cards */}
-        <ProfileStatsCards 
-          node={node || null} 
+        <ProfileStatsCards
+          node={node || null}
           network={network}
         />
+
+        {/* Manager Section */}
+        <ProfileManagerSection manager={data?.manager} />
 
         {/* Charts */}
         {(hasAnyData || node) && (
@@ -115,7 +119,7 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
 
         {/* AI Summary - Above Events */}
         {node && aiSummaryPrompt && (
-          <AISummary 
+          <AISummary
             prompt={aiSummaryPrompt}
             title="AI Analysis"
             autoLoad={true}
@@ -128,9 +132,9 @@ export function NodeProfileClient({ ip, initialData }: NodeProfileClientProps) {
 
         {/* Snapshots Table */}
         {hasAnyData && (
-          <ProfileSnapshotsTable 
-            displayHistory={displayHistory} 
-            isShowingFallbackData={isShowingFallbackData} 
+          <ProfileSnapshotsTable
+            displayHistory={displayHistory}
+            isShowingFallbackData={isShowingFallbackData}
           />
         )}
       </div>

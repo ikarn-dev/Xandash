@@ -27,10 +27,10 @@ export async function getLocationForIP(ip: string): Promise<LocationData | null>
     const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,lat,lon,isp`, {
       signal: AbortSignal.timeout(5000),
     });
-    
+
     if (response.ok) {
       const data = await response.json();
-      
+
       if (data.status === 'success') {
         const locationData: LocationData = {
           country: data.country || 'Unknown',
@@ -42,12 +42,12 @@ export async function getLocationForIP(ip: string): Promise<LocationData | null>
           lat: data.lat,
           lon: data.lon
         };
-        
+
         geoCache[ip] = locationData;
         return locationData;
       }
     }
-  } catch (error) {
+  } catch (_error) {
     // Continue to fallback
   }
 
@@ -56,14 +56,14 @@ export async function getLocationForIP(ip: string): Promise<LocationData | null>
     const response = await fetch(`https://ipwho.is/${ip}`, {
       signal: AbortSignal.timeout(5000),
     });
-    
+
     if (!response.ok) {
       geoCache[ip] = null;
       return null;
     }
 
     const data = await response.json();
-    
+
     if (!data.success) {
       geoCache[ip] = null;
       return null;
@@ -79,10 +79,10 @@ export async function getLocationForIP(ip: string): Promise<LocationData | null>
       lat: data.latitude,
       lon: data.longitude
     };
-    
+
     geoCache[ip] = locationData;
     return locationData;
-  } catch (error) {
+  } catch (_error) {
     geoCache[ip] = null;
     return null;
   }
@@ -92,7 +92,7 @@ export async function getLocationsForIPs(ips: string[]): Promise<{ [ip: string]:
   if (ips.length === 0) {
     return {};
   }
-  
+
   try {
     // Use our batch API endpoint
     const response = await fetch('/api/geolocation', {
@@ -102,21 +102,21 @@ export async function getLocationsForIPs(ips: string[]): Promise<{ [ip: string]:
       },
       body: JSON.stringify({ ips }),
     });
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
-    
+
     const results = await response.json();
-    
+
     // Update local cache
     Object.entries(results).forEach(([ip, location]) => {
       geoCache[ip] = location as LocationData | null;
     });
-    
+
     return results;
-  } catch (error) {
-    
+  } catch (_error) {
+
     // Fallback: return empty results for all IPs
     const fallbackResults: { [ip: string]: LocationData | null } = {};
     ips.forEach(ip => {
@@ -133,11 +133,11 @@ export function extractIPFromAddress(address: string): string {
 
 export function formatLocation(location: LocationData | null): string {
   if (!location) return 'Unknown Location';
-  
+
   // Filter out empty strings and "Unknown" values
   const parts = [location.city, location.region, location.country]
     .filter(part => part && part !== 'Unknown');
-  
+
   if (parts.length === 0) return 'Unknown Location';
   return parts.join(', ');
 }

@@ -210,7 +210,10 @@ export async function GET(request: NextRequest) {
     // Initialize endpoints if not done
     initializeEndpoints();
     
-    if (refresh) {
+    // Always perform health checks on first load or when refresh is requested
+    const shouldCheckHealth = refresh || Array.from(endpointStatus.values()).some(e => e.responseTime === 0);
+    
+    if (shouldCheckHealth) {
       // Check all endpoints health
       const endpoints = Array.from(endpointStatus.values());
       const filteredEndpoints = network 

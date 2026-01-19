@@ -26,7 +26,7 @@ export function AISummary({ prompt, title = 'AI Analysis', autoLoad = true, clas
 
   const generateSummary = async () => {
     if (isLoading) return;
-    
+
     setIsLoading(true);
     setError(null);
     setSummary('');
@@ -36,7 +36,7 @@ export function AISummary({ prompt, title = 'AI Analysis', autoLoad = true, clas
       // Include network context in the prompt
       const networkContext = `[Network: ${network.toUpperCase()}] `;
       const fullPrompt = networkContext + prompt;
-      
+
       const response = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -69,11 +69,11 @@ export function AISummary({ prompt, title = 'AI Analysis', autoLoad = true, clas
                 fullText += data.content;
                 setSummary(fullText);
               }
-            } catch {}
+            } catch { }
           }
         }
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to generate AI summary');
     } finally {
       setIsLoading(false);
@@ -97,16 +97,16 @@ export function AISummary({ prompt, title = 'AI Analysis', autoLoad = true, clas
   return (
     <div className={`bg-gradient-to-br from-purple-500/5 to-blue-500/5 border border-purple-500/20 rounded-xl overflow-hidden ${className}`}>
       {/* Header */}
-      <div 
+      <div
         className="flex items-center justify-between p-3 cursor-pointer hover:bg-white/5 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center">
             <svg className="w-3.5 h-3.5 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
-              <circle cx="7.5" cy="14.5" r="1.5"/>
-              <circle cx="16.5" cy="14.5" r="1.5"/>
+              <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z" />
+              <circle cx="7.5" cy="14.5" r="1.5" />
+              <circle cx="16.5" cy="14.5" r="1.5" />
             </svg>
           </div>
           <div>
@@ -128,19 +128,19 @@ export function AISummary({ prompt, title = 'AI Analysis', autoLoad = true, clas
               title="Regenerate"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
-                <path d="M21 3v5h-5"/>
+                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
               </svg>
             </button>
           )}
-          <svg 
-            className={`w-3.5 h-3.5 text-white/40 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
+          <svg
+            className={`w-3.5 h-3.5 text-white/40 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
             strokeWidth="2"
           >
-            <path d="M6 9l6 6 6-6"/>
+            <path d="M6 9l6 6 6-6" />
           </svg>
         </div>
       </div>
@@ -153,7 +153,7 @@ export function AISummary({ prompt, title = 'AI Analysis', autoLoad = true, clas
               <span className="text-xs text-white/40">Analyzing...</span>
             </div>
           )}
-          
+
           {error && (
             <div className="py-2 text-center">
               <p className="text-xs text-red-400 mb-1">{error}</p>
@@ -165,7 +165,7 @@ export function AISummary({ prompt, title = 'AI Analysis', autoLoad = true, clas
               </button>
             </div>
           )}
-          
+
           {displayedText && (
             <div className="text-xs text-white/60 leading-relaxed">
               <span className="whitespace-pre-wrap">{displayedText}</span>
@@ -174,7 +174,7 @@ export function AISummary({ prompt, title = 'AI Analysis', autoLoad = true, clas
               )}
             </div>
           )}
-          
+
           {!isLoading && !displayedText && !error && !autoLoad && (
             <button
               onClick={generateSummary}

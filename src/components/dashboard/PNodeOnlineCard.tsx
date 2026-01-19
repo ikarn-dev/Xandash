@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { AlertCircle } from 'lucide-react';
 import { useNodesData } from '@/libs/context/nodes-data-context';
 import { AnimatedValue } from '@/components/ui/SlotNumber';
 
@@ -65,13 +64,13 @@ export const PNodeOnlineCard: React.FC<PNodeOnlineCardProps> = ({ className = ""
         <div className="text-white/40 text-[9px] sm:text-[10px] mb-2 sm:mb-3">
           <AnimatedValue value={stats.online} /> of <AnimatedValue value={stats.total} /> nodes
         </div>
-        
+
         {/* Online Status Bar Graph */}
         <div className="w-full px-1 sm:px-2 mt-1">
-          <svg 
-            className="w-full" 
-            height="20" 
-            viewBox="0 0 200 24" 
+          <svg
+            className="w-full"
+            height="20"
+            viewBox="0 0 200 24"
             preserveAspectRatio="none"
           >
             {Array.from({ length: totalBars }).map((_, index) => (

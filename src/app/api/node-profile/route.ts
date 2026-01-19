@@ -3,6 +3,8 @@ import { cache } from '@/libs/cache/LocalCache';
 import { getNodeEvents, getLatestNodeSnapshot, getNodeStatsHistory, saveNodeSnapshot } from '@/libs/db/node-service';
 import { getMainnetNodeByIp } from '@/libs/services/mainnet-data-service';
 import { getDevnetNodeByIp } from '@/libs/services/devnet-data-service';
+import { getManagerAssets } from '@/libs/services/manager-assets-service';
+import managersData from '../../../../managers_data/managers_node_data.json';
 
 /**
  * Node Profile API
@@ -60,7 +62,7 @@ export async function GET(request: NextRequest) {
       // Get live credits for the node's pubkey
       // Use null to indicate "unknown/failed" vs 0 which is a valid value
       let liveCredits: number | null = null;
-      
+
       // Try from liveCreditsData (fetched from credits API)
       if (liveCreditsData && currentNodeData.pubkey) {
         const creditsEntry = liveCreditsData.find((c: any) => c.pod_id === currentNodeData.pubkey);
@@ -69,14 +71,14 @@ export async function GET(request: NextRequest) {
           liveCredits = creditsEntry.credits ?? 0;
         }
       }
-      
+
       // If API didn't return data for this node, try node data
       if (liveCredits === null && currentNodeData.credits !== undefined && currentNodeData.credits !== null) {
         liveCredits = currentNodeData.credits;
       }
-      
+
       // Pass the credits (null means API failed, 0 means API returned 0)
-      saveNodeSnapshotOnVisit(ip, currentNodeData, liveCredits, network).catch(() => {});
+      saveNodeSnapshotOnVisit(ip, currentNodeData, liveCredits, network).catch(() => { });
     }
 
     let status = 'unknown';
@@ -90,7 +92,7 @@ export async function GET(request: NextRequest) {
     // Get live credits from credits API - just use current value
     let currentCredits = 0;
     const pubkey = currentNodeData?.pubkey || dbSnapshot?.pubkey;
-    
+
     if (pubkey && liveCreditsData) {
       const creditsEntry = liveCreditsData.find((c: any) => c.pod_id === pubkey);
       currentCredits = creditsEntry?.credits || 0;
@@ -102,7 +104,44 @@ export async function GET(request: NextRequest) {
     }
 
     const nodeData = currentNodeData || dbSnapshot;
-    
+
+    // Look up manager for this node from managers JSON data
+    let managerData = null;
+    const nodePubkey = nodeData?.pubkey;
+
+    if (nodePubkey) {
+      // Find the manager that owns this node
+      for (const manager of managersData.managers) {
+        const nodeEntry = manager.nodes.find(node => node.pnode_pubkey === nodePubkey);
+        if (nodeEntry) {
+          // Found the manager, now fetch their NFT/SBT assets
+          const managerAddress = manager.manager_address;
+          let managerAssets = null;
+
+          try {
+            managerAssets = await getManagerAssets(managerAddress);
+          } catch (err) {
+            console.error(`Failed to fetch manager assets for ${managerAddress}:`, err);
+          }
+
+          managerData = {
+            manager_address: managerAddress,
+            node_label: nodeEntry.node_label,
+            registered_time: nodeEntry.registered_time,
+            total_nodes: manager.nodes.length,
+            nft_count: managerAssets?.nft_count || 0,
+            sbt_count: managerAssets?.sbt_count || 0,
+            xand_balance: managerAssets?.xand_balance || 0,
+            xeno_balance: managerAssets?.xeno_balance || 0,
+            nft_previews: managerAssets?.nft_previews || [],
+            sbt_previews: managerAssets?.sbt_previews || [],
+            last_updated: managerAssets?.last_updated || null,
+          };
+          break;
+        }
+      }
+    }
+
     const response = {
       ip,
       network,
@@ -123,12 +162,13 @@ export async function GET(request: NextRequest) {
         active_streams: nodeData.active_streams || 0,
         credits: currentCredits,
       } : null,
+      manager: managerData,
       dbHistory: dbHistory.length > 0 ? dbHistory : undefined,
       dbEvents: dbEvents.length > 0 ? dbEvents : undefined,
     };
 
     return NextResponse.json(response, {
-      headers: { 
+      headers: {
         'Cache-Control': 'no-store',
         'X-Network': network,
       },
@@ -143,14 +183,14 @@ async function saveNodeSnapshotOnVisit(ip: string, nodeData: any, credits: numbe
   const cacheKey = `snapshot-saved:${network}:${ip}`;
   const recentlySaved = await cache.get(cacheKey);
   if (recentlySaved) return;
-  
+
   try {
     // Calculate status from last_seen_timestamp
     const timeDiff = Math.floor(Date.now() / 1000) - (nodeData.last_seen_timestamp || 0);
     let status: 'online' | 'offline' | 'syncing' = 'offline';
     if (timeDiff < 300) status = 'online';
     else if (timeDiff < 3600) status = 'syncing';
-    
+
     await saveNodeSnapshot({
       ip,
       pubkey: nodeData.pubkey || '',
@@ -167,7 +207,7 @@ async function saveNodeSnapshotOnVisit(ip: string, nodeData: any, credits: numbe
       credits: credits ?? undefined, // Pass undefined if null to let saveNodeSnapshot handle it
       active_streams: nodeData.active_streams || 0,
     }, network);
-    
+
     await cache.set(cacheKey, true, 60);
   } catch (err) {
     console.error(`[Profile] Failed to save snapshot for ${ip} on ${network}:`, err);
@@ -184,10 +224,10 @@ async function fetchLocationData(ip: string): Promise<LocationData | null> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
-    
+
     const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,lat,lon,isp`, { signal: controller.signal });
     clearTimeout(timeout);
-    
+
     if (res.ok) {
       const data = await res.json();
       if (data.status === 'success') {
@@ -201,7 +241,7 @@ async function fetchLocationData(ip: string): Promise<LocationData | null> {
           lat: data.lat,
           lon: data.lon,
         };
-        
+
         await cache.set(cacheKey, location, 86400);
         return location;
       }
@@ -214,14 +254,14 @@ async function fetchLocationData(ip: string): Promise<LocationData | null> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
-    
+
     const res = await fetch(`https://ipwho.is/${ip}`, { signal: controller.signal });
     clearTimeout(timeout);
-    
+
     if (!res.ok) return null;
     const data = await res.json();
     if (!data.success) return null;
-    
+
     const location: LocationData = {
       country: data.country || 'Unknown',
       country_code: data.country_code?.toLowerCase() || '',
@@ -232,7 +272,7 @@ async function fetchLocationData(ip: string): Promise<LocationData | null> {
       lat: data.latitude,
       lon: data.longitude,
     };
-    
+
     await cache.set(cacheKey, location, 86400);
     return location;
   } catch {
@@ -281,20 +321,20 @@ async function fetchLiveCreditsData(network: NetworkType): Promise<any[] | null>
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    
+
     // Use hardcoded network-specific credits API URL
     const url = network === 'mainnet' ? MAINNET_CREDITS_URL : DEVNET_CREDITS_URL;
-    
+
     const res = await fetch(url, {
       signal: controller.signal,
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
     });
     clearTimeout(timeout);
-    
+
     if (!res.ok) return null;
     const data = await res.json();
     const credits = data.pods_credits || [];
-    
+
     await cache.set(cacheKey, credits, 60); // Cache for 1 minute
     return credits;
   } catch {

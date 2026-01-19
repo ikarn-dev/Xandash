@@ -3,7 +3,7 @@
  * Centralized calculations for node statistics
  */
 
-import { getNodeStatus, DEFAULT_STATUS_CONFIG, type NodeStatus } from './node-status';
+import { getNodeStatus } from './node-status';
 
 export interface NodeData {
   pubkey: string;
@@ -59,22 +59,22 @@ export function calculateNodeStats(
   referenceTime: number = Math.floor(Date.now() / 1000)
 ): NodeStats {
   const total = nodes.length;
-  
+
   let online = 0;
   let syncing = 0;
   let offline = 0;
   let publicCount = 0;
-  
+
   nodes.forEach(node => {
     const status = getNodeStatus(node.last_seen_timestamp, referenceTime);
-    
+
     if (status === 'online') online++;
     else if (status === 'syncing') syncing++;
     else offline++;
-    
+
     if (node.is_public) publicCount++;
   });
-  
+
   return {
     total,
     online,
@@ -92,7 +92,7 @@ export function calculateNodeStats(
 export function calculateStorageStats(nodes: NodeData[]): StorageStats {
   const totalCommitted = nodes.reduce((sum, node) => sum + (node.storage_committed || 0), 0);
   const totalUsed = nodes.reduce((sum, node) => sum + (node.storage_used || 0), 0);
-  
+
   return {
     totalCommitted,
     totalUsed,
@@ -107,7 +107,7 @@ export function calculateStorageStats(nodes: NodeData[]): StorageStats {
  */
 export function calculateUptimeStats(nodes: NodeData[]): UptimeStats {
   const uptimes = nodes.map(node => node.uptime || 0).filter(u => u > 0);
-  
+
   if (uptimes.length === 0) {
     return {
       averageUptime: 0,
@@ -116,10 +116,10 @@ export function calculateUptimeStats(nodes: NodeData[]): UptimeStats {
       medianUptime: 0,
     };
   }
-  
+
   const sorted = [...uptimes].sort((a, b) => a - b);
   const sum = uptimes.reduce((a, b) => a + b, 0);
-  
+
   return {
     averageUptime: sum / uptimes.length,
     maxUptime: Math.max(...uptimes),
@@ -133,26 +133,26 @@ export function calculateUptimeStats(nodes: NodeData[]): UptimeStats {
  */
 export function calculateVersionStats(nodes: NodeData[]): VersionStats {
   const versionCounts = new Map<string, number>();
-  
+
   nodes.forEach(node => {
     const version = node.version || 'unknown';
     versionCounts.set(version, (versionCounts.get(version) || 0) + 1);
   });
-  
+
   const totalNodes = nodes.length;
   const versionEntries = Array.from(versionCounts.entries());
-  
+
   // Sort by count (highest first) - Latest = most nodes
   const sortedByCount = versionEntries.sort(([, a], [, b]) => b - a);
   const latestVersion = sortedByCount[0]?.[0] || 'unknown';
-  
+
   const versionDistribution = sortedByCount.map(([version, count]) => ({
     version,
     count,
     percentage: (count / totalNodes) * 100,
     isLatest: version === latestVersion && version !== 'unknown',
   }));
-  
+
   return {
     totalVersions: versionCounts.size,
     latestVersion,
@@ -178,7 +178,7 @@ export function formatUptime(seconds: number): string {
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
-  
+
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;

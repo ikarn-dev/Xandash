@@ -38,7 +38,10 @@ async function syncMainnetNodes(): Promise<{
       const creditsMap = await getMainnetCreditsMap();
       const result = await saveAllNodeSnapshots(externalData.nodes, creditsMap, 'mainnet');
       
-      return { ...result, source: externalData.source };
+      return { 
+        ...result, 
+        source: externalData.source
+      };
     }
     
     return { total: 0, newNodes: 0, statusChanges: 0, versionChanges: 0, storageChanges: 0, creditsChanges: 0, source: 'none' };
@@ -78,7 +81,9 @@ async function syncDevnetNodes(): Promise<{
     // Credits fetch failed silently
   }
 
-  return await saveAllNodeSnapshots(devnetData.nodes, creditsMap, 'devnet');
+  const result = await saveAllNodeSnapshots(devnetData.nodes, creditsMap, 'devnet');
+  
+  return result;
 }
 
 async function syncAllNodes(network: NetworkType = 'devnet') {

@@ -106,16 +106,6 @@ export const VPSProvidersChart: React.FC<VPSProvidersChartProps> = ({
 
   const topProvider = filteredData.length > 0 ? filteredData[0] : null;
 
-  // Calculate bar height based on number of items - fit all without scrolling
-  const barHeight = useMemo(() => {
-    const availableHeight = height - 8; // minimal padding
-    const itemCount = filteredData.length;
-    if (itemCount === 0) return 16;
-    const gap = 2; // 2px gap between items
-    const calculatedHeight = Math.floor((availableHeight - (itemCount - 1) * gap) / itemCount);
-    return Math.max(12, Math.min(20, calculatedHeight)); // min 12px, max 20px
-  }, [filteredData.length, height]);
-
   if (isLoading) {
     return <ChartLoadingSkeleton height={height} />;
   }
@@ -151,9 +141,9 @@ export const VPSProvidersChart: React.FC<VPSProvidersChartProps> = ({
       </div>
 
       {/* Chart */}
-      <div 
-        ref={containerRef} 
-        className="p-2 sm:p-3 touch-pan-y" 
+      <div
+        ref={containerRef}
+        className="p-2 sm:p-3 touch-pan-y"
         style={{ height }}
       >
         {filteredData.length === 0 ? (
@@ -169,14 +159,13 @@ export const VPSProvidersChart: React.FC<VPSProvidersChartProps> = ({
               // Limit max height per bar to 24px regardless of available space
               const maxBarHeight = 24;
               const useFixedHeight = filteredData.length <= 5;
-              
+
               return (
                 <div
                   key={item.provider}
-                  className={`flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all duration-200 ${
-                    isHovered ? 'bg-white/5 -mx-2 px-2' : ''
-                  }`}
-                  style={{ 
+                  className={`flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all duration-200 ${isHovered ? 'bg-white/5 -mx-2 px-2' : ''
+                    }`}
+                  style={{
                     height: useFixedHeight ? maxBarHeight : 'auto',
                     flex: useFixedHeight ? 'none' : 1,
                     minHeight: useFixedHeight ? maxBarHeight : 12
@@ -187,20 +176,18 @@ export const VPSProvidersChart: React.FC<VPSProvidersChartProps> = ({
                   onTouchEnd={() => setTimeout(() => setHoveredIndex(null), 1500)}
                 >
                   {/* Provider name - full name, no truncation */}
-                  <div 
-                    className={`text-[9px] sm:text-[11px] flex-shrink-0 text-right transition-colors duration-200 ${
-                      isHovered ? 'text-white' : 'text-white/70'
-                    }`}
+                  <div
+                    className={`text-[9px] sm:text-[11px] flex-shrink-0 text-right transition-colors duration-200 ${isHovered ? 'text-white' : 'text-white/70'
+                      }`}
                     style={{ width: '80px', minWidth: '80px' }}
                     title={item.provider}
                   >
                     <span className="truncate block">{item.provider}</span>
                   </div>
-                  
+
                   {/* Bar */}
-                  <div className={`flex-1 h-full bg-white/5 relative overflow-hidden transition-all duration-200 ${
-                    isHovered ? 'bg-white/10' : ''
-                  }`}>
+                  <div className={`flex-1 h-full bg-white/5 relative overflow-hidden transition-all duration-200 ${isHovered ? 'bg-white/10' : ''
+                    }`}>
                     <div
                       className="absolute inset-y-0 left-0 transition-all duration-500 ease-out flex items-center justify-end pr-1.5"
                       style={{
@@ -213,28 +200,25 @@ export const VPSProvidersChart: React.FC<VPSProvidersChartProps> = ({
                       }}
                     >
                       {percentage > 25 && (
-                        <span className={`text-[9px] sm:text-[10px] font-mono font-medium text-white transition-all duration-200 ${
-                          isHovered ? 'scale-110' : ''
-                        }`}>
+                        <span className={`text-[9px] sm:text-[10px] font-mono font-medium text-white transition-all duration-200 ${isHovered ? 'scale-110' : ''
+                          }`}>
                           {item.count}
                         </span>
                       )}
                     </div>
                     {percentage <= 25 && (
                       <div className="absolute inset-y-0 flex items-center" style={{ left: `${Math.max(percentage, 8) + 2}%` }}>
-                        <span className={`text-[9px] sm:text-[10px] font-mono font-medium transition-colors duration-200 ${
-                          isHovered ? 'text-white' : 'text-white/70'
-                        }`}>
+                        <span className={`text-[9px] sm:text-[10px] font-mono font-medium transition-colors duration-200 ${isHovered ? 'text-white' : 'text-white/70'
+                          }`}>
                           {item.count}
                         </span>
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Percentage */}
-                  <div className={`w-8 sm:w-10 text-[8px] sm:text-[10px] text-right flex-shrink-0 transition-colors duration-200 ${
-                    isHovered ? 'text-white/70' : 'text-white/40'
-                  }`}>
+                  <div className={`w-8 sm:w-10 text-[8px] sm:text-[10px] text-right flex-shrink-0 transition-colors duration-200 ${isHovered ? 'text-white/70' : 'text-white/40'
+                    }`}>
                     {((item.count / totalNodes) * 100).toFixed(0)}%
                   </div>
                 </div>

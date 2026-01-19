@@ -3,7 +3,7 @@
 import { SEO_CONFIG } from './config';
 
 export function StructuredData() {
-  const { baseUrl, siteName } = SEO_CONFIG;
+  const { baseUrl } = SEO_CONFIG;
 
   // Organization schema - for brand recognition and favicon
   const organizationSchema = {

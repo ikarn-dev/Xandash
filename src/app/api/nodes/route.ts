@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMainnetData } from '@/libs/services/mainnet-data-service';
 import { getDevnetData } from '@/libs/services/devnet-data-service';
+import managersData from '../../../../managers_data/managers_node_data.json';
 
 /**
  * Nodes API
@@ -23,6 +24,41 @@ export interface PaginatedNodesResponse {
     hasNext: boolean;
     hasPrev: boolean;
   };
+}
+
+/**
+ * Create a pubkey to manager mapping from managers JSON data
+ */
+function createPubkeyToManagerMap(): Map<string, string> {
+  const pubkeyToManager = new Map<string, string>();
+  
+  managersData.managers.forEach(manager => {
+    manager.nodes.forEach(node => {
+      pubkeyToManager.set(node.pnode_pubkey, manager.manager_address);
+    });
+  });
+  
+  return pubkeyToManager;
+}
+
+/**
+ * Enrich nodes with manager pubkey from JSON data
+ */
+function enrichNodesWithManagerData(nodes: any[], pubkeyToManagerMap: Map<string, string>): any[] {
+  return nodes.map(node => {
+    const managerAddress = pubkeyToManagerMap.get(node.pubkey);
+    
+    if (managerAddress) {
+      // Node is registered to a manager
+      return {
+        ...node,
+        manager_pubkey: managerAddress
+      };
+    }
+    
+    // Node has no manager
+    return node;
+  });
 }
 
 export async function GET(request: NextRequest) {
@@ -66,6 +102,12 @@ export async function GET(request: NextRequest) {
       } catch (error) {
         console.error('[Nodes API] Devnet API failed:', error);
       }
+    }
+    
+    // Enrich nodes with manager pubkey from JSON data
+    if (allNodes.length > 0) {
+      const pubkeyToManagerMap = createPubkeyToManagerMap();
+      allNodes = enrichNodesWithManagerData(allNodes, pubkeyToManagerMap);
     }
     
     let result;

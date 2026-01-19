@@ -30,7 +30,7 @@ export interface NetworkStatsData {
 async function makeRpcCall<T>(method: string): Promise<T | null> {
   const rpcUrl = process.env.MAINNET_RPC_DIRECT_URL;
   const apiKey = process.env.MAINNET_RPC_API_KEY;
-  
+
   if (!rpcUrl || !apiKey) {
     return null;
   }
@@ -52,7 +52,7 @@ async function makeRpcCall<T>(method: string): Promise<T | null> {
     }
 
     return await response.json() as T;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -64,7 +64,7 @@ export async function getVersionData(): Promise<{
 }> {
   try {
     const data = await makeRpcCall<any>('get-version');
-    
+
     if (!data) {
       return {
         version: { version: '0.7.3' },
@@ -76,7 +76,7 @@ export async function getVersionData(): Promise<{
     const version = data.version || data.result?.version || data.data?.version || '0.7.3';
     const build = data.build || data.result?.build || data.data?.build;
     const commit = data.commit || data.result?.commit || data.data?.commit;
-    
+
     return {
       version: { version, build, commit }
     };
@@ -100,7 +100,7 @@ export async function getNetworkStatsData(): Promise<{
       makeRpcCall<any>('get-stats'),
       makeRpcCall<any>('get-pods-with-stats')
     ]);
-    
+
     if (!statsData) {
       return {
         stats: null,
@@ -110,18 +110,18 @@ export async function getNetworkStatsData(): Promise<{
 
     // Extract stats from response
     const stats = statsData.stats || statsData.result?.stats || statsData.data?.stats || statsData.result || statsData.data || statsData;
-    
+
     // Calculate storage stats from pods
     let storageCommitted = 0;
     let storageUsed = 0;
     let totalPods = 0;
 
     if (podsData) {
-      const pods = podsData.pods || podsData.result?.pods || podsData.data?.pods || 
-                   (Array.isArray(podsData.result) ? podsData.result : []) ||
-                   (Array.isArray(podsData.data) ? podsData.data : []) ||
-                   (Array.isArray(podsData) ? podsData : []);
-      
+      const pods = podsData.pods || podsData.result?.pods || podsData.data?.pods ||
+        (Array.isArray(podsData.result) ? podsData.result : []) ||
+        (Array.isArray(podsData.data) ? podsData.data : []) ||
+        (Array.isArray(podsData) ? podsData : []);
+
       if (Array.isArray(pods)) {
         totalPods = pods.length;
         pods.forEach((pod: any) => {
@@ -132,7 +132,7 @@ export async function getNetworkStatsData(): Promise<{
     }
 
     const avgStoragePerPod = totalPods > 0 ? storageCommitted / totalPods : 0;
-    
+
     const processedStats: NetworkStatsData = {
       active_streams: stats.active_streams ?? 0,
       cpu_percent: stats.cpu_percent ?? stats.cpu ?? 0,

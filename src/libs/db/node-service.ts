@@ -28,6 +28,14 @@ export async function saveNodeSnapshot(nodeData: {
   last_seen_timestamp: number;
   credits?: number;
   active_streams?: number;
+  // Manager data (optional)
+  manager_pubkey?: string;
+  manager_nft_count?: number;
+  manager_sbt_count?: number;
+  manager_xand_balance?: number;
+  manager_data_updated?: number;
+  manager_nft_names?: string[];
+  manager_sbt_names?: string[];
 }, network: NetworkType = 'devnet'): Promise<{ isNew: boolean; statusChanged: boolean; versionChanged: boolean; storageChanged: boolean; creditsChanged: boolean }> {
   const db = await connectToDatabase();
   const collections = getCollectionNames(network);
@@ -182,6 +190,16 @@ export async function saveNodeSnapshot(nodeData: {
     active_streams: nodeData.active_streams || 0,
     timestamp,
     created_at: new Date(),
+    // Manager data (if provided)
+    ...(nodeData.manager_pubkey && {
+      manager_pubkey: nodeData.manager_pubkey,
+      manager_nft_count: nodeData.manager_nft_count || 0,
+      manager_sbt_count: nodeData.manager_sbt_count || 0,
+      manager_xand_balance: nodeData.manager_xand_balance || 0,
+      manager_data_updated: nodeData.manager_data_updated || timestamp,
+      manager_nft_names: nodeData.manager_nft_names || [],
+      manager_sbt_names: nodeData.manager_sbt_names || [],
+    }),
   };
   
   await snapshotsCol.insertOne(snapshot);
@@ -189,8 +207,13 @@ export async function saveNodeSnapshot(nodeData: {
   return { isNew, statusChanged, versionChanged, storageChanged, creditsChanged };
 }
 
-// Save multiple node snapshots (batch)
-export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string, number>, network: NetworkType = 'devnet'): Promise<{
+// Save multiple node snapshots (batch) with optional manager data
+export async function saveAllNodeSnapshots(
+  nodes: any[], 
+  creditsMap?: Map<string, number>, 
+  network: NetworkType = 'devnet',
+  managerAssetsMap?: Map<string, any> // Map of pubkey -> manager assets data
+): Promise<{
   total: number;
   newNodes: number;
   statusChanges: number;
@@ -328,6 +351,9 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
       }
     }
     
+    // Get manager assets data for this node
+    const managerAssets = managerAssetsMap?.get(node.pubkey);
+    
     snapshotsToInsert.push({
       ip,
       pubkey: node.pubkey || '',
@@ -345,6 +371,16 @@ export async function saveAllNodeSnapshots(nodes: any[], creditsMap?: Map<string
       active_streams: node.active_streams || 0,
       timestamp,
       created_at: new Date(),
+      // Manager data (if available)
+      ...(managerAssets && {
+        manager_pubkey: managerAssets.manager_pubkey,
+        manager_nft_count: managerAssets.nft_count || 0,
+        manager_sbt_count: managerAssets.sbt_count || 0,
+        manager_xand_balance: managerAssets.xand_balance || 0,
+        manager_data_updated: managerAssets.last_updated || timestamp,
+        manager_nft_names: managerAssets.nft_names || [],
+        manager_sbt_names: managerAssets.sbt_names || [],
+      }),
     });
   }
   

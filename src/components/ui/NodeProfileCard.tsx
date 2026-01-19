@@ -125,7 +125,7 @@ const AnimatedBar: React.FC<{
 // Mini sparkline component based on actual data
 const MiniSparkline: React.FC<{ sent: number; received: number; color: string }> = ({ sent, received, color }) => {
   // Generate a simple visualization based on the ratio
-  const total = sent + received;
+  const _total = sent + received;
   const height = 24;
   const width = 60;
 

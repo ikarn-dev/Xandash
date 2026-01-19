@@ -146,6 +146,17 @@ export function ManagersView({ mainnetValidators, devnetValidators }: ManagersVi
     return isMainnet ? 'mainnet' : 'devnet';
   }, [pubkeyMaps.mainnet, pubkeyMaps.devnet, showAllManagers, isMainnet]);
 
+  // Create a combined map for IP lookup
+  const allValidatorsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    [...mainnetValidators, ...devnetValidators].forEach(v => {
+      if (v.pubkey && v.address) {
+        map.set(v.pubkey, v.address);
+      }
+    });
+    return map;
+  }, [mainnetValidators, devnetValidators]);
+
   // Filter and sort managers
   const filteredManagers = useMemo(() => {
     let managers = data.managers;
@@ -156,10 +167,12 @@ export function ManagersView({ mainnetValidators, devnetValidators }: ManagersVi
       managers = managers.filter(manager => {
         // Search by manager address
         if (manager.manager_address.toLowerCase().includes(query)) return true;
-        // Search by any node pubkey
-        if (manager.nodes.some(n => n.pnode_pubkey.toLowerCase().includes(query))) return true;
-        // Search by manager index
-        if (manager.manager_index.toString().includes(query)) return true;
+        // Search by any node pubkey or IP
+        if (manager.nodes.some(n => {
+          if (n.pnode_pubkey.toLowerCase().includes(query)) return true;
+          const ip = allValidatorsMap.get(n.pnode_pubkey);
+          return ip && ip.toLowerCase().includes(query);
+        })) return true;
         return false;
       });
     }
@@ -183,7 +196,7 @@ export function ManagersView({ mainnetValidators, devnetValidators }: ManagersVi
       // Secondary: sort by total nodes (descending)
       return b.nodes.length - a.nodes.length;
     });
-  }, [data.managers, searchQuery, getActiveNodeCount, showAllManagers]);
+  }, [data.managers, searchQuery, getActiveNodeCount, showAllManagers, allValidatorsMap]);
 
   // Paginate
   const { paginatedManagers, totalPages } = useMemo(() => {
@@ -297,7 +310,7 @@ export function ManagersView({ mainnetValidators, devnetValidators }: ManagersVi
             type="text"
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Search by manager address, node pubkey, or index..."
+            placeholder="Search by manager address, node pubkey, or node IP..."
             className="w-full bg-black border border-white/10 pl-11 pr-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-white/20 transition-colors text-sm"
           />
         </div>
