@@ -202,13 +202,11 @@ src/
 
 | Document | Description |
 |----------|-------------|
-| [Architecture](docs/ARCHITECTURE.md) | System design, data flow diagrams, component hierarchy |
-| [Algorithms](docs/ALGORITHMS.md) | Core algorithms, formulas, and logic reference |
-| [Tech Stack](docs/TECH_STACK.md) | Detailed technology overview and database schema |
-| [API Reference](docs/API_REFERENCE.md) | API endpoints documentation with examples |
-| [Cron Setup](docs/CRON_SETUP.md) | GitHub Actions cron configuration for data sync |
-| [CAPTCHA Setup](docs/CAPTCHA_SETUP.md) | Cloudflare Turnstile integration guide |
-| [SEO](docs/SEO.md) | SEO implementation, routes, and best practices |
+| [Architecture](/docs#architecture) | System design, data flow diagrams, component hierarchy |
+| [Tech Stack](/docs#tech-stack) | Detailed technology overview and database schema |
+| [API Reference](/docs#api-reference) | API endpoints documentation with examples |
+| [Cron Setup](documentation/CRON_SETUP.md) | GitHub Actions cron configuration for data sync |
+| [CAPTCHA Setup](documentation/CAPTCHA_SETUP.md) | Cloudflare Turnstile integration guide |
 
 ---
 
