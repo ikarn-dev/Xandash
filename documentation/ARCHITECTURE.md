@@ -78,10 +78,8 @@ XanDash is a real-time monitoring dashboard built with Next.js 16, following a m
 
 ## Node Compare Data Flow
 
-```
 <img width="2816" height="1536" alt="compare-flow" src="https://github.com/user-attachments/assets/04f9e03b-fe6c-4845-93dc-9a647b0d3449" />
 
-```
 
 ## Leaderboard Architecture
 
