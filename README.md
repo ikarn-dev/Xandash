@@ -270,7 +270,6 @@ Contributions are welcome! Please:
 - [Xandeum Website](https://www.xandeum.network)
 - [Xandeum Documentation](https://docs.xandeum.network)
 - [Twitter/X](https://x.com/Xandeum)
-- [Discord](https://discord.gg/xandeum)
 
 ---
 
