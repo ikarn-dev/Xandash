@@ -52,6 +52,7 @@ export interface CurrentNodeData {
   is_public?: boolean;
   last_seen_timestamp?: number;
   credits?: number;
+  score?: number;
 }
 
 export interface ManagerData {

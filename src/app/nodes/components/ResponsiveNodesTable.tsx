@@ -151,6 +151,12 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
               >
                 Status {getSortIcon('status')}
               </th>
+              <th
+                className="w-[7%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
+                onClick={() => handleSort('score')}
+              >
+                Score {getSortIcon('score')}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -165,8 +171,8 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
 
 
               const timeDiff = dataFetchTime - validator.last_seen_timestamp;
-              const isOnline = timeDiff < 1800;
-              const isSyncing = timeDiff >= 1800 && timeDiff < 3600;
+              const isOnline = timeDiff <= 3600;
+              const isSyncing = timeDiff > 3600 && timeDiff < 7200;
 
               let lastSeenDisplay = '';
               if (timeDiff < 60) lastSeenDisplay = `${timeDiff}s`;
@@ -339,6 +345,13 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                         {isOnline ? 'Active' : isSyncing ? 'Syncing' : 'Offline'}
                       </span>
                     </div>
+                  </td>
+
+                  {/* Score */}
+                  <td className="px-3 py-3 text-xs">
+                    <span className="text-purple-400 font-mono font-semibold">
+                      {validator.score ? validator.score.toFixed(1) : '0.0'}
+                    </span>
                   </td>
                 </tr>
               );

@@ -218,8 +218,8 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
     if (node.last_seen_timestamp) {
       const now = Math.floor(Date.now() / 1000);
       const timeDiff = now - node.last_seen_timestamp;
-      if (timeDiff < 300) return 'online';
-      if (timeDiff < 3600) return 'maintenance';
+      if (timeDiff <= 3600) return 'online';
+      if (timeDiff < 7200) return 'maintenance'; // Using maintenance color for syncing/intermediate
       return 'offline';
     }
     return node.status || 'offline';

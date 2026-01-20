@@ -28,6 +28,7 @@ interface NodeData {
   country?: string;
   country_code?: string;
   provider?: string;
+  score?: number;
   // Manager data
   manager_pubkey?: string;
   manager_nft_count?: number;
@@ -107,9 +108,9 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
     for (const node of nodes) {
       const timeDiff = serverTime - (node.last_seen_timestamp || 0);
 
-      if (timeDiff < 1800) {
+      if (timeDiff <= 3600) {
         online++;
-      } else if (timeDiff < 3600) {
+      } else if (timeDiff < 7200) {
         syncing++;
       } else {
         offline++;
@@ -176,8 +177,8 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
         fetchedNodes = data.nodes.map((node: any) => {
           const timeDiff = serverTime - (node.last_seen_timestamp || 0);
           let status: 'online' | 'syncing' | 'offline' = 'offline';
-          if (timeDiff < 1800) status = 'online';
-          else if (timeDiff < 3600) status = 'syncing';
+          if (timeDiff <= 3600) status = 'online';
+          else if (timeDiff < 7200) status = 'syncing';
 
           return {
             address: node.address || '',
@@ -195,6 +196,7 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
             country: node.country,
             country_code: node.country_code,
             provider: node.provider,
+            score: node.score || 0,
             // Manager data
             manager_pubkey: node.manager_pubkey,
             manager_nft_count: node.manager_nft_count,
@@ -248,8 +250,8 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
         fetchedNodes = data.nodes.map((node: any) => {
           const timeDiff = serverTime - (node.last_seen_timestamp || 0);
           let status: 'online' | 'syncing' | 'offline' = 'offline';
-          if (timeDiff < 1800) status = 'online';
-          else if (timeDiff < 3600) status = 'syncing';
+          if (timeDiff <= 3600) status = 'online';
+          else if (timeDiff < 7200) status = 'syncing';
 
           return {
             address: node.address || '',
@@ -266,6 +268,7 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
             country: node.country,
             country_code: node.country_code,
             provider: node.provider,
+            score: node.score || 0,
             // Manager data
             manager_pubkey: node.manager_pubkey,
             manager_nft_count: node.manager_nft_count,

@@ -5,6 +5,7 @@ import { getNodeStatsHistory, getNodeEvents, getLatestNodeSnapshot } from '@/lib
 import { ProfileCacheService } from '@/libs/services/profile-cache';
 import { getMainnetNodeByIp } from '@/libs/services/mainnet-data-service';
 import { getDevnetNodeByIp } from '@/libs/services/devnet-data-service';
+import { calculateNodeScore } from '@/libs/utils/score-utils';
 import { generateMetadata } from './metadata';
 
 interface PageProps {
@@ -21,13 +22,13 @@ export async function getProfileData(ip: string) {
   try {
     // Fetch location data
     const locationData = await fetchLocationData(ip);
-    
+
     // Fetch current node data from RPC
     const currentNodeData = await fetchCurrentNodeData(ip);
-    
+
     // Fetch credits data
     const creditsData = await fetchCreditsData();
-    
+
     // Fetch MongoDB data (7 days by default for SSR)
     const [dbHistory, dbEvents, dbSnapshot] = await Promise.all([
       getNodeStatsHistory(ip, 168).catch(() => []), // 7 days = 168 hours
@@ -38,7 +39,7 @@ export async function getProfileData(ip: string) {
     // Get current credits from API
     let currentCredits = 0;
     const pubkey = currentNodeData?.pubkey || dbSnapshot?.pubkey;
-    
+
     if (pubkey && creditsData) {
       const entry = creditsData.find((c: any) => c.pod_id === pubkey);
       if (entry) currentCredits = entry.credits;
@@ -48,14 +49,14 @@ export async function getProfileData(ip: string) {
     let status = 'unknown';
     if (currentNodeData) {
       const timeDiff = Math.floor(Date.now() / 1000) - (currentNodeData.last_seen_timestamp || 0);
-      status = timeDiff < 300 ? 'online' : timeDiff < 3600 ? 'syncing' : 'offline';
+      status = timeDiff <= 3600 ? 'online' : timeDiff < 7200 ? 'syncing' : 'offline';
     } else if (dbSnapshot) {
       status = dbSnapshot.status;
     }
 
     // Build response - serialize MongoDB objects to plain objects
     const nodeData = currentNodeData || dbSnapshot;
-    
+
     return {
       ip,
       location: locationData,
@@ -72,6 +73,7 @@ export async function getProfileData(ip: string) {
         is_public: nodeData.is_public || false,
         last_seen_timestamp: nodeData.last_seen_timestamp || 0,
         credits: currentCredits,
+        score: (nodeData as any).score || 0,
       } : null,
       // Serialize MongoDB arrays to plain objects
       dbHistory: dbHistory.length > 0 ? dbHistory.map(serializeMongoObject) : undefined,
@@ -85,37 +87,37 @@ export async function getProfileData(ip: string) {
 // Helper function to serialize MongoDB objects to plain objects
 function serializeMongoObject(obj: any): any {
   if (!obj) return obj;
-  
+
   // Handle primitive types
   if (typeof obj !== 'object') return obj;
-  
+
   // Handle arrays
   if (Array.isArray(obj)) {
     return obj.map(serializeMongoObject);
   }
-  
+
   // Handle Date objects
   if (obj instanceof Date) {
     return obj.toISOString();
   }
-  
+
   // Handle MongoDB ObjectId and other objects with toString method
   if (obj.toString && typeof obj.toString === 'function' && obj.constructor.name === 'ObjectId') {
     return obj.toString();
   }
-  
+
   // Handle objects with toJSON method
   if (obj.toJSON && typeof obj.toJSON === 'function') {
     return serializeMongoObject(obj.toJSON());
   }
-  
+
   // Handle plain objects
   const serialized: any = {};
-  
+
   for (const key in obj) {
     if (obj.hasOwnProperty(key)) {
       const value = obj[key];
-      
+
       if (key === '_id') {
         // Convert ObjectId to string
         serialized[key] = value?.toString() || value;
@@ -140,7 +142,7 @@ function serializeMongoObject(obj: any): any {
       }
     }
   }
-  
+
   return serialized;
 }
 
@@ -149,10 +151,10 @@ async function fetchLocationData(ip: string) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
-    
+
     const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,lat,lon,isp`, { signal: controller.signal });
     clearTimeout(timeout);
-    
+
     if (res.ok) {
       const data = await res.json();
       if (data.status === 'success') {
@@ -176,14 +178,14 @@ async function fetchLocationData(ip: string) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
-    
+
     const res = await fetch(`https://ipwho.is/${ip}`, { signal: controller.signal });
     clearTimeout(timeout);
-    
+
     if (!res.ok) return null;
     const data = await res.json();
     if (!data.success) return null;
-    
+
     return {
       country: data.country || 'Unknown',
       country_code: data.country_code?.toLowerCase() || '',
@@ -201,13 +203,32 @@ async function fetchLocationData(ip: string) {
 
 async function fetchCurrentNodeData(ip: string) {
   try {
+    const now = Math.floor(Date.now() / 1000);
+
     // Try mainnet first
     const mainnetNode = await getMainnetNodeByIp(ip);
-    if (mainnetNode) return mainnetNode;
-    
+    if (mainnetNode) {
+      // Always calculate score dynamically to ensure it's up-to-date
+      const score = calculateNodeScore({
+        uptime: mainnetNode.uptime || 0,
+        storage_committed: mainnetNode.storage_committed || 0,
+        last_seen_timestamp: mainnetNode.last_seen_timestamp || now,
+      }, now);
+      return { ...mainnetNode, score };
+    }
+
     // Fallback to devnet
     const devnetNode = await getDevnetNodeByIp(ip);
-    return devnetNode;
+    if (devnetNode) {
+      // Calculate score for devnet nodes too
+      const score = calculateNodeScore({
+        uptime: devnetNode.uptime || 0,
+        storage_committed: devnetNode.storage_committed || 0,
+        last_seen_timestamp: devnetNode.last_seen_timestamp || now,
+      }, now);
+      return { ...devnetNode, score };
+    }
+    return null;
   } catch {
     return null;
   }
@@ -220,13 +241,13 @@ async function fetchCreditsData() {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    
+
     const res = await fetch(DEVNET_CREDITS_URL, {
       signal: controller.signal,
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
     });
     clearTimeout(timeout);
-    
+
     if (!res.ok) return null;
     const data = await res.json();
     return data.pods_credits || [];
@@ -241,11 +262,11 @@ export default async function ProfilePage({ params }: PageProps) {
 
   // Try to get cached data first
   let initialData = await ProfileCacheService.getCachedProfile(decodedIP);
-  
+
   // If no cached data or data is stale, fetch fresh data
   if (!initialData || Date.now() - initialData.cachedAt > 300000) { // 5 minutes
     const freshData = await getProfileData(decodedIP);
-    
+
     // Cache the fresh data and create cached data object
     if (freshData) {
       await ProfileCacheService.cacheProfile(decodedIP, freshData);

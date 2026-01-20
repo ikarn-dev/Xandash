@@ -343,5 +343,95 @@ All endpoints return errors in this format:
 ## Authentication
 
 - `/api/sync-nodes` POST requires `Authorization: Bearer CRON_SECRET` header
-- `/api/verify-turnstile` validates Cloudflare Turnstile tokens
-- Other endpoints are public but rate-limited
+
+---
+
+### GET /api/manager-wallet
+
+Fetches manager's wallet data including SOL balance, SPL tokens, and NFTs from Helius API.
+
+**Query Parameters:**
+- `address` (required): Wallet address
+
+**Response:**
+```json
+{
+  "solBalance": 10.5,
+  "tokens": [
+    {
+      "mint": "string",
+      "amount": 1000,
+      "decimals": 9,
+      "symbol": "XAND",
+      "name": "Xandeum",
+      "logoURI": "url"
+    }
+  ],
+  "nfts": [
+    {
+      "id": "string",
+      "content": { ... }
+    }
+  ],
+  "totalUsdValue": 0
+}
+```
+
+---
+
+### GET /api/nodes-trend
+
+Fetches historical node count trends for network visualization.
+
+**Query Parameters:**
+- `network` (optional): `devnet` or `mainnet` (default: `devnet`)
+- `hours` (optional): Hours of history (default: 24, max: 168)
+
+**Response:**
+```json
+{
+  "network": "devnet",
+  "hours": 24,
+  "data": [
+    {
+      "timestamp": 1704672000,
+      "total_nodes": 250,
+      "online_nodes": 200,
+      "offline_nodes": 40,
+      "syncing_nodes": 10,
+      "created_at": "2024-01-08T00:00:00.000Z"
+    }
+  ],
+  "count": 48
+}
+```
+
+---
+
+### GET /api/rpc-status
+
+Provides real-time health status of RPC endpoints.
+
+**Query Parameters:**
+- `network` (optional): `devnet` or `mainnet`
+
+**Response:**
+```json
+{
+  "endpoints": [
+    {
+      "name": "Primary RPC",
+      "url": "http://...",
+      "status": "operational",
+      "responseTime": 150,
+      "uptime": 99.9,
+      "lastChecked": 1704672000
+    }
+  ],
+  "summary": {
+    "total": 3,
+    "operational": 3,
+    "avgResponseTime": 145
+  }
+}
+```

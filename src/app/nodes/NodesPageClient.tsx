@@ -112,7 +112,7 @@ export function NodesPageClientRefactored({
         uptime: node.uptime || 0,
         last_seen_timestamp: node.last_seen_timestamp || 0,
         status: node.status,
-        score: 0,
+        score: node.score || 0,
         rank: index + 1,
         // duplicateCount: 1 means this node IS a duplicate (has same pubkey as another)
         // This is used for filtering - when showDuplicates is true, show nodes where duplicateCount > 0

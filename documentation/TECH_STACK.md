@@ -23,6 +23,8 @@ XanDash is built with modern web technologies optimized for performance, develop
 | MongoDB Atlas | Historical data storage, node snapshots |
 | JSON-RPC 2.0 | Communication with Xandeum network |
 | CoinGecko API | XAND token market data |
+| Helius API | Onchain wallet data (tokens, NFTs) for managers |
+| OpenRouter API | AI Assistant (Gemini, Llama) for insights |
 | IP Geolocation | Node location services (ip-api.com batch) |
 
 ## UI Components
@@ -71,6 +73,18 @@ XanDash is built with modern web technologies optimized for performance, develop
 - Treasury balance with SOL price conversion
 - Sequential RPC batching to avoid rate limits
 - bs58 address decoding for accurate comparison
+
+### Manager Profiles
+- Helius API integration for onchain wallet data
+- Aggregated stats for manager's node fleet
+- NFT/SBT visualization for community status
+- Searchable by wallet or node IP
+
+### AI Assistant
+- Floating chat interface with streaming responses
+- Context-aware prompts built from page data
+- Automatic node analysis generation
+- Fallback chain for AI models (Gemini -> Llama)
 
 ## Database Schema
 

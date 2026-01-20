@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPricesForGovernance } from '@/libs/services/price-service';
-
-const HELIUS_API_KEY = process.env.HELIUS_API_KEY || '';
-const HELIUS_RPC_URL = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
+import { getHeliusRpcUrl, reportSuccess, reportRateLimitHit, isRateLimitError } from '@/libs/utils/api-key-manager';
 
 // DAO and Token addresses
 const DAO_ADDRESS = '5JpYydB2VFcxbPGr8xmpefmJw86GQELCk7cB132wRXCa';
@@ -61,16 +59,26 @@ const PROPOSAL_STATES: Record<number, string> = {
 };
 
 async function rpcCall(method: string, params: unknown[]) {
-  const response = await fetch(HELIUS_RPC_URL, {
+  const response = await fetch(getHeliusRpcUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
   });
+
+  // Check for rate limit
+  if (isRateLimitError(response)) {
+    console.log(`[Governance RPC] Rate limit hit, reporting failover...`);
+    reportRateLimitHit('helius');
+    return null;
+  }
+
   const data = await response.json();
   if (data.error) {
     console.error(`[RPC Error] ${method}:`, data.error);
     return null;
   }
+
+  reportSuccess('helius');
   return data.result;
 }
 

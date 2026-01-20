@@ -88,3 +88,10 @@ export const CalendarIcon = ({ className = "w-4 h-4" }: { className?: string }) 
         <line x1="3" y1="10" x2="21" y2="10" />
     </svg>
 );
+
+export const ChartIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v18h18" />
+        <path d="M18 17V9M13 17V5M8 17v-3" />
+    </svg>
+);

@@ -13,6 +13,7 @@ import { CountryResultsView } from './components/CountryResultsView';
 import { CompareTypeSwitcher } from './components/CompareTypeSwitcher';
 import { CornerAccents } from '@/components/ui';
 import { toast } from 'sonner';
+import { getNodeStatus } from '@/libs/utils/node-status';
 
 import { useManagerAssets } from '@/app/nodes/hooks/useManagerAssets';
 
@@ -27,6 +28,7 @@ interface NodeData {
   last_seen_timestamp?: number;
   country_code?: string;
   manager_pubkey?: string;
+  score?: number;
 }
 
 interface NodeProfile {
@@ -42,6 +44,7 @@ interface NodeProfile {
   location?: { country: string; city: string; provider: string };
   history?: Array<{ timestamp: number; credits: number; uptime: number; storage_committed: number; storage_used: number }>;
   manager_pubkey?: string;
+  score: number;
 }
 
 interface CountryData {
@@ -81,13 +84,7 @@ const CountriesIcon = () => (
   </svg>
 );
 
-function getNodeStatusLocal(lastSeen: number, currentTimestamp: number): string {
-  if (!lastSeen) return 'offline';
-  const diff = currentTimestamp - lastSeen;
-  if (diff <= 150) return 'online';
-  if (diff <= 300) return 'syncing';
-  return 'offline';
-}
+
 
 function ComparePageContent() {
   const { network } = useNetwork();
@@ -152,6 +149,7 @@ function ComparePageContent() {
               last_seen_timestamp: n.last_seen_timestamp || 0,
               country_code: (n.country_code || '').toLowerCase(),
               manager_pubkey: n.manager_pubkey,
+              score: n.score || 0,
             }))
             .sort((a: NodeData, b: NodeData) => (b.credits || 0) - (a.credits || 0));
 
@@ -188,11 +186,11 @@ function ComparePageContent() {
         if (!node) return null;
         return {
           ip: node.address?.split(':')[0] || '', pubkey, color: NODE_COLORS[i % NODE_COLORS.length],
-          status: getNodeStatusLocal(node.last_seen_timestamp || 0, timestamp),
+          status: getNodeStatus(node.last_seen_timestamp || 0, timestamp),
           uptime: node.uptime || 0, credits: node.credits || 0,
           storage_committed: node.storage_committed || 0, storage_used: node.storage_used || 0,
           version: node.version || '', location: undefined, history: [],
-          manager_pubkey: node.manager_pubkey,
+          manager_pubkey: node.manager_pubkey, score: node.score || 0,
         };
       }).filter(Boolean) as NodeProfile[];
 
@@ -251,10 +249,10 @@ function ComparePageContent() {
         if (!node) return null;
         return {
           ip: node.address?.split(':')[0] || '', pubkey, color: NODE_COLORS[i % NODE_COLORS.length],
-          status: getNodeStatusLocal(node.last_seen_timestamp || 0, serverTimestamp),
+          status: getNodeStatus(node.last_seen_timestamp || 0, serverTimestamp),
           uptime: node.uptime || 0, credits: node.credits || 0,
           storage_committed: node.storage_committed || 0, storage_used: node.storage_used || 0,
-          version: node.version || '', location: undefined, history: []
+          version: node.version || '', location: undefined, history: [], score: node.score || 0,
         };
       }).filter(Boolean) as NodeProfile[];
 
@@ -293,7 +291,7 @@ function ComparePageContent() {
       setIsComparing(false);
       setIsHistoryLoading(false);
     }
-  }, [selectedPubkeys, allNodes, serverTimestamp, getNodeStatusLocal, network]);
+  }, [selectedPubkeys, allNodes, serverTimestamp, network]);
 
   const handleCompareCountries = useCallback(() => {
     if (selectedCountryCodes.length < 2) return;
@@ -416,7 +414,7 @@ function ComparePageContent() {
             </div>
 
             {compareType === 'nodes' ? (
-              <NodeSelector nodes={allNodes} selectedNodes={selectedPubkeys} onToggle={handleToggleNode} maxNodes={4} isLoading={isLoading} />
+              <NodeSelector nodes={allNodes} selectedNodes={selectedPubkeys} onToggle={handleToggleNode} maxNodes={4} isLoading={isLoading} serverTimestamp={serverTimestamp} />
             ) : (
               <CountrySelector countries={countryStats} selectedCountries={selectedCountryCodes} onToggle={handleToggleCountry} maxCountries={4} isLoading={countryLoading} />
             )}

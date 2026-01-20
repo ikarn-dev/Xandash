@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout';
 
@@ -134,6 +134,12 @@ const ActivityIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
   </svg>
 );
 
+const ChevronDownIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+);
+
 // Corner Accent Component
 const CornerAccents = ({ color = 'white' }: { color?: string }) => {
   const colorClass = color === 'purple' ? 'bg-purple-400' : 'bg-white/20';
@@ -168,6 +174,28 @@ function AboutContent() {
   const benefitsRef = useRef<HTMLDivElement>(null);
   const capabilitiesRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
+  const [activeFaq, setActiveFaq] = useState<number | null>(null);
+
+  const toggleFaq = (index: number) => {
+    setActiveFaq(activeFaq === index ? null : index);
+  };
+
+  const parseAnswer = (text: string) => {
+    return text.split(/(\*\*.*?\*\*)/).map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        const content = part.slice(2, -2);
+        let colorClass = 'text-white font-bold';
+
+        if (content === 'Online') colorClass = 'text-green-400 font-bold';
+        else if (content === 'Offline') colorClass = 'text-red-400 font-bold';
+        else if (content === 'Syncing') colorClass = 'text-amber-400 font-bold';
+        else if (content.includes('Score') || content.includes('Credits') || content.includes('Storage')) colorClass = 'text-purple-400 font-bold';
+
+        return <span key={index} className={colorClass}>{content}</span>;
+      }
+      return part;
+    });
+  };
 
   useEffect(() => {
     const initAnimations = async () => {
@@ -225,9 +253,9 @@ function AboutContent() {
   }, []);
 
   const mainFeatures = [
-    { icon: EyeIcon, title: 'Real-Time Node Monitoring', desc: 'Track 265+ pNodes with live status updates every 30 seconds. Monitor online/offline states, uptime, storage usage, and credits in real-time.' },
+    { icon: EyeIcon, title: 'Real-Time Node Monitoring', desc: 'Track all active pNodes with live status updates. Monitor online/offline states, uptime, storage usage, and credits in real-time.' },
     { icon: CompareIcon, title: 'Node Compare (Up to 4)', desc: 'Compare up to 4 nodes side-by-side with detailed metrics, historical charts, and AI-powered analysis. Select nodes directly from tables.' },
-    { icon: MapIcon, title: 'Interactive Network Map', desc: 'Visualize global node distribution across 38+ countries. Click on markers to view node details and navigate to profiles.' },
+    { icon: MapIcon, title: 'Interactive Network Map', desc: 'Visualize global node distribution across multiple regions. Click on markers to view node details and navigate to profiles.' },
     { icon: TrophyIcon, title: 'Multi-Leaderboards', desc: 'Rankings by Credits, Uptime, and Storage. Track top performers and compete with other operators on the network.' },
     { icon: BotIcon, title: 'AI-Powered Analysis', desc: 'XanDash AI provides intelligent summaries on node profiles and comparisons. Chat with AI for network insights and recommendations.' },
     { icon: ShieldIcon, title: 'Governance Tracking', desc: 'Monitor proposals, treasury balance with real-time SOL conversion, voting statistics, and governance member activity.' },
@@ -237,38 +265,90 @@ function AboutContent() {
   ];
 
   const operatorBenefits = [
-    'Monitor your pNode status, uptime, and earnings in real-time',
-    'Compare your node performance against network averages',
-    'Track credit accumulation and storage utilization',
-    'Receive AI-powered insights and optimization suggestions',
-    'View historical data to identify performance trends',
-    'Stay informed about governance proposals and voting',
-    'Access detailed analytics for each of your nodes',
-    'Access detailed analytics for each of your nodes',
-    'Benchmark against top performers on leaderboards',
-    'Monitor API endpoint connectivity and latency',
+    { text: 'Monitor your pNode status and uptime in real-time', icon: EyeIcon },
+    { text: 'Compare your node performance against network averages', icon: CompareIcon },
+    { text: 'Track credit accumulation and storage utilization', icon: CoinsIcon },
+    { text: 'Receive AI-powered insights and optimization suggestions', icon: BotIcon },
+    { text: 'View historical data to identify performance trends', icon: ChartIcon },
+    { text: 'Stay informed about governance proposals and voting', icon: ShieldIcon },
+    { text: 'Access detailed analytics for each of your nodes', icon: DatabaseIcon },
+    { text: 'Benchmark against top performers on leaderboards', icon: TrophyIcon },
+    { text: 'Monitor API endpoint connectivity and latency', icon: ActivityIcon },
   ];
 
   const capabilities = [
     { label: 'Networks', value: 'Mainnet + Devnet', icon: NetworkIcon },
-    { label: 'Auto Refresh', value: '30 seconds', icon: ZapIcon },
+    { label: 'Auto Refresh', value: 'Live Updates', icon: ZapIcon },
     { label: 'Node Compare', value: 'Up to 4', icon: CompareIcon },
-    { label: 'Historical Data', value: '7+ Days', icon: DatabaseIcon },
-    { label: 'Countries', value: '38+', icon: MapIcon },
+    { label: 'Historical Data', value: 'Deep History', icon: DatabaseIcon },
+    { label: 'Countries', value: 'Global', icon: MapIcon },
     { label: 'AI Analysis', value: 'Powered', icon: BotIcon },
   ];
 
   const additionalFeatures = [
-    'Country Analytics & Comparison',
-    'VPS Provider Statistics',
-    'Version Distribution Charts',
-    'Node Event Logs',
-    'XAND Token Price Tracking',
-    'STOINC Calculator',
-    'RPC Endpoint Tester',
-    'NFT/SBT Tracking',
-    'Quick Table Compare',
-    'Manager Wallet Integration',
+    { text: 'Country Analytics & Comparison', icon: MapIcon },
+    { text: 'VPS Provider Statistics', icon: ServerIcon },
+    { text: 'Version Distribution Charts', icon: ChartIcon },
+    { text: 'Node Event Logs', icon: LayersIcon },
+    { text: 'XAND Token Price Tracking', icon: CoinsIcon },
+    { text: 'STOINC Calculator', icon: ZapIcon },
+    { text: 'RPC Endpoint Tester', icon: ActivityIcon },
+    { text: 'NFT/SBT Tracking', icon: TrophyIcon },
+    { text: 'Quick Table Compare', icon: CompareIcon },
+    { text: 'Manager Wallet Integration', icon: WalletIcon },
+  ];
+
+  const faqItems = [
+    {
+      question: "How is Node Status determined?",
+      answer: "We use a precise heartbeat mechanism to track node activity. A node is considered **Online** if it has been seen within the last hour. If a node hasn't reported in for 1-2 hours, it is marked as **Syncing**. Nodes inactive for more than 2 hours are classified as **Offline**.",
+      icon: ActivityIcon
+    },
+    {
+      question: "How is the Node Score calculated?",
+      answer: "The Node Score (0-100) is calculated identically on both **Mainnet** and **Devnet** using three components: **Uptime (40 points max)** - Scales linearly, earning 40 points for 30 days of uptime. **Storage (30 points max)** - Scales linearly, earning 30 points for committing 100GB of storage. **Online Status (30 points)** - Awards a flat 30 points if the node was seen within the last 60 minutes. Formula: Score = (Uptime ÷ 30 days × 40) + (Storage ÷ 100GB × 30) + (Online ? 30 : 0)",
+      icon: TrophyIcon
+    },
+    {
+      question: "What is STOINC?",
+      answer: "STOINC (Storage Income) is our advanced revenue estimation model. It calculates potential earnings by combining your **Base Storage Credits** with **Boost Factors** from NFTs (e.g., Titan, Genesis) and Era multipliers. The formula adjusts for your share of the total network's boosted credits.",
+      icon: CoinsIcon
+    },
+    {
+      question: "How do we ensure Data Reliability?",
+      answer: "XanDash employs a **Multi-Layer Failover System** for RPC connections. If a primary provider (like Helius) encounters rate limits or downtime, our API Manager automatically routes requests to backup keys and endpoints, ensuring continuous data availability without user interruption.",
+      icon: ServerIcon
+    },
+    {
+      question: "What is the High Watermark logic?",
+      answer: "To ensure dashboard stability, we implement a 'High Watermark' system. If a network fetch returns an incomplete list of nodes due to temporary RPC issues, we retain the last known complete dataset. This prevents the dashboard from showing empty or flashing states.",
+      icon: DatabaseIcon
+    },
+    {
+      question: "How are Duplicate Nodes handled?",
+      answer: "To maintain an accurate network view, we filter out duplicate entries based on Public Key and IP Address. If distinctions are found, we prioritize the most recently active instance, ensuring the dashboard reflects the true state of unique validators.",
+      icon: UsersIcon
+    },
+    {
+      question: "How is Geolocation determined?",
+      answer: "We use IP-based geolocation to map nodes to their approximate physical locations. This allows for the interactive global map and country-based analytics without compromising operator privacy beyond standard IP resolution.",
+      icon: MapIcon
+    },
+    {
+      question: "How are Leaderboard Rankings determined?",
+      answer: "Leaderboards rank nodes based on their **Node Score**. The list is sorted in descending order, showcasing the highest-performing nodes at the top. This allows operators to benchmark their performance against the network's best.",
+      icon: TrophyIcon
+    },
+    {
+      question: "How are Network Stats calculated?",
+      answer: "Network-wide metrics like **Total Storage** and **Used Storage** are calculated by aggregating real-time data from all discovered pNodes. The **Average per Pod** is derived by dividing total committed storage by the validator count.",
+      icon: NetworkIcon
+    },
+    {
+      question: "How are Manager Stats aggregated?",
+      answer: "Manager profiles provide a consolidated view by summing up the metrics (nodes, storage, assets) of all pNodes registered to their **Public Key**. This allows large-scale operators to monitor their entire fleet in one place.",
+      icon: UsersIcon
+    }
   ];
 
   return (
@@ -308,15 +388,15 @@ function AboutContent() {
           </div>
 
           <div className="flex flex-wrap gap-3 hero-animate">
-            <Link href="/" className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-black font-medium rounded-lg hover:bg-white/90 transition-all font-sans">
+            <Link href="/" className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-black font-medium hover:bg-white/90 transition-all font-sans">
               <ChartIcon className="w-4 h-4" />
               View Dashboard
             </Link>
-            <Link href="/nodes" className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/5 text-white font-medium rounded-lg hover:bg-white/10 transition-all border border-white/10 font-sans">
+            <Link href="/nodes" className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/5 text-white font-medium hover:bg-white/10 transition-all border border-white/10 font-sans">
               <ServerIcon className="w-4 h-4" />
               Browse Nodes
             </Link>
-            <Link href="/compare" className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/5 text-white font-medium rounded-lg hover:bg-white/10 transition-all border border-white/10 font-sans">
+            <Link href="/compare" className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/5 text-white font-medium hover:bg-white/10 transition-all border border-white/10 font-sans">
               <CompareIcon className="w-4 h-4" />
               Compare Nodes
             </Link>
@@ -345,7 +425,7 @@ function AboutContent() {
           <span className="text-white/80 text-sm font-semibold font-sans">Key Features</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {mainFeatures.map((feature, i) => (
             <div key={i} className="feature-card relative bg-black/50 border border-white/10 p-5 group hover:border-white/20 transition-all rounded-lg">
               <CornerAccents />
@@ -360,8 +440,8 @@ function AboutContent() {
       </div>
 
       {/* Benefits for Node Operators */}
-      <div ref={benefitsRef} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="relative bg-black/50 border border-white/10 p-6 group hover:border-emerald-500/30 transition-all rounded-lg">
+      <div ref={benefitsRef} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="relative bg-black/50 border border-white/10 p-6 group hover:border-emerald-500/30 transition-all">
           <CornerAccents />
 
           <div className="flex items-center gap-2 mb-4">
@@ -374,19 +454,19 @@ function AboutContent() {
             <span className="text-emerald-400">Manage Your pNodes</span>
           </h2>
 
-          <div className="space-y-2">
+          <div className="space-y-0">
             {operatorBenefits.map((benefit, i) => (
-              <div key={i} className="benefit-item flex items-start gap-3 p-2 bg-white/5 rounded-lg">
-                <div className="p-1 bg-emerald-500/20 rounded mt-0.5">
-                  <CheckIcon className="w-3 h-3 text-emerald-400" />
+              <div key={i} className="benefit-item flex items-center gap-3 p-3 bg-white/5 border-b border-white/5 last:border-b-0 hover:bg-white/[0.08] transition-colors">
+                <div className="p-1.5 bg-emerald-500/20">
+                  <benefit.icon className="w-3.5 h-3.5 text-emerald-400" />
                 </div>
-                <span className="text-white/70 text-sm font-sans">{benefit}</span>
+                <span className="text-white/70 text-sm font-sans">{benefit.text}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="relative bg-black/50 border border-white/10 p-6 group hover:border-blue-500/30 transition-all rounded-lg">
+        <div className="relative bg-black/50 border border-white/10 p-6 group hover:border-blue-500/30 transition-all">
           <CornerAccents />
 
           <div className="flex items-center gap-2 mb-4">
@@ -399,11 +479,13 @@ function AboutContent() {
             <span className="text-blue-400">Network Analysis</span>
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="space-y-0">
             {additionalFeatures.map((feature, i) => (
-              <div key={i} className="benefit-item flex items-center gap-2 p-2 bg-white/5 rounded-lg">
-                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
-                <span className="text-white/70 text-sm font-sans">{feature}</span>
+              <div key={i} className="benefit-item flex items-center gap-3 p-3 bg-white/5 border-b border-white/5 last:border-b-0 hover:bg-white/[0.08] transition-colors">
+                <div className="p-1.5 bg-blue-500/20">
+                  <feature.icon className="w-3.5 h-3.5 text-blue-400" />
+                </div>
+                <span className="text-white/70 text-sm font-sans">{feature.text}</span>
               </div>
             ))}
           </div>
@@ -455,6 +537,48 @@ function AboutContent() {
         </div>
       </div>
 
+      {/* FAQ Section */}
+      <div className="relative bg-black border border-white/10 p-6 sm:p-8 group hover:border-white/20 transition-all">
+        <CornerAccents />
+        <div className="flex items-center gap-2 mb-6">
+          <ShieldIcon className="w-5 h-5 text-purple-400" />
+          <span className="text-white/80 text-sm font-semibold font-sans">FAQs</span>
+        </div>
+
+        <div className="divide-y divide-white/10">
+          {faqItems.map((item, i) => (
+            <div key={i} className="overflow-hidden transition-all duration-300">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleFaq(i);
+                }}
+                className="w-full flex items-center justify-between py-4 text-left transition-colors hover:bg-white/[0.02] group"
+              >
+                <span className={`text-sm font-medium font-sans transition-colors duration-300 ${activeFaq === i ? 'text-white' : 'text-white/70 group-hover:text-white/90'}`}>
+                  {item.question}
+                </span>
+                <div className={`w-5 h-5 flex items-center justify-center transition-transform duration-500 ease-spring ${activeFaq === i ? 'rotate-45' : 'rotate-0'}`}>
+                  <svg className={`w-4 h-4 transition-colors duration-300 ${activeFaq === i ? 'text-white' : 'text-white/40 group-hover:text-white/60'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </div>
+              </button>
+
+              <div
+                className={`grid transition-[grid-template-rows] duration-500 ease-out ${activeFaq === i ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+              >
+                <div className="overflow-hidden">
+                  <div className={`text-sm text-white/50 leading-relaxed font-sans pr-8 pb-4 transition-opacity duration-300 ${activeFaq === i ? 'opacity-100' : 'opacity-0'}`}>
+                    {parseAnswer(item.answer)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* CTA Section */}
       <div ref={ctaRef} className="relative bg-black/50 border border-white/10 p-6 sm:p-8 group hover:border-white/20 transition-all text-center overflow-hidden">
         <CornerAccents />
@@ -465,15 +589,15 @@ function AboutContent() {
         </p>
 
         <div className="flex flex-wrap justify-center gap-3 cta-animate">
-          <Link href="/" className="inline-flex items-center gap-2 px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-medium rounded-lg transition-all font-sans">
+          <Link href="/" className="inline-flex items-center gap-2 px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-medium transition-all font-sans">
             <ChartIcon className="w-4 h-4" />
             Analytics Dashboard
           </Link>
-          <Link href="/managers" className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white font-medium rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans">
+          <Link href="/managers" className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white font-medium hover:bg-white/20 transition-all border border-white/20 font-sans">
             <UsersIcon className="w-4 h-4" />
             View Managers
           </Link>
-          <Link href="/governance" className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white font-medium rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans">
+          <Link href="/governance" className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white font-medium hover:bg-white/20 transition-all border border-white/20 font-sans">
             <ShieldIcon className="w-4 h-4" />
             Governance
           </Link>

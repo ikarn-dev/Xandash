@@ -91,17 +91,9 @@ export function StructuredData() {
     "description": "XanDash is a comprehensive Xandeum dashboard for monitoring pNodes. Track node performance, uptime, storage, and credits in real-time with AI-powered analytics.",
     "url": baseUrl,
     "image": `${baseUrl}/icon.png`,
-    "screenshot": `${baseUrl}/icon.png`,
     "author": {
       "@type": "Organization",
       "name": "XanDash"
-    },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.9",
-      "ratingCount": "200",
-      "bestRating": "5",
-      "worstRating": "1"
     }
   };
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ClockIcon, ServerIcon, ActivityIcon, UsersIcon, DatabaseIcon } from './ManagerProfileIcons';
+import { ClockIcon, ServerIcon, ActivityIcon, UsersIcon, DatabaseIcon, ChartIcon } from './ManagerProfileIcons';
 import { CornerAccents } from '@/components/ui';
 import type { ManagerStats } from './types';
 
@@ -33,7 +33,7 @@ const formatCredits = (credits: number) => {
 export const ManagerStatsCards = ({ stats }: ManagerStatsCardsProps) => {
     return (
         <div className="w-full overflow-hidden">
-            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
                 {/* Total Nodes */}
                 <div className="relative group bg-black border border-white/10 p-2 sm:p-3 lg:p-4 hover:border-white/20 transition-all min-w-0">
                     <CornerAccents />
@@ -46,6 +46,21 @@ export const ManagerStatsCards = ({ stats }: ManagerStatsCardsProps) => {
                     </div>
                     <div className="text-[8px] sm:text-[9px] lg:text-[10px] text-emerald-400/70 mt-0.5 sm:mt-1 truncate">
                         {stats.activeNodes} active
+                    </div>
+                </div>
+
+                {/* Avg Score */}
+                <div className="relative group bg-black border border-white/10 p-2 sm:p-3 lg:p-4 hover:border-white/20 transition-all min-w-0">
+                    <CornerAccents />
+                    <div className="flex items-center gap-1 sm:gap-1.5 text-pink-400/70 text-[9px] sm:text-[10px] mb-1 sm:mb-1.5">
+                        <ChartIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-3.5 lg:h-3.5 flex-shrink-0" />
+                        <span className="truncate">Avg Score</span>
+                    </div>
+                    <div className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-pink-400 font-mono">
+                        {(stats.avgScore || 0).toFixed(1)}
+                    </div>
+                    <div className="text-[8px] sm:text-[9px] lg:text-[10px] text-white/40 mt-0.5 sm:mt-1 truncate">
+                        / 100 max
                     </div>
                 </div>
 

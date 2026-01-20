@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+    getActiveApiKey,
+    reportRateLimitHit,
+    reportSuccess,
+    isRateLimitError
+} from '@/libs/utils/api-key-manager';
 
-const HELIUS_API_KEY = process.env.HELIUS_API_KEY_2 || '';
 const HELIUS_API_URL = 'https://mainnet.helius-rpc.com';
 
 export const dynamic = 'force-dynamic';
@@ -41,11 +46,12 @@ interface WalletData {
 }
 
 async function getTokenBalances(walletAddress: string): Promise<TokenBalance[]> {
-    if (!HELIUS_API_KEY) return [];
+    const apiKey = getActiveApiKey('helius');
+    if (!apiKey) return [];
 
     try {
         // Use Helius DAS API for Fungible Tokens to get metadata
-        const response = await fetch(`https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`, {
+        const response = await fetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -65,7 +71,15 @@ async function getTokenBalances(walletAddress: string): Promise<TokenBalance[]> 
             signal: AbortSignal.timeout(15000),
         });
 
+        // Check for rate limit and handle failover
+        if (isRateLimitError(response)) {
+            reportRateLimitHit('helius');
+            return [];
+        }
+
         if (!response.ok) return [];
+
+        reportSuccess('helius');
 
         const data = await response.json();
         const items = data.result?.items || [];
@@ -119,10 +133,11 @@ async function getTokenBalances(walletAddress: string): Promise<TokenBalance[]> 
 }
 
 async function getSolBalance(walletAddress: string): Promise<number> {
-    if (!HELIUS_API_KEY) return 0;
+    const apiKey = getActiveApiKey('helius');
+    if (!apiKey) return 0;
 
     try {
-        const response = await fetch(`${HELIUS_API_URL}/?api-key=${HELIUS_API_KEY}`, {
+        const response = await fetch(`${HELIUS_API_URL}/?api-key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -134,8 +149,15 @@ async function getSolBalance(walletAddress: string): Promise<number> {
             signal: AbortSignal.timeout(10000),
         });
 
+        // Check for rate limit and handle failover
+        if (isRateLimitError(response)) {
+            reportRateLimitHit('helius');
+            return 0;
+        }
+
         if (!response.ok) return 0;
 
+        reportSuccess('helius');
         const data = await response.json();
         return (data.result?.value || 0) / 1e9; // Convert lamports to SOL
     } catch (error) {
@@ -145,11 +167,12 @@ async function getSolBalance(walletAddress: string): Promise<number> {
 }
 
 async function getNFTs(walletAddress: string): Promise<NFTAsset[]> {
-    if (!HELIUS_API_KEY) return [];
+    const apiKey = getActiveApiKey('helius');
+    if (!apiKey) return [];
 
     try {
         // Use Helius DAS API for NFTs
-        const response = await fetch(`https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`, {
+        const response = await fetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -169,8 +192,15 @@ async function getNFTs(walletAddress: string): Promise<NFTAsset[]> {
             signal: AbortSignal.timeout(15000),
         });
 
+        // Check for rate limit and handle failover
+        if (isRateLimitError(response)) {
+            reportRateLimitHit('helius');
+            return [];
+        }
+
         if (!response.ok) return [];
 
+        reportSuccess('helius');
         const data = await response.json();
         const items = data.result?.items || [];
 
@@ -195,7 +225,8 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
         }
 
-        if (!HELIUS_API_KEY) {
+        const heliusApiKey = getActiveApiKey('helius');
+        if (!heliusApiKey) {
             return NextResponse.json({
                 error: 'Helius API key not configured',
                 solBalance: 0,

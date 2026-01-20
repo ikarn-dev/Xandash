@@ -9,28 +9,9 @@ export function generateRobots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/', '/_next/', '/admin/', '/private/'],
-      },
-      {
-        userAgent: 'Googlebot',
-        allow: '/',
-      },
-      {
-        userAgent: 'Googlebot-Image',
-        allow: '/',
-      },
-      {
-        userAgent: ['Bingbot', 'Slurp', 'DuckDuckBot', 'Baiduspider', 'YandexBot'],
-        allow: '/',
-        crawlDelay: 1,
-      },
-      // Block aggressive crawlers and scrapers
-      {
-        userAgent: ['AhrefsBot', 'SemrushBot', 'MJ12bot', 'DotBot', 'BLEXBot'],
-        disallow: ['/'],
+        disallow: ['/api/', '/_next/'],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
-    host: baseUrl,
   };
 }

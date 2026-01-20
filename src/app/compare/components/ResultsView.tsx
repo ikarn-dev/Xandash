@@ -19,6 +19,7 @@ interface NodeProfile {
   location?: { country: string; city: string; provider: string };
   history?: Array<{ timestamp: number; credits: number; uptime: number; storage_committed: number; storage_used: number }>;
   manager_pubkey?: string;
+  score: number;
 }
 
 interface ResultsViewProps {
@@ -52,6 +53,7 @@ export function ResultsView({ nodes, onReset, network = 'devnet', managerAssets,
 
   const stats = [
     { key: 'credits', label: 'Credits', format: (v: number) => `+${v.toLocaleString()}`, best: getBest('credits') },
+    { key: 'score', label: 'Score', format: (v: number) => v.toFixed(1), best: getBest('score') },
     { key: 'uptime', label: 'Uptime', format: formatUptime, best: getBest('uptime') },
     { key: 'storage_committed', label: 'Storage', format: formatStorage, best: getBest('storage_committed') },
   ];
@@ -148,10 +150,10 @@ export function ResultsView({ nodes, onReset, network = 'devnet', managerAssets,
               </div>
 
               {/* Manager Badge Section - Two Column Layout */}
-              {node.manager_pubkey && (
-                <div className="mt-3 pt-3 border-t border-white/5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-white/40 uppercase tracking-wider font-medium">Manager</span>
+              <div className="mt-3 pt-3 border-t border-white/5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-white/40 uppercase tracking-wider font-medium">Manager</span>
+                  {node.manager_pubkey ? (
                     <ManagerBadge
                       managerPubkey={node.manager_pubkey}
                       nftCount={managerAssets?.get(node.manager_pubkey)?.nft_count}
@@ -163,9 +165,13 @@ export function ResultsView({ nodes, onReset, network = 'devnet', managerAssets,
                       sbtPreviews={managerAssets?.get(node.manager_pubkey)?.sbt_previews}
                       size="sm"
                     />
-                  </div>
+                  ) : (
+                    <span className="px-2 py-0.5 text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/30 rounded">
+                      Not Registered
+                    </span>
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* Location Section - Two Column Layout */}
               {node.location && (
@@ -216,6 +222,7 @@ export function ResultsView({ nodes, onReset, network = 'devnet', managerAssets,
               {/* Other stats rows */}
               {[
                 { label: 'Credits', getValue: (n: NodeProfile) => `+${n.credits.toLocaleString()}`, isBest: (n: NodeProfile) => n.credits === getBest('credits') },
+                { label: 'Score', getValue: (n: NodeProfile) => n.score.toFixed(1), isBest: (n: NodeProfile) => n.score === getBest('score') },
                 { label: 'Uptime', getValue: (n: NodeProfile) => formatUptime(n.uptime), isBest: (n: NodeProfile) => n.uptime === getBest('uptime') },
                 { label: 'Storage', getValue: (n: NodeProfile) => formatStorage(n.storage_committed), isBest: (n: NodeProfile) => n.storage_committed === getBest('storage_committed') },
                 { label: 'Version', getValue: (n: NodeProfile) => n.version || 'N/A' },
@@ -253,7 +260,9 @@ export function ResultsView({ nodes, onReset, network = 'devnet', managerAssets,
                           size="sm"
                         />
                       ) : (
-                        <span className="text-white/30 text-xs">-</span>
+                        <span className="px-2 py-0.5 text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/30 rounded">
+                          Not Registered
+                        </span>
                       )}
                     </div>
                   </td>

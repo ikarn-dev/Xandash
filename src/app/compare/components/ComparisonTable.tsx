@@ -12,6 +12,7 @@ interface NodeProfile {
   storage_committed: number;
   storage_used: number;
   version: string;
+  score?: number;
   location?: {
     country: string;
     city: string;
@@ -59,16 +60,17 @@ export function ComparisonTable({ nodes }: ComparisonTableProps) {
     format: (v: any, node?: NodeProfile) => string;
     isBest: (v: any) => boolean;
   }> = [
-    { label: 'Name', key: 'pubkey', format: (v) => getNodeName(v), isBest: () => false },
-    { label: 'Status', key: 'status', format: (v) => String(v).toUpperCase(), isBest: () => false },
-    { label: 'Uptime', key: 'uptime', format: formatUptime, isBest: (v) => v === getBestValue('uptime') },
-    { label: 'Credits', key: 'credits', format: (v) => `+${Number(v).toLocaleString()}`, isBest: (v) => v === getBestValue('credits') },
-    { label: 'Storage Committed', key: 'storage_committed', format: formatStorage, isBest: (v) => v === getBestValue('storage_committed') },
-    { label: 'Storage Used', key: 'storage_used', format: formatStorage, isBest: (v) => v === getBestValue('storage_used') },
-    { label: 'Version', key: 'version', format: (v) => v || 'N/A', isBest: () => false },
-    { label: 'Location', key: 'location', format: (v) => v ? `${v.city}, ${v.country}` : 'N/A', isBest: () => false },
-    { label: 'Provider', key: 'location', format: (v) => v?.provider || 'N/A', isBest: () => false },
-  ];
+      { label: 'Name', key: 'pubkey', format: (v) => getNodeName(v), isBest: () => false },
+      { label: 'Status', key: 'status', format: (v) => String(v).toUpperCase(), isBest: () => false },
+      { label: 'Score', key: 'score', format: (v) => (v || 0).toFixed(1), isBest: (v) => v === getBestValue('score' as keyof NodeProfile) },
+      { label: 'Uptime', key: 'uptime', format: formatUptime, isBest: (v) => v === getBestValue('uptime') },
+      { label: 'Credits', key: 'credits', format: (v) => `+${Number(v).toLocaleString()}`, isBest: (v) => v === getBestValue('credits') },
+      { label: 'Storage Committed', key: 'storage_committed', format: formatStorage, isBest: (v) => v === getBestValue('storage_committed') },
+      { label: 'Storage Used', key: 'storage_used', format: formatStorage, isBest: (v) => v === getBestValue('storage_used') },
+      { label: 'Version', key: 'version', format: (v) => v || 'N/A', isBest: () => false },
+      { label: 'Location', key: 'location', format: (v) => v ? `${v.city}, ${v.country}` : 'N/A', isBest: () => false },
+      { label: 'Provider', key: 'location', format: (v) => v?.provider || 'N/A', isBest: () => false },
+    ];
 
   if (nodes.length === 0) {
     return (
@@ -105,15 +107,14 @@ export function ComparisonTable({ nodes }: ComparisonTableProps) {
                 const isStatus = row.key === 'status';
                 const isName = row.key === 'pubkey';
                 const hasName = isName && getNodeName(value) !== 'N/A';
-                
+
                 return (
                   <td key={node.pubkey} className="py-3 px-4 text-center">
-                    <span className={`font-mono text-sm ${
-                      isStatus ? getStatusColor(value as string) : 
-                      hasName ? 'text-cyan-400 font-medium' :
-                      isName ? 'text-white/30' :
-                      isBest ? 'text-emerald-400 font-medium' : 'text-white'
-                    }`}>
+                    <span className={`font-mono text-sm ${isStatus ? getStatusColor(value as string) :
+                        hasName ? 'text-cyan-400 font-medium' :
+                          isName ? 'text-white/30' :
+                            isBest ? 'text-emerald-400 font-medium' : 'text-white'
+                      }`}>
                       {formatted}
                     </span>
                     {isBest && <span className="ml-1 text-[8px] text-emerald-400">★</span>}

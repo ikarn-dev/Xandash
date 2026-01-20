@@ -2,19 +2,25 @@
 
 <div align="center">
 
-![XanDash](public/logo/xandash.png)
+# **XANDASH**
 
 **Real-time monitoring dashboard for the Xandeum pNode network**
 
-[![Next.js](https://img.shields.io/badge/Next.js-16.0-black?logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb)](https://www.mongodb.com/)
-[![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react)](https://react.dev/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-xandash.online-8A2BE2?style=for-the-badge&logo=vercel)](https://www.xandash.online)
+[![GitHub Stars](https://img.shields.io/github/stars/ikarn-dev/Xandash?style=for-the-badge&logo=github&label=Stars)](https://github.com/ikarn-dev/Xandash)
 
-[Live Demo](https://www.xandash.online) · [Documentation](https://www.xandash.online/docs) · [Xandeum Network](https://www.xandeum.network)
+[![Next.js](https://img.shields.io/badge/Next.js-16.0-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![React](https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+
+[![Twitter](https://img.shields.io/badge/@Xandeum-black?style=for-the-badge&logo=x)](https://x.com/Xandeum)
+[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/xandeum)
+[![Documentation](https://img.shields.io/badge/Docs-Read-blue?style=for-the-badge&logo=gitbook&logoColor=white)](https://www.xandash.online/docs)
 
 </div>
+
 
 ---
 
@@ -22,44 +28,59 @@
 
 XanDash is a comprehensive monitoring dashboard for the Xandeum decentralized storage network. It provides real-time insights into pNode performance, network statistics, historical data tracking, governance monitoring, and detailed analytics for both Mainnet and Devnet.
 
+---
+
 ## Features
 
-### Core Features
-- **Real-time pNode Monitoring** - Track 265+ nodes with live status updates every 30 seconds
+### Real-Time Monitoring
+- **pNode Tracking** - Monitor all active nodes with live status updates every 30 seconds
 - **Dual Network Support** - Full support for both Mainnet and Devnet with network switcher
-- **Interactive Network Map** - Visualize global node distribution across 38+ locations using Leaflet
-- **Node Profiles** - Detailed performance metrics, uptime history, and event logs
+- **Status Detection** - Online/Offline/Syncing status based on heartbeat mechanism
+- **Node Score** - Performance scoring (0-100) based on uptime, storage, and online status
 
-### Node Compare
-- **Multi-Node Comparison** - Compare up to 4 nodes side by side
-- **Quick Compare from Tables** - Select nodes directly from pNodes and Dashboard tables
+### Node Comparison
+- **Multi-Node Compare** - Compare up to 4 nodes side by side
+- **Quick Compare** - Select nodes directly from pNodes and Dashboard tables
 - **Instant Results** - Uses pre-fetched data for immediate comparison
-- **Historical Charts** - Credits, uptime, storage committed, and storage used trends
-- **AI-Powered Analysis** - Automatic comparison summary with insights
-- **Performance Metrics** - Side-by-side stats with "BEST" indicators
+- **Historical Charts** - 7-day trends for credits, uptime, and storage
+- **AI Analysis** - Automatic comparison summary with insights
 
 ### Leaderboards
 - **Multi-Criteria Rankings** - Separate leaderboards for Credits, Uptime, and Storage
-- **Tier System** - Diamond, Platinum, Gold, Silver, Bronze tiers for Credits
-- **Bookmarks** - Save and track your favorite nodes
-- **Search & Pagination** - Find nodes quickly with search and pagination
+- **Tier System** - Diamond, Platinum, Gold, Silver, Bronze tiers (Credits only)
+- **Bookmarks** - Save and track favorite nodes per network
+- **Search & Pagination** - Find nodes quickly by IP or Pod ID
+
+### Manager Profiles
+- **Wallet Integration** - View manager profiles with XAND balance
+- **NFT/SBT Tracking** - Display Titan, Genesis, and other NFT holdings
+- **Fleet Overview** - Aggregated stats for all nodes under a manager
+- **Onchain Data** - Data fetched from Helius API
 
 ### Governance
-- **Proposal Tracking** - Monitor active and completed governance proposals
-- **Treasury Overview** - Real-time treasury balance with SOL price conversion
-- **Voting Stats** - Track voting participation and results
+- **Proposal Tracking** - Monitor active and completed proposals
+- **Treasury Overview** - Real-time balance with SOL price conversion
+- **Voting Stats** - Track participation and results
 
 ### Analytics
-- **AI Assistant** - Chat with XanDash AI for node analysis and network insights
-- **AI Node Summaries** - Automatic analysis on node profiles and comparisons
-- **Token Analytics** - Live XAND token price, market cap, and 24h charts via CoinGecko
-- **Country Analytics** - Node distribution and statistics by country
-- **Network Stats** - Total storage, uptime averages, version distribution
+- **AI Assistant** - Chat with XanDash AI for network insights
+- **AI Node Summaries** - Automatic analysis on node profiles
+- **Token Analytics** - Live XAND price via CoinGecko API
+- **Country Analytics** - Node distribution by country
+- **VPS Provider Stats** - Statistics by hosting provider
+- **Version Distribution** - Node software version breakdown
+
+### Network Map
+- **Interactive Globe** - Leaflet-powered world map
+- **Node Markers** - Click for node details
+- **Country Pages** - Detailed stats per country
 
 ### Tools
-- **Endpoint Testing** - Built-in RPC endpoint health checker with Web Workers
-- **XAND Calculator** - Token utility calculator
-- **STOINC Rewards** - Staking rewards tracker
+- **Endpoint Testing** - RPC endpoint health checker with Web Workers
+- **STOINC Calculator** - Storage incentive rewards calculator
+- **RPC Tester** - Direct JSON-RPC method testing
+
+---
 
 ## Tech Stack
 
@@ -75,7 +96,10 @@ XanDash is a comprehensive monitoring dashboard for the Xandeum decentralized st
 | **Animations** | GSAP (ScrollTrigger) |
 | **Security** | Cloudflare Turnstile |
 | **Deployment** | Vercel |
-| **Cron** | GitHub Actions |
+| **Cron** | GitHub Actions (every 5 min) |
+| **AI** | OpenRouter API (Gemini/Llama/Mistral) |
+
+---
 
 ## Getting Started
 
@@ -131,7 +155,15 @@ CRON_SECRET=your-secure-random-string
 
 # Governance RPC
 GOVERNANCE_RPC_URL=your_governance_rpc_url
+
+# Helius API (Manager Data)
+HELIUS_API_KEY=your_helius_api_key
+
+# OpenRouter API (AI)
+OPENROUTER_API_KEY=your_openrouter_api_key
 ```
+
+---
 
 ## Project Structure
 
@@ -139,36 +171,52 @@ GOVERNANCE_RPC_URL=your_governance_rpc_url
 src/
 ├── app/                    # Next.js App Router pages
 │   ├── api/               # API routes
+│   │   ├── ai-chat/       # AI assistant endpoint
 │   │   ├── governance/    # Governance data API
 │   │   ├── node-history/  # Historical node data
 │   │   ├── node-profile/  # Node profile data
 │   │   ├── nodes/         # All nodes listing
 │   │   ├── pod-credits/   # Credits data
-│   │   └── geolocation/   # IP geolocation batch API
+│   │   ├── geolocation/   # IP geolocation batch API
+│   │   └── sync-nodes/    # MongoDB sync (cron)
 │   ├── compare/           # Node comparison page
-│   ├── governance/        # Governance tracking page
+│   ├── country/[code]/    # Country detail pages
+│   ├── docs/              # Documentation page
+│   ├── governance/        # Governance tracking
 │   ├── leaderboard/       # Multi-criteria leaderboards
+│   ├── manager/[pubkey]/  # Manager profile pages
+│   ├── managers/          # Managers listing
 │   ├── network/           # Network map page
 │   ├── nodes/             # pNodes listing page
-│   └── profile/[ip]/      # Node profile pages
+│   ├── profile/[ip]/      # Node profile pages
+│   ├── stoinc/            # STOINC calculator
+│   └── xand/              # XAND token info
 ├── components/
 │   ├── dashboard/         # Dashboard cards and widgets
 │   ├── layout/            # Layout components (Navbar, Footer)
 │   └── ui/                # Reusable UI components
 └── libs/
     ├── db/                # MongoDB integration
-    └── services/          # External service integrations
+    ├── hooks/             # Custom React hooks
+    ├── services/          # External service integrations
+    └── utils/             # Utility functions
 ```
+
+---
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [Architecture](docs/ARCHITECTURE.md) | System design and data flow diagrams |
-| [Tech Stack](docs/TECH_STACK.md) | Detailed technology overview |
-| [API Reference](docs/API_REFERENCE.md) | API endpoints documentation |
-| [Cron Setup](docs/CRON_SETUP.md) | GitHub Actions cron configuration |
-| [CAPTCHA Setup](docs/CAPTCHA_SETUP.md) | Cloudflare Turnstile integration |
+| [Architecture](docs/ARCHITECTURE.md) | System design, data flow diagrams, component hierarchy |
+| [Algorithms](docs/ALGORITHMS.md) | Core algorithms, formulas, and logic reference |
+| [Tech Stack](docs/TECH_STACK.md) | Detailed technology overview and database schema |
+| [API Reference](docs/API_REFERENCE.md) | API endpoints documentation with examples |
+| [Cron Setup](docs/CRON_SETUP.md) | GitHub Actions cron configuration for data sync |
+| [CAPTCHA Setup](docs/CAPTCHA_SETUP.md) | Cloudflare Turnstile integration guide |
+| [SEO](docs/SEO.md) | SEO implementation, routes, and best practices |
+
+---
 
 ## API Endpoints
 
@@ -180,28 +228,25 @@ src/
 | `/api/pod-credits` | GET | Get pod credits data |
 | `/api/governance` | GET | Get governance proposals and treasury |
 | `/api/geolocation` | POST | Batch IP geolocation lookup |
-| `/api/xand-info` | GET | Get XAND token info |
-| `/api/sync-nodes` | POST | Sync all nodes to MongoDB |
+| `/api/xand-info` | GET | Get XAND token info from CoinGecko |
+| `/api/ai-chat` | POST | AI assistant chat (SSE streaming) |
+| `/api/sync-nodes` | POST | Sync all nodes to MongoDB (requires auth) |
 
-## Recent Updates
+---
 
-### January 2026
-- **AI-Powered Analysis** - AI summaries on node profiles and comparison results
-- **Quick Compare from Tables** - Select nodes directly from pNodes and Dashboard tables
-- **Node Compare** - Compare up to 4 nodes with instant results and historical charts
-- **Multi-Leaderboards** - Separate rankings for Credits, Uptime, and Storage
-- **Governance Tracking** - Monitor proposals, treasury, and voting
-- **Performance Optimization** - Parallel API fetching, pre-loaded data for instant comparisons
-- **Mainnet Support** - Full dual-network support with network switcher
-- **Treasury Display** - Real-time SOL price conversion with exact token amounts
-- **Discord Community** - Added Discord link in footer
+## Node Score Calculation
 
-### Previous Updates
-- Cloudflare Turnstile CAPTCHA protection
-- GSAP scroll animations on About page
-- MongoDB sync optimization (~2s completion)
-- GitHub Actions cron (every 5 minutes)
-- Mobile-responsive navbar and tables
+The Node Score (0-100) is calculated using three components:
+
+| Component | Max Points | Calculation |
+|-----------|------------|-------------|
+| **Uptime** | 40 | Scales linearly, 40 points for 30 days |
+| **Storage** | 30 | Scales linearly, 30 points for 100GB committed |
+| **Online Status** | 30 | Flat 30 points if seen within 60 minutes |
+
+**Formula:** `Score = (Uptime ÷ 30 days × 40) + (Storage ÷ 100GB × 30) + (Online ? 30 : 0)`
+
+---
 
 ## Deployment
 
@@ -214,12 +259,7 @@ src/
 3. Add environment variables
 4. Deploy
 
-### Post-Deployment
-
-```bash
-# Initialize MongoDB indexes (run once)
-curl "https://www.xandash.online/api/sync-nodes?action=init"
-```
+---
 
 ## Contributing
 
@@ -229,11 +269,16 @@ Contributions are welcome! Please:
 3. Follow existing code style
 4. Submit a pull request
 
+---
+
 ## Links
 
 - [Xandeum Website](https://www.xandeum.network)
 - [Xandeum Documentation](https://docs.xandeum.network)
 - [Twitter/X](https://x.com/Xandeum)
+- [Discord](https://discord.gg/xandeum)
+
+---
 
 ## License
 

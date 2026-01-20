@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const HELIUS_API_KEY = process.env.HELIUS_API_KEY || '';
-const HELIUS_RPC_URL = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
+import { getHeliusRpcUrl, reportSuccess, reportRateLimitHit, isRateLimitError } from '@/libs/utils/api-key-manager';
 
 const DAO_ADDRESS = '5JpYydB2VFcxbPGr8xmpefmJw86GQELCk7cB132wRXCa';
 const XAND_MINT = 'XANDuUoVoUqniKkpcKhrxmvYJybpJvUxJLr21Gaj3Hx';
@@ -27,11 +25,23 @@ function bs58Encode(bytes: Buffer): string {
 async function rpcCall(method: string, params: unknown[], retries = 2): Promise<unknown> {
   for (let i = 0; i <= retries; i++) {
     try {
-      const res = await fetch(HELIUS_RPC_URL, {
+      const res = await fetch(getHeliusRpcUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
       });
+
+      // Check for rate limit
+      if (isRateLimitError(res)) {
+        console.log(`[Members RPC] Rate limit hit, reporting failover...`);
+        reportRateLimitHit('helius');
+        if (i < retries) {
+          await new Promise(r => setTimeout(r, 500 * (i + 1)));
+          continue;
+        }
+        return null;
+      }
+
       const data = await res.json();
       if (data.error) {
         if (data.error.code === -32429 && i < retries) {
@@ -40,6 +50,8 @@ async function rpcCall(method: string, params: unknown[], retries = 2): Promise<
         }
         return null;
       }
+
+      reportSuccess('helius');
       return data.result;
     } catch {
       if (i < retries) {

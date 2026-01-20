@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { CopyBtn as CopyButton } from '@/components/ui/CopyBtn';
-import { ServerIcon, ClockIcon, ExternalLinkIcon, CheckCircleIcon, XCircleIcon, CalendarIcon, ActivityIcon } from './ManagerProfileIcons';
+import { ServerIcon, ClockIcon, ExternalLinkIcon, CheckCircleIcon, XCircleIcon, CalendarIcon, ActivityIcon, ChartIcon } from './ManagerProfileIcons';
 import { CornerAccents } from '@/components/ui';
 import { getCountryFlagUrl } from '@/libs/services/geolocation';
 import type { EnrichedNodeData } from './types';
@@ -56,15 +56,15 @@ export const ManagerNodeCard = ({ node, index }: ManagerNodeCardProps) => {
         try {
             const date = new Date(dateString);
             return {
-                date: date.toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    day: 'numeric', 
-                    year: 'numeric' 
+                date: date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
                 }),
-                time: date.toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
+                time: date.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
                     minute: '2-digit',
-                    hour12: true 
+                    hour12: true
                 })
             };
         } catch {
@@ -122,8 +122,8 @@ export const ManagerNodeCard = ({ node, index }: ManagerNodeCardProps) => {
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1.5 text-white/50 text-[10px] sm:text-xs">
                             <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                                <circle cx="12" cy="10" r="3"/>
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                <circle cx="12" cy="10" r="3" />
                             </svg>
                             <span className="text-white/40">Location:</span>
                         </div>
@@ -139,7 +139,7 @@ export const ManagerNodeCard = ({ node, index }: ManagerNodeCardProps) => {
                                 <>
                                     <div className="flex items-center gap-1.5">
                                         {flagUrl && (
-                                            <img 
+                                            <img
                                                 src={flagUrl}
                                                 alt={`${location} flag`}
                                                 className="w-4 h-3 sm:w-5 sm:h-4 object-cover rounded-sm border border-white/20 shadow-sm"
@@ -155,8 +155,8 @@ export const ManagerNodeCard = ({ node, index }: ManagerNodeCardProps) => {
                                             />
                                         )}
                                         {countryFlag && (
-                                            <span 
-                                                className="text-sm sm:text-base hidden" 
+                                            <span
+                                                className="text-sm sm:text-base hidden"
                                                 title={`${location} (${countryCode})`}
                                             >
                                                 {countryFlag}
@@ -199,7 +199,18 @@ export const ManagerNodeCard = ({ node, index }: ManagerNodeCardProps) => {
             {/* Card Body - Stats */}
             <div className="p-3 sm:p-4">
                 {validator && isOnline ? (
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
+                        {/* Score */}
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-1 text-white/40 text-[9px] sm:text-[10px]">
+                                <ChartIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                <span>Score</span>
+                            </div>
+                            <div className="text-purple-400 text-xs sm:text-sm font-mono font-medium">
+                                {(validator.score || 0).toFixed(1)}
+                            </div>
+                        </div>
+
                         {/* Uptime */}
                         <div className="space-y-1">
                             <div className="flex items-center gap-1 text-white/40 text-[9px] sm:text-[10px]">

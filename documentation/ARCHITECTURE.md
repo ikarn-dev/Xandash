@@ -252,6 +252,10 @@ RootLayout
 │       │   │   ├── TreasuryTab
 │       │   │   └── VotingTab
 │       │   │
+│       │   ├── Managers (/managers)
+│       │   │   ├── ManagerList
+│       │   │   └── ManagerProfile (/manager/[pubkey])
+│       │   │
 │       │   └── ... other pages
 │       │
 │       └── Footer

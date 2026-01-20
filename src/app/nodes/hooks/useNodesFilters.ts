@@ -88,31 +88,31 @@ export function useNodesFilters(
       total: total,
       online: filtered.filter(v => {
         const timeDiff = referenceTime - v.last_seen_timestamp;
-        return timeDiff < 1800;
+        return timeDiff <= 3600;
       }).length,
       syncing: filtered.filter(v => {
         const timeDiff = referenceTime - v.last_seen_timestamp;
-        return timeDiff >= 1800 && timeDiff < 3600;
+        return timeDiff > 3600 && timeDiff < 7200;
       }).length,
       public: filtered.filter(v => v.is_public).length,
       inactive: filtered.filter(v => {
         const timeDiff = referenceTime - v.last_seen_timestamp;
-        return timeDiff >= 3600;
+        return timeDiff >= 7200;
       }).length,
     } : {
       total: total,
       online: allValidators.filter(v => {
         const timeDiff = referenceTime - v.last_seen_timestamp;
-        return timeDiff < 1800;
+        return timeDiff <= 3600;
       }).length,
       syncing: allValidators.filter(v => {
         const timeDiff = referenceTime - v.last_seen_timestamp;
-        return timeDiff >= 1800 && timeDiff < 3600;
+        return timeDiff > 3600 && timeDiff < 7200;
       }).length,
       public: allValidators.filter(v => v.is_public).length,
       inactive: allValidators.filter(v => {
         const timeDiff = referenceTime - v.last_seen_timestamp;
-        return timeDiff >= 3600;
+        return timeDiff >= 7200;
       }).length,
     };
 

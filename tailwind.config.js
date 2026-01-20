@@ -14,6 +14,18 @@ module.exports = {
         background: 'var(--background)',
         foreground: 'var(--foreground)',
       },
+      transitionTimingFunction: {
+        'spring': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0', transform: 'translateY(-10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        fadeIn: 'fadeIn 0.5s ease-out forwards',
+      },
     },
   },
   plugins: [],

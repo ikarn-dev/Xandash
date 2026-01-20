@@ -12,6 +12,7 @@
 
 import { cache } from '@/libs/cache/LocalCache';
 import { monitoredFetch } from './rpc-status-monitor';
+import { calculateNodeScore } from '@/libs/utils/score-utils';
 
 // Get URLs from environment variables for RPC (sensitive)
 const MAINNET_RPC_URL = process.env.MAINNET_RPC_DIRECT_URL || '';
@@ -57,6 +58,7 @@ export interface MainnetNodeData {
   country_code?: string;
   provider?: string;
   active_streams?: number;
+  score?: number;
 }
 
 export interface MainnetExternalData {
@@ -369,7 +371,11 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
 
     if (freshNodes && freshNodes.length > 0) {
       // Use fresh data directly - always reflect current API state
-      currentNodes = freshNodes;
+      const now = Math.floor(Date.now() / 1000);
+      currentNodes = freshNodes.map(node => ({
+        ...node,
+        score: calculateNodeScore(node, now)
+      }));
 
       await cache.set(CACHE_KEY_NODES, currentNodes, CACHE_TTL_MS * 10);
       await cache.set(CACHE_KEY_LAST_FETCH, Date.now(), CACHE_TTL_MS * 2);

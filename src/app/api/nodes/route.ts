@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { calculateNodeScore } from '@/libs/utils/score-utils';
 import { getMainnetData } from '@/libs/services/mainnet-data-service';
 import { getDevnetData } from '@/libs/services/devnet-data-service';
 import managersData from '../../../../managers_data/managers_node_data.json';
@@ -31,13 +32,13 @@ export interface PaginatedNodesResponse {
  */
 function createPubkeyToManagerMap(): Map<string, string> {
   const pubkeyToManager = new Map<string, string>();
-  
+
   managersData.managers.forEach(manager => {
     manager.nodes.forEach(node => {
       pubkeyToManager.set(node.pnode_pubkey, manager.manager_address);
     });
   });
-  
+
   return pubkeyToManager;
 }
 
@@ -47,7 +48,7 @@ function createPubkeyToManagerMap(): Map<string, string> {
 function enrichNodesWithManagerData(nodes: any[], pubkeyToManagerMap: Map<string, string>): any[] {
   return nodes.map(node => {
     const managerAddress = pubkeyToManagerMap.get(node.pubkey);
-    
+
     if (managerAddress) {
       // Node is registered to a manager
       return {
@@ -55,7 +56,7 @@ function enrichNodesWithManagerData(nodes: any[], pubkeyToManagerMap: Map<string
         manager_pubkey: managerAddress
       };
     }
-    
+
     // Node has no manager
     return node;
   });
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const includeAll = searchParams.get('includeAll') === 'true';
     const network = searchParams.get('network') || 'devnet';
-    
+
     if (page < 1 || limit < 1 || limit > 1000) {
       return NextResponse.json({ error: 'Invalid pagination parameters' }, { status: 400 });
     }
@@ -103,16 +104,39 @@ export async function GET(request: NextRequest) {
         console.error('[Nodes API] Devnet API failed:', error);
       }
     }
-    
+
+
+    // Calculate score and standardize status for all nodes
+    if (allNodes.length > 0) {
+      const now = Math.floor(Date.now() / 1000);
+      allNodes = allNodes.map((node: any) => {
+        // Recalculate status for consistency with 1h/2h logic
+        const timeDiff = now - (node.last_seen_timestamp || now);
+        let status = 'offline';
+        if (timeDiff <= 3600) status = 'online';
+        else if (timeDiff < 7200) status = 'syncing';
+
+        // Calculate score if missing or recalc to ensure consistency
+        // Use service score if available, otherwise calculate
+        const score = typeof node.score === 'number' ? node.score : calculateNodeScore(node, now);
+
+        return {
+          ...node,
+          status,
+          score
+        };
+      });
+    }
+
     // Enrich nodes with manager pubkey from JSON data
     if (allNodes.length > 0) {
       const pubkeyToManagerMap = createPubkeyToManagerMap();
       allNodes = enrichNodesWithManagerData(allNodes, pubkeyToManagerMap);
     }
-    
+
     let result;
     const serverTimestamp = Math.floor(Date.now() / 1000);
-    
+
     if (includeAll) {
       result = {
         nodes: allNodes,

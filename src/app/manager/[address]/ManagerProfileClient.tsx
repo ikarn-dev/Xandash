@@ -178,6 +178,9 @@ export function ManagerProfileClient({
             avgUptime: activeNodes.length > 0
                 ? activeNodes.reduce((sum, n) => sum + (n.validator?.uptime || 0), 0) / activeNodes.length
                 : 0,
+            avgScore: activeNodes.length > 0
+                ? activeNodes.reduce((sum, n) => sum + (n.validator?.score || 0), 0) / activeNodes.length
+                : 0,
         };
     }, [enrichedNodes]);
 

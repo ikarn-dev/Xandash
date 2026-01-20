@@ -2,8 +2,12 @@ import { NextRequest } from 'next/server';
 import { connectToDatabase, getCollectionNames, NodeSnapshot, NodeEventLog } from '@/libs/db/mongodb';
 import { getMainnetData } from '@/libs/services/mainnet-data-service';
 import { getDevnetData } from '@/libs/services/devnet-data-service';
-
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+import {
+  getActiveApiKey,
+  reportRateLimitHit,
+  reportSuccess,
+  isRateLimitError
+} from '@/libs/utils/api-key-manager';
 
 const MODELS = [
   'google/gemini-2.0-flash-001',
@@ -576,7 +580,12 @@ When generating node or comparison summaries:
 export async function POST(req: NextRequest) {
   try {
     const { messages, network: requestNetwork } = await req.json();
-    if (!OPENROUTER_API_KEY) return new Response(JSON.stringify({ error: 'No API key' }), { status: 500 });
+
+    // Get active API key for OpenRouter
+    let currentApiKey = getActiveApiKey('openrouter');
+    if (!currentApiKey) {
+      return new Response(JSON.stringify({ error: 'No API key configured' }), { status: 500 });
+    }
 
     const lastMsg = messages[messages.length - 1]?.content || '';
 
@@ -586,23 +595,58 @@ export async function POST(req: NextRequest) {
     const sysPrompt = SYSTEM + (ctx ? `\n\n--- LIVE DATA ---${ctx}\n--- END DATA ---` : '');
 
     let response: Response | null = null;
-    for (const model of MODELS) {
-      try {
-        const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://www.xandash.online'
-          },
-          body: JSON.stringify({
-            model,
-            messages: [{ role: 'system', content: sysPrompt }, ...messages],
-            stream: true
-          }),
-        });
-        if (r.ok) { response = r; break; }
-      } catch { }
+    let rateLimitRetries = 0;
+    const maxRateLimitRetries = 3; // Try up to 3 different API keys
+
+    while (!response && rateLimitRetries < maxRateLimitRetries) {
+      for (const model of MODELS) {
+        try {
+          const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${currentApiKey}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://www.xandash.online'
+            },
+            body: JSON.stringify({
+              model,
+              messages: [{ role: 'system', content: sysPrompt }, ...messages],
+              stream: true
+            }),
+          });
+
+          // Check for rate limit errors
+          if (isRateLimitError(r)) {
+            console.log(`[AI Chat] Rate limit hit on OpenRouter, attempting failover...`);
+            const switched = reportRateLimitHit('openrouter');
+            if (switched) {
+              currentApiKey = getActiveApiKey('openrouter');
+              rateLimitRetries++;
+              break; // Break inner loop to retry with new key
+            }
+          }
+
+          if (r.ok) {
+            reportSuccess('openrouter');
+            response = r;
+            break;
+          }
+        } catch (error) {
+          // Check if error indicates rate limit
+          if (isRateLimitError(null, error)) {
+            console.log(`[AI Chat] Rate limit error on OpenRouter, attempting failover...`);
+            const switched = reportRateLimitHit('openrouter');
+            if (switched) {
+              currentApiKey = getActiveApiKey('openrouter');
+              rateLimitRetries++;
+              break;
+            }
+          }
+        }
+      }
+
+      // If we got a response or couldn't switch keys, exit the while loop
+      if (response || rateLimitRetries >= maxRateLimitRetries) break;
     }
 
     if (!response) return new Response(JSON.stringify({ error: 'AI unavailable' }), { status: 500 });

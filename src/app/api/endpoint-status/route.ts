@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getActiveApiKey } from '@/libs/utils/api-key-manager';
 
 interface EndpointStatus {
   name: string;
@@ -29,12 +30,12 @@ const initializeEndpoints = () => {
     { name: 'CoinGecko API', url: process.env.NEXT_PUBLIC_COINGECKO_API_URL!, network: 'devnet' as const },
     { name: 'IP Geolocation (ipapi.co)', url: process.env.NEXT_PUBLIC_IPAPI_CO_URL!, network: 'devnet' as const },
     { name: 'IP Geolocation (ip-api.com)', url: process.env.NEXT_PUBLIC_IP_API_COM_URL!, network: 'devnet' as const },
-    
+
     // Mainnet endpoints
     // { name: 'Mainnet RPC Direct', url: process.env.MAINNET_RPC_DIRECT_URL!, network: 'mainnet' as const }, // Temporarily disabled - Cloudflare tunnel down
     { name: 'Pod Credits Mainnet', url: process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL!, network: 'mainnet' as const },
     { name: 'Helius RPC', url: process.env.NEXT_PUBLIC_HELIUS_RPC_URL!, network: 'mainnet' as const },
-    
+
     // Database and Infrastructure
     { name: 'MongoDB Atlas', url: process.env.MONGODB_URI || 'mongodb://localhost:27017', network: 'devnet' as const },
   ];
@@ -50,7 +51,7 @@ const initializeEndpoints = () => {
         lastChecked: new Date().toISOString(),
         network: endpoint.network
       });
-      
+
       // Initialize with recent uptime data (last 30 minutes in 30-second intervals)
       const history: UptimeDataPoint[] = [];
       const now = new Date();
@@ -70,18 +71,18 @@ const initializeEndpoints = () => {
 // Check endpoint health
 const checkEndpointHealth = async (endpoint: EndpointStatus): Promise<EndpointStatus> => {
   const startTime = Date.now();
-  
+
   try {
     let response: Response;
     let isHealthy = false;
-    
+
     // Special handling for MongoDB
     if (endpoint.name.includes('MongoDB')) {
       // For MongoDB, we'll simulate a health check since we can't directly ping it from the client
       // In a real implementation, you'd check MongoDB connection from your backend
       const responseTime = Math.floor(Math.random() * 100) + 30; // 30-130ms
       isHealthy = Math.random() > 0.02; // 98% uptime simulation
-      
+
       // Update uptime history
       const history = uptimeHistory.get(endpoint.name) || [];
       history.push({
@@ -89,15 +90,15 @@ const checkEndpointHealth = async (endpoint: EndpointStatus): Promise<EndpointSt
         status: isHealthy ? 'up' : 'down',
         responseTime
       });
-      
+
       if (history.length > 60) { // Changed from 90 to 60 for 30 minutes
         history.shift();
       }
       uptimeHistory.set(endpoint.name, history);
-      
+
       const upCount = history.filter(h => h.status === 'up').length;
       const uptime = history.length > 0 ? (upCount / history.length) * 100 : 0;
-      
+
       return {
         ...endpoint,
         status: isHealthy ? 'operational' : 'down',
@@ -106,15 +107,18 @@ const checkEndpointHealth = async (endpoint: EndpointStatus): Promise<EndpointSt
         lastChecked: new Date().toISOString()
       };
     }
-    
+
     // Special handling for different endpoint types
     if (endpoint.name.includes('RPC')) {
       // For Helius RPC, add API key as query parameter
       let requestUrl = endpoint.url;
-      if (endpoint.name.includes('Helius') && process.env.HELIUS_API_KEY) {
-        requestUrl = `${endpoint.url}?api-key=${process.env.HELIUS_API_KEY}`;
+      if (endpoint.name.includes('Helius')) {
+        const heliusKey = getActiveApiKey('helius');
+        if (heliusKey) {
+          requestUrl = `${endpoint.url}?api-key=${heliusKey}`;
+        }
       }
-      
+
       response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
@@ -142,10 +146,10 @@ const checkEndpointHealth = async (endpoint: EndpointStatus): Promise<EndpointSt
         signal: AbortSignal.timeout(10000)
       });
     }
-    
+
     const responseTime = Date.now() - startTime;
     isHealthy = response.ok;
-    
+
     // Update uptime history
     const history = uptimeHistory.get(endpoint.name) || [];
     history.push({
@@ -153,17 +157,17 @@ const checkEndpointHealth = async (endpoint: EndpointStatus): Promise<EndpointSt
       status: isHealthy ? 'up' : 'down',
       responseTime
     });
-    
+
     // Keep only last 60 periods (30 minutes at 30-second intervals)
     if (history.length > 60) { // Changed from 90 to 60 for 30 minutes
       history.shift();
     }
     uptimeHistory.set(endpoint.name, history);
-    
+
     // Calculate uptime percentage
     const upCount = history.filter(h => h.status === 'up').length;
     const uptime = history.length > 0 ? (upCount / history.length) * 100 : 0;
-    
+
     return {
       ...endpoint,
       status: isHealthy ? 'operational' : 'down',
@@ -171,10 +175,10 @@ const checkEndpointHealth = async (endpoint: EndpointStatus): Promise<EndpointSt
       uptime: Math.round(uptime * 10) / 10,
       lastChecked: new Date().toISOString()
     };
-    
+
   } catch (error) {
     const responseTime = Date.now() - startTime;
-    
+
     // Update uptime history for failed check
     const history = uptimeHistory.get(endpoint.name) || [];
     history.push({
@@ -182,15 +186,15 @@ const checkEndpointHealth = async (endpoint: EndpointStatus): Promise<EndpointSt
       status: 'down',
       responseTime
     });
-    
+
     if (history.length > 60) { // Changed from 90 to 60 for 30 minutes
       history.shift();
     }
     uptimeHistory.set(endpoint.name, history);
-    
+
     const upCount = history.filter(h => h.status === 'up').length;
     const uptime = history.length > 0 ? (upCount / history.length) * 100 : 0;
-    
+
     return {
       ...endpoint,
       status: 'down',
@@ -206,24 +210,24 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const network = searchParams.get('network') as 'devnet' | 'mainnet' | null;
     const refresh = searchParams.get('refresh') === 'true';
-    
+
     // Initialize endpoints if not done
     initializeEndpoints();
-    
+
     // Always perform health checks on first load or when refresh is requested
     const shouldCheckHealth = refresh || Array.from(endpointStatus.values()).some(e => e.responseTime === 0);
-    
+
     if (shouldCheckHealth) {
       // Check all endpoints health
       const endpoints = Array.from(endpointStatus.values());
-      const filteredEndpoints = network 
+      const filteredEndpoints = network
         ? endpoints.filter(e => e.network === network)
         : endpoints;
-      
+
       const healthChecks = await Promise.allSettled(
         filteredEndpoints.map(endpoint => checkEndpointHealth(endpoint))
       );
-      
+
       // Update status map
       healthChecks.forEach((result, index) => {
         if (result.status === 'fulfilled') {
@@ -231,19 +235,19 @@ export async function GET(request: NextRequest) {
         }
       });
     }
-    
+
     // Get current status
     const allEndpoints = Array.from(endpointStatus.values());
-    const filteredEndpoints = network 
+    const filteredEndpoints = network
       ? allEndpoints.filter(e => e.network === network)
       : allEndpoints;
-    
+
     // Get uptime history for requested endpoints
     const endpointsWithHistory = filteredEndpoints.map(endpoint => ({
       ...endpoint,
       uptimeHistory: uptimeHistory.get(endpoint.name) || []
     }));
-    
+
     return NextResponse.json({
       endpoints: endpointsWithHistory,
       network: network || 'all',
@@ -253,7 +257,7 @@ export async function GET(request: NextRequest) {
         operational: filteredEndpoints.filter(e => e.status === 'operational').length,
         degraded: filteredEndpoints.filter(e => e.status === 'degraded').length,
         down: filteredEndpoints.filter(e => e.status === 'down').length,
-        avgResponseTime: filteredEndpoints.length > 0 
+        avgResponseTime: filteredEndpoints.length > 0
           ? Math.round(filteredEndpoints.reduce((sum, e) => sum + e.responseTime, 0) / filteredEndpoints.length)
           : 0,
         avgUptime: filteredEndpoints.length > 0
@@ -266,7 +270,7 @@ export async function GET(request: NextRequest) {
         'Pragma': 'no-cache'
       }
     });
-    
+
   } catch (error) {
     console.error('Endpoint status error:', error);
     return NextResponse.json(
@@ -279,25 +283,25 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { endpoint } = await request.json();
-    
+
     if (!endpoint || !endpointStatus.has(endpoint)) {
       return NextResponse.json(
         { error: 'Invalid endpoint' },
         { status: 400 }
       );
     }
-    
+
     const endpointData = endpointStatus.get(endpoint)!;
     const updatedEndpoint = await checkEndpointHealth(endpointData);
     endpointStatus.set(endpoint, updatedEndpoint);
-    
+
     return NextResponse.json({
       endpoint: {
         ...updatedEndpoint,
         uptimeHistory: uptimeHistory.get(endpoint) || []
       }
     });
-    
+
   } catch (error) {
     console.error('Manual endpoint test error:', error);
     return NextResponse.json(

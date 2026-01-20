@@ -1,10 +1,10 @@
 'use client';
 
 import { CornerAccents } from '@/components/ui';
-import { 
-  BookIcon, CodeIcon, ServerIcon, LayersIcon, DatabaseIcon, 
-  GlobeIcon, ChartIcon, ShieldIcon, ZapIcon, TerminalIcon, 
-  CpuIcon, LinkIcon, ChevronRightIcon, ChevronDownIcon 
+import {
+  BookIcon, CodeIcon, ServerIcon, LayersIcon, DatabaseIcon,
+  GlobeIcon, ChartIcon, ShieldIcon, ZapIcon, TerminalIcon,
+  CpuIcon, LinkIcon, ChevronRightIcon, ChevronDownIcon
 } from './DocsIcons';
 
 export interface SidebarItem {
@@ -34,9 +34,11 @@ export const sidebarSections: SidebarSection[] = [
       { id: 'pnodes', title: 'pNodes Monitoring', icon: ServerIcon },
       { id: 'leaderboard', title: 'Leaderboard', icon: ChartIcon },
       { id: 'node-compare', title: 'Node Compare', icon: LayersIcon },
+      { id: 'managers', title: 'Manager Profiles', icon: DatabaseIcon },
       { id: 'governance', title: 'Governance', icon: ShieldIcon },
       { id: 'network', title: 'Network Map', icon: GlobeIcon },
       { id: 'xand-token', title: 'XAND Token Info', icon: DatabaseIcon },
+      { id: 'ai-assistant', title: 'AI Assistant', icon: CpuIcon },
       { id: 'endpoints', title: 'Endpoint Testing', icon: TerminalIcon },
     ]
   },
@@ -52,6 +54,8 @@ export const sidebarSections: SidebarSection[] = [
   {
     title: 'Advanced',
     items: [
+      { id: 'algorithms', title: 'Algorithms & Logic', icon: CpuIcon },
+      { id: 'faq', title: 'FAQ', icon: BookIcon },
       { id: 'security', title: 'Security', icon: ShieldIcon },
       { id: 'performance', title: 'Performance', icon: ZapIcon },
       { id: 'contributing', title: 'Contributing', icon: CodeIcon },
@@ -77,7 +81,7 @@ export function DocsSidebar({ activeSection, expandedSections, onToggleSection, 
           <BookIcon className="w-5 h-5 text-white" />
           <span className="text-white font-semibold">Documentation</span>
         </div>
-        
+
         <nav className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pr-2 scrollbar-hide">
           {sidebarSections.map((section) => (
             <div key={section.title}>
@@ -88,16 +92,15 @@ export function DocsSidebar({ activeSection, expandedSections, onToggleSection, 
                 <span>// {section.title}</span>
                 {expandedSections.includes(section.title) ? <ChevronDownIcon className="w-3 h-3" /> : <ChevronRightIcon className="w-3 h-3" />}
               </button>
-              
+
               {expandedSections.includes(section.title) && (
                 <ul className="space-y-1 ml-2">
                   {section.items.map((item) => (
                     <li key={item.id}>
                       <button
                         onClick={() => onNavigate(item.id)}
-                        className={`flex items-center gap-2 w-full px-3 py-2 rounded text-sm transition-all ${
-                          activeSection === item.id ? 'bg-white/10 text-white border-l-2 border-white' : 'text-white/60 hover:text-white hover:bg-white/5'
-                        }`}
+                        className={`flex items-center gap-2 w-full px-3 py-2 rounded text-sm transition-all ${activeSection === item.id ? 'bg-white/10 text-white border-l-2 border-white' : 'text-white/60 hover:text-white hover:bg-white/5'
+                          }`}
                       >
                         <item.icon className="w-4 h-4" />
                         <span>{item.title}</span>

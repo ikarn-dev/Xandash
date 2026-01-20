@@ -7,6 +7,7 @@
 
 import { cache } from '@/libs/cache/LocalCache';
 import { monitoredFetch } from './rpc-status-monitor';
+import { calculateNodeScore } from '@/libs/utils/score-utils';
 
 // Get URL from environment variable - NEVER hardcode
 const DEVNET_API_URL = process.env.DEVNET_API_URL || '';
@@ -33,6 +34,7 @@ export interface DevnetNodeData {
   country_code?: string;
   provider?: string;
   active_streams?: number;
+  score?: number;
 }
 
 export interface DevnetExternalData {
@@ -84,10 +86,10 @@ async function fetchFromDevnetApi(): Promise<DevnetNodeData[] | null> {
     }
 
     const data = await response.json();
-    
+
     // Handle different response formats
     let pods: DevnetNodeData[] = [];
-    
+
     if (Array.isArray(data)) {
       pods = data;
     } else if (data.pods && Array.isArray(data.pods)) {
@@ -113,26 +115,33 @@ async function fetchFromDevnetApi(): Promise<DevnetNodeData[] | null> {
  */
 export async function getDevnetData(forceRefresh: boolean = false): Promise<DevnetExternalData> {
   const canFetchNow = await canFetch();
-  
+
   // Get cached data
   const cachedData = await cache.get(CACHE_KEY_DEVNET) as DevnetExternalData | null;
-  
+
   // Try to fetch fresh data if allowed
   if (canFetchNow || forceRefresh) {
     const freshNodes = await fetchFromDevnetApi();
-    
+
     if (freshNodes && freshNodes.length > 0) {
+      // Calculate scores before caching
+      const now = Math.floor(Date.now() / 1000);
+      const nodesWithScore = freshNodes.map(node => ({
+        ...node,
+        score: calculateNodeScore(node, now)
+      }));
+
       const result: DevnetExternalData = {
-        nodes: freshNodes,
+        nodes: nodesWithScore,
         total: freshNodes.length,
         source: 'devnet-api',
         cached: false,
         timestamp: Date.now(),
       };
-      
+
       await cache.set(CACHE_KEY_DEVNET, result, CACHE_TTL * 2);
       await cache.set(CACHE_KEY_LAST_FETCH, Date.now(), CACHE_TTL * 2);
-      
+
       return result;
     }
   }
@@ -160,12 +169,12 @@ export async function getDevnetData(forceRefresh: boolean = false): Promise<Devn
  */
 export async function getDevnetNodeByIp(ip: string): Promise<DevnetNodeData | null> {
   const data = await getDevnetData();
-  
+
   const node = data.nodes.find(n => {
     const nodeIp = n.address?.split(':')[0];
     return nodeIp === ip;
   });
-  
+
   return node || null;
 }
 

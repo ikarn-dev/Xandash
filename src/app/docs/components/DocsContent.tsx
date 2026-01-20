@@ -24,9 +24,13 @@ export const OverviewContent = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <LinkCard href="/" title="Analytics" desc="Main dashboard with network statistics, charts, and real-time metrics" />
       <LinkCard href="/nodes" title="pNodes" desc="Detailed view of all network nodes with status, resources, and performance data" />
-      <LinkCard href="/leaderboard" title="Leaderboard" desc="Rankings of nodes by credits earned, uptime, and performance metrics" />
+      <LinkCard href="/leaderboard" title="Leaderboard" desc="Rankings of nodes by credits earned, uptime, and storage committed" />
+      <LinkCard href="/compare" title="Node Compare" desc="Compare up to 4 nodes side-by-side with historical charts and AI analysis" />
+      <LinkCard href="/managers" title="Managers" desc="View manager profiles with NFT holdings, XAND balance, and managed nodes" />
+      <LinkCard href="/governance" title="Governance" desc="Track proposals, treasury balance, and voting statistics" />
       <LinkCard href="/network" title="Network" desc="Geographic distribution of nodes with interactive map and country statistics" />
       <LinkCard href="/xand" title="XAND" desc="Token information including price, market data, and supply metrics from CoinGecko" />
+      <LinkCard href="/stoinc" title="STOINC" desc="Storage incentive rewards calculator for estimating earnings" />
       <LinkCard href="/endpoints" title="Endpoints" desc="RPC endpoint testing tool for checking network connectivity and response times" />
     </div>
   </div>
@@ -189,6 +193,10 @@ export const ApiReferenceContent = () => (
       <ApiEndpoint method="GET" path="/api/xand-info" desc="Fetches XAND token data from CoinGecko API" />
       <ApiEndpoint method="POST" path="/api/rpc" desc="Proxy endpoint for Xandeum JSON-RPC calls" />
       <ApiEndpoint method="POST" path="/api/sync-nodes" desc="Syncs all nodes to MongoDB (requires auth)" />
+      <ApiEndpoint method="GET" path="/api/manager-wallet?address={addr}" desc="Fetches manager wallet assets (SOL, Tokens, NFTs)" />
+      <ApiEndpoint method="GET" path="/api/nodes-trend" desc="Fetches historical node count trends" />
+      <ApiEndpoint method="GET" path="/api/rpc-status" desc="Real-time RPC endpoint health status" />
+      <ApiEndpoint method="POST" path="/api/ai-chat" desc="AI assistant streaming endpoint" />
     </div>
   </div>
 );
@@ -199,9 +207,9 @@ export const DataFlowContent = () => (
     <p className="text-white/70 leading-relaxed mb-6">Understanding how data flows through XanDash:</p>
     <div className="space-y-4">
       {[{ title: '1. Initial Page Load (SSR)', points: ['Server fetches initial data from Xandeum RPC', 'HTML is rendered with data and sent to client', 'Client hydrates React components'] },
-        { title: '2. Real-time Updates', points: ['LiveRefresh component triggers every 30 seconds', 'React Query refetches stale data in background', 'UI updates seamlessly without page reload'] },
-        { title: '3. Caching Strategy', points: ['React Query caches responses with configurable stale time', 'Geolocation data cached to reduce API calls', 'Token data has 5-minute refresh cooldown'] },
-        { title: '4. Error Handling', points: ['Graceful degradation when APIs are unavailable', 'Toast notifications for user feedback', 'Retry logic for failed requests'] }
+      { title: '2. Real-time Updates', points: ['LiveRefresh component triggers every 30 seconds', 'React Query refetches stale data in background', 'UI updates seamlessly without page reload'] },
+      { title: '3. Caching Strategy', points: ['React Query caches responses with configurable stale time', 'Geolocation data cached to reduce API calls', 'Token data has 5-minute refresh cooldown'] },
+      { title: '4. Error Handling', points: ['Graceful degradation when APIs are unavailable', 'Toast notifications for user feedback', 'Retry logic for failed requests'] }
       ].map((section, i) => (<InfoCard key={i} title={section.title}><div className="text-white/60 text-sm space-y-1">{section.points.map((point, j) => <p key={j}>• {point}</p>)}</div></InfoCard>))}
     </div>
   </div>
@@ -212,9 +220,9 @@ export const SecurityContent = () => (
     <SectionHeader icon={ShieldIcon} label="SECURITY" title="Security Considerations" />
     <div className="space-y-4">
       {[{ title: 'API Proxy', desc: 'All RPC calls are proxied through Next.js API routes, hiding backend endpoints from the client.' },
-        { title: 'Environment Variables', desc: 'Sensitive configuration like RPC endpoints and API keys are stored in environment variables.' },
-        { title: 'Input Validation', desc: 'All user inputs are validated and sanitized before being used in API calls.' },
-        { title: 'HTTPS Only', desc: 'All communications are encrypted using HTTPS. The application enforces secure connections.' }
+      { title: 'Environment Variables', desc: 'Sensitive configuration like RPC endpoints and API keys are stored in environment variables.' },
+      { title: 'Input Validation', desc: 'All user inputs are validated and sanitized before being used in API calls.' },
+      { title: 'HTTPS Only', desc: 'All communications are encrypted using HTTPS. The application enforces secure connections.' }
       ].map((item, i) => (<InfoCard key={i} title={item.title}><p className="text-white/60 text-sm">{item.desc}</p></InfoCard>))}
     </div>
   </div>
@@ -225,12 +233,36 @@ export const PerformanceContent = () => (
     <SectionHeader icon={ZapIcon} label="PERFORMANCE" title="Performance Optimizations" />
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {[{ title: 'Server-Side Rendering', desc: 'Initial page loads are server-rendered for fast First Contentful Paint.' },
-        { title: 'Code Splitting', desc: 'Next.js automatically splits code by route, loading only necessary JavaScript.' },
-        { title: 'Custom SVG Icons', desc: 'Inline SVG icons reduce bundle size and eliminate additional network requests.' },
-        { title: 'Web Workers', desc: 'Heavy computations run in Web Workers to keep the main thread responsive.' },
-        { title: 'Optimized Images', desc: 'Next.js Image component automatically optimizes images with lazy loading.' },
-        { title: 'PWA Caching', desc: 'Service worker caches static assets for offline access and faster loads.' }
+      { title: 'Code Splitting', desc: 'Next.js automatically splits code by route, loading only necessary JavaScript.' },
+      { title: 'Custom SVG Icons', desc: 'Inline SVG icons reduce bundle size and eliminate additional network requests.' },
+      { title: 'Web Workers', desc: 'Heavy computations run in Web Workers to keep the main thread responsive.' },
+      { title: 'Optimized Images', desc: 'Next.js Image component automatically optimizes images with lazy loading.' },
+      { title: 'PWA Caching', desc: 'Service worker caches static assets for offline access and faster loads.' }
       ].map((item, i) => (<InfoCard key={i} title={item.title}><p className="text-white/60 text-sm">{item.desc}</p></InfoCard>))}
+    </div>
+  </div>
+);
+
+export const ManagersContent = () => (
+  <div className="space-y-6">
+    <SectionHeader icon={DatabaseIcon} label="MANAGERS" title="Manager Profiles" />
+    <p className="text-white/70 leading-relaxed mb-4">View detailed information about network managers (node operators):</p>
+    <div className="space-y-4">
+      <InfoCard title="Manager Overview"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem desc="View all network managers with their node counts" /><ListItem desc="Search managers by public key or node IP address" /><ListItem desc="See aggregated stats for managed nodes" /></ul></InfoCard>
+      <InfoCard title="Profile Details"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem label="Wallet Balance" desc="XAND token holdings from onchain data" /><ListItem label="NFT/SBT Holdings" desc="Titan, Genesis, and other NFT collections" /><ListItem label="Managed Nodes" desc="List of all nodes under the manager" /><ListItem label="Fleet Stats" desc="Total storage, uptime, and credits across all nodes" /></ul></InfoCard>
+      <InfoCard title="Data Sources"><p className="text-white/60 text-sm">Manager data is aggregated from Helius API for onchain wallet data, and internal node tracking for fleet statistics.</p></InfoCard>
+    </div>
+  </div>
+);
+
+export const AIAssistantContent = () => (
+  <div className="space-y-6">
+    <SectionHeader icon={CpuIcon} label="AI ASSISTANT" title="XanDash AI" />
+    <p className="text-white/70 leading-relaxed mb-4">Interact with the AI-powered assistant for network insights and node analysis:</p>
+    <div className="space-y-4">
+      <InfoCard title="Features"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem desc="Floating chat interface accessible from any page" /><ListItem desc="Streaming responses for real-time text display" /><ListItem desc="Context-aware answers based on your queries" /></ul></InfoCard>
+      <InfoCard title="Supported Queries"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem label="Node Analysis" desc="'Analyze node 173.249.54.191'" /><ListItem label="Country Stats" desc="'Show nodes in Germany'" /><ListItem label="Network Overview" desc="'Network health summary'" /><ListItem label="Token Info" desc="'Current XAND price'" /><ListItem label="Credits" desc="'Top earning nodes'" /></ul></InfoCard>
+      <InfoCard title="Auto Summaries"><p className="text-white/60 text-sm">AI automatically generates analysis summaries on Node Profile pages and after Node Comparison results, providing insights without manual prompts.</p></InfoCard>
     </div>
   </div>
 );
@@ -240,8 +272,37 @@ export const ContributingContent = () => (
     <SectionHeader icon={CodeIcon} label="CONTRIBUTING" title="Contributing" />
     <p className="text-white/70 leading-relaxed mb-6">XanDash is open source and welcomes contributions from the community.</p>
     <div className="space-y-4">
-      <InfoCard title="Getting Started"><CodeBlock language="bash" code={`# Clone the repository\ngit clone https://github.com/xandeum/xandash.git\n\n# Install dependencies\nnpm install\n\n# Start development server\nnpm run dev`} /></InfoCard>
+      <InfoCard title="Getting Started"><CodeBlock language="bash" code={`# Clone the repository\ngit clone https://github.com/ikarn-dev/Xandash.git\n\n# Install dependencies\nnpm install\n\n# Start development server\nnpm run dev`} /></InfoCard>
       <InfoCard title="Contribution Guidelines"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem desc="Fork the repository and create a feature branch" /><ListItem desc="Follow the existing code style and conventions" /><ListItem desc="Write meaningful commit messages" /><ListItem desc="Test your changes thoroughly" /><ListItem desc="Submit a pull request with a clear description" /></ul></InfoCard>
+    </div>
+  </div>
+);
+
+export const AlgorithmsContent = () => (
+  <div className="space-y-6">
+    <SectionHeader icon={CpuIcon} label="ALGORITHMS" title="Algorithms & Logic" />
+    <p className="text-white/70 leading-relaxed mb-4">Core algorithms and formulas used throughout XanDash:</p>
+    <div className="space-y-4">
+      <InfoCard title="Node Status Detection"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem label="Online" desc="Last seen < 60 minutes" /><ListItem label="Syncing" desc="Last seen 60-120 minutes" /><ListItem label="Offline" desc="Last seen > 120 minutes" /></ul></InfoCard>
+      <InfoCard title="Node Score (0-100)"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem label="Uptime (40 pts)" desc="Linear scale, 40 points for 30 days uptime" /><ListItem label="Storage (30 pts)" desc="Linear scale, 30 points for 100GB committed" /><ListItem label="Online (30 pts)" desc="Flat 30 points if seen within 60 minutes" /></ul><p className="text-white/50 text-xs mt-2 font-mono">Formula: Score = (Uptime ÷ 30d × 40) + (Storage ÷ 100GB × 30) + (Online ? 30 : 0)</p></InfoCard>
+      <InfoCard title="Leaderboard Tiers (Credits)"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem label="Diamond" desc="≥ 50,000 credits" /><ListItem label="Platinum" desc="≥ 25,000 credits" /><ListItem label="Gold" desc="≥ 10,000 credits" /><ListItem label="Silver" desc="≥ 5,000 credits" /><ListItem label="Bronze" desc="< 5,000 credits" /></ul></InfoCard>
+      <InfoCard title="High Watermark Logic"><p className="text-white/60 text-sm">If a network fetch returns incomplete data, XanDash retains the last known complete dataset to prevent empty/flashing states.</p></InfoCard>
+      <InfoCard title="Duplicate Handling"><p className="text-white/60 text-sm">Nodes are deduplicated by Public Key, prioritizing the most recently active instance when conflicts occur.</p></InfoCard>
+    </div>
+  </div>
+);
+
+export const FAQContent = () => (
+  <div className="space-y-6">
+    <SectionHeader icon={BookIcon} label="FAQ" title="Frequently Asked Questions" />
+    <div className="space-y-4">
+      <InfoCard title="How is Node Status determined?"><p className="text-white/60 text-sm">Nodes are tracked via heartbeat mechanism. Online = seen within 1 hour, Syncing = 1-2 hours inactive, Offline = inactive for 2+ hours.</p></InfoCard>
+      <InfoCard title="How is the Node Score calculated?"><p className="text-white/60 text-sm">Score (0-100) combines Uptime (40 pts for 30 days), Storage (30 pts for 100GB), and Online status (30 pts if active). Same formula on both Mainnet and Devnet.</p></InfoCard>
+      <InfoCard title="What is STOINC?"><p className="text-white/60 text-sm">STOINC (Storage Income) estimates earnings by combining Base Storage Credits with NFT Boost Factors (Titan, Genesis) and Era multipliers.</p></InfoCard>
+      <InfoCard title="How does Data Reliability work?"><p className="text-white/60 text-sm">XanDash uses a Multi-Layer Failover System. If primary API hits rate limits, requests automatically route to backup keys ensuring continuous availability.</p></InfoCard>
+      <InfoCard title="How are Leaderboards ranked?"><p className="text-white/60 text-sm">Three separate leaderboards rank nodes by Credits (with tier badges), Uptime duration, and Storage committed. Each updates in real-time.</p></InfoCard>
+      <InfoCard title="How is Geolocation determined?"><p className="text-white/60 text-sm">IP-based geolocation maps nodes to physical locations using ip-api.com batch lookups, cached for 24 hours.</p></InfoCard>
+      <InfoCard title="How are Manager Stats aggregated?"><p className="text-white/60 text-sm">Manager profiles consolidate metrics from all nodes registered to their Public Key, including total storage, credits, and fleet status.</p></InfoCard>
     </div>
   </div>
 );
@@ -249,8 +310,10 @@ export const ContributingContent = () => (
 export const contentMap: Record<string, React.FC> = {
   'introduction': IntroductionContent, 'overview': OverviewContent, 'quick-start': QuickStartContent,
   'analytics': AnalyticsContent, 'pnodes': PNodesContent, 'leaderboard': LeaderboardContent,
-  'node-compare': NodeCompareContent, 'governance': GovernanceContent,
-  'network': NetworkContent, 'xand-token': XandTokenContent, 'endpoints': EndpointsContent,
+  'node-compare': NodeCompareContent, 'managers': ManagersContent, 'governance': GovernanceContent,
+  'network': NetworkContent, 'xand-token': XandTokenContent, 'ai-assistant': AIAssistantContent, 'endpoints': EndpointsContent,
   'architecture': ArchitectureContent, 'tech-stack': TechStackContent, 'api-reference': ApiReferenceContent,
-  'data-flow': DataFlowContent, 'security': SecurityContent, 'performance': PerformanceContent, 'contributing': ContributingContent,
+  'data-flow': DataFlowContent, 'algorithms': AlgorithmsContent, 'faq': FAQContent,
+  'security': SecurityContent, 'performance': PerformanceContent, 'contributing': ContributingContent,
 };
+

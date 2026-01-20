@@ -4,6 +4,13 @@
  * Handles fetching and caching of manager NFT/SBT data for nodes
  */
 
+import {
+  getActiveApiKey,
+  reportRateLimitHit,
+  reportSuccess,
+  isRateLimitError
+} from '@/libs/utils/api-key-manager';
+
 export interface NFTPreview {
   name: string;
   image: string | null;
@@ -49,8 +56,6 @@ const XENO_TOKEN_MINTS = [
 // Keywords to identify Xandeum-related NFTs/SBTs
 const XANDEUM_KEYWORDS = ['xandeum', 'xand', 'pnode', 'manager', 'xandash', 'sbt', 'deepsouth', 'dragon', 'rabbit', 'deep south', 'g2btxn'];
 
-const HELIUS_API_KEY = process.env.HELIUS_API_KEY_2 || process.env.HELIUS_API_KEY || '';
-
 /**
  * Check if an NFT is Xandeum-related
  */
@@ -85,138 +90,172 @@ function isSBT(nft: NFTAsset): boolean {
  * Fetch manager assets from Helius API
  */
 async function fetchManagerAssets(managerAddress: string): Promise<ManagerAssetData | null> {
-  if (!HELIUS_API_KEY) {
+  let currentApiKey = getActiveApiKey('helius');
+  if (!currentApiKey) {
     console.warn('Helius API key not configured for manager assets');
     return null;
   }
 
-  try {
-    // Fetch tokens and NFTs in parallel
-    const [tokensResponse, nftsResponse] = await Promise.all([
-      // Fetch fungible tokens
-      fetch(`https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 'manager-tokens',
-          method: 'getAssetsByOwner',
-          params: {
-            ownerAddress: managerAddress,
-            page: 1,
-            limit: 100,
-            displayOptions: {
-              showFungible: true,
-              showNativeBalance: false,
+  const maxRetries = 3;
+  let retryCount = 0;
+
+  while (retryCount < maxRetries) {
+    try {
+      // Fetch tokens and NFTs in parallel
+      const [tokensResponse, nftsResponse] = await Promise.all([
+        // Fetch fungible tokens
+        fetch(`https://mainnet.helius-rpc.com/?api-key=${currentApiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 'manager-tokens',
+            method: 'getAssetsByOwner',
+            params: {
+              ownerAddress: managerAddress,
+              page: 1,
+              limit: 100,
+              displayOptions: {
+                showFungible: true,
+                showNativeBalance: false,
+              }
+            }
+          }),
+          signal: AbortSignal.timeout(10000),
+        }),
+        // Fetch NFTs
+        fetch(`https://mainnet.helius-rpc.com/?api-key=${currentApiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 'manager-nfts',
+            method: 'getAssetsByOwner',
+            params: {
+              ownerAddress: managerAddress,
+              page: 1,
+              limit: 100,
+              displayOptions: {
+                showFungible: false,
+                showNativeBalance: false,
+              }
+            }
+          }),
+          signal: AbortSignal.timeout(10000),
+        })
+      ]);
+
+      // Check for rate limit errors
+      if (isRateLimitError(tokensResponse) || isRateLimitError(nftsResponse)) {
+        console.log(`[Manager Assets] Rate limit hit on Helius, attempting failover...`);
+        const switched = reportRateLimitHit('helius');
+        if (switched) {
+          currentApiKey = getActiveApiKey('helius');
+          retryCount++;
+          continue;
+        }
+        return null; // No more backup keys
+      }
+
+      // Report success
+      reportSuccess('helius');
+
+      let xandBalance = 0;
+      let xenoBalance = 0;
+      let nftCount = 0;
+      let sbtCount = 0;
+      const nftPreviews: NFTPreview[] = [];
+      const sbtPreviews: NFTPreview[] = [];
+
+      // Process tokens
+      if (tokensResponse.ok) {
+        const tokensData = await tokensResponse.json();
+        const tokens = tokensData.result?.items || [];
+
+        tokens.forEach((token: any) => {
+          const tokenInfo = token.token_info || {};
+          const metadata = token.content?.metadata || {};
+
+          // Check if it's a Xandeum token (Strict match only)
+          const isXandeumToken = XANDEUM_TOKEN_MINTS.includes(token.id);
+
+          if (isXandeumToken) {
+            const decimals = tokenInfo.decimals || 0;
+            const balance = tokenInfo.balance || 0;
+            xandBalance += balance / Math.pow(10, decimals);
+          }
+
+          // Check for XENO token
+          const isXenoToken = XENO_TOKEN_MINTS.includes(token.id) ||
+            (tokenInfo.symbol?.toLowerCase() === 'xeno') ||
+            (metadata.name?.toLowerCase().includes('xeno'));
+
+          if (isXenoToken) {
+            const decimals = tokenInfo.decimals || 0;
+            const balance = tokenInfo.balance || 0;
+            xenoBalance += balance / Math.pow(10, decimals);
+          }
+        });
+      }
+
+      // Process NFTs
+      if (nftsResponse.ok) {
+        const nftsData = await nftsResponse.json();
+        const nfts = nftsData.result?.items || [];
+
+        nfts.forEach((nft: any) => {
+          if (isXandeumRelatedNFT(nft)) {
+            const nftName = nft.content?.metadata?.name || `NFT ${nft.id.slice(0, 8)}...`;
+
+            // Helper to extract image
+            const imageUrl = nft.content?.links?.image ||
+              nft.content?.files?.[0]?.uri ||
+              null;
+
+            const preview: NFTPreview = { name: nftName, image: imageUrl };
+
+            if (isSBT(nft)) {
+              sbtCount++;
+              sbtPreviews.push(preview);
+            } else {
+              nftCount++;
+              nftPreviews.push(preview);
             }
           }
-        }),
-        signal: AbortSignal.timeout(10000),
-      }),
-      // Fetch NFTs
-      fetch(`https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 'manager-nfts',
-          method: 'getAssetsByOwner',
-          params: {
-            ownerAddress: managerAddress,
-            page: 1,
-            limit: 100,
-            displayOptions: {
-              showFungible: false,
-              showNativeBalance: false,
-            }
-          }
-        }),
-        signal: AbortSignal.timeout(10000),
-      })
-    ]);
+        });
+      }
 
-    let xandBalance = 0;
-    let xenoBalance = 0;
-    let nftCount = 0;
-    let sbtCount = 0;
-    const nftPreviews: NFTPreview[] = [];
-    const sbtPreviews: NFTPreview[] = [];
+      return {
+        manager_pubkey: managerAddress,
+        nft_count: nftCount,
+        sbt_count: sbtCount,
+        xand_balance: xandBalance,
+        xeno_balance: xenoBalance,
+        last_updated: Date.now(),
+        nft_names: nftPreviews.map(n => n.name),
+        sbt_names: sbtPreviews.map(s => s.name),
+        nft_previews: nftPreviews.slice(0, 10),
+        sbt_previews: sbtPreviews.slice(0, 10),
+      };
 
-    // Process tokens
-    if (tokensResponse.ok) {
-      const tokensData = await tokensResponse.json();
-      const tokens = tokensData.result?.items || [];
-
-      tokens.forEach((token: any) => {
-        const tokenInfo = token.token_info || {};
-        const metadata = token.content?.metadata || {};
-
-        // Check if it's a Xandeum token (Strict match only)
-        const isXandeumToken = XANDEUM_TOKEN_MINTS.includes(token.id);
-
-        if (isXandeumToken) {
-          const decimals = tokenInfo.decimals || 0;
-          const balance = tokenInfo.balance || 0;
-          xandBalance += balance / Math.pow(10, decimals);
+    } catch (error) {
+      // Check if error indicates rate limit
+      if (isRateLimitError(null, error)) {
+        console.log(`[Manager Assets] Rate limit error on Helius, attempting failover...`);
+        const switched = reportRateLimitHit('helius');
+        if (switched) {
+          currentApiKey = getActiveApiKey('helius');
+          retryCount++;
+          continue;
         }
-
-        // Check for XENO token
-        const isXenoToken = XENO_TOKEN_MINTS.includes(token.id) ||
-          (tokenInfo.symbol?.toLowerCase() === 'xeno') ||
-          (metadata.name?.toLowerCase().includes('xeno'));
-
-        if (isXenoToken) {
-          const decimals = tokenInfo.decimals || 0;
-          const balance = tokenInfo.balance || 0;
-          xenoBalance += balance / Math.pow(10, decimals);
-        }
-      });
+      }
+      console.error(`Error fetching manager assets for ${managerAddress}:`, error);
+      return null;
     }
-
-    // Process NFTs
-    if (nftsResponse.ok) {
-      const nftsData = await nftsResponse.json();
-      const nfts = nftsData.result?.items || [];
-
-      nfts.forEach((nft: any) => {
-        if (isXandeumRelatedNFT(nft)) {
-          const nftName = nft.content?.metadata?.name || `NFT ${nft.id.slice(0, 8)}...`;
-
-          // Helper to extract image
-          const imageUrl = nft.content?.links?.image ||
-            nft.content?.files?.[0]?.uri ||
-            null;
-
-          const preview: NFTPreview = { name: nftName, image: imageUrl };
-
-          if (isSBT(nft)) {
-            sbtCount++;
-            sbtPreviews.push(preview);
-          } else {
-            nftCount++;
-            nftPreviews.push(preview);
-          }
-        }
-      });
-    }
-
-    return {
-      manager_pubkey: managerAddress,
-      nft_count: nftCount,
-      sbt_count: sbtCount,
-      xand_balance: xandBalance,
-      xeno_balance: xenoBalance,
-      last_updated: Date.now(),
-      nft_names: nftPreviews.map(n => n.name),
-      sbt_names: sbtPreviews.map(s => s.name),
-      nft_previews: nftPreviews.slice(0, 10),
-      sbt_previews: sbtPreviews.slice(0, 10),
-    };
-
-  } catch (error) {
-    console.error(`Error fetching manager assets for ${managerAddress}:`, error);
-    return null;
   }
+
+  // Exhausted all retries
+  return null;
 }
 
 /**

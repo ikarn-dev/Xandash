@@ -68,13 +68,13 @@ export async function getValidatorsData(): Promise<{
       const timeDiff = now - (validator.last_seen_timestamp || now);
 
       // Simplified status logic similar to endpoint tester
-      // Online: last seen < 30 minutes
-      // Syncing: last seen 30-60 minutes
-      // Offline: last seen > 60 minutes
+      // Online: last seen <= 60 minutes
+      // Syncing: last seen 60-120 minutes
+      // Offline: last seen > 120 minutes
       let status: 'online' | 'syncing' | 'offline' = 'offline';
-      if (timeDiff < 1800) status = 'online';        // Less than 30 minutes = online
-      else if (timeDiff < 3600) status = 'syncing';  // 30-60 minutes = syncing
-      else status = 'offline';                       // More than 60 minutes = offline
+      if (timeDiff <= 3600) status = 'online';       // Less than or equal to 60 minutes = online
+      else if (timeDiff < 7200) status = 'syncing';  // 60-120 minutes = syncing
+      else status = 'offline';                       // More than 120 minutes = offline
 
       const isOnline = status === 'online'; // For score calculation
 
@@ -283,7 +283,7 @@ export function filterAndSortValidators(
     filtered = filtered.filter(v => {
       const now = Math.floor(Date.now() / 1000);
       const timeDiff = now - v.last_seen_timestamp;
-      return timeDiff < 1800; // Less than 30 minutes = online
+      return timeDiff <= 3600; // Less than or equal to 60 minutes = online
     });
   }
 
@@ -292,7 +292,7 @@ export function filterAndSortValidators(
     filtered = filtered.filter(v => {
       const now = Math.floor(Date.now() / 1000);
       const timeDiff = now - v.last_seen_timestamp;
-      return timeDiff >= 1800 && timeDiff < 3600; // 30-60 minutes = syncing
+      return timeDiff > 3600 && timeDiff < 7200; // 60-120 minutes = syncing
     });
   }
 
@@ -301,7 +301,7 @@ export function filterAndSortValidators(
     filtered = filtered.filter(v => {
       const now = Math.floor(Date.now() / 1000);
       const timeDiff = now - v.last_seen_timestamp;
-      return timeDiff >= 3600; // More than 60 minutes = offline
+      return timeDiff >= 7200; // More than 120 minutes = offline
     });
   }
 

@@ -203,7 +203,7 @@ export const DashboardNodesCard: React.FC = () => {
   const handleSeeMore = () => router.push('/nodes');
 
   const exportToCSV = () => {
-    const headers = ['Location', 'IP', 'Pubkey', 'Public', 'Storage (GB)', 'Version', 'Uptime', 'Last Seen', 'Credits', 'Status'];
+    const headers = ['Location', 'IP', 'Pubkey', 'Public', 'Storage (GB)', 'Version', 'Uptime', 'Last Seen', 'Credits', 'Status', 'Score'];
     const rows = nodes.map(node => {
       const ip = extractIPFromAddress(node.address || '');
       const location = locations[ip];
@@ -218,12 +218,13 @@ export const DashboardNodesCard: React.FC = () => {
       else if (timeDiff < 3600) lastSeenDisplay = `${Math.floor(timeDiff / 60)}m`;
       else if (timeDiff < 86400) lastSeenDisplay = `${Math.floor(timeDiff / 3600)}h`;
       else lastSeenDisplay = `${Math.floor(timeDiff / 86400)}d`;
-      const status = timeDiff < 1800 ? 'ACTIVE' : timeDiff < 3600 ? 'SYNCING' : 'OFFLINE';
+      const status = timeDiff <= 3600 ? 'ACTIVE' : timeDiff < 7200 ? 'SYNCING' : 'OFFLINE';
       return [
         location ? `${location.city}, ${location.country}` : 'Unknown',
         ip || 'Unknown', node.pubkey || 'Unknown', node.is_public ? 'YES' : 'NO',
         storageDisplay, node.version || 'Unknown', uptimeDisplay, lastSeenDisplay,
-        nodeCredits !== null && nodeCredits !== undefined ? nodeCredits.toString() : '0', status
+        nodeCredits !== null && nodeCredits !== undefined ? nodeCredits.toString() : '0', status,
+        node.score ? node.score.toFixed(1) : '0.0'
       ];
     });
     const csvContent = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
@@ -336,11 +337,12 @@ export const DashboardNodesCard: React.FC = () => {
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Last Seen</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Credits</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Score</th>
               </tr>
             </thead>
             <tbody>
               {nodes.length === 0 ? (
-                <tr><td colSpan={isMainnet ? 13 : 12} className="px-6 py-12 text-center text-white/60 text-sm">No nodes found for {isMainnet ? 'mainnet' : 'devnet'}</td></tr>
+                <tr><td colSpan={isMainnet ? 14 : 13} className="px-6 py-12 text-center text-white/60 text-sm">No nodes found for {isMainnet ? 'mainnet' : 'devnet'}</td></tr>
               ) : nodes.map((node, index) => {
                 const ip = extractIPFromAddress(node.address || '');
                 const location = locations[ip];
@@ -363,8 +365,8 @@ export const DashboardNodesCard: React.FC = () => {
                 const isSelected = selectedForCompare.includes(node.pubkey);
                 const canSelect = selectedForCompare.length < 4 || isSelected;
                 const timeDiff = dataFetchTime - node.last_seen_timestamp;
-                const isOnline = timeDiff < 1800;
-                const isSyncing = timeDiff >= 1800 && timeDiff < 3600;
+                const isOnline = timeDiff <= 3600;
+                const isSyncing = timeDiff > 3600 && timeDiff < 7200;
 
                 let lastSeenDisplay = '';
                 if (timeDiff < 60) lastSeenDisplay = `${timeDiff}s`;
@@ -422,6 +424,7 @@ export const DashboardNodesCard: React.FC = () => {
                         <span className={`text-xs whitespace-nowrap ${isOnline ? 'text-green-400' : isSyncing ? 'text-amber-400' : 'text-red-400'}`}>{isOnline ? 'Active' : isSyncing ? 'Syncing' : 'Offline'}</span>
                       </div>
                     </td>
+                    <td className="px-3 py-3 text-xs"><span className="text-purple-400 font-mono font-semibold">{node.score ? node.score.toFixed(1) : '0.0'}</span></td>
                   </tr>
                 );
               })}

@@ -41,4 +41,5 @@ export interface ManagerStats {
     usedStorage: number;
     totalCredits: number;
     avgUptime: number;
+    avgScore: number;
 }

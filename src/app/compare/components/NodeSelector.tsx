@@ -2,11 +2,14 @@
 
 import { useState, useMemo } from 'react';
 import { getNodeName } from '@/libs/utils/node-names';
+import { getNodeStatus, getStatusColorClasses } from '@/libs/utils/node-status';
 
 interface Node {
   pubkey: string;
   address: string;
   credits?: number;
+  last_seen_timestamp?: number;
+  score?: number;
 }
 
 interface NodeSelectorProps {
@@ -15,14 +18,16 @@ interface NodeSelectorProps {
   onToggle: (pubkey: string) => void;
   maxNodes?: number;
   isLoading?: boolean;
+  serverTimestamp?: number;
 }
 
-export function NodeSelector({ 
-  nodes, 
-  selectedNodes, 
-  onToggle, 
+export function NodeSelector({
+  nodes,
+  selectedNodes,
+  onToggle,
   maxNodes = 4,
-  isLoading = false 
+  isLoading = false,
+  serverTimestamp = 0
 }: NodeSelectorProps) {
   const [search, setSearch] = useState('');
 
@@ -34,12 +39,12 @@ export function NodeSelector({
       seen.add(n.pubkey);
       return true;
     });
-    
+
     if (!search.trim()) return unique.slice(0, 100);
     const query = search.toLowerCase();
     return unique
-      .filter(n => 
-        n.pubkey.toLowerCase().includes(query) || 
+      .filter(n =>
+        n.pubkey.toLowerCase().includes(query) ||
         n.address?.toLowerCase().includes(query)
       )
       .slice(0, 100);
@@ -79,10 +84,10 @@ export function NodeSelector({
             const node = nodes.find(n => n.pubkey === pubkey);
             const nodeName = getNodeName(pubkey);
             return (
-              <div 
+              <div
                 key={pubkey}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-                style={{ 
+                style={{
                   backgroundColor: `${colors[index % colors.length]}20`,
                   borderColor: `${colors[index % colors.length]}50`,
                   color: colors[index % colors.length],
@@ -91,7 +96,7 @@ export function NodeSelector({
               >
                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colors[index % colors.length] }} />
                 <span className="font-mono">{nodeName !== 'N/A' ? nodeName : (node ? extractIP(node.address) : pubkey.slice(0, 8))}</span>
-                <button 
+                <button
                   onClick={() => onToggle(pubkey)}
                   className="ml-1 hover:opacity-70 transition-opacity"
                 >
@@ -119,29 +124,29 @@ export function NodeSelector({
               const selectedIndex = selectedNodes.indexOf(node.pubkey);
               const canSelect = selectedNodes.length < maxNodes || isSelected;
               const ip = extractIP(node.address);
-              
+              const status = getNodeStatus(node.last_seen_timestamp || 0, serverTimestamp);
+              const statusColors = getStatusColorClasses(status);
+
               return (
                 <button
                   key={node.pubkey}
                   onClick={() => canSelect && onToggle(node.pubkey)}
                   disabled={!canSelect}
-                  className={`w-full flex items-center justify-between p-3 transition-all ${
-                    isSelected 
-                      ? 'bg-white/5' 
-                      : canSelect 
-                        ? 'hover:bg-white/5' 
-                        : 'opacity-40 cursor-not-allowed'
-                  }`}
+                  className={`w-full flex items-center justify-between p-3 transition-all ${isSelected
+                    ? 'bg-white/5'
+                    : canSelect
+                      ? 'hover:bg-white/5'
+                      : 'opacity-40 cursor-not-allowed'
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     {/* Checkbox */}
-                    <div 
-                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                        isSelected 
-                          ? 'border-emerald-500 bg-emerald-500' 
-                          : 'border-white/20'
-                      }`}
-                      style={isSelected ? { 
+                    <div
+                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${isSelected
+                        ? 'border-emerald-500 bg-emerald-500'
+                        : 'border-white/20'
+                        }`}
+                      style={isSelected ? {
                         backgroundColor: colors[selectedIndex % colors.length],
                         borderColor: colors[selectedIndex % colors.length]
                       } : {}}
@@ -152,9 +157,11 @@ export function NodeSelector({
                         </svg>
                       )}
                     </div>
-                    
+
                     <div className="text-left">
                       <div className="flex items-center gap-2">
+                        {/* Status indicator dot */}
+                        <div className={`w-2 h-2 rounded-full ${statusColors.dot}`} title={status.charAt(0).toUpperCase() + status.slice(1)} />
                         <span className="font-mono text-sm text-white">{ip}</span>
                         {getNodeName(node.pubkey) !== 'N/A' && (
                           <span className="text-[10px] text-cyan-400 font-medium">{getNodeName(node.pubkey)}</span>
@@ -165,19 +172,26 @@ export function NodeSelector({
                       </div>
                     </div>
                   </div>
-                  
-                  {node.credits !== undefined && node.credits > 0 && (
-                    <span className="text-xs text-emerald-400 font-mono font-medium">
-                      +{node.credits.toLocaleString()}
-                    </span>
-                  )}
+
+                  <div className="flex flex-col items-end gap-0.5">
+                    {node.credits !== undefined && node.credits > 0 && (
+                      <span className="text-xs text-emerald-400 font-mono font-medium">
+                        +{node.credits.toLocaleString()}
+                      </span>
+                    )}
+                    {(node.score !== undefined) && (
+                      <span className="text-[10px] text-purple-400 font-mono font-medium">
+                        {node.score.toFixed(1)}
+                      </span>
+                    )}
+                  </div>
                 </button>
               );
             })}
           </div>
         )}
       </div>
-      
+
       <div className="text-[10px] text-white/30 text-center">
         {filteredNodes.length} nodes available • Select up to {maxNodes} to compare
       </div>
