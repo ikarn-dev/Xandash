@@ -8,17 +8,11 @@
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-xandash.online-8A2BE2?style=for-the-badge&logo=vercel)](https://www.xandash.online)
 [![GitHub Stars](https://img.shields.io/github/stars/ikarn-dev/Xandash?style=for-the-badge&logo=github&label=Stars)](https://github.com/ikarn-dev/Xandash)
-
 [![Next.js](https://img.shields.io/badge/Next.js-16.0-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![React](https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-
-[![Twitter](https://img.shields.io/badge/@Xandeum-black?style=for-the-badge&logo=x)](https://x.com/Xandeum)
-[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/xandeum)
-[![Documentation](https://img.shields.io/badge/Docs-Read-blue?style=for-the-badge&logo=gitbook&logoColor=white)](https://www.xandash.online/docs)
-
 </div>
 
 
