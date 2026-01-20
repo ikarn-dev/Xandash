@@ -85,19 +85,16 @@ XanDash is a real-time monitoring dashboard built with Next.js 16, following a m
 
 ## Leaderboard Architecture
 
-```
+
 <img width="2816" height="1536" alt="leaderboard-system" src="https://github.com/user-attachments/assets/f16edd4b-3744-4a0b-ab61-472b70b1b865" />
 <img width="2816" height="1536" alt="leaderboard-uml" src="https://github.com/user-attachments/assets/ab4a3e43-309c-4e89-9a8f-d4e10dba5356" />
 
-```
 
 ## Governance Data Flow
 
-```
 <img width="2816" height="1536" alt="governance-flow" src="https://github.com/user-attachments/assets/a50a74c5-d518-4714-9ae4-3f159453ddc1" />
 <img width="2816" height="1536" alt="governnance-uml" src="https://github.com/user-attachments/assets/ccd9171b-a242-4bd8-9774-32612803e7d8" />
 
-```
 
 ## Component Architecture
 
@@ -227,7 +224,7 @@ RootLayout
 
 ## AI Integration
 
-```
+
 <img width="2816" height="1536" alt="ai-flow" src="https://github.com/user-attachments/assets/c41b11d8-ac96-46c4-92d9-a35afd3b47c0" />
 <img width="2816" height="1536" alt="ai-uml" src="https://github.com/user-attachments/assets/42b24e90-2100-4bf8-aaa3-39af4b56f122" />
 
@@ -235,4 +232,4 @@ AI Summary Components:
 • Node Profile Page - Auto-generates analysis on page load
 • Compare Results - Auto-generates comparison summary after results
 • AI Assistant - Floating chat for interactive queries
-```
+
