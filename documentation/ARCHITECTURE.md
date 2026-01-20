@@ -78,137 +78,21 @@ XanDash is a real-time monitoring dashboard built with Next.js 16, following a m
 
 ## Node Compare Data Flow
 
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                           NODE COMPARE FLOW                                   │
-└──────────────────────────────────────────────────────────────────────────────┘
+<img width="2816" height="1536" alt="compare-flow" src="https://github.com/user-attachments/assets/04f9e03b-fe6c-4845-93dc-9a647b0d3449" />
 
-1. Page Load - Pre-fetch all node data
-         │
-         ▼
-┌─────────────────┐     ┌─────────────────┐
-│  /api/nodes     │────▶│  Store in       │
-│  (all nodes)    │     │  React State    │
-└─────────────────┘     └─────────────────┘
-         │
-         ▼
-┌─────────────────┐     ┌─────────────────┐
-│  /api/pod-      │────▶│  Merge credits  │
-│  credits        │     │  with nodes     │
-└─────────────────┘     └─────────────────┘
-
-2. User selects nodes (up to 4)
-         │
-         ▼
-3. Click "Compare" button
-         │
-         ▼
-┌─────────────────┐
-│  Build profiles │ ◀── INSTANT (uses pre-fetched data)
-│  from state     │     • IP, pubkey, status
-└─────────────────┘     • uptime, credits, storage, version
-         │
-         ▼
-┌─────────────────┐
-│  Show Results   │ ◀── Immediate display
-│  View           │
-└─────────────────┘
-         │
-         ▼ (background)
-┌─────────────────┐     ┌─────────────────┐
-│  /api/node-     │────▶│  Update charts  │
-│  history        │     │  with history   │
-└─────────────────┘     └─────────────────┘
-         │
-         ▼
-┌─────────────────┐     ┌─────────────────┐
-│  /api/geo-      │────▶│  Update         │
-│  location       │     │  locations      │
-│  (batch POST)   │     │                 │
-└─────────────────┘     └─────────────────┘
-```
 
 ## Leaderboard Architecture
 
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                           LEADERBOARD SYSTEM                                  │
-└──────────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Data Sources                                                                │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  /api/nodes ──────────────────┐                                             │
-│  • uptime                     │                                             │
-│  • storage_committed          ├──▶ Merged Data ──▶ Sorted by criteria       │
-│  • storage_used               │                                             │
-│  • address (IP:PORT)          │                                             │
-│                               │                                             │
-│  /api/pod-credits ────────────┘                                             │
-│  • credits per pod_id                                                        │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+<img width="2816" height="1536" alt="leaderboard-system" src="https://github.com/user-attachments/assets/f16edd4b-3744-4a0b-ab61-472b70b1b865" />
+<img width="2816" height="1536" alt="leaderboard-uml" src="https://github.com/user-attachments/assets/ab4a3e43-309c-4e89-9a8f-d4e10dba5356" />
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Leaderboard Tabs                                                            │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                          │
-│  │  CREDITS    │  │   UPTIME    │  │   STORAGE   │                          │
-│  │  ─────────  │  │  ─────────  │  │  ─────────  │                          │
-│  │  Sorted by  │  │  Sorted by  │  │  Sorted by  │                          │
-│  │  credits    │  │  uptime     │  │  storage_   │                          │
-│  │             │  │  (seconds)  │  │  committed  │                          │
-│  │  + Tier     │  │             │  │             │                          │
-│  │  badges     │  │             │  │             │                          │
-│  └─────────────┘  └─────────────┘  └─────────────┘                          │
-│                                                                              │
-│  Tier System (Credits only):                                                 │
-│  • Diamond:  ≥50,000 credits                                                │
-│  • Platinum: ≥25,000 credits                                                │
-│  • Gold:     ≥10,000 credits                                                │
-│  • Silver:   ≥5,000 credits                                                 │
-│  • Bronze:   <5,000 credits                                                 │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
 
 ## Governance Data Flow
 
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                           GOVERNANCE FLOW                                     │
-└──────────────────────────────────────────────────────────────────────────────┘
+<img width="2816" height="1536" alt="governance-flow" src="https://github.com/user-attachments/assets/a50a74c5-d518-4714-9ae4-3f159453ddc1" />
+<img width="2816" height="1536" alt="governnance-uml" src="https://github.com/user-attachments/assets/ccd9171b-a242-4bd8-9774-32612803e7d8" />
 
-┌─────────────────┐
-│  /api/governance│
-└─────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Sequential RPC Batching (to avoid rate limits)                              │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  1. Fetch all proposal accounts                                              │
-│  2. Batch decode (5 at a time with delays)                                  │
-│  3. bs58 decode addresses for accurate comparison                           │
-│  4. Fetch treasury balance                                                   │
-│  5. Return combined data                                                     │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Treasury Tab                                                                │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  • Real-time SOL price from CoinGecko                                       │
-│  • Exact token amounts (no abbreviation)                                    │
-│  • formatExactNumber for thousand separators                                │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
 
 ## Component Architecture
 
@@ -338,50 +222,12 @@ RootLayout
 
 ## AI Integration
 
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                           AI ASSISTANT FLOW                                   │
-└──────────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────┐
-│  User Message   │
-└─────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Context Builder (buildContext function)                                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Detects query type and fetches relevant data:                              │
-│  • IP address → fetchNodeByIdentifier()                                     │
-│  • Pubkey → fetchNodeByIdentifier()                                         │
-│  • Country name/code → fetchCountryData()                                   │
-│  • Network keywords → fetchNetworkSummary()                                 │
-│  • Credits keywords → fetchCreditsSummary()                                 │
-│  • Token keywords → fetchTokenData()                                        │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  OpenRouter API (Streaming)                                                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Models (fallback chain):                                                    │
-│  1. google/gemini-2.0-flash-001                                             │
-│  2. meta-llama/llama-3.1-8b-instruct                                        │
-│  3. mistralai/mistral-7b-instruct                                           │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Streaming      │ ──▶ Real-time text display with typing animation
-│  Response       │
-└─────────────────┘
+<img width="2816" height="1536" alt="ai-flow" src="https://github.com/user-attachments/assets/c41b11d8-ac96-46c4-92d9-a35afd3b47c0" />
+<img width="2816" height="1536" alt="ai-uml" src="https://github.com/user-attachments/assets/42b24e90-2100-4bf8-aaa3-39af4b56f122" />
 
 AI Summary Components:
 • Node Profile Page - Auto-generates analysis on page load
 • Compare Results - Auto-generates comparison summary after results
 • AI Assistant - Floating chat for interactive queries
-```
+
