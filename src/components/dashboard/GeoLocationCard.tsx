@@ -93,10 +93,10 @@ export const GeoLocationCard: React.FC = () => {
   const { network, isMainnet } = useNetwork();
   // Use shared nodes data context - includes high watermark logic for mainnet
   const { nodes: sharedNodes, isLoading } = useNodesData();
-  
+
   const [locations, setLocations] = useState<{ [ip: string]: LocationData | null }>({});
   const [locationsLoading, setLocationsLoading] = useState(false);
-  
+
   // Track previous network for location cache clearing
   const prevNetworkRef = useRef(network);
 
@@ -107,10 +107,10 @@ export const GeoLocationCard: React.FC = () => {
       prevNetworkRef.current = network;
       setLocations({});
     }
-    
+
     // Skip geolocation fetch for mainnet (data comes from external source)
     if (isMainnet || sharedNodes.length === 0) return;
-    
+
     const fetchLocations = async () => {
       setLocationsLoading(true);
       try {
@@ -119,7 +119,7 @@ export const GeoLocationCard: React.FC = () => {
             .map((node) => extractIPFromAddress(node.address || ''))
             .filter((ip: string) => ip)
         ));
-        
+
         if (uniqueIPs.length > 0) {
           const locationData = await getLocationsForIPs(uniqueIPs);
           setLocations(locationData);
@@ -143,16 +143,16 @@ export const GeoLocationCard: React.FC = () => {
       country: string;
       count: number;
     }>();
-    
+
     const countryMap = new Map<string, { country: string; country_code: string; count: number }>();
 
     sharedNodes.forEach((node) => {
       const ip = extractIPFromAddress(node.address || '');
-      
+
       // For mainnet, use geo data from node itself (from external sources)
       // For devnet, use fetched location data
       let location: LocationData | null = null;
-      
+
       if (isMainnet && node.country && node.country_code) {
         const countryCode = node.country_code.toUpperCase();
         const coords = COUNTRY_COORDS[countryCode];
@@ -169,32 +169,32 @@ export const GeoLocationCard: React.FC = () => {
       } else {
         location = locations[ip];
       }
-      
+
       // Get coordinates - either from location data or from country lookup
       const countryCode = location?.country_code?.toUpperCase() || '';
       const lat = location?.lat || COUNTRY_COORDS[countryCode]?.lat || 0;
       const lon = location?.lon || COUNTRY_COORDS[countryCode]?.lon || 0;
-      
-      if (location && lat !== 0 && lon !== 0) {
+
+      if (location && location.country && lat !== 0 && lon !== 0) {
         // Group by city/country for map markers
-        const locationKey = isMainnet 
+        const locationKey = isMainnet
           ? `${location.country}-center`
-          : `${location.city}-${location.country}`;
+          : `${location.city || 'Unknown'}-${location.country}`;
         const existing = locationGroups.get(locationKey);
-        
+
         if (existing) {
           existing.count++;
         } else {
           locationGroups.set(locationKey, {
             lat,
             lng: lon,
-            city: location.city || location.country,
+            city: location.city || location.country || 'Unknown',
             country: location.country,
             count: 1
           });
         }
       }
-      
+
       // Count ALL nodes by country (including unknown locations)
       if (location && location.country) {
         const countryKey = location.country;
@@ -311,7 +311,7 @@ export const GeoLocationCard: React.FC = () => {
       {/* Country Stats - Bottom Left */}
       <div className="absolute bottom-3 left-3 sm:bottom-6 sm:left-6 z-50 bg-black/40 backdrop-blur-sm rounded-lg p-2 sm:p-3 max-h-32 sm:max-h-48">
         <div className="text-white/80 text-xs font-medium mb-1 sm:mb-2">pNodes by Country</div>
-        <div 
+        <div
           className="space-y-1 max-w-36 sm:max-w-48 max-h-24 sm:max-h-40 pr-2"
           style={{
             overflowY: 'auto',
@@ -328,7 +328,7 @@ export const GeoLocationCard: React.FC = () => {
             <div key={country.country} className="flex items-center justify-between text-xs">
               <div className="flex items-center space-x-1 sm:space-x-2 flex-1 min-w-0">
                 {country.country_code ? (
-                  <img 
+                  <img
                     src={`${process.env.NEXT_PUBLIC_FLAG_CDN_URL || 'https://flagcdn.com'}/16x12/${country.country_code.toLowerCase()}.png`}
                     alt={country.country}
                     className="w-3 h-2 sm:w-4 sm:h-3 object-cover rounded-sm flex-shrink-0"
@@ -353,7 +353,7 @@ export const GeoLocationCard: React.FC = () => {
 
       {/* Interactive Map - Full background */}
       <div className="absolute inset-0 z-0">
-        <InteractiveMap 
+        <InteractiveMap
           validators={mapValidators}
           className="w-full h-full"
         />

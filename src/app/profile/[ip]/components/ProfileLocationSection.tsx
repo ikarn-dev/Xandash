@@ -46,7 +46,7 @@ export const ProfileLocationSection = ({ location, node }: ProfileLocationSectio
               lat={location.lat}
               lon={location.lon}
               city={location.city}
-              country={location.country}
+              country={location?.country || ''}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-white/40 text-xs sm:text-sm">
@@ -66,8 +66,8 @@ export const ProfileLocationSection = ({ location, node }: ProfileLocationSectio
         <div className="space-y-2 text-xs sm:text-sm">
           {location?.country_code && (
             <img
-              src={getCountryFlagUrl(location.country_code)}
-              alt={location.country}
+              src={getCountryFlagUrl(location?.country_code || '')}
+              alt={location?.country || ''}
               className="w-5 h-3.5 sm:w-6 sm:h-4 object-cover mb-2"
             />
           )}

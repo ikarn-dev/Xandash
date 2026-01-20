@@ -236,7 +236,7 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                       {location?.country_code ? (
                         <img
                           src={getCountryFlagUrl(location.country_code)}
-                          alt={location.country}
+                          alt={location?.country || ''}
                           className="w-4 h-3 object-cover rounded-sm flex-shrink-0"
                           onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
