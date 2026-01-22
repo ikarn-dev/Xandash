@@ -1,6 +1,6 @@
 /**
  * Cloudflare Pages Worker for Next.js
- * This file handles routing and serves the Next.js application
+ * Routes requests to the appropriate Next.js assets and pages
  */
 
 export default {
@@ -13,10 +13,10 @@ export default {
       return env.ASSETS.fetch(request);
     }
 
-    // Handle public assets
+    // Handle public assets and common file types
     if (
       pathname.startsWith('/public/') ||
-      pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|json)$/)
+      pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|json|webp|avif)$/)
     ) {
       return env.ASSETS.fetch(request);
     }
@@ -25,9 +25,13 @@ export default {
     try {
       return await env.ASSETS.fetch(request);
     } catch (error) {
-      // Fallback to index for client-side routing
+      // Fallback to index for client-side routing on GET requests
       if (request.method === 'GET') {
-        return env.ASSETS.fetch(new Request(new URL('/index.html', url).toString(), request));
+        try {
+          return await env.ASSETS.fetch(new Request(new URL('/index.html', url).toString(), request));
+        } catch {
+          return new Response('Not Found', { status: 404 });
+        }
       }
       return new Response('Not Found', { status: 404 });
     }

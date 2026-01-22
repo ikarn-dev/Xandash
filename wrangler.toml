@@ -6,9 +6,12 @@ route = ""
 zone_id = ""
 compatibility_date = "2026-01-22"
 
+# Main worker script
+main = "public/_worker.js"
+
 # Assets directory for Cloudflare Pages
 [assets]
-directory = "./.next/static"
+directory = "./.next"
 binding = "ASSETS"
 
 [env.production]
