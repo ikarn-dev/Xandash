@@ -173,21 +173,21 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
 
   const segments = React.useMemo(() => {
     if (committed === 0) return [];
-    
+
     const radius = 42;
     const gapPercent = hoveredSegment !== null ? 4 : 1;
     const circumference = 2 * Math.PI * radius;
     const minVisiblePercent = 3; // Minimum 3% to ensure visibility even for small storage like 1GB
-    
+
     const segmentsList = [];
-    
+
     // Used segment - always show if there's any used storage, with minimum visibility
     if (used > 0) {
       const rawPercent = Math.max(usedPercentage, minVisiblePercent);
       const percent = Math.max(minVisiblePercent, rawPercent - gapPercent);
       const dashArray = (percent / 100) * circumference;
       const dashOffset = -(gapPercent / 2 / 100) * circumference;
-      
+
       segmentsList.push({
         type: 'used',
         color: usedColor,
@@ -197,7 +197,7 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
         circumference,
       });
     }
-    
+
     // Available segment - adjust to account for minimum used visibility
     if (availablePercentage > 0) {
       const usedDisplayPercent = used > 0 ? Math.max(usedPercentage, minVisiblePercent) : 0;
@@ -205,7 +205,7 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
       const percent = Math.max(0, availableDisplayPercent - gapPercent);
       const dashArray = (percent / 100) * circumference;
       const dashOffset = -((usedDisplayPercent + gapPercent / 2) / 100) * circumference;
-      
+
       segmentsList.push({
         type: 'available',
         color: availableColor,
@@ -215,7 +215,7 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
         circumference,
       });
     }
-    
+
     return segmentsList;
   }, [usedPercentage, availablePercentage, hoveredSegment, used]);
 
@@ -235,11 +235,11 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
             stroke="rgba(255,255,255,0.08)"
             strokeWidth={8}
           />
-          
+
           {/* Cylindrical shadow layer - rendered behind main segments */}
           {segments.map((segment) => {
             const isHovered = hoveredSegment === segment.type;
-            
+
             return (
               <circle
                 key={`shadow-${segment.type}`}
@@ -255,16 +255,17 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
                 style={{
                   opacity: animated ? 0.6 : 0,
                   transition: 'opacity 0.15s ease, stroke-width 0.2s ease, stroke-dasharray 0.4s ease-out',
+                  pointerEvents: 'none',
                 }}
               />
             );
           })}
-          
+
           {/* Glow layer - rendered behind main segments */}
           {segments.map((segment) => {
             const isHovered = hoveredSegment === segment.type;
             if (!isHovered || !animated) return null;
-            
+
             return (
               <circle
                 key={`glow-${segment.type}`}
@@ -280,16 +281,17 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
                 style={{
                   opacity: 0.3,
                   filter: 'blur(6px)',
+                  pointerEvents: 'none',
                 }}
               />
             );
           })}
-          
+
           {/* Main segments layer */}
           {segments.map((segment) => {
             const isHovered = hoveredSegment === segment.type;
             const isDimmed = hoveredSegment !== null && hoveredSegment !== segment.type;
-            
+
             return (
               <circle
                 key={segment.type}
@@ -313,12 +315,12 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
               />
             );
           })}
-          
+
           {/* Highlight layer - rendered on top for better visibility */}
           {segments.map((segment) => {
             const isHovered = hoveredSegment === segment.type;
             if (!isHovered || !animated) return null;
-            
+
             return (
               <circle
                 key={`highlight-${segment.type}`}
@@ -333,12 +335,13 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
                 strokeLinecap="round"
                 style={{
                   opacity: 0.8,
+                  pointerEvents: 'none',
                 }}
               />
             );
           })}
         </svg>
-        
+
         {/* Center content - always visible with hover overlay */}
         <div className="absolute inset-0 flex flex-col items-center justify-center px-2">
           {hoveredSegment ? (

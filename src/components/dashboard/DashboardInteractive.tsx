@@ -9,11 +9,24 @@ import { nodeSearchService, type SearchableNode } from '@/libs/search/NodeSearch
 import { getLocationsForIPs, extractIPFromAddress } from '@/libs/services/geolocation';
 import { toast } from 'sonner';
 import { useNetwork } from '@/libs/context/network-context';
+import { usePrefetchProfile } from '@/libs/hooks/usePrefetchProfile';
+import { ManagerSearchResultCard, type Manager } from './ManagerSearchResultCard';
+import managersDataRaw from '../../../managers_data/managers_node_data.json';
+import type { ValidatorData } from '@/libs/server';
+
+const managersData = managersDataRaw as { managers: Manager[] };
+
+type SearchResultItem = SearchableNode | Manager;
+
+function isManager(item: SearchResultItem): item is Manager {
+  return (item as Manager).manager_address !== undefined;
+}
 
 export const DashboardInteractive: React.FC = () => {
   const { network } = useNetwork();
+  const { navigateToProfile } = usePrefetchProfile();
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchableNode[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [nodesData, setNodesData] = useState<SearchableNode[]>([]);
   const [showResults, setShowResults] = useState(false);
@@ -30,13 +43,13 @@ export const DashboardInteractive: React.FC = () => {
     try {
       const response = await fetch(`/api/nodes?includeAll=true&network=${network}`);
       const data = await response.json();
-      
+
       if (data.nodes) {
         // Extract IPs for geolocation
         const ips: string[] = data.nodes
           .map((node: any) => extractIPFromAddress(node.address || ''))
           .filter((ip: string) => ip);
-        
+
         // Fetch location data
         let locationMap: Record<string, any> = {};
         if (ips.length > 0) {
@@ -50,7 +63,7 @@ export const DashboardInteractive: React.FC = () => {
         const nodes = data.nodes.map((node: any) => {
           const ip = extractIPFromAddress(node.address || '');
           const locationData = locationMap[ip];
-          
+
           // Pass through ALL fields from the API
           return {
             ...node, // Include all original fields first
@@ -83,7 +96,7 @@ export const DashboardInteractive: React.FC = () => {
             } : null,
           };
         });
-        
+
         setNodesData(nodes);
         nodeSearchService.updateIndex(nodes);
       }
@@ -96,6 +109,23 @@ export const DashboardInteractive: React.FC = () => {
   useEffect(() => {
     initializeSearchIndex();
   }, [initializeSearchIndex]);
+
+  // Create pubkey map for manager card lookups
+  const pubkeyToNode = React.useMemo(() => {
+    const map = new Map<string, ValidatorData>();
+    nodesData.forEach(node => {
+      if (node.pubkey) {
+        map.set(node.pubkey, node as unknown as ValidatorData);
+      }
+    });
+    return map;
+  }, [nodesData]);
+
+  // Navigate to profile with loading toast
+  const handleNavigateToProfile = useCallback((ip: string) => {
+    toast.loading('Loading node profile...', { id: 'node-profile-loading' });
+    navigateToProfile(ip);
+  }, [navigateToProfile]);
 
   // Handle animation states
   useEffect(() => {
@@ -112,7 +142,7 @@ export const DashboardInteractive: React.FC = () => {
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
-    
+
     if (!query.trim()) {
       setSearchResults([]);
       setShowResults(false);
@@ -125,13 +155,33 @@ export const DashboardInteractive: React.FC = () => {
     }
 
     setIsSearching(true);
-    
+
     try {
-      const results = nodeSearchService.search(query.trim(), {
+      // 1. Search Nodes
+      const nodeResults = nodeSearchService.search(query.trim(), {
         limit: 10
       });
-      
-      setSearchResults(results);
+
+      // 2. Search Managers
+      const queryLower = query.toLowerCase().trim();
+      const managerResults = managersData.managers.filter(manager => {
+        // Search by manager address
+        if (manager.manager_address.toLowerCase().includes(queryLower)) return true;
+        // Search by any node pubkey or IP associated with the manager
+        // Note: For checking IP, we ideally need to map manager pubkeys to IPs using nodesData.
+        // We can do a quick check against the pubkeyToNode map inside the loop if performance allows.
+
+        // Quick check on manager's node pubkeys
+        if (manager.nodes.some(n => n.pnode_pubkey.toLowerCase().includes(queryLower))) return true;
+
+        // Check IPs if possible (using nodesData find)
+        // This is O(M * N) potentially, but usually N per manager is small. 
+        // Optimization: Create a reverse map if needed, but for now simple filter.
+        return false;
+      }).slice(0, 5); // Limit managers found
+
+      // Combine results (Managers first, then Nodes)
+      setSearchResults([...managerResults, ...nodeResults]);
       setShowResults(true);
     } catch (error) {
       console.error('Search failed:', error);
@@ -180,17 +230,16 @@ export const DashboardInteractive: React.FC = () => {
     if (!showResults || !mounted) return null;
 
     return createPortal(
-      <div 
-        className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 transition-opacity duration-300 ${
-          isAnimating ? 'opacity-100' : 'opacity-0'
-        }`}
+      <div
+        className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'
+          }`}
       >
         {/* Backdrop */}
-        <div 
+        <div
           className="absolute inset-0 bg-black/80 backdrop-blur-sm"
           onClick={handleClose}
         />
-        
+
         {/* Close button */}
         <button
           onClick={handleClose}
@@ -201,12 +250,11 @@ export const DashboardInteractive: React.FC = () => {
         </button>
 
         {/* Content - Just the card(s), centered */}
-        <div 
-          className={`relative z-10 w-full max-w-md transition-all duration-300 ${
-            isAnimating 
-              ? 'opacity-100 scale-100 translate-y-0' 
-              : 'opacity-0 scale-95 translate-y-4'
-          }`}
+        <div
+          className={`relative z-10 w-full max-w-md transition-all duration-300 ${isAnimating
+            ? 'opacity-100 scale-100 translate-y-0'
+            : 'opacity-0 scale-95 translate-y-4'
+            }`}
         >
           {isSearching ? (
             <div className="flex items-center justify-center py-12">
@@ -223,16 +271,38 @@ export const DashboardInteractive: React.FC = () => {
                   {searchResults.length} results found
                 </div>
               )}
-              
+
               {/* Cards */}
               <div className={`space-y-4 ${searchResults.length > 1 ? 'max-h-[80vh] overflow-y-auto pr-2' : ''}`}>
-                {searchResults.map((node, index) => (
-                  <NodeProfileCard
-                    key={`${node.pod_id}-${index}`}
-                    node={node}
-                    onCopy={handleCopy}
-                  />
-                ))}
+                {searchResults.map((item, index) => {
+                  if (isManager(item)) {
+                    // Determine network status for the found manager based on current nodes data (which assumes filtered by current network in context)
+                    // Since DashboardInteractive uses `nodesData` which comes from `/api/nodes?includeAll=true&network=${network}`, 
+                    // `nodesData` contains ALL nodes for component, but `initializeSearchIndex` fetches specific network. 
+                    // Actually `nodesData` here seems to be set from `initializeSearchIndex` fetching from `/api/nodes...`.
+                    // So `pubkeyToNode` only contains nodes from current network.
+                    const activeCount = item.nodes.filter(n => pubkeyToNode.has(n.pnode_pubkey)).length;
+                    const status = activeCount > 0 ? (network === 'mainnet' ? 'mainnet' : 'devnet') : 'none';
+
+                    return (
+                      <ManagerSearchResultCard
+                        key={`manager-${item.manager_address}`}
+                        manager={item}
+                        pubkeyToNode={pubkeyToNode}
+                        onNavigateToProfile={handleNavigateToProfile}
+                        networkStatus={status}
+                      />
+                    );
+                  }
+
+                  return (
+                    <NodeProfileCard
+                      key={`${item.pod_id}-${index}`}
+                      node={item}
+                      onCopy={handleCopy}
+                    />
+                  );
+                })}
               </div>
             </div>
           ) : searchQuery ? (
@@ -253,9 +323,9 @@ export const DashboardInteractive: React.FC = () => {
 
   return (
     <div className="w-full space-y-4">
-      <SearchBox 
+      <SearchBox
         onSearch={handleSearch}
-        placeholder="Search by Pod ID, Address, or Public Key..."
+        placeholder="Search Nodes (Pod ID, IP, PubKey) or Managers (Manager Address, Node PubKey)..."
       />
 
       {/* Render overlay */}

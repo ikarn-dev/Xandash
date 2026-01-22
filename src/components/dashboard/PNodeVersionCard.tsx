@@ -87,6 +87,8 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
     setShowModal(true);
   };
 
+  const [hoveredVersionData, setHoveredVersionData] = useState<{ version: string; count: number; percentage: number } | null>(null);
+
   const getVersionColor = (index: number) => {
     const colors = [
       '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -105,13 +107,19 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
       const segmentsForVersion = Math.round((version.percentage / 100) * totalSegments);
 
       for (let j = 0; j < segmentsForVersion && segmentIndex < totalSegments; j++) {
-        segments.push({ index: segmentIndex, color: getVersionColor(i), version: version.version });
+        segments.push({
+          index: segmentIndex,
+          color: getVersionColor(i),
+          version: version.version,
+          count: version.count,
+          percentage: version.percentage
+        });
         segmentIndex++;
       }
     }
 
     while (segmentIndex < totalSegments) {
-      segments.push({ index: segmentIndex, color: '#1a1a1a', version: 'empty' });
+      segments.push({ index: segmentIndex, color: '#1a1a1a', version: 'empty', count: 0, percentage: 0 });
       segmentIndex++;
     }
 
@@ -135,21 +143,50 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
             const x4 = 50 + innerRadius * Math.cos(endAngle);
             const y4 = 50 + innerRadius * Math.sin(endAngle);
 
+            const isHovered = hoveredVersionData?.version === seg.version && seg.version !== 'empty';
+            const isDimmed = hoveredVersionData && hoveredVersionData.version !== seg.version;
+
             return (
               <path
                 key={i}
                 d={`M ${x1} ${y1} L ${x2} ${y2} A ${outerRadius} ${outerRadius} 0 0 1 ${x3} ${y3} L ${x4} ${y4} A ${innerRadius} ${innerRadius} 0 0 0 ${x1} ${y1}`}
                 fill={seg.color}
-                className="transition-all duration-300"
+                className="transition-all duration-300 cursor-pointer"
+                style={{
+                  opacity: isDimmed ? 0.3 : 1,
+                  filter: isHovered ? `drop-shadow(0 0 4px ${seg.color})` : 'none',
+                }}
+                onMouseEnter={() => {
+                  if (seg.version !== 'empty') {
+                    setHoveredVersionData({
+                      version: seg.version,
+                      count: seg.count,
+                      percentage: seg.percentage
+                    });
+                  }
+                }}
+                onMouseLeave={() => setHoveredVersionData(null)}
               />
             );
           })}
           <circle cx="50" cy="50" r="28" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
         </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center">
-            <div className="text-white text-xl font-bold font-mono">{versionStats.totalVersions}</div>
-            <div className="text-white/40 text-[9px]">versions</div>
+            {hoveredVersionData ? (
+              <>
+                <div className="text-white text-sm font-bold font-mono truncate max-w-[80px]" title={hoveredVersionData.version}>
+                  {hoveredVersionData.version.length > 8 ? hoveredVersionData.version.substring(0, 8) + '..' : hoveredVersionData.version}
+                </div>
+                <div className="text-white/60 text-[9px]">{hoveredVersionData.count} nodes</div>
+                <div className="text-green-400 text-[9px]">{hoveredVersionData.percentage.toFixed(0)}%</div>
+              </>
+            ) : (
+              <>
+                <div className="text-white text-xl font-bold font-mono">{versionStats.totalVersions}</div>
+                <div className="text-white/40 text-[9px]">versions</div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -161,7 +198,7 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
       <div className={`relative bg-black border border-white/10 p-6 h-full group hover:border-white/20 transition-all duration-300 overflow-hidden ${className}`}>
         <CornerAccents />
         <div className="flex flex-col h-full text-center relative z-10">
-          <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">Software Versions</div>
+          <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">pNode Versions</div>
           <div className="h-10 w-12 bg-white/10 rounded mb-2 mx-auto"></div>
           <div className="h-3 w-28 bg-white/10 rounded mx-auto"></div>
         </div>
@@ -177,7 +214,7 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
       >
         <CornerAccents />
         <div className="flex flex-col h-full text-center relative z-10">
-          <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">Software Versions</div>
+          <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">pNode Versions</div>
           <div className="text-white text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1 sm:mb-2">
             <AnimatedValue value={versionStats.totalVersions} />
           </div>

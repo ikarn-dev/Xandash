@@ -39,7 +39,7 @@ export const PNodeStorageCard: React.FC<PNodeStorageCardProps> = ({ className = 
     const totalStorage = nodes.reduce((sum, node) => sum + (node.storage_committed || 0), 0);
     const usedStorage = nodes.reduce((sum, node) => sum + (node.storage_used || 0), 0);
     const usagePercentage = totalStorage > 0 ? (usedStorage / totalStorage) * 100 : 0;
-    
+
     return { totalStorage, usedStorage, usagePercentage };
   }, [nodes]);
 
@@ -58,7 +58,7 @@ export const PNodeStorageCard: React.FC<PNodeStorageCardProps> = ({ className = 
       <div className={`relative bg-black border border-white/10 p-6 h-full group hover:border-white/20 transition-all duration-300 overflow-hidden ${className}`}>
         <CornerAccents />
         <div className="flex flex-col h-full text-center relative z-10">
-          <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">Total Storage</div>
+          <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">Storage Details</div>
           <div className="h-10 w-28 bg-white/10 rounded mb-2 mx-auto"></div>
           <div className="h-3 w-20 bg-white/10 rounded mb-3 sm:mb-4 mx-auto"></div>
           <div className="h-5 w-full bg-white/10 rounded mt-auto"></div>
@@ -73,9 +73,10 @@ export const PNodeStorageCard: React.FC<PNodeStorageCardProps> = ({ className = 
 
       {/* Content */}
       <div className="flex flex-col h-full text-center relative z-10">
-        <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">Total Storage</div>
-        <div className="text-orange-400 text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1 sm:mb-2">
+        <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">Storage Details</div>
+        <div className="text-orange-400 text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1 sm:mb-2 flex items-baseline justify-center gap-2">
           <AnimatedValue value={formatBytes(storageStats.usedStorage)} />
+          <span className="text-orange-400/60 text-sm font-normal">Used</span>
         </div>
         <div className="text-white/40 text-[10px] sm:text-xs mb-3 sm:mb-4">
           of <AnimatedValue value={formatBytes(storageStats.totalStorage)} />
@@ -111,9 +112,9 @@ export const PNodeStorageCard: React.FC<PNodeStorageCardProps> = ({ className = 
               {formatBytes(storageStats.totalStorage - storageStats.usedStorage)} free
             </span>
             <span className="text-orange-400 text-[8px] sm:text-[9px] font-medium">
-              {storageStats.usagePercentage < 0.01 
-                ? storageStats.usagePercentage.toFixed(6) 
-                : storageStats.usagePercentage < 0.1 
+              {storageStats.usagePercentage < 0.01
+                ? storageStats.usagePercentage.toFixed(6)
+                : storageStats.usagePercentage < 0.1
                   ? storageStats.usagePercentage.toFixed(4)
                   : storageStats.usagePercentage < 1
                     ? storageStats.usagePercentage.toFixed(3)
