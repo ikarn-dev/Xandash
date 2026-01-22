@@ -8,11 +8,15 @@ export default {
     const url = new URL(request.url);
     const pathname = url.pathname;
 
-    // Handle static assets
+    // Handle static assets from .next/static
+    if (pathname.startsWith('/_next/static/')) {
+      return env.ASSETS.fetch(request);
+    }
+
+    // Handle public assets
     if (
-      pathname.startsWith('/_next/') ||
       pathname.startsWith('/public/') ||
-      pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)
+      pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|json)$/)
     ) {
       return env.ASSETS.fetch(request);
     }

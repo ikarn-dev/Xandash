@@ -6,6 +6,11 @@ route = ""
 zone_id = ""
 compatibility_date = "2026-01-22"
 
+# Assets directory for Cloudflare Pages
+[assets]
+directory = "./.next/static"
+binding = "ASSETS"
+
 [env.production]
 name = "xandash-prod"
 route = "example.com/*"
