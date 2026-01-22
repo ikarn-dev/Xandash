@@ -100,19 +100,18 @@ export const ManagerBadge: React.FC<ManagerBadgeProps> = ({
   // If manager is registered but has no assets, show "Registered • 0 NFTs"
   if (!hasAssets) {
     return (
-      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-gray-800/80 border border-green-500/30 text-[9px] sm:text-[10px]">
-        <span className="text-green-400 font-medium">Registered</span>
-        <span className="text-gray-500">•</span>
-        <span className="text-gray-400">0 NFTs</span>
+      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-[9px] sm:text-[10px] whitespace-nowrap w-[110px] justify-center">
+        <span className="text-emerald-400 font-medium">Registered</span>
+        <span className="text-emerald-500/40">•</span>
+        <span className="text-emerald-400/60">0 NFTs</span>
       </div>
     );
   }
 
   // Render compact badges with detailed tooltips
-  // Render compact badges with detailed tooltips
   return (
     <div ref={badgeRef} className="flex flex-col gap-1">
-      {/* NFT Badge */}
+      {/* Combined NFT + XENO Badge */}
       {hasNfts && (
         <div
           className="relative"
@@ -121,25 +120,21 @@ export const ManagerBadge: React.FC<ManagerBadgeProps> = ({
         >
           <div
             onClick={handleBadgeClick}
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-gray-800/80 border border-orange-500/30 text-[9px] sm:text-[10px] cursor-pointer hover:bg-gray-700/80 transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-500/10 border border-orange-500/30 text-[9px] sm:text-[10px] cursor-pointer hover:bg-orange-500/20 transition-colors whitespace-nowrap w-[110px] justify-center"
           >
             <span className="text-orange-400 font-bold">{actualNftCount}</span>
-            <span className="text-orange-300/80">NFT{actualNftCount !== 1 ? 's' : ''}</span>
-            {firstNftName && (
+            <span className="text-orange-400/80">NFT</span>
+            {hasXeno && (
               <>
-                <span className="text-gray-500">•</span>
-                <span className="text-gray-300 truncate max-w-[60px] sm:max-w-[80px]" title={firstNftName}>
-                  {truncateName(firstNftName, 10)}
-                </span>
+                <span className="text-orange-500/40">•</span>
+                <span className="text-purple-400 font-bold">{xenoBalance.toLocaleString()}</span>
+                <span className="text-purple-400/80">XENO</span>
               </>
-            )}
-            {actualNftCount > 1 && (
-              <span className="text-orange-400/60 text-[8px]">+{actualNftCount - 1}</span>
             )}
           </div>
 
           {/* Tooltip */}
-          <div className={`absolute bottom-full left-0 mb-1 z-[100] bg-gray-900 border border-orange-500/30 rounded-lg p-2 shadow-xl min-w-[180px] max-w-[260px] ${showTooltip ? 'block' : 'hidden'}`}>
+          <div className={`absolute top-full left-0 mt-1 z-[100] bg-gray-900 border border-orange-500/30 rounded-lg p-2 shadow-xl min-w-[180px] max-w-[260px] ${showTooltip ? 'block' : 'hidden'}`}>
             {/* XENO Info in Tooltip */}
             {xenoBalance > 0 && (
               <div className="mb-2 pb-2 border-b border-white/10">
@@ -176,25 +171,20 @@ export const ManagerBadge: React.FC<ManagerBadgeProps> = ({
         >
           <div
             onClick={handleBadgeClick}
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-gray-800/80 border border-blue-500/30 text-[9px] sm:text-[10px] cursor-pointer hover:bg-gray-700/80 transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-[9px] sm:text-[10px] cursor-pointer hover:bg-blue-500/20 transition-colors whitespace-nowrap w-[110px] justify-center"
           >
             <span className="text-blue-400 font-bold">{actualSbtCount}</span>
-            <span className="text-blue-300/80">SBT{actualSbtCount !== 1 ? 's' : ''}</span>
-            {firstSbtName && (
-              <>
-                <span className="text-gray-500">•</span>
-                <span className="text-gray-300 truncate max-w-[60px] sm:max-w-[80px]" title={firstSbtName}>
-                  {truncateName(firstSbtName, 10)}
-                </span>
-              </>
-            )}
+            <span className="text-blue-400/80">SBT{actualSbtCount !== 1 ? 's' : ''}</span>
             {actualSbtCount > 1 && (
-              <span className="text-blue-400/60 text-[8px]">+{actualSbtCount - 1}</span>
+              <>
+                <span className="text-blue-500/40">•</span>
+                <span className="text-blue-400/60 text-[8px]">+{actualSbtCount - 1}</span>
+              </>
             )}
           </div>
 
           {/* Tooltip */}
-          <div className={`absolute bottom-full left-0 mb-1 z-[100] bg-gray-900 border border-blue-500/30 rounded-lg p-2 shadow-xl min-w-[180px] max-w-[260px] ${showTooltip ? 'block' : 'hidden'}`}>
+          <div className={`absolute top-full left-0 mt-1 z-[100] bg-gray-900 border border-blue-500/30 rounded-lg p-2 shadow-xl min-w-[180px] max-w-[260px] ${showTooltip ? 'block' : 'hidden'}`}>
             {/* XENO Info in Tooltip - Show here too if hovered on SBT */}
             {xenoBalance > 0 && (
               <div className="mb-2 pb-2 border-b border-white/10">
@@ -229,12 +219,12 @@ export const ManagerBadge: React.FC<ManagerBadgeProps> = ({
           onMouseEnter={() => setShowTooltip(true)}
           onMouseLeave={() => setShowTooltip(false)}
         >
-          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] sm:text-[10px] font-mono cursor-help">
+          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] sm:text-[10px] font-mono cursor-help w-[110px] justify-center">
             <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-            <span>XENO Holder</span>
+            <span>{xenoBalance.toLocaleString()} XENO</span>
           </div>
           {/* Tooltip for Just XENO */}
-          <div className={`absolute bottom-full left-0 mb-1 z-[100] bg-gray-900 border border-purple-500/30 rounded-lg p-2 shadow-xl min-w-[160px] ${showTooltip ? 'block' : 'hidden'}`}>
+          <div className={`absolute top-full left-0 mt-1 z-[100] bg-gray-900 border border-purple-500/30 rounded-lg p-2 shadow-xl min-w-[160px] ${showTooltip ? 'block' : 'hidden'}`}>
             <div className="text-[9px] text-purple-400 font-mono uppercase tracking-wider mb-0.5">XENO Balance</div>
             <div className="text-xs text-white font-mono">{xenoBalance.toLocaleString()} XENO</div>
           </div>

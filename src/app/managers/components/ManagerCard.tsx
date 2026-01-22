@@ -193,63 +193,66 @@ export function ManagerCard({
 
       {/* Expanded content - absolute positioned to overlay other cards */}
       {isExpanded && (
-        <div className="absolute left-0 right-0 top-full border border-white/10 border-t-0 bg-black shadow-2xl shadow-black/50 max-h-80 overflow-y-auto w-[calc(100%+2px)] -ml-[1px]">
-          <div className="divide-y divide-white/5">
-            {manager.nodes.map((node) => {
-              const matchedValidator = pubkeyToNode.get(node.pnode_pubkey);
-              const nodeIP = matchedValidator?.address?.split(':')[0];
+        <div className="absolute left-0 right-0 top-full border border-white/10 border-t-0 bg-black shadow-2xl shadow-black/50 w-[calc(100%+2px)] -ml-[1px] flex flex-col max-h-[60vh] sm:max-h-80">
+          {/* Scrollable nodes list */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="divide-y divide-white/5">
+              {manager.nodes.map((node) => {
+                const matchedValidator = pubkeyToNode.get(node.pnode_pubkey);
+                const nodeIP = matchedValidator?.address?.split(':')[0];
 
-              return (
-                <div
-                  key={node.pnode_pubkey}
-                  className="p-3 flex items-center justify-between gap-3 hover:bg-white/5 transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    {/* IP Address - always show column for alignment */}
-                    <div className="text-white/50 text-xs font-mono flex-shrink-0 hidden sm:block w-32">
-                      {nodeIP || '—'}
+                return (
+                  <div
+                    key={node.pnode_pubkey}
+                    className="p-3 flex items-center justify-between gap-3 hover:bg-white/5 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      {/* IP Address - always show column for alignment */}
+                      <div className="text-white/50 text-xs font-mono flex-shrink-0 hidden sm:block w-32">
+                        {nodeIP || '—'}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white/60 text-xs font-mono truncate">
+                            {truncateAddress(node.pnode_pubkey, 8, 6)}
+                          </span>
+                          <CopyButton
+                            text={node.pnode_pubkey}
+                            label="Pubkey"
+                            className="p-0.5"
+                            iconClassName="w-3 h-3"
+                            onClick={(e) => copyAddress(node.pnode_pubkey, e)}
+                          />
+                        </div>
+                        <div className="text-white/40 text-[10px] mt-0.5">
+                          Registered: {node.registered_time}
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-white/60 text-xs font-mono truncate">
-                          {truncateAddress(node.pnode_pubkey, 8, 6)}
-                        </span>
-                        <CopyButton
-                          text={node.pnode_pubkey}
-                          label="Pubkey"
-                          className="p-0.5"
-                          iconClassName="w-3 h-3"
-                          onClick={(e) => copyAddress(node.pnode_pubkey, e)}
-                        />
+                    {/* Action Button */}
+                    {matchedValidator && nodeIP ? (
+                      <button
+                        onClick={() => onNavigateToProfile(nodeIP)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-white/10 text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-xs font-medium flex-shrink-0 cursor-pointer"
+                      >
+                        <span className="hidden sm:inline">View Profile</span>
+                        <span className="sm:hidden">Profile</span>
+                        <ExternalLinkIcon className="w-3 h-3" />
+                      </button>
+                    ) : (
+                      <div className="px-3 py-1.5 bg-white/5 text-white/30 border border-white/10 text-xs flex-shrink-0">
+                        Offline
                       </div>
-                      <div className="text-white/40 text-[10px] mt-0.5">
-                        Registered: {node.registered_time}
-                      </div>
-                    </div>
+                    )}
                   </div>
-
-                  {/* Action Button */}
-                  {matchedValidator && nodeIP ? (
-                    <button
-                      onClick={() => onNavigateToProfile(nodeIP)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-white/10 text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-xs font-medium flex-shrink-0 cursor-pointer"
-                    >
-                      <span className="hidden sm:inline">View Profile</span>
-                      <span className="sm:hidden">Profile</span>
-                      <ExternalLinkIcon className="w-3 h-3" />
-                    </button>
-                  ) : (
-                    <div className="px-3 py-1.5 bg-white/5 text-white/30 border border-white/10 text-xs flex-shrink-0">
-                      Offline
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-          {/* View Manager Profile button - especially for mobile */}
-          <div className="p-3 border-t border-white/10">
+          {/* View Manager Profile button - fixed at bottom, never scrolls */}
+          <div className="p-3 border-t border-white/10 flex-shrink-0 bg-black">
             <button
               onClick={handleViewManager}
               className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 hover:border-purple-500/50 transition-all duration-300 text-sm font-medium cursor-pointer"

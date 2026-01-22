@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
     let status = 'unknown';
     if (currentNodeData) {
       const timeDiff = Math.floor(Date.now() / 1000) - (currentNodeData.last_seen_timestamp || 0);
-      status = timeDiff < 300 ? 'online' : timeDiff < 3600 ? 'syncing' : 'offline';
+      status = timeDiff <= 3600 ? 'online' : timeDiff < 7200 ? 'syncing' : 'offline';
     } else if (dbSnapshot) {
       status = dbSnapshot.status;
     }
@@ -188,8 +188,8 @@ async function saveNodeSnapshotOnVisit(ip: string, nodeData: any, credits: numbe
     // Calculate status from last_seen_timestamp
     const timeDiff = Math.floor(Date.now() / 1000) - (nodeData.last_seen_timestamp || 0);
     let status: 'online' | 'offline' | 'syncing' = 'offline';
-    if (timeDiff < 300) status = 'online';
-    else if (timeDiff < 3600) status = 'syncing';
+    if (timeDiff <= 3600) status = 'online';
+    else if (timeDiff < 7200) status = 'syncing';
 
     await saveNodeSnapshot({
       ip,

@@ -57,10 +57,11 @@ export const PNodeStorageCard: React.FC<PNodeStorageCardProps> = ({ className = 
     return (
       <div className={`relative bg-black border border-white/10 p-6 h-full group hover:border-white/20 transition-all duration-300 overflow-hidden ${className}`}>
         <CornerAccents />
-        <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
-          <div className="h-3 w-24 bg-white/10 rounded mb-4"></div>
-          <div className="h-10 w-28 bg-white/10 rounded mb-2"></div>
-          <div className="h-3 w-20 bg-white/10 rounded"></div>
+        <div className="flex flex-col h-full text-center relative z-10">
+          <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">Total Storage</div>
+          <div className="h-10 w-28 bg-white/10 rounded mb-2 mx-auto"></div>
+          <div className="h-3 w-20 bg-white/10 rounded mb-3 sm:mb-4 mx-auto"></div>
+          <div className="h-5 w-full bg-white/10 rounded mt-auto"></div>
         </div>
       </div>
     );
@@ -71,13 +72,54 @@ export const PNodeStorageCard: React.FC<PNodeStorageCardProps> = ({ className = 
       <CornerAccents />
 
       {/* Content */}
-      <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
-        <div className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider mb-2 sm:mb-4">{/* STORAGE USED */}</div>
+      <div className="flex flex-col h-full text-center relative z-10">
+        <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">Total Storage</div>
         <div className="text-orange-400 text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1 sm:mb-2">
           <AnimatedValue value={formatBytes(storageStats.usedStorage)} />
         </div>
-        <div className="text-white/40 text-[10px] sm:text-xs">
+        <div className="text-white/40 text-[10px] sm:text-xs mb-3 sm:mb-4">
           of <AnimatedValue value={formatBytes(storageStats.totalStorage)} />
+        </div>
+
+        {/* Storage Bar Graph */}
+        <div className="w-full px-1 sm:px-2 mt-auto">
+          <svg
+            className="w-full"
+            height="20"
+            viewBox="0 0 200 24"
+            preserveAspectRatio="none"
+          >
+            {Array.from({ length: 45 }).map((_, index) => {
+              const segmentPercentage = (index / 45) * 100;
+              const isFilled = segmentPercentage <= storageStats.usagePercentage;
+
+              return (
+                <rect
+                  key={index}
+                  x={index * 4.5}
+                  y={0}
+                  width={3}
+                  height={24}
+                  rx={1}
+                  fill={isFilled ? '#fb923c' : '#374151'}
+                />
+              );
+            })}
+          </svg>
+          <div className="flex justify-between items-center mt-1 sm:mt-1.5">
+            <span className="text-white/40 text-[8px] sm:text-[9px]">
+              {formatBytes(storageStats.totalStorage - storageStats.usedStorage)} free
+            </span>
+            <span className="text-orange-400 text-[8px] sm:text-[9px] font-medium">
+              {storageStats.usagePercentage < 0.01 
+                ? storageStats.usagePercentage.toFixed(6) 
+                : storageStats.usagePercentage < 0.1 
+                  ? storageStats.usagePercentage.toFixed(4)
+                  : storageStats.usagePercentage < 1
+                    ? storageStats.usagePercentage.toFixed(3)
+                    : storageStats.usagePercentage.toFixed(2)}% used
+            </span>
+          </div>
         </div>
       </div>
     </div>

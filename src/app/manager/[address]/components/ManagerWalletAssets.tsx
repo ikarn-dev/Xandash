@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { WalletIcon, ExternalLinkIcon } from './ManagerProfileIcons';
 import { CornerAccents } from '@/components/ui';
 
@@ -47,7 +47,7 @@ function truncateAddress(address: string, start = 6, end = 4): string {
 
 // Known token mints for logo mapping
 const KNOWN_TOKENS: { [mint: string]: { name: string; symbol: string; logo: string } } = {
-    'So11111111111111111111111111111111111111112': { name: 'Wrapped SOL', symbol: 'SOL', logo: '/logo/solanaToken.jpg' },
+    'So11111111111111111111111111111111111111112': { name: 'Wrapped SOL', symbol: 'SOL', logo: '/logo/SolanaToken.png' },
     // Add Xandeum token mint here
     'XANDuUoVoUqniKkpcKhrxmvYJybpJvUxJLr21Gaj3Hx': { name: 'Xandeum', symbol: 'XAND', logo: '/logo/XandToken.png' },
     'G2bTxNndhA9zxxy4PZnHFcQo9wQQozrfcmN6AN9Heqoe': { name: 'XENO', symbol: 'XENO', logo: '/logo/XandToken.png' },
@@ -77,6 +77,7 @@ export const ManagerWalletAssets = ({ walletAddress }: ManagerWalletAssetsProps)
     const [walletData, setWalletData] = useState<WalletData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [nftPage, setNftPage] = useState(0);
 
     useEffect(() => {
         const fetchWalletData = async () => {
@@ -194,7 +195,7 @@ export const ManagerWalletAssets = ({ walletAddress }: ManagerWalletAssetsProps)
                     <CornerAccents />
                     <div className="flex items-center gap-2 text-purple-400/70 text-[10px] sm:text-xs mb-2">
                         <img
-                            src="/logo/solanaToken.jpg"
+                            src="/logo/SolanaToken.png"
                             alt="SOL"
                             className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-cover"
                             onError={(e) => {
@@ -250,8 +251,8 @@ export const ManagerWalletAssets = ({ walletAddress }: ManagerWalletAssetsProps)
                             <span className="ml-2 text-[10px] text-purple-400">(Xandeum tokens first)</span>
                         )}
                     </h3>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {sortedTokens.slice(0, 50).map((token) => {
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                        {sortedTokens.map((token) => {
                             const knownToken = KNOWN_TOKENS[token.mint];
                             const name = token.name || knownToken?.name;
                             const symbol = token.symbol || knownToken?.symbol;
@@ -259,7 +260,7 @@ export const ManagerWalletAssets = ({ walletAddress }: ManagerWalletAssetsProps)
                             let logoUrl = token.logoURI || getTokenLogo(token.mint);
                             // Fallback based on symbol
                             if (!logoUrl) {
-                                if (symbol === 'SOL') logoUrl = '/logo/solanaToken.jpg';
+                                if (symbol === 'SOL') logoUrl = '/logo/SolanaToken.png';
                                 else if (symbol === 'XAND') logoUrl = '/logo/XandToken.png';
                             }
 
@@ -324,14 +325,21 @@ export const ManagerWalletAssets = ({ walletAddress }: ManagerWalletAssetsProps)
             {sortedNfts.length > 0 && (
                 <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4">
                     <CornerAccents />
-                    <h3 className="text-xs sm:text-sm font-medium text-white/70 mb-3 block">
-                        NFT Collection
-                        {sortedNfts.some(isXandeumRelated) && (
-                            <span className="ml-2 text-[10px] text-purple-400">(Xandeum NFTs first)</span>
-                        )}
-                    </h3>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3">
-                        {sortedNfts.slice(0, 12).map((nft) => {
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-xs sm:text-sm font-medium text-white/70 block">
+                            NFT Collection
+                            {sortedNfts.some(isXandeumRelated) && (
+                                <span className="ml-2 text-[10px] text-purple-400">(Xandeum NFTs first)</span>
+                            )}
+                        </h3>
+                        <span className="text-[10px] text-white/40">
+                            {sortedNfts.length} total
+                        </span>
+                    </div>
+                    
+                    {/* NFT Grid - 2 rows (6 cols per row) */}
+                    <div className="grid grid-cols-6 gap-2 sm:gap-3 mb-3">
+                        {sortedNfts.slice(nftPage * 12, (nftPage + 1) * 12).map((nft) => {
                             const imageUrl = nft.content?.links?.image ||
                                 nft.content?.files?.[0]?.uri ||
                                 null;
@@ -378,9 +386,27 @@ export const ManagerWalletAssets = ({ walletAddress }: ManagerWalletAssetsProps)
                             );
                         })}
                     </div>
+
+                    {/* Pagination Controls */}
                     {sortedNfts.length > 12 && (
-                        <div className="text-center text-white/40 text-[10px] sm:text-xs pt-3">
-                            +{sortedNfts.length - 12} more NFTs
+                        <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                            <button
+                                onClick={() => setNftPage(Math.max(0, nftPage - 1))}
+                                disabled={nftPage === 0}
+                                className="px-2 py-1 text-xs bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white/70 hover:text-white transition-colors rounded"
+                            >
+                                ← Prev
+                            </button>
+                            <span className="text-[10px] text-white/50">
+                                {nftPage + 1} / {Math.ceil(sortedNfts.length / 12)}
+                            </span>
+                            <button
+                                onClick={() => setNftPage(Math.min(Math.ceil(sortedNfts.length / 12) - 1, nftPage + 1))}
+                                disabled={nftPage >= Math.ceil(sortedNfts.length / 12) - 1}
+                                className="px-2 py-1 text-xs bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white/70 hover:text-white transition-colors rounded"
+                            >
+                                Next →
+                            </button>
                         </div>
                     )}
                 </div>

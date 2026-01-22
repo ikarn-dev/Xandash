@@ -6,3 +6,4 @@ export * from './ManagerNodeCard';
 export * from './ManagerNodesList';
 export * from './ManagerProfileSkeleton';
 export * from './ManagerWalletAssets';
+export * from './ManagerAssetsSummary';

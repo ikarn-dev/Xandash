@@ -84,11 +84,18 @@ export default async function ManagerProfilePage({ params }: PageProps) {
             if (timeDiff < 1800) status = 'online';        // Less than 30 minutes
             else if (timeDiff < 3600) status = 'syncing'; // 30-60 minutes
 
+            // Calculate score using the same formula as other pages
+            const isOnline = timeDiff <= 3600;
+            const uptimeScore = Math.min((node.uptime || 0) / (30 * 24 * 3600), 1) * 40; // Max 40 points for 30 days uptime
+            const storageScore = Math.min((node.storage_committed || 0) / (100 * 1024 ** 3), 1) * 30; // Max 30 points for 100GB
+            const onlineScore = isOnline ? 30 : 0; // 30 points for being online
+            const totalScore = uptimeScore + storageScore + onlineScore;
+
             return {
                 pubkey: node.pubkey,
                 address: node.address,
                 status,
-                score: 0,
+                score: node.score ?? totalScore,
                 rank: index + 1,
                 uptime: node.uptime || 0,
                 storage_committed: node.storage_committed || 0,

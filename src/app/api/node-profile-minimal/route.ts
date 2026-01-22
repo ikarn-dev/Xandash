@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     let status = 'unknown';
     if (node) {
       const timeDiff = Math.floor(Date.now() / 1000) - (node.last_seen_timestamp || 0);
-      status = timeDiff < 300 ? 'online' : timeDiff < 3600 ? 'syncing' : 'offline';
+      status = timeDiff <= 3600 ? 'online' : timeDiff < 7200 ? 'syncing' : 'offline';
     }
 
     return NextResponse.json({

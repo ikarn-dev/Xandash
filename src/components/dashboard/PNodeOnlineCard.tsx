@@ -38,10 +38,10 @@ export const PNodeOnlineCard: React.FC<PNodeOnlineCardProps> = ({ className = ""
     return (
       <div className={`relative bg-black border border-white/10 p-6 h-full group hover:border-white/20 transition-all duration-300 overflow-hidden ${className}`}>
         <CornerAccents />
-        <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
-          <div className="h-3 w-20 bg-white/10 rounded mb-3"></div>
-          <div className="h-10 w-24 bg-white/10 rounded mb-2"></div>
-          <div className="h-3 w-32 bg-white/10 rounded"></div>
+        <div className="flex flex-col h-full text-center relative z-10">
+          <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">Node Availability</div>
+          <div className="h-10 w-24 bg-white/10 rounded mb-2 mx-auto"></div>
+          <div className="h-3 w-32 bg-white/10 rounded mx-auto"></div>
         </div>
       </div>
     );
@@ -56,17 +56,17 @@ export const PNodeOnlineCard: React.FC<PNodeOnlineCardProps> = ({ className = ""
       <CornerAccents />
 
       {/* Content */}
-      <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
-        <div className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider mb-2 sm:mb-3">{/* ONLINE RATE */}</div>
+      <div className="flex flex-col h-full text-center relative z-10">
+        <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">Node Availability</div>
         <div className="text-green-400 text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1">
           <AnimatedValue value={`${stats.onlinePercentage.toFixed(1)}%`} />
         </div>
-        <div className="text-white/40 text-[9px] sm:text-[10px] mb-2 sm:mb-3">
+        <div className="text-white/40 text-[9px] sm:text-[10px] mb-3 sm:mb-4">
           <AnimatedValue value={stats.online} /> of <AnimatedValue value={stats.total} /> nodes
         </div>
 
         {/* Online Status Bar Graph */}
-        <div className="w-full px-1 sm:px-2 mt-1">
+        <div className="w-full px-1 sm:px-2 mt-auto">
           <svg
             className="w-full"
             height="20"

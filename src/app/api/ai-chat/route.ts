@@ -103,7 +103,7 @@ async function fetchNodeByIdentifier(identifier: string) {
 
     const ip = node.address?.split(':')[0];
     const timeDiff = Math.floor(Date.now() / 1000) - (node.last_seen_timestamp || 0);
-    const status = timeDiff < 300 ? 'online' : timeDiff < 3600 ? 'syncing' : 'offline';
+    const status = timeDiff <= 3600 ? 'online' : timeDiff < 7200 ? 'syncing' : 'offline';
 
     // Get credits for this node (use existing credits from mainnet or fetch from devnet)
     let credits = node.credits || 0;
@@ -512,7 +512,7 @@ XANDASH FEATURES:
 10. Endpoints: API endpoint testing tools
 
 POD METRICS EXPLAINED:
-- Status: online (<5min seen), syncing (<1hr), offline (>1hr)
+- Status: online (<=60min seen), syncing (60min-2hr), offline (>2hr)
 - Uptime: Continuous running time - higher is better for reliability
 - Storage Committed: Total storage allocated to network
 - Storage Used: Actually utilized storage (efficiency = used/committed)

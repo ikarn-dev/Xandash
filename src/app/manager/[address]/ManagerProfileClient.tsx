@@ -13,6 +13,7 @@ import {
     ManagerNodesList,
     ManagerProfileSkeleton,
     ManagerWalletAssets,
+    ManagerAssetsSummary,
 } from './components';
 
 interface PodCredit {
@@ -230,6 +231,9 @@ export function ManagerProfileClient({
                 manager={manager}
                 stats={stats}
             />
+
+            {/* Assets Summary (XAND, XENO, NFTs, SBTs) */}
+            <ManagerAssetsSummary managerAddress={manager.manager_address} />
 
             {/* Stats Cards */}
             <ManagerStatsCards stats={stats} />

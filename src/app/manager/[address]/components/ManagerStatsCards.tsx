@@ -55,11 +55,32 @@ export const ManagerStatsCards = ({ stats }: ManagerStatsCardsProps) => {
                     <div className="flex items-center gap-1 sm:gap-1.5 text-pink-400/70 text-[9px] sm:text-[10px] mb-1 sm:mb-1.5">
                         <ChartIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-3.5 lg:h-3.5 flex-shrink-0" />
                         <span className="truncate">Avg Score</span>
+                        {/* Info icon with tooltip */}
+                        <div className="relative ml-auto">
+                            <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white/30 hover:text-white/60 cursor-help transition-colors peer" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M12 16v-4M12 8h.01" />
+                            </svg>
+                            {/* Tooltip - positioned below and to the left to avoid cropping */}
+                            <div className="absolute top-full right-0 mt-1.5 px-2 py-1.5 bg-black border border-white/20 text-[8px] sm:text-[9px] whitespace-nowrap opacity-0 invisible peer-hover:opacity-100 peer-hover:visible hover:opacity-100 hover:visible transition-all duration-200 z-[100] shadow-xl rounded">
+                                <div className="text-white/70 font-medium mb-1">How it&apos;s calculated:</div>
+                                <div className="text-white/50 text-center">
+                                    <div>Sum of all node scores</div>
+                                    <div className="border-t border-white/20 my-0.5"></div>
+                                    <div>Number of active nodes</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-pink-400 font-mono">
                         {(stats.avgScore || 0).toFixed(1)}
                     </div>
-                    <div className="text-[8px] sm:text-[9px] lg:text-[10px] text-white/40 mt-0.5 sm:mt-1 truncate">
+                    {/* Show active nodes count on larger screens */}
+                    <div className="hidden lg:block text-[8px] text-white/30 mt-0.5">
+                        from {stats.activeNodes} active node{stats.activeNodes !== 1 ? 's' : ''}
+                    </div>
+                    {/* Mobile: simple max indicator */}
+                    <div className="lg:hidden text-[8px] sm:text-[9px] text-white/40 mt-0.5 truncate">
                         / 100 max
                     </div>
                 </div>

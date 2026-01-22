@@ -131,7 +131,8 @@ export const Marquee = ({ className = '' }: MarqueeProps) => {
       <div className="absolute right-8 top-0 bottom-0 w-12 bg-gradient-to-l from-black/80 to-transparent z-[1] pointer-events-none" />
 
       <div className="flex animate-marquee py-2">
-        {[...Array(4)].map((_, repeatIndex) => (
+        {/* Repeat content twice for seamless infinite scroll - translating -50% shows full content then loops */}
+        {[...Array(2)].map((_, repeatIndex) => (
           <div key={repeatIndex} className="flex items-center gap-4 px-4 shrink-0">
             {announcements.map((item, i) => (
               <div key={`${repeatIndex}-${i}`} className="flex items-center gap-2 shrink-0">
@@ -153,18 +154,18 @@ export const Marquee = ({ className = '' }: MarqueeProps) => {
             transform: translateX(0);
           }
           100% {
-            transform: translateX(-25%);
+            transform: translateX(-50%);
           }
         }
         .animate-marquee {
-          animation: marquee 20s linear infinite;
+          animation: marquee 40s linear infinite;
         }
         .animate-marquee:hover {
           animation-play-state: paused;
         }
         @media (max-width: 640px) {
           .animate-marquee {
-            animation: marquee 15s linear infinite;
+            animation: marquee 20s linear infinite;
           }
         }
       `}</style>

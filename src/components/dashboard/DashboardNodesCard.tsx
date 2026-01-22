@@ -11,8 +11,7 @@ import { usePrefetchProfile } from '@/libs/hooks/usePrefetchProfile';
 import { toast } from 'sonner';
 import { useNetwork } from '@/libs/context/network-context';
 import { useNodesData } from '@/libs/context/nodes-data-context';
-import { getNodeName, hasNodeName } from '@/libs/utils/node-names';
-import { formatStorage } from '@/libs/utils';
+import { formatStorageCompact, formatStorageAuto } from '@/libs/utils';
 
 // Compare icon
 const CompareIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -80,19 +79,11 @@ export const DashboardNodesCard: React.FC = () => {
   const nodes = useMemo(() => {
     if (sharedNodes.length === 0) return [];
 
-    // Sort: named nodes first (mainnet), then by last_seen_timestamp, then slice to 20
+    // Sort by last_seen_timestamp, then slice to 20
     return [...sharedNodes]
-      .sort((a, b) => {
-        if (isMainnet) {
-          const aHasName = hasNodeName(a.pubkey);
-          const bHasName = hasNodeName(b.pubkey);
-          if (aHasName && !bHasName) return -1;
-          if (!aHasName && bHasName) return 1;
-        }
-        return b.last_seen_timestamp - a.last_seen_timestamp;
-      })
+      .sort((a, b) => b.last_seen_timestamp - a.last_seen_timestamp)
       .slice(0, 20);
-  }, [sharedNodes, isMainnet]);
+  }, [sharedNodes]);
 
   // Toggle node for comparison
   const handleToggleCompare = useCallback((pubkey: string, e: React.MouseEvent) => {
@@ -203,13 +194,16 @@ export const DashboardNodesCard: React.FC = () => {
   const handleSeeMore = () => router.push('/nodes');
 
   const exportToCSV = () => {
-    const headers = ['Location', 'IP', 'Pubkey', 'Public', 'Storage (GB)', 'Version', 'Uptime', 'Last Seen', 'Credits', 'Status', 'Score'];
+    const headers = ['Location', 'IP', 'Pubkey', 'Public', 'Committed', 'Used', 'Usage %', 'Version', 'Uptime', 'Last Seen', 'Credits', 'Status', 'Score'];
     const rows = nodes.map(node => {
       const ip = extractIPFromAddress(node.address || '');
       const location = locations[ip];
       const nodeCredits = node.pubkey ? credits[node.pubkey] : null;
       const timeDiff = dataFetchTime - node.last_seen_timestamp;
-      const storageDisplay = formatStorage(node.storage_committed || 0);
+      const storageCommittedDisplay = formatStorageCompact(node.storage_committed || 0);
+      const storageUsedDisplay = formatStorageAuto(node.storage_used || 0);
+      const usagePercent = node.storage_usage_percent ? (node.storage_usage_percent * 100) : 0;
+      const usagePercentDisplay = usagePercent > 0 ? usagePercent.toFixed(4) : '0.0000';
       const uptimeHours = Math.floor(node.uptime / 3600);
       const uptimeDays = Math.floor(uptimeHours / 24);
       const uptimeDisplay = uptimeDays > 0 ? `${uptimeDays}d` : `${uptimeHours}h`;
@@ -222,7 +216,7 @@ export const DashboardNodesCard: React.FC = () => {
       return [
         location ? `${location.city}, ${location.country}` : 'Unknown',
         ip || 'Unknown', node.pubkey || 'Unknown', node.is_public ? 'YES' : 'NO',
-        storageDisplay, node.version || 'Unknown', uptimeDisplay, lastSeenDisplay,
+        storageCommittedDisplay, storageUsedDisplay, usagePercentDisplay, node.version || 'Unknown', uptimeDisplay, lastSeenDisplay,
         nodeCredits !== null && nodeCredits !== undefined ? nodeCredits.toString() : '0', status,
         node.score ? node.score.toFixed(1) : '0.0'
       ];
@@ -319,19 +313,20 @@ export const DashboardNodesCard: React.FC = () => {
       {/* Table with horizontal scroll */}
       <div className="bg-black border border-white/10 rounded-lg overflow-hidden">
         <div className="overflow-x-auto scrollbar-hide">
-          <table className="w-full min-w-[1020px]">
+          <table className="w-full min-w-[1280px]">
             <thead className="bg-white/5 border-b border-white/10">
               <tr>
                 <th className="w-[4%] px-2 py-3 text-center text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
                   <CompareIcon className="w-3.5 h-3.5 mx-auto text-white/50" />
                 </th>
-                {isMainnet && <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Name</th>}
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Location</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Manager Assets</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">IP Address</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Pubkey</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Public</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Storage</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Committed</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Used</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Usage %</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Version</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Uptime</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Last Seen</th>
@@ -374,7 +369,10 @@ export const DashboardNodesCard: React.FC = () => {
                 else if (timeDiff < 86400) lastSeenDisplay = `${Math.floor(timeDiff / 3600)}h`;
                 else lastSeenDisplay = `${Math.floor(timeDiff / 86400)}d`;
 
-                const storageDisplay = formatStorage(node.storage_committed || 0);
+                const storageCommittedDisplay = formatStorageCompact(node.storage_committed || 0);
+                const storageUsedDisplay = formatStorageAuto(node.storage_used || 0);
+                const usagePercent = node.storage_usage_percent ? (node.storage_usage_percent * 100) : 0;
+                const usagePercentDisplay = usagePercent > 0 ? usagePercent.toFixed(4) : '0.0000';
                 const uptimeHours = Math.floor(node.uptime / 3600);
                 const uptimeDays = Math.floor(uptimeHours / 24);
                 const uptimeDisplay = uptimeDays > 0 ? `${uptimeDays}d` : `${uptimeHours}h`;
@@ -390,7 +388,6 @@ export const DashboardNodesCard: React.FC = () => {
                         {isSelected && <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12l5 5L20 7" /></svg>}
                       </button>
                     </td>
-                    {isMainnet && <td className="px-3 py-3 text-xs"><span className={`${getNodeName(node.pubkey) !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>{getNodeName(node.pubkey)}</span></td>}
                     <td className="px-3 py-3 text-xs">
                       <div className="flex items-center space-x-2 min-w-0">
                         {displayLocation?.country_code ? <img src={getCountryFlagUrl(displayLocation.country_code)} alt={displayLocation.country} className="w-4 h-3 object-cover rounded-sm flex-shrink-0" loading="lazy" decoding="async" width="16" height="12" onError={(e) => { e.currentTarget.style.display = 'none'; }} /> : <Globe className="w-4 h-3 text-white/40 flex-shrink-0" />}
@@ -403,17 +400,23 @@ export const DashboardNodesCard: React.FC = () => {
                           managerPubkey={node.manager_pubkey}
                           nftCount={managerAssets.get(node.manager_pubkey)?.nft_count}
                           sbtCount={managerAssets.get(node.manager_pubkey)?.sbt_count}
+                          xandBalance={managerAssets.get(node.manager_pubkey)?.xand_balance}
+                          xenoBalance={managerAssets.get(node.manager_pubkey)?.xeno_balance}
                           nftNames={managerAssets.get(node.manager_pubkey)?.nft_names}
                           sbtNames={managerAssets.get(node.manager_pubkey)?.sbt_names}
                         />
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] bg-gray-500/20 text-gray-400 border border-gray-500/30 whitespace-nowrap">Not Registered</span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-500/10 border border-gray-500/30 text-[9px] sm:text-[10px] text-gray-400 whitespace-nowrap w-[110px] justify-center">
+                          Not Registered
+                        </span>
                       )}
                     </td>
                     <td className="px-3 py-3 text-xs"><div className="flex items-center space-x-1 min-w-0"><span className="text-white/80 font-mono truncate max-w-[100px]">{ip || 'Unknown'}</span>{ip && <CopyBtn text={ip} type="IP" size="sm" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex-shrink-0" />}</div></td>
                     <td className="px-3 py-3 text-xs"><div className="flex items-center space-x-1 min-w-0"><span className="text-white/60 font-mono truncate max-w-[120px]">{node.pubkey || 'Unknown'}</span>{node.pubkey && <CopyBtn text={node.pubkey} type="Pubkey" size="sm" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex-shrink-0" />}</div></td>
                     <td className="px-3 py-3 text-xs"><span className={`px-2 py-1 rounded text-xs ${node.is_public ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-500/20 text-gray-400'}`}>{node.is_public ? 'YES' : 'NO'}</span></td>
-                    <td className="px-3 py-3 text-xs"><span className="text-white/80 font-mono whitespace-nowrap">{storageDisplay}</span></td>
+                    <td className="px-3 py-3 text-xs"><span className="text-white/80 font-mono whitespace-nowrap">{storageCommittedDisplay}</span></td>
+                    <td className="px-3 py-3 text-xs"><span className="text-white/80 font-mono whitespace-nowrap">{storageUsedDisplay}</span></td>
+                    <td className="px-3 py-3 text-xs"><span className="text-white/80 font-mono whitespace-nowrap">{usagePercentDisplay}%</span></td>
                     <td className="px-3 py-3 text-xs"><span className="text-white/70 font-mono truncate block max-w-[70px]">{node.version || 'Unknown'}</span></td>
                     <td className="px-3 py-3 text-xs"><span className="text-white/70 font-mono">{uptimeDisplay}</span></td>
                     <td className="px-3 py-3 text-xs"><span className="text-white/60 font-mono">{lastSeenDisplay}</span></td>

@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     const timeUntilNext = await getTimeUntilNextCall();
 
     // Update local cache
-    localCache = { 
+    localCache = {
       data: {
         nodes: mainnetData.nodes,
         geo: mainnetData.geo,

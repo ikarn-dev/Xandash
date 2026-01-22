@@ -50,84 +50,134 @@ async function getTokenBalances(walletAddress: string): Promise<TokenBalance[]> 
     if (!apiKey) return [];
 
     try {
-        // Use Helius DAS API for Fungible Tokens to get metadata
-        const response = await fetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
+        const allTokens: TokenBalance[] = [];
+        
+        // Fetch first page to determine if more pages exist
+        const page1Response = await fetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 jsonrpc: '2.0',
-                id: 'fungible-assets',
+                id: 'fungible-assets-1',
                 method: 'getAssetsByOwner',
                 params: {
                     ownerAddress: walletAddress,
                     page: 1,
-                    limit: 100, // Fetch up to 100 tokens
+                    limit: 100,
                     displayOptions: {
                         showFungible: true,
-                        showNativeBalance: false, // We get SOL separately
+                        showNativeBalance: false,
                     }
                 }
             }),
             signal: AbortSignal.timeout(15000),
         });
 
-        // Check for rate limit and handle failover
-        if (isRateLimitError(response)) {
+        if (isRateLimitError(page1Response)) {
             reportRateLimitHit('helius');
             return [];
         }
 
-        if (!response.ok) return [];
+        if (!page1Response.ok) return [];
 
         reportSuccess('helius');
 
-        const data = await response.json();
-        const items = data.result?.items || [];
-
-        // Filter for FungibleToken or FungibleAsset
-        const fungibles = items.filter((item: any) =>
-            item.interface === 'FungibleToken' ||
-            item.interface === 'FungibleAsset'
-        );
-
-        return fungibles.map((item: any) => {
+        const data1 = await page1Response.json();
+        const items1 = data1.result?.items || [];
+        
+        // Process first page
+        items1.forEach((item: any) => {
             const tokenInfo = item.token_info || {};
             const metadata = item.content?.metadata || {};
             const files = item.content?.files || [];
 
-            // Try to find logo in different places
             let logoURI = item.content?.links?.image;
             if (!logoURI && files.length > 0) {
                 logoURI = files[0]?.uri;
             }
 
-            // Calculate amount based on decimals
             const decimals = tokenInfo.decimals || 0;
             const balance = tokenInfo.balance || 0;
-            // Balance from DAS is usually raw amount, need to adjust by decimals? 
-            // Helius DAS 'balance' for token_info is often the UI amount or raw? 
-            // Validating: Helius DAS "balance" in token_info is usually integer (raw).
-            // But let's be careful. The `getTokenAccountsByOwner` returned uiAmount.
-            // DAS `token_info.balance` is typically the raw amount (integer).
             const amount = balance / Math.pow(10, decimals);
 
-            // Filter out zero balances if any
-            if (amount <= 0) return null;
+            if (amount > 0) {
+                allTokens.push({
+                    mint: item.id,
+                    amount: amount,
+                    decimals: decimals,
+                    tokenAccount: '',
+                    symbol: tokenInfo.symbol || metadata.symbol,
+                    name: metadata.name,
+                    logoURI: logoURI,
+                });
+            }
+        });
 
-            return {
-                mint: item.id,
-                amount: amount,
-                decimals: decimals,
-                tokenAccount: '', // Not strictly needed for display
-                symbol: tokenInfo.symbol || metadata.symbol,
-                name: metadata.name, // "names of those tokens as per blockchain data"
-                logoURI: logoURI,
-            };
-        }).filter(Boolean) as TokenBalance[];
+        // If first page has 100 items, fetch remaining pages concurrently
+        if (items1.length === 100) {
+            const remainingPages = 9; // Max 10 pages total
+            const pageRequests: Promise<any>[] = [];
+
+            for (let page = 2; page <= remainingPages + 1; page++) {
+                pageRequests.push(
+                    fetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            jsonrpc: '2.0',
+                            id: `fungible-assets-${page}`,
+                            method: 'getAssetsByOwner',
+                            params: {
+                                ownerAddress: walletAddress,
+                                page: page,
+                                limit: 100,
+                                displayOptions: {
+                                    showFungible: true,
+                                    showNativeBalance: false,
+                                }
+                            }
+                        }),
+                        signal: AbortSignal.timeout(15000),
+                    }).then(r => r.json())
+                );
+            }
+
+            const results = await Promise.all(pageRequests);
+            results.forEach(result => {
+                const items = result.result?.items || [];
+                items.forEach((item: any) => {
+                    const tokenInfo = item.token_info || {};
+                    const metadata = item.content?.metadata || {};
+                    const files = item.content?.files || [];
+
+                    let logoURI = item.content?.links?.image;
+                    if (!logoURI && files.length > 0) {
+                        logoURI = files[0]?.uri;
+                    }
+
+                    const decimals = tokenInfo.decimals || 0;
+                    const balance = tokenInfo.balance || 0;
+                    const amount = balance / Math.pow(10, decimals);
+
+                    if (amount > 0) {
+                        allTokens.push({
+                            mint: item.id,
+                            amount: amount,
+                            decimals: decimals,
+                            tokenAccount: '',
+                            symbol: tokenInfo.symbol || metadata.symbol,
+                            name: metadata.name,
+                            logoURI: logoURI,
+                        });
+                    }
+                });
+            });
+        }
+
+        return allTokens;
 
     } catch (error) {
         console.error('Error fetching token balances with DAS:', error);
-        // Fallback to basic method if DAS fails? For now just return empty or log error.
         return [];
     }
 }
@@ -171,18 +221,20 @@ async function getNFTs(walletAddress: string): Promise<NFTAsset[]> {
     if (!apiKey) return [];
 
     try {
-        // Use Helius DAS API for NFTs
-        const response = await fetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
+        const allNFTs: NFTAsset[] = [];
+
+        // Fetch first page to determine if more pages exist
+        const page1Response = await fetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 jsonrpc: '2.0',
-                id: 'nft-assets',
+                id: 'nft-assets-1',
                 method: 'getAssetsByOwner',
                 params: {
                     ownerAddress: walletAddress,
                     page: 1,
-                    limit: 50,
+                    limit: 100,
                     displayOptions: {
                         showFungible: false,
                         showNativeBalance: false,
@@ -192,24 +244,69 @@ async function getNFTs(walletAddress: string): Promise<NFTAsset[]> {
             signal: AbortSignal.timeout(15000),
         });
 
-        // Check for rate limit and handle failover
-        if (isRateLimitError(response)) {
+        if (isRateLimitError(page1Response)) {
             reportRateLimitHit('helius');
             return [];
         }
 
-        if (!response.ok) return [];
+        if (!page1Response.ok) return [];
 
         reportSuccess('helius');
-        const data = await response.json();
-        const items = data.result?.items || [];
 
-        // Filter to only NFTs (not fungible tokens)
-        return items.filter((item: any) =>
+        const data1 = await page1Response.json();
+        const items1 = data1.result?.items || [];
+
+        // Filter to only NFTs
+        const nfts1 = items1.filter((item: any) =>
             item.interface === 'V1_NFT' ||
             item.interface === 'ProgrammableNFT' ||
             item.interface === 'Custom'
-        ).slice(0, 20); // Limit to 20 NFTs
+        );
+
+        allNFTs.push(...nfts1);
+
+        // If first page has 100 items, fetch remaining pages concurrently
+        if (items1.length === 100) {
+            const remainingPages = 9; // Max 10 pages total
+            const pageRequests: Promise<any>[] = [];
+
+            for (let page = 2; page <= remainingPages + 1; page++) {
+                pageRequests.push(
+                    fetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            jsonrpc: '2.0',
+                            id: `nft-assets-${page}`,
+                            method: 'getAssetsByOwner',
+                            params: {
+                                ownerAddress: walletAddress,
+                                page: page,
+                                limit: 100,
+                                displayOptions: {
+                                    showFungible: false,
+                                    showNativeBalance: false,
+                                }
+                            }
+                        }),
+                        signal: AbortSignal.timeout(15000),
+                    }).then(r => r.json())
+                );
+            }
+
+            const results = await Promise.all(pageRequests);
+            results.forEach(result => {
+                const items = result.result?.items || [];
+                const nfts = items.filter((item: any) =>
+                    item.interface === 'V1_NFT' ||
+                    item.interface === 'ProgrammableNFT' ||
+                    item.interface === 'Custom'
+                );
+                allNFTs.push(...nfts);
+            });
+        }
+
+        return allNFTs;
     } catch (error) {
         console.error('Error fetching NFTs:', error);
         return [];

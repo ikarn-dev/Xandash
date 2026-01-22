@@ -42,11 +42,11 @@ export async function getNodeCountTrend(network: NetworkType = 'devnet', hours: 
         // Calculate status based on last_seen_timestamp
         calculatedStatus: {
           $cond: {
-            if: { $lt: [{ $subtract: ['$timestamp', '$last_seen_timestamp'] }, 300] },
+            if: { $lte: [{ $subtract: ['$timestamp', '$last_seen_timestamp'] }, 3600] },
             then: 'online',
             else: {
               $cond: {
-                if: { $lt: [{ $subtract: ['$timestamp', '$last_seen_timestamp'] }, 3600] },
+                if: { $lt: [{ $subtract: ['$timestamp', '$last_seen_timestamp'] }, 7200] },
                 then: 'syncing',
                 else: 'offline'
               }
@@ -233,11 +233,11 @@ async function getCurrentNodeCounts(network: NetworkType): Promise<NodeCountSnap
       $addFields: {
         calculatedStatus: {
           $cond: {
-            if: { $lt: [{ $subtract: [now, '$last_seen_timestamp'] }, 300] },
+            if: { $lte: [{ $subtract: [now, '$last_seen_timestamp'] }, 3600] },
             then: 'online',
             else: {
               $cond: {
-                if: { $lt: [{ $subtract: [now, '$last_seen_timestamp'] }, 3600] },
+                if: { $lt: [{ $subtract: [now, '$last_seen_timestamp'] }, 7200] },
                 then: 'syncing',
                 else: 'offline'
               }

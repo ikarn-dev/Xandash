@@ -53,9 +53,9 @@ export function ResultsView({ nodes, onReset, network = 'devnet', managerAssets,
 
   const stats = [
     { key: 'credits', label: 'Credits', format: (v: number) => `+${v.toLocaleString()}`, best: getBest('credits') },
-    { key: 'score', label: 'Score', format: (v: number) => v.toFixed(1), best: getBest('score') },
     { key: 'uptime', label: 'Uptime', format: formatUptime, best: getBest('uptime') },
     { key: 'storage_committed', label: 'Storage', format: formatStorage, best: getBest('storage_committed') },
+    { key: 'score', label: 'Score', format: (v: number) => v.toFixed(1), best: getBest('score') },
   ];
 
   const aiComparisonPrompt = useMemo(() => {
@@ -222,18 +222,24 @@ export function ResultsView({ nodes, onReset, network = 'devnet', managerAssets,
               {/* Other stats rows */}
               {[
                 { label: 'Credits', getValue: (n: NodeProfile) => `+${n.credits.toLocaleString()}`, isBest: (n: NodeProfile) => n.credits === getBest('credits') },
-                { label: 'Score', getValue: (n: NodeProfile) => n.score.toFixed(1), isBest: (n: NodeProfile) => n.score === getBest('score') },
                 { label: 'Uptime', getValue: (n: NodeProfile) => formatUptime(n.uptime), isBest: (n: NodeProfile) => n.uptime === getBest('uptime') },
                 { label: 'Storage', getValue: (n: NodeProfile) => formatStorage(n.storage_committed), isBest: (n: NodeProfile) => n.storage_committed === getBest('storage_committed') },
-                { label: 'Version', getValue: (n: NodeProfile) => n.version || 'N/A' },
+                {
+                  label: 'Version', getValue: (n: NodeProfile) => {
+                    const v = n.version || 'N/A';
+                    return v.length > 20 ? `${v.substring(0, 12)}...` : v;
+                  }
+                },
                 { label: 'Provider', getValue: (n: NodeProfile) => n.location?.provider || 'N/A' },
+                { label: 'Score', getValue: (n: NodeProfile) => n.score.toFixed(1), isBest: (n: NodeProfile) => n.score === getBest('score') },
               ].map((row, i) => (
                 <tr key={i} className="border-b border-white/5 hover:bg-white/5">
                   <td className="py-3 px-4 text-white/60 text-sm">{row.label}</td>
                   {nodes.map(node => {
                     const isBest = row.isBest?.(node) && nodes.length > 1;
+                    const fullValue = row.label === 'Version' ? (node.version || 'N/A') : undefined;
                     return (
-                      <td key={node.pubkey} className="py-3 px-4 text-center">
+                      <td key={node.pubkey} className="py-3 px-4 text-center" title={fullValue}>
                         <span className={`font-mono text-sm ${isBest ? 'text-emerald-400 font-medium' : 'text-white'}`}>{row.getValue(node)}</span>
                         {isBest && <span className="ml-1 text-emerald-400">★</span>}
                       </td>

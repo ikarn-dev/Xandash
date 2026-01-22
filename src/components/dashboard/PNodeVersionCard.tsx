@@ -160,10 +160,10 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
     return (
       <div className={`relative bg-black border border-white/10 p-6 h-full group hover:border-white/20 transition-all duration-300 overflow-hidden ${className}`}>
         <CornerAccents />
-        <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
-          <div className="h-3 w-20 bg-white/10 rounded mb-4"></div>
-          <div className="h-10 w-12 bg-white/10 rounded mb-2"></div>
-          <div className="h-3 w-28 bg-white/10 rounded"></div>
+        <div className="flex flex-col h-full text-center relative z-10">
+          <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">Software Versions</div>
+          <div className="h-10 w-12 bg-white/10 rounded mb-2 mx-auto"></div>
+          <div className="h-3 w-28 bg-white/10 rounded mx-auto"></div>
         </div>
       </div>
     );
@@ -176,13 +176,13 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
         onClick={handleOpenModal}
       >
         <CornerAccents />
-        <div className="flex flex-col justify-center items-center h-full text-center relative z-10">
-          <div className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider mb-2 sm:mb-4">{/* VERSIONS */}</div>
+        <div className="flex flex-col h-full text-center relative z-10">
+          <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">Software Versions</div>
           <div className="text-white text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1 sm:mb-2">
             <AnimatedValue value={versionStats.totalVersions} />
           </div>
-          <div className="text-white/40 text-[10px] sm:text-xs mb-1">versions</div>
-          <div className="text-white/30 text-[9px] sm:text-[10px] hover:text-white/50 transition-colors cursor-pointer">click for details</div>
+          <div className="text-white/40 text-[10px] sm:text-xs mb-1">unique versions</div>
+          <div className="text-white/30 text-[9px] sm:text-[10px] hover:text-white/50 transition-colors cursor-pointer mt-auto">click for details</div>
         </div>
       </div>
 

@@ -13,6 +13,7 @@
 import { cache } from '@/libs/cache/LocalCache';
 import { monitoredFetch } from './rpc-status-monitor';
 import { calculateNodeScore } from '@/libs/utils/score-utils';
+import managersData from '../../../managers_data/managers_node_data.json';
 
 // Get URLs from environment variables for RPC (sensitive)
 const MAINNET_RPC_URL = process.env.MAINNET_RPC_DIRECT_URL || '';
@@ -59,6 +60,12 @@ export interface MainnetNodeData {
   provider?: string;
   active_streams?: number;
   score?: number;
+  manager_pubkey?: string;
+  manager_nft_count?: number;
+  manager_sbt_count?: number;
+  manager_xand_balance?: number;
+  manager_nft_names?: string[];
+  manager_sbt_names?: string[];
 }
 
 export interface MainnetExternalData {
@@ -321,6 +328,39 @@ async function fetchExternalGeoData(ips: string[]): Promise<Record<string, Mainn
 }
 
 /**
+ * Create a pubkey to manager mapping from managers JSON data
+ */
+function createPubkeyToManagerMap(): Map<string, string> {
+  const pubkeyToManager = new Map<string, string>();
+
+  managersData.managers.forEach(manager => {
+    manager.nodes.forEach(node => {
+      pubkeyToManager.set(node.pnode_pubkey, manager.manager_address);
+    });
+  });
+
+  return pubkeyToManager;
+}
+
+/**
+ * Enrich nodes with manager pubkey from JSON data
+ */
+function enrichNodesWithManagerData(nodes: MainnetNodeData[], pubkeyToManagerMap: Map<string, string>): MainnetNodeData[] {
+  return nodes.map(node => {
+    const managerAddress = pubkeyToManagerMap.get(node.pubkey);
+
+    if (managerAddress) {
+      return {
+        ...node,
+        manager_pubkey: managerAddress
+      };
+    }
+
+    return node;
+  });
+}
+
+/**
  * Enrich nodes with geo data and credits
  */
 function enrichNodesWithGeoAndCredits(
@@ -420,9 +460,13 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
     }
   }
 
+  // Enrich nodes with manager data
+  const pubkeyToManagerMap = createPubkeyToManagerMap();
+  
   // Enrich nodes with geo data and credits
   let enrichedNodes = currentNodes || [];
   enrichedNodes = enrichNodesWithGeoAndCredits(enrichedNodes, cachedGeo || {}, creditsMap);
+  enrichedNodes = enrichNodesWithManagerData(enrichedNodes, pubkeyToManagerMap);
 
   // Update merged cache if fresh data
   if (freshFetch && enrichedNodes.length > 0) {
@@ -443,6 +487,7 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
   if (cachedMerged && cachedMerged.nodes.length > 0) {
     let nodes = cachedMerged.nodes;
     nodes = enrichNodesWithGeoAndCredits(nodes, cachedGeo || cachedMerged.geo, creditsMap);
+    nodes = enrichNodesWithManagerData(nodes, pubkeyToManagerMap);
     return {
       ...cachedMerged,
       nodes,

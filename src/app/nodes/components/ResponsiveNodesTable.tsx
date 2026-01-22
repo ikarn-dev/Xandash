@@ -4,8 +4,7 @@ import React from 'react';
 import { Globe } from 'lucide-react';
 import { CopyBtn } from '@/components/ui/CopyBtn';
 import { ManagerBadge, NFTNamesList } from '@/components/ui';
-import { getNodeName } from '@/libs/utils/node-names';
-import { formatStorage } from '@/libs/utils';
+import { formatStorage, formatStorageCompact, formatStorageAuto } from '@/libs/utils';
 import type { ValidatorData } from '@/libs/server';
 
 interface LocationData {
@@ -73,19 +72,13 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
   return (
     <div className="w-full bg-black border border-white/10 rounded-lg overflow-hidden">
       <div className="overflow-x-auto scrollbar-hide">
-        <table className="w-full min-w-[1200px]">
+        <table className="w-full min-w-[1280px]">
           <thead className="bg-white/5 border-b border-white/10">
             <tr>
               {/* Compare column */}
               {onToggleCompare && (
                 <th className="w-[4%] px-2 py-3 text-center text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
                   <CompareIcon className="w-3.5 h-3.5 mx-auto text-white/50" />
-                </th>
-              )}
-              {/* Name column - Mainnet only */}
-              {isMainnet && (
-                <th className="w-[6%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
-                  Name
                 </th>
               )}
               <th
@@ -100,11 +93,11 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
               >
                 IP Address {getSortIcon('address')}
               </th>
-              <th className="w-[12%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
+              <th className="w-[9%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
                 Manager Assets
               </th>
               <th
-                className="w-[13%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
+                className="w-[9%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
                 onClick={() => handleSort('pubkey')}
               >
                 Pubkey {getSortIcon('pubkey')}
@@ -116,10 +109,22 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                 Public {getSortIcon('public')}
               </th>
               <th
-                className="w-[10%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
+                className="w-[3.5%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
                 onClick={() => handleSort('storage_committed')}
               >
-                Storage {getSortIcon('storage_committed')}
+                Committed {getSortIcon('storage_committed')}
+              </th>
+              <th
+                className="w-[3.5%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
+                onClick={() => handleSort('storage_used')}
+              >
+                Used {getSortIcon('storage_used')}
+              </th>
+              <th
+                className="w-[3%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
+                onClick={() => handleSort('storage_usage_percent')}
+              >
+                Usage % {getSortIcon('storage_usage_percent')}
               </th>
               <th
                 className="w-[8%] px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider cursor-pointer hover:text-white transition-colors whitespace-nowrap"
@@ -180,8 +185,10 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
               else if (timeDiff < 86400) lastSeenDisplay = `${Math.floor(timeDiff / 3600)}h`;
               else lastSeenDisplay = `${Math.floor(timeDiff / 86400)}d`;
 
-              const storageDisplay = formatStorage(validator.storage_committed || 0);
-              const usagePercent = validator.storage_usage_percent ? (validator.storage_usage_percent * 100).toFixed(2) : '0.00';
+              const storageCommittedDisplay = formatStorageCompact(validator.storage_committed || 0);
+              const storageUsedDisplay = formatStorageAuto(validator.storage_used || 0);
+              const usagePercent = validator.storage_usage_percent ? (validator.storage_usage_percent * 100) : 0;
+              const usagePercentDisplay = usagePercent > 0 ? usagePercent.toFixed(4) : '0.0000';
 
               const uptimeHours = Math.floor(validator.uptime / 3600);
               const uptimeDays = Math.floor(uptimeHours / 24);
@@ -218,15 +225,6 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                           </svg>
                         )}
                       </button>
-                    </td>
-                  )}
-
-                  {/* Name - Mainnet only */}
-                  {isMainnet && (
-                    <td className="px-3 py-3 text-xs">
-                      <span className={`${getNodeName(validator.pubkey) !== 'N/A' ? 'text-cyan-400 font-medium' : 'text-white/30'}`}>
-                        {getNodeName(validator.pubkey)}
-                      </span>
                     </td>
                   )}
 
@@ -270,6 +268,7 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                             nftCount={assets?.nft_count}
                             sbtCount={assets?.sbt_count}
                             xandBalance={assets?.xand_balance}
+                            xenoBalance={assets?.xeno_balance}
                             nftNames={assets?.nft_names}
                             sbtNames={assets?.sbt_names}
                             size="sm"
@@ -277,7 +276,7 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                         );
                       })()
                     ) : (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-[9px] sm:text-[10px] bg-gray-500/20 text-gray-400 border border-gray-500/30 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-500/10 border border-gray-500/30 text-[9px] sm:text-[10px] text-gray-400 whitespace-nowrap w-[110px] justify-center">
                         Not Registered
                       </span>
                     )}
@@ -303,12 +302,19 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                     </span>
                   </td>
 
-                  {/* Storage */}
+                  {/* Storage Committed */}
                   <td className="px-3 py-3 text-xs">
-                    <div className="text-white/80 font-mono">
-                      <div>{storageDisplay}</div>
-                      <div className="text-[10px] text-white/40">{usagePercent}%</div>
-                    </div>
+                    <span className="text-white/80 font-mono">{storageCommittedDisplay}</span>
+                  </td>
+
+                  {/* Storage Used */}
+                  <td className="px-3 py-3 text-xs">
+                    <span className="text-white/80 font-mono">{storageUsedDisplay}</span>
+                  </td>
+
+                  {/* Usage Percent */}
+                  <td className="px-3 py-3 text-xs">
+                    <span className="text-white/80 font-mono">{usagePercentDisplay}%</span>
                   </td>
 
                   {/* Version */}

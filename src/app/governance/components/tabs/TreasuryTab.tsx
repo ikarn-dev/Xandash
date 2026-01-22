@@ -82,7 +82,7 @@ export function TreasuryTab({ data }: { data: GovernanceData }) {
       </div>
 
       {/* Token Holdings Cards */}
-      <div>
+      <div className="mt-8 sm:mt-0">
         <h3 className="text-xs sm:text-sm font-semibold text-white font-mono mb-4">// TOKEN HOLDINGS</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {tokens.map((token) => (

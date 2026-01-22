@@ -191,7 +191,7 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
                           sbtNames={assets?.sbt_names}
                         />
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] bg-gray-500/20 text-gray-400 border border-gray-500/30 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-500/10 border border-gray-500/30 text-[9px] sm:text-[10px] text-gray-400 whitespace-nowrap w-[110px] justify-center">
                           Not Registered
                         </span>
                       )}

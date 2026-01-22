@@ -12,9 +12,9 @@ export interface NodeStatusConfig {
 
 /**
  * Default status thresholds
- * - Online: last seen < 30 minutes (1800s)
- * - Syncing: last seen 30-60 minutes (1800-3600s)
- * - Offline: last seen > 60 minutes (3600s)
+ * - Online: last seen <= 60 minutes (3600s)
+ * - Syncing: last seen > 60 minutes and < 120 minutes (3600-7200s)
+ * - Offline: last seen >= 120 minutes (7200s)
  */
 export const DEFAULT_STATUS_CONFIG: NodeStatusConfig = {
   onlineThreshold: 3600,  // 60 minutes
@@ -31,7 +31,7 @@ export function getNodeStatus(
 ): NodeStatus {
   const timeDiff = referenceTime - lastSeenTimestamp;
 
-  if (timeDiff < config.onlineThreshold) {
+  if (timeDiff <= config.onlineThreshold) {
     return 'online';
   } else if (timeDiff < config.syncingThreshold) {
     return 'syncing';
