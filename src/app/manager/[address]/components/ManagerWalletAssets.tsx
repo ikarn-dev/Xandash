@@ -77,7 +77,7 @@ export const ManagerWalletAssets = ({ walletAddress }: ManagerWalletAssetsProps)
     const [walletData, setWalletData] = useState<WalletData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [nftPage, setNftPage] = useState(0);
+
 
     useEffect(() => {
         const fetchWalletData = async () => {
@@ -160,14 +160,7 @@ export const ManagerWalletAssets = ({ walletAddress }: ManagerWalletAssetsProps)
         return b.amount - a.amount;
     });
 
-    // Sort NFTs: Xandeum-related first
-    const sortedNfts = [...nfts].sort((a, b) => {
-        const aIsXandeum = isXandeumRelated(a);
-        const bIsXandeum = isXandeumRelated(b);
-        if (aIsXandeum && !bIsXandeum) return -1;
-        if (!aIsXandeum && bIsXandeum) return 1;
-        return 0;
-    });
+
 
     return (
         <div className="space-y-4">
@@ -321,96 +314,75 @@ export const ManagerWalletAssets = ({ walletAddress }: ManagerWalletAssetsProps)
                 </div>
             )}
 
-            {/* NFTs Grid */}
-            {sortedNfts.length > 0 && (
-                <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4">
-                    <CornerAccents />
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-xs sm:text-sm font-medium text-white/70 block">
-                            NFT Collection
-                            {sortedNfts.some(isXandeumRelated) && (
-                                <span className="ml-2 text-[10px] text-purple-400">(Xandeum NFTs first)</span>
-                            )}
-                        </h3>
-                        <span className="text-[10px] text-white/40">
-                            {sortedNfts.length} total
-                        </span>
-                    </div>
-                    
-                    {/* NFT Grid - 2 rows (6 cols per row) */}
-                    <div className="grid grid-cols-6 gap-2 sm:gap-3 mb-3">
-                        {sortedNfts.slice(nftPage * 12, (nftPage + 1) * 12).map((nft) => {
-                            const imageUrl = nft.content?.links?.image ||
-                                nft.content?.files?.[0]?.uri ||
-                                null;
-                            const isXandeum = isXandeumRelated(nft);
+            {/* NFTs Grid - Xandeum NFTs Only */}
+            {(() => {
+                // Filter only Xandeum NFTs (names starting with "Xandeum")
+                const xandeumNfts = nfts.filter(nft => {
+                    const name = nft.content?.metadata?.name || '';
+                    return name.toLowerCase().startsWith('xandeum');
+                });
 
-                            return (
-                                <div
-                                    key={nft.id}
-                                    className={`group relative aspect-square bg-white/5 border overflow-hidden transition-all cursor-pointer ${isXandeum
-                                        ? 'border-purple-500/50 hover:border-purple-500'
-                                        : 'border-white/10 hover:border-white/20'
-                                        }`}
-                                    title={nft.content?.metadata?.name || 'NFT'}
-                                >
-                                    {isXandeum && (
+                if (xandeumNfts.length === 0) return null;
+
+                return (
+                    <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4 -mx-3 sm:mx-0">
+                        <CornerAccents />
+                        <div className="flex items-center justify-between mb-3 px-3 sm:px-0">
+                            <h3 className="text-xs sm:text-sm font-medium text-white/70 block">
+                                Xandeum NFT Collection
+                            </h3>
+                            <span className="text-[10px] text-purple-400">
+                                {xandeumNfts.length} Xandeum NFTs
+                            </span>
+                        </div>
+
+                        {/* NFT Grid - Show all Xandeum NFTs */}
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3 px-3 sm:px-0">
+                            {xandeumNfts.map((nft) => {
+                                const imageUrl = nft.content?.links?.image ||
+                                    nft.content?.files?.[0]?.uri ||
+                                    null;
+
+                                return (
+                                    <div
+                                        key={nft.id}
+                                        className="group relative aspect-square bg-white/5 border border-purple-500/50 hover:border-purple-500 overflow-hidden transition-all cursor-pointer"
+                                        title={nft.content?.metadata?.name || 'NFT'}
+                                    >
+                                        {/* Xandeum Badge */}
                                         <div className="absolute top-1 right-1 z-10">
                                             <img
                                                 src="/logo/XandToken.png"
                                                 alt="Xandeum"
-                                                className="w-4 h-4 rounded-full"
+                                                className="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
                                             />
                                         </div>
-                                    )}
-                                    {imageUrl ? (
-                                        <img
-                                            src={imageUrl}
-                                            alt={nft.content?.metadata?.name || 'NFT'}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                (e.target as HTMLImageElement).style.display = 'none';
-                                            }}
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-white/20">
-                                            <span className="text-xl sm:text-2xl">🖼️</span>
+                                        {imageUrl ? (
+                                            <img
+                                                src={imageUrl}
+                                                alt={nft.content?.metadata?.name || 'NFT'}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                }}
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-white/20">
+                                                <span className="text-xl sm:text-2xl">🖼️</span>
+                                            </div>
+                                        )}
+                                        <div className="absolute bottom-0 left-0 right-0 p-1 sm:p-1.5 bg-gradient-to-t from-black/80 to-transparent">
+                                            <p className="text-[8px] sm:text-[9px] text-white truncate">
+                                                {nft.content?.metadata?.name || truncateAddress(nft.id)}
+                                            </p>
                                         </div>
-                                    )}
-                                    <div className="absolute bottom-0 left-0 right-0 p-1 sm:p-1.5 bg-gradient-to-t from-black/80 to-transparent">
-                                        <p className="text-[8px] sm:text-[9px] text-white truncate">
-                                            {nft.content?.metadata?.name || truncateAddress(nft.id)}
-                                        </p>
                                     </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Pagination Controls */}
-                    {sortedNfts.length > 12 && (
-                        <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                            <button
-                                onClick={() => setNftPage(Math.max(0, nftPage - 1))}
-                                disabled={nftPage === 0}
-                                className="px-2 py-1 text-xs bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white/70 hover:text-white transition-colors rounded"
-                            >
-                                ← Prev
-                            </button>
-                            <span className="text-[10px] text-white/50">
-                                {nftPage + 1} / {Math.ceil(sortedNfts.length / 12)}
-                            </span>
-                            <button
-                                onClick={() => setNftPage(Math.min(Math.ceil(sortedNfts.length / 12) - 1, nftPage + 1))}
-                                disabled={nftPage >= Math.ceil(sortedNfts.length / 12) - 1}
-                                className="px-2 py-1 text-xs bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white/70 hover:text-white transition-colors rounded"
-                            >
-                                Next →
-                            </button>
+                                );
+                            })}
                         </div>
-                    )}
-                </div>
-            )}
+                    </div>
+                );
+            })()}
 
             {/* Empty state */}
             {tokens.length === 0 && nfts.length === 0 && solBalance === 0 && (

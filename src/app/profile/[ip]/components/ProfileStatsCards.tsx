@@ -92,7 +92,7 @@ export const ProfileStatsCards = ({ node }: ProfileStatsCardsProps) => {
           <ServerIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           <span>Storage</span>
         </div>
-        <div className="text-base sm:text-xl lg:text-2xl font-bold text-orange-400 font-mono">
+        <div className="text-sm sm:text-xl lg:text-2xl font-bold text-orange-400 font-mono">
           {formatBytes(node?.storage_committed || 0)}
         </div>
       </div>
@@ -104,7 +104,7 @@ export const ProfileStatsCards = ({ node }: ProfileStatsCardsProps) => {
           <ServerIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           <span>Used</span>
         </div>
-        <div className="text-base sm:text-xl lg:text-2xl font-bold text-yellow-400 font-mono">
+        <div className="text-sm sm:text-xl lg:text-2xl font-bold text-yellow-400 font-mono">
           {formatBytes(node?.storage_used || 0)}
         </div>
       </div>

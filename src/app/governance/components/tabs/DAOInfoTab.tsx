@@ -63,11 +63,11 @@ export function DAOInfoTab({ data }: { data: GovernanceData }) {
 function TopHoldersSection({ data }: { data: GovernanceData }) {
   const [search, setSearch] = useState('');
   const [displayCount, setDisplayCount] = useState(5);
-  
-  const filteredHolders = data.largestHolders.filter(holder => 
+
+  const filteredHolders = data.largestHolders.filter(holder =>
     holder.address.toLowerCase().includes(search.toLowerCase())
   );
-  
+
   const displayedHolders = filteredHolders.slice(0, displayCount);
   const hasMore = displayCount < filteredHolders.length;
 
@@ -86,7 +86,7 @@ function TopHoldersSection({ data }: { data: GovernanceData }) {
             placeholder="Search by address..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setDisplayCount(5); }}
-            className="w-full bg-white/5 border border-white/10 rounded pl-9 sm:pl-10 pr-3 py-2 text-xs sm:text-sm text-white placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-colors"
+            className="w-full bg-white/5 border border-white/10 rounded pl-9 sm:pl-10 pr-3 py-1.5 sm:py-2 text-xs sm:text-sm text-white placeholder-white/30 placeholder:text-[10px] sm:placeholder:text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
           />
         </div>
       </div>
@@ -152,7 +152,7 @@ function RecentActivitySection({ data }: { data: GovernanceData }) {
           <div key={i} className="flex items-center justify-between p-2 sm:p-3 bg-white/5 rounded hover:bg-white/10 transition-colors">
             <div className="flex items-center gap-2">
               <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${tx.error ? 'bg-red-400' : 'bg-emerald-400'}`}></div>
-              <a href={getSolscanUrl(tx.signature, 'tx')} target="_blank" rel="noopener noreferrer" 
+              <a href={getSolscanUrl(tx.signature, 'tx')} target="_blank" rel="noopener noreferrer"
                 className="text-white/70 hover:text-white font-mono text-[10px] sm:text-xs">
                 {shortenAddress(tx.signature, 6)}
               </a>
@@ -161,9 +161,8 @@ function RecentActivitySection({ data }: { data: GovernanceData }) {
               <span className="text-white/40 text-[9px] sm:text-xs hidden sm:inline">
                 {tx.blockTime ? new Date(tx.blockTime * 1000).toLocaleDateString() : '-'}
               </span>
-              <span className={`px-1.5 sm:px-2 py-0.5 rounded text-[8px] sm:text-[10px] ${
-                tx.error ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'
-              }`}>
+              <span className={`px-1.5 sm:px-2 py-0.5 rounded text-[8px] sm:text-[10px] ${tx.error ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'
+                }`}>
                 {tx.error ? 'failed' : 'success'}
               </span>
             </div>

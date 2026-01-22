@@ -311,7 +311,7 @@ export function ManagersView({ mainnetValidators, devnetValidators }: ManagersVi
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search by manager address, node pubkey, or node IP..."
-            className="w-full bg-black border border-white/10 pl-11 pr-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-white/20 transition-colors text-sm"
+            className="w-full bg-black border border-white/10 pl-10 sm:pl-11 pr-4 py-2 sm:py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-white/20 transition-colors text-xs sm:text-sm placeholder:text-[10px] sm:placeholder:text-sm"
           />
         </div>
 

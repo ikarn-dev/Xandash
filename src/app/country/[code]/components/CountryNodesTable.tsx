@@ -124,7 +124,7 @@ export const CountryNodesTable = ({ nodes, locations, countryName, network = 'de
               placeholder="Search nodes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 sm:pl-9 pr-3 sm:pr-4 py-1.5 sm:py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs sm:text-sm placeholder:text-white/40 focus:outline-none focus:border-white/30 w-full sm:w-64"
+              className="pl-8 sm:pl-9 pr-3 sm:pr-4 py-1.5 sm:py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs sm:text-sm placeholder:text-white/40 placeholder:text-[10px] sm:placeholder:text-sm focus:outline-none focus:border-white/30 w-full sm:w-64"
             />
           </div>
         </div>

@@ -5,9 +5,9 @@ import { GovernanceData } from '../../hooks/useGovernance';
 import { shortenAddress, getStateColor, getRealmsUrl, copyToClipboard } from '../../utils/helpers';
 import { SearchIcon, ChevronDownIcon, ExternalLinkIcon, CopyIcon } from '../Icons';
 
-interface Proposal { 
-  pubkey: string; 
-  name: string; 
+interface Proposal {
+  pubkey: string;
+  name: string;
   state: string;
   voteType?: string;
   createdAt?: number;
@@ -62,7 +62,7 @@ export function ProposalsTab({ data }: { data: GovernanceData }) {
       <div className="relative">
         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
         <input type="text" placeholder="Search proposals..." value={search} onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-white/5 border border-white/10 rounded pl-10 pr-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-emerald-500/50" />
+          className="w-full bg-white/5 border border-white/10 rounded pl-9 sm:pl-10 pr-3 py-1.5 sm:py-2 text-xs sm:text-sm text-white placeholder-white/30 placeholder:text-[10px] sm:placeholder:text-sm focus:outline-none focus:border-emerald-500/50" />
       </div>
 
       {/* State Filters */}
@@ -89,10 +89,10 @@ export function ProposalsTab({ data }: { data: GovernanceData }) {
               <span className="text-white/40 text-[10px]">☰ {p.voteType || 'Single-choice'}</span>
               <span className="text-white/40 text-[10px]">⏱ {p.createdAt ? timeAgo(p.createdAt) : '—'}</span>
             </div>
-            
+
             {/* Title */}
             <h4 className="text-white font-medium text-sm sm:text-base mb-2">{p.name}</h4>
-            
+
             {/* Address Row */}
             <div className="flex items-center gap-2 mb-3">
               <span className="text-white/50 text-xs font-mono">{shortenAddress(p.pubkey, 6)}</span>
@@ -100,7 +100,7 @@ export function ProposalsTab({ data }: { data: GovernanceData }) {
                 <CopyIcon className="w-3 h-3" />
               </button>
             </div>
-            
+
             {/* Progress Bar (for executable/voting) */}
             {(p.state === 'Executable' || p.state === 'Voting' || p.state === 'Succeeded') && (
               <div className="mb-3">
@@ -109,7 +109,7 @@ export function ProposalsTab({ data }: { data: GovernanceData }) {
                 </div>
               </div>
             )}
-            
+
             {/* Footer */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">

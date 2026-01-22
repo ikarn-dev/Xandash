@@ -419,6 +419,7 @@ export function NodesPageClientRefactored({
           <SearchBox
             onSearch={handleSearchChange}
             placeholder="Search by IP, pubkey, version, or manager address..."
+            mobilePlaceholder="Search by IP, pubkey..."
           />
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">

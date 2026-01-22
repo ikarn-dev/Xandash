@@ -80,7 +80,7 @@ export function CountrySelector({
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search by country name..."
-          className="w-full pl-10 pr-4 py-2.5 bg-black border border-white/10 text-sm text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50 transition-colors"
+          className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 bg-black border border-white/10 text-xs sm:text-sm text-white placeholder-white/30 placeholder:text-[10px] sm:placeholder:text-sm focus:outline-none focus:border-purple-500/50 transition-colors"
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-white/30">
           {selectedCountries.length}/{maxCountries}
@@ -145,18 +145,18 @@ export function CountrySelector({
                   onClick={() => canSelect && onToggle(country.country_code)}
                   disabled={!canSelect}
                   className={`w-full flex items-center justify-between p-3 transition-all ${isSelected
-                      ? 'bg-white/5'
-                      : canSelect
-                        ? 'hover:bg-white/5'
-                        : 'opacity-40 cursor-not-allowed'
+                    ? 'bg-white/5'
+                    : canSelect
+                      ? 'hover:bg-white/5'
+                      : 'opacity-40 cursor-not-allowed'
                     }`}
                 >
                   <div className="flex items-center gap-3">
                     {/* Checkbox */}
                     <div
                       className={`w-5 h-5 border-2 flex items-center justify-center transition-all ${isSelected
-                          ? 'border-purple-500 bg-purple-500'
-                          : 'border-white/20'
+                        ? 'border-purple-500 bg-purple-500'
+                        : 'border-white/20'
                         }`}
                       style={isSelected ? {
                         backgroundColor: COUNTRY_COLORS[selectedIndex % COUNTRY_COLORS.length],

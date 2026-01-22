@@ -70,7 +70,7 @@ export function NodeSelector({
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search by IP or Pod ID..."
-          className="w-full pl-10 pr-4 py-2.5 bg-black/50 border border-white/10 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-colors"
+          className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 bg-black/50 border border-white/10 rounded-lg text-xs sm:text-sm text-white placeholder-white/30 placeholder:text-[10px] sm:placeholder:text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-white/30">
           {selectedNodes.length}/{maxNodes}

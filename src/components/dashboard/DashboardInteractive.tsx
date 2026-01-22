@@ -326,6 +326,7 @@ export const DashboardInteractive: React.FC = () => {
       <SearchBox
         onSearch={handleSearch}
         placeholder="Search Nodes (Pod ID, IP, PubKey) or Managers (Manager Address, Node PubKey)..."
+        mobilePlaceholder="Search Nodes or Managers..."
       />
 
       {/* Render overlay */}

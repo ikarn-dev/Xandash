@@ -40,7 +40,7 @@ export function MembersTab({ data }: { data: GovernanceData }) {
         <div className="relative flex-1 max-w-md">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
           <input type="text" placeholder="Search by address..." value={search} onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded pl-10 pr-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-emerald-500/50" />
+            className="w-full bg-white/5 border border-white/10 rounded pl-9 sm:pl-10 pr-3 py-1.5 sm:py-2 text-xs sm:text-sm text-white placeholder-white/30 placeholder:text-[10px] sm:placeholder:text-sm focus:outline-none focus:border-emerald-500/50" />
         </div>
         <div className="flex gap-3">
           <div className="px-4 py-2 bg-white/5 rounded">

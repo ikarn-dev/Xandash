@@ -30,7 +30,11 @@ export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ mana
       try {
         setLoading(true);
         const response = await fetch(`/api/manager-assets?address=${managerAddress}`);
-        if (!response.ok) throw new Error('Failed to fetch assets');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch assets');
+        }
+        
         const data = await response.json();
         setAssets(data);
       } catch (err) {
@@ -58,13 +62,82 @@ export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ mana
   }
 
   if (error || !assets) {
-    return null;
+    // Show cards with zero values instead of hiding completely
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+        {/* XAND Balance */}
+        <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4">
+          <CornerAccents />
+          <div className="flex items-center gap-2 text-purple-400/70 text-[10px] sm:text-xs mb-2">
+            <img
+              src="/logo/XandToken.png"
+              alt="XAND"
+              className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+            <span>XAND Balance</span>
+          </div>
+          <div className="text-lg sm:text-xl lg:text-2xl font-bold text-purple-400 font-mono">
+            0
+          </div>
+          <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
+            Xandeum Token
+          </div>
+        </div>
+
+        {/* XENO Balance */}
+        <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4">
+          <CornerAccents />
+          <div className="flex items-center gap-2 text-cyan-400/70 text-[10px] sm:text-xs mb-2">
+            <img
+              src="/logo/XandToken.png"
+              alt="XENO"
+              className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+            <span>XENO Balance</span>
+          </div>
+          <div className="text-lg sm:text-xl lg:text-2xl font-bold text-cyan-400 font-mono">
+            0
+          </div>
+          <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
+            XENO Token
+          </div>
+        </div>
+
+        {/* NFT Summary */}
+        <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4 col-span-2 sm:col-span-1">
+          <CornerAccents />
+          <div className="flex items-center gap-2 text-orange-400/70 text-[10px] sm:text-xs mb-2">
+            <img
+              src="/logo/XandToken.png"
+              alt="NFTs"
+              className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+            <span>NFTs</span>
+          </div>
+          <div className="text-lg sm:text-xl lg:text-2xl font-bold text-orange-400 font-mono">
+            0
+          </div>
+          <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
+            Xandeum NFTs
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  const hasXand = assets.xand_balance > 0;
-  const hasXeno = assets.xeno_balance > 0;
-  const hasSbts = assets.sbt_count > 0;
-  const hasNfts = assets.nft_count > 0;
+  const hasXand = (assets.xand_balance ?? 0) > 0;
+  const hasXeno = (assets.xeno_balance ?? 0) > 0;
+  const hasSbts = (assets.sbt_count ?? 0) > 0;
+  const hasNfts = (assets.nft_count ?? 0) > 0;
 
   // Always show the cards section
   return (
@@ -84,7 +157,7 @@ export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ mana
           <span>XAND Balance</span>
         </div>
         <div className="text-lg sm:text-xl lg:text-2xl font-bold text-purple-400 font-mono">
-          {assets.xand_balance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          {(assets.xand_balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
         </div>
         <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
           Xandeum Token
@@ -106,15 +179,15 @@ export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ mana
           <span>XENO Balance</span>
         </div>
         <div className="text-lg sm:text-xl lg:text-2xl font-bold text-cyan-400 font-mono">
-          {assets.xeno_balance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          {(assets.xeno_balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
         </div>
         <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
           XENO Token
         </div>
       </div>
 
-      {/* NFT Summary */}
-      <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4">
+      {/* NFT Summary - Full width on mobile */}
+      <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4 col-span-2 sm:col-span-1">
         <CornerAccents />
         <div className="flex items-center gap-2 text-orange-400/70 text-[10px] sm:text-xs mb-2">
           <img
@@ -128,7 +201,7 @@ export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ mana
           <span>NFTs</span>
         </div>
         <div className="text-lg sm:text-xl lg:text-2xl font-bold text-orange-400 font-mono">
-          {assets.nft_count}
+          {assets.nft_count ?? 0}
         </div>
         <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
           Xandeum NFTs
@@ -151,7 +224,7 @@ export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ mana
             <span>SBTs</span>
           </div>
           <div className="text-lg sm:text-xl lg:text-2xl font-bold text-emerald-400 font-mono">
-            {assets.sbt_count}
+            {assets.sbt_count ?? 0}
           </div>
           <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
             Soul Bound Tokens

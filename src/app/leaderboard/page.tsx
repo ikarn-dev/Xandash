@@ -3,11 +3,11 @@
 import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import { RefreshCw, ChevronLeft, ChevronRight, Bookmark } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout';
-import { 
-  LeaderboardTitleCard, 
-  LeaderboardTotalCreditsCard, 
-  LeaderboardDistributionCard, 
-  LeaderboardTopPodCard 
+import {
+  LeaderboardTitleCard,
+  LeaderboardTotalCreditsCard,
+  LeaderboardDistributionCard,
+  LeaderboardTopPodCard
 } from '@/components/dashboard';
 import { usePodCredits } from '@/libs/hooks/usePodCredits';
 import { SearchBox } from '@/components/ui/SearchBox';
@@ -56,7 +56,7 @@ function LeaderboardPageContent() {
         const storedTime = parseInt(stored);
         const now = Date.now();
         const timeSinceRefresh = (now - storedTime) / 1000;
-        
+
         if (timeSinceRefresh < REFRESH_COOLDOWN) {
           setLastRefresh(storedTime);
           setCooldown(Math.ceil(REFRESH_COOLDOWN - timeSinceRefresh));
@@ -144,14 +144,14 @@ function LeaderboardPageContent() {
   // Merge credits data with nodes data and deduplicate by pod_id
   const mergedData: NodeData[] = useMemo(() => {
     if (!creditsData?.data) return [];
-    
+
     // Use a Map to deduplicate by pod_id
     const uniquePods = new Map<string, NodeData>();
-    
+
     creditsData.data.forEach((pod) => {
       // Skip if we already have this pod_id (keep first occurrence which has higher credits)
       if (uniquePods.has(pod.pod_id)) return;
-      
+
       const nodeInfo = nodesMap.get(pod.pod_id);
       uniquePods.set(pod.pod_id, {
         pod_id: pod.pod_id,
@@ -162,7 +162,7 @@ function LeaderboardPageContent() {
         address: nodeInfo?.address,
       });
     });
-    
+
     return Array.from(uniquePods.values());
   }, [creditsData, nodesMap]);
 
@@ -220,22 +220,22 @@ function LeaderboardPageContent() {
   const handleRefresh = useCallback(async () => {
     const now = Date.now();
     const timeSinceLastRefresh = (now - lastRefresh) / 1000;
-    
+
     if (timeSinceLastRefresh < REFRESH_COOLDOWN) {
       const remaining = Math.ceil(REFRESH_COOLDOWN - timeSinceLastRefresh);
       toast.error(`Please wait ${remaining}s before refreshing again`);
       return;
     }
-    
+
     setIsRefreshing(true);
     setLastRefresh(now);
     setCooldown(REFRESH_COOLDOWN);
-    
+
     // Persist to localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, now.toString());
     }
-    
+
     try {
       await refetch();
       const response = await fetch(`/api/nodes?includeAll=true&network=${selectedNetwork}`);
@@ -327,20 +327,21 @@ function LeaderboardPageContent() {
       </div>
 
       {/* Leaderboard Trends */}
-      <LeaderboardTrendSection 
+      <LeaderboardTrendSection
         data={mergedData}
         isLoading={isLoading || nodesLoading}
       />
 
-      <SearchBox 
+      <SearchBox
         onSearch={handleSearch}
         placeholder="Search by Pod ID or IP..."
+        mobilePlaceholder="Search Pod ID or IP..."
       />
 
       {/* Bookmarks Section */}
       {bookmarkedPods.size > 0 && (
         <div className="bg-black/90 border border-yellow-500/30 rounded-lg overflow-hidden">
-          <div 
+          <div
             className="flex items-center justify-between p-3 sm:p-4 border-b border-yellow-500/20 cursor-pointer hover:bg-yellow-500/5 transition-colors"
             onClick={() => setShowBookmarks(!showBookmarks)}
           >
@@ -364,7 +365,7 @@ function LeaderboardPageContent() {
             </div>
           </div>
           {showBookmarks && (
-            <BookmarksTable 
+            <BookmarksTable
               data={bookmarkedPodsData}
               onRemoveBookmark={toggleBookmark}
             />
@@ -398,7 +399,7 @@ function LeaderboardPageContent() {
         <LeaderboardTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         {/* Ranking Table */}
-        <RankingTable 
+        <RankingTable
           data={paginatedData}
           type={activeTab}
           bookmarkedPods={bookmarkedPods}
@@ -413,9 +414,9 @@ function LeaderboardPageContent() {
               Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length}
             </div>
             <div className="flex items-center space-x-1 sm:space-x-2 order-1 sm:order-2">
-              <button 
-                onClick={() => goToPage(currentPage - 1)} 
-                disabled={currentPage === 1} 
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
                 className="p-1.5 sm:p-2 bg-black/60 border border-white/20 rounded text-gray-400 hover:text-white hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -428,23 +429,22 @@ function LeaderboardPageContent() {
                   else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
                   else pageNum = currentPage - 2 + i;
                   return (
-                    <button 
-                      key={pageNum} 
-                      onClick={() => goToPage(pageNum)} 
-                      className={`px-2 sm:px-3 py-0.5 sm:py-1 bg-black/60 border rounded text-xs sm:text-sm transition-all duration-200 ${
-                        currentPage === pageNum 
-                          ? 'border-white/40 text-white' 
+                    <button
+                      key={pageNum}
+                      onClick={() => goToPage(pageNum)}
+                      className={`px-2 sm:px-3 py-0.5 sm:py-1 bg-black/60 border rounded text-xs sm:text-sm transition-all duration-200 ${currentPage === pageNum
+                          ? 'border-white/40 text-white'
                           : 'border-white/20 text-gray-400 hover:text-white hover:border-white/40'
-                      }`}
+                        }`}
                     >
                       {pageNum}
                     </button>
                   );
                 })}
               </div>
-              <button 
-                onClick={() => goToPage(currentPage + 1)} 
-                disabled={currentPage === totalPages} 
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
                 className="p-1.5 sm:p-2 bg-black/60 border border-white/20 rounded text-gray-400 hover:text-white hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />

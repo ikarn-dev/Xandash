@@ -6,87 +6,87 @@ import { toast } from 'sonner';
 // Custom SVG Icons
 const CalculatorIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="4" y="2" width="16" height="20" rx="2"/>
-    <line x1="8" y1="6" x2="16" y2="6"/>
-    <line x1="8" y1="10" x2="16" y2="10"/>
-    <line x1="8" y1="14" x2="16" y2="14"/>
-    <line x1="8" y1="18" x2="12" y2="18"/>
+    <rect x="4" y="2" width="16" height="20" rx="2" />
+    <line x1="8" y1="6" x2="16" y2="6" />
+    <line x1="8" y1="10" x2="16" y2="10" />
+    <line x1="8" y1="14" x2="16" y2="14" />
+    <line x1="8" y1="18" x2="12" y2="18" />
   </svg>
 );
 
 const StorageIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <ellipse cx="12" cy="5" rx="9" ry="3"/>
-    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
-    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+    <ellipse cx="12" cy="5" rx="9" ry="3" />
+    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
   </svg>
 );
 
 const TrendUpIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
-    <polyline points="17 6 23 6 23 12"/>
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+    <polyline points="17 6 23 6 23 12" />
   </svg>
 );
 
 const ChartIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M3 3v18h18"/>
-    <path d="M18 17V9M13 17V5M8 17v-3"/>
+    <path d="M3 3v18h18" />
+    <path d="M18 17V9M13 17V5M8 17v-3" />
   </svg>
 );
 
 const InfoIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="10"/>
-    <line x1="12" y1="16" x2="12" y2="12"/>
-    <line x1="12" y1="8" x2="12.01" y2="8"/>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="16" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12.01" y2="8" />
   </svg>
 );
 
 const DollarIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="10"/>
-    <path d="M12 6v12M15 9.5c-.5-1-1.5-1.5-3-1.5-2 0-3 1-3 2.5s1 2 3 2.5c2 .5 3 1.5 3 2.5s-1 2.5-3 2.5c-1.5 0-2.5-.5-3-1.5"/>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 6v12M15 9.5c-.5-1-1.5-1.5-3-1.5-2 0-3 1-3 2.5s1 2 3 2.5c2 .5 3 1.5 3 2.5s-1 2.5-3 2.5c-1.5 0-2.5-.5-3-1.5" />
   </svg>
 );
 
 // Custom icons for earning factors
 const PNodeIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-    <line x1="8" y1="21" x2="16" y2="21"/>
-    <line x1="12" y1="17" x2="12" y2="21"/>
-    <circle cx="7" cy="9" r="1.5" fill="currentColor"/>
-    <circle cx="12" cy="9" r="1.5" fill="currentColor"/>
-    <circle cx="17" cy="9" r="1.5" fill="currentColor"/>
-    <path d="M7 9v3M12 9v3M17 9v3"/>
+    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+    <line x1="8" y1="21" x2="16" y2="21" />
+    <line x1="12" y1="17" x2="12" y2="21" />
+    <circle cx="7" cy="9" r="1.5" fill="currentColor" />
+    <circle cx="12" cy="9" r="1.5" fill="currentColor" />
+    <circle cx="17" cy="9" r="1.5" fill="currentColor" />
+    <path d="M7 9v3M12 9v3M17 9v3" />
   </svg>
 );
 
 const StorageBoxIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-    <line x1="12" y1="22.08" x2="12" y2="12"/>
-    <line x1="12" y1="12" x2="12" y2="12.01"/>
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+    <line x1="12" y1="22.08" x2="12" y2="12" />
+    <line x1="12" y1="12" x2="12" y2="12.01" />
   </svg>
 );
 
 const PerformanceIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-    <circle cx="12" cy="12" r="3"/>
-    <path d="M12 9v3l2 2"/>
+    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 9v3l2 2" />
   </svg>
 );
 
 const StakeIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="10"/>
-    <path d="M12 6v6l4 2"/>
-    <circle cx="12" cy="12" r="2" fill="currentColor"/>
-    <path d="M8.5 8.5L6 6M15.5 8.5L18 6M8.5 15.5L6 18M15.5 15.5L18 18"/>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 6v6l4 2" />
+    <circle cx="12" cy="12" r="2" fill="currentColor" />
+    <path d="M8.5 8.5L6 6M15.5 8.5L18 6M8.5 15.5L6 18M15.5 15.5L18 18" />
   </svg>
 );
 
@@ -202,24 +202,24 @@ const DEFAULT_NETWORK_PARAMS: NetworkParameters = {
 function calculateStorageCredits(inputs: StoincInputs): number {
   try {
     const { pNodeCount, storageSpacePerNode, performanceScore, xandStake } = inputs;
-    
+
     // Validate inputs
-    if (!Number.isFinite(pNodeCount) || !Number.isFinite(storageSpacePerNode) || 
-        !Number.isFinite(performanceScore) || !Number.isFinite(xandStake)) {
+    if (!Number.isFinite(pNodeCount) || !Number.isFinite(storageSpacePerNode) ||
+      !Number.isFinite(performanceScore) || !Number.isFinite(xandStake)) {
       throw new Error('All input values must be valid numbers');
     }
-    
+
     // If any factor is zero, return zero (as per requirements)
     if (pNodeCount === 0 || storageSpacePerNode === 0 || performanceScore === 0 || xandStake === 0) {
       return 0;
     }
-    
+
     const result = pNodeCount * storageSpacePerNode * performanceScore * xandStake;
-    
+
     if (!Number.isFinite(result)) {
       throw new Error('Calculation resulted in invalid number');
     }
-    
+
     return result;
   } catch (error) {
     throw new Error(`Storage credits calculation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -235,28 +235,28 @@ function calculateGeometricMean(boostFactors: BoostFactor[]): number {
     if (boostFactors.length === 0) {
       return 1; // No boost factors means no boost (multiplier of 1)
     }
-    
+
     // Validate all multipliers are positive numbers
     for (const factor of boostFactors) {
       if (!Number.isFinite(factor.multiplier) || factor.multiplier <= 0) {
         throw new Error(`Invalid boost factor multiplier: ${factor.multiplier}`);
       }
     }
-    
+
     // Calculate product of all multipliers
     const product = boostFactors.reduce((acc, factor) => acc * factor.multiplier, 1);
-    
+
     if (!Number.isFinite(product) || product <= 0) {
       throw new Error('Product of boost factors is invalid');
     }
-    
+
     // Return geometric mean: product^(1/count)
     const result = Math.pow(product, 1 / boostFactors.length);
-    
+
     if (!Number.isFinite(result)) {
       throw new Error('Geometric mean calculation resulted in invalid number');
     }
-    
+
     return result;
   } catch (error) {
     throw new Error(`Geometric mean calculation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -278,7 +278,7 @@ function estimateStoinc(boostedCredits: number, networkParams: NetworkParameters
   if (boostedCredits === 0 || networkParams.totalBoostedCredits === 0) {
     return 0;
   }
-  
+
   const userShare = boostedCredits / networkParams.totalBoostedCredits;
   return userShare * networkParams.totalNetworkFees * networkParams.pNodeShare;
 }
@@ -293,17 +293,17 @@ function calculateStoinc(inputs: StoincInputs, networkParams: NetworkParameters 
     if (!networkParams.totalNetworkFees || !networkParams.pNodeShare || !networkParams.totalBoostedCredits) {
       throw new Error('Invalid network parameters provided');
     }
-    
+
     // Calculate storage credits
     const storageCredits = calculateStorageCredits(inputs);
-    
+
     // Calculate boosted credits
     const boostedCredits = calculateBoostedCredits(storageCredits, inputs.boostFactors);
     const geometricMeanBoost = calculateGeometricMean(inputs.boostFactors);
-    
+
     // Estimate STOINC earnings
     const estimatedStoinc = estimateStoinc(boostedCredits, networkParams);
-    
+
     // Create detailed breakdown
     const breakdown: CalculationBreakdown = {
       baseCalculation: {
@@ -325,7 +325,7 @@ function calculateStoinc(inputs: StoincInputs, networkParams: NetworkParameters 
         estimatedEarnings: estimatedStoinc
       }
     };
-    
+
     return {
       storageCredits,
       boostedCredits,
@@ -433,27 +433,27 @@ function validateXandStake(stake: number): ValidationResult {
  */
 function validateInputs(inputs: StoincInputs): ValidationErrors {
   const errors: ValidationErrors = {};
-  
+
   const pNodeValidation = validatePNodeCount(inputs.pNodeCount);
   if (!pNodeValidation.isValid) {
     errors.pNodeCount = pNodeValidation.error;
   }
-  
+
   const storageValidation = validateStorageSpace(inputs.storageSpacePerNode);
   if (!storageValidation.isValid) {
     errors.storageSpacePerNode = storageValidation.error;
   }
-  
+
   const performanceValidation = validatePerformanceScore(inputs.performanceScore);
   if (!performanceValidation.isValid) {
     errors.performanceScore = performanceValidation.error;
   }
-  
+
   const stakeValidation = validateXandStake(inputs.xandStake);
   if (!stakeValidation.isValid) {
     errors.xandStake = stakeValidation.error;
   }
-  
+
   return errors;
 }
 
@@ -501,7 +501,7 @@ const NumberInput: React.FC<NumberInputProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
-    
+
     // Parse and validate the number
     const numValue = parseFloat(newValue);
     if (!isNaN(numValue) && isFinite(numValue)) {
@@ -535,11 +535,10 @@ const NumberInput: React.FC<NumberInputProps> = ({
           min={min}
           max={max}
           step={step}
-          className={`w-full px-3 py-2 bg-white/5 border rounded-lg text-white placeholder-white/40 transition-colors focus:outline-none focus:ring-2 ${
-            error 
-              ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' 
+          className={`w-full px-3 py-2 bg-white/5 border rounded-lg text-white placeholder-white/40 transition-colors focus:outline-none focus:ring-2 ${error
+              ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
               : 'border-white/10 focus:border-emerald-500/50 focus:ring-emerald-500/20'
-          }`}
+            }`}
         />
         {unit && !isFocused && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/40 text-sm pointer-events-none">
@@ -550,9 +549,9 @@ const NumberInput: React.FC<NumberInputProps> = ({
       {error && (
         <div className="text-red-400 text-xs flex items-center gap-1">
           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
           {error}
         </div>
@@ -577,7 +576,7 @@ const BoostFactorSelector: React.FC<BoostFactorSelectorProps> = ({
 
   const handleFactorToggle = (factor: BoostFactor) => {
     const isSelected = selectedFactors.some(f => f.id === factor.id);
-    
+
     if (isSelected) {
       // Remove the factor
       onChange(selectedFactors.filter(f => f.id !== factor.id));
@@ -594,16 +593,15 @@ const BoostFactorSelector: React.FC<BoostFactorSelectorProps> = ({
   const renderFactorCard = (factor: BoostFactor) => {
     const isSelected = selectedFactors.some(f => f.id === factor.id);
     const boostPercentage = ((factor.multiplier - 1) * 100).toFixed(1);
-    
+
     return (
       <div
         key={factor.id}
         onClick={() => handleFactorToggle(factor)}
-        className={`relative p-4 rounded-lg border cursor-pointer transition-all duration-300 group ${
-          isSelected
+        className={`relative p-4 rounded-lg border cursor-pointer transition-all duration-300 group ${isSelected
             ? 'border-emerald-500/50 bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 shadow-lg shadow-emerald-500/10'
             : 'border-white/10 bg-gradient-to-br from-white/5 to-transparent hover:border-emerald-500/30 hover:from-emerald-500/10 hover:to-transparent'
-        }`}
+          }`}
       >
         {/* Corner accents for selected state */}
         {isSelected && (
@@ -626,42 +624,38 @@ const BoostFactorSelector: React.FC<BoostFactorSelectorProps> = ({
             </div>
           </>
         )}
-        
+
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
-            <h4 className={`font-medium text-sm mb-1 transition-colors ${
-              isSelected ? 'text-emerald-400' : 'text-white group-hover:text-emerald-400'
-            }`}>
+            <h4 className={`font-medium text-sm mb-1 transition-colors ${isSelected ? 'text-emerald-400' : 'text-white group-hover:text-emerald-400'
+              }`}>
               {factor.name}
             </h4>
             <div className="text-white/40 text-xs">
               {factor.description}
             </div>
           </div>
-          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ml-2 transition-all ${
-            isSelected 
-              ? 'border-emerald-500 bg-emerald-500 scale-110' 
+          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ml-2 transition-all ${isSelected
+              ? 'border-emerald-500 bg-emerald-500 scale-110'
               : 'border-white/30 group-hover:border-emerald-500/50'
-          }`}>
+            }`}>
             {isSelected && (
               <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                <polyline points="20 6 9 17 4 12"/>
+                <polyline points="20 6 9 17 4 12" />
               </svg>
             )}
           </div>
         </div>
-        
+
         <div className="flex items-center justify-between">
-          <div className={`font-mono text-xl font-bold transition-colors ${
-            isSelected ? 'text-emerald-400' : 'text-white/70 group-hover:text-emerald-400'
-          }`}>
+          <div className={`font-mono text-xl font-bold transition-colors ${isSelected ? 'text-emerald-400' : 'text-white/70 group-hover:text-emerald-400'
+            }`}>
             {factor.multiplier}x
           </div>
-          <div className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-            isSelected 
-              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+          <div className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${isSelected
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
               : 'bg-white/5 text-white/60 border border-white/10 group-hover:bg-emerald-500/10 group-hover:text-emerald-400 group-hover:border-emerald-500/20'
-          }`}>
+            }`}>
             +{boostPercentage}%
           </div>
         </div>
@@ -680,14 +674,12 @@ const BoostFactorSelector: React.FC<BoostFactorSelectorProps> = ({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className={`px-3 py-1.5 border rounded-lg ${
-            selectedFactors.length >= pNodeCount 
-              ? 'bg-emerald-500/20 border-emerald-500/30' 
+          <div className={`px-3 py-1.5 border rounded-lg ${selectedFactors.length >= pNodeCount
+              ? 'bg-emerald-500/20 border-emerald-500/30'
               : 'bg-white/5 border-white/10'
-          }`}>
-            <div className={`text-xs font-medium ${
-              selectedFactors.length >= pNodeCount ? 'text-emerald-400' : 'text-white/70'
             }`}>
+            <div className={`text-xs font-medium ${selectedFactors.length >= pNodeCount ? 'text-emerald-400' : 'text-white/70'
+              }`}>
               {selectedFactors.length}/{pNodeCount} Selected
             </div>
           </div>
@@ -705,18 +697,17 @@ const BoostFactorSelector: React.FC<BoostFactorSelectorProps> = ({
       <div className="relative flex space-x-2 bg-black/50 border border-white/10 rounded-lg p-1.5">
         <button
           onClick={() => setActiveTab('nft')}
-          className={`relative flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-300 ${
-            activeTab === 'nft'
+          className={`relative flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-300 ${activeTab === 'nft'
               ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 text-emerald-400 shadow-lg shadow-emerald-500/10'
               : 'text-white/60 hover:text-white hover:bg-white/5'
-          }`}
+            }`}
         >
           <div className="flex items-center justify-center gap-2">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="7" height="7"/>
-              <rect x="14" y="3" width="7" height="7"/>
-              <rect x="14" y="14" width="7" height="7"/>
-              <rect x="3" y="14" width="7" height="7"/>
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
             </svg>
             <span>NFT Boosts</span>
           </div>
@@ -726,16 +717,15 @@ const BoostFactorSelector: React.FC<BoostFactorSelectorProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('era')}
-          className={`relative flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-300 ${
-            activeTab === 'era'
+          className={`relative flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-300 ${activeTab === 'era'
               ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 text-emerald-400 shadow-lg shadow-emerald-500/10'
               : 'text-white/60 hover:text-white hover:bg-white/5'
-          }`}
+            }`}
         >
           <div className="flex items-center justify-center gap-2">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
             </svg>
             <span>Purchase Era Boosts</span>
           </div>
@@ -760,12 +750,12 @@ const BoostFactorSelector: React.FC<BoostFactorSelectorProps> = ({
               backgroundSize: '24px 24px'
             }}></div>
           </div>
-          
+
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <svg className="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="20 6 9 17 4 12"/>
+                  <polyline points="20 6 9 17 4 12" />
                 </svg>
                 <span className="text-white/70 text-sm font-mono">// ACTIVE BOOSTS</span>
               </div>
@@ -774,13 +764,13 @@ const BoostFactorSelector: React.FC<BoostFactorSelectorProps> = ({
                 className="text-xs text-white/50 hover:text-red-400 transition-colors flex items-center gap-1"
               >
                 <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18"/>
-                  <line x1="6" y1="6" x2="18" y2="18"/>
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
                 Clear All
               </button>
             </div>
-            
+
             <div className="flex flex-wrap gap-2 mb-4">
               {selectedFactors.map((factor) => (
                 <div
@@ -801,22 +791,22 @@ const BoostFactorSelector: React.FC<BoostFactorSelectorProps> = ({
                       className="opacity-0 group-hover:opacity-100 hover:text-red-400 text-white/50 transition-all"
                     >
                       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
                       </svg>
                     </button>
                   </div>
                 </div>
               ))}
             </div>
-            
+
             {selectedFactors.length > 1 && (
               <div className="flex items-center justify-between p-3 bg-black/30 border border-white/10 rounded-lg">
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                    <line x1="12" y1="22.08" x2="12" y2="12" />
                   </svg>
                   <span className="text-white/70 text-sm">Combined Geometric Mean:</span>
                 </div>
@@ -885,8 +875,8 @@ const ResultCard: React.FC<ResultCardProps> = ({
               <TrendUpIcon className="w-3 h-3" />
             ) : (
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/>
-                <polyline points="17 18 23 18 23 12"/>
+                <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
+                <polyline points="17 18 23 18 23 12" />
               </svg>
             )}
             <span>{trend.value}</span>
@@ -932,17 +922,17 @@ const FormulaBreakdown: React.FC<FormulaBreakdownProps> = ({ results, inputs }) 
             <div className="text-white font-medium text-sm">Base Storage Credits Formula</div>
             <div className="text-white/40 text-xs">pNodes × storageSpace × performanceScore × stake</div>
           </div>
-          <svg 
+          <svg
             className={`w-4 h-4 text-white/40 transition-transform ${expandedSection === 'base' ? 'rotate-180' : ''}`}
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
             strokeWidth="2"
           >
-            <polyline points="6 9 12 15 18 9"/>
+            <polyline points="6 9 12 15 18 9" />
           </svg>
         </button>
-        
+
         {expandedSection === 'base' && (
           <div className="px-4 pb-4 border-t border-white/10">
             <div className="space-y-3 mt-3">
@@ -995,17 +985,17 @@ const FormulaBreakdown: React.FC<FormulaBreakdownProps> = ({ results, inputs }) 
               <div className="text-white font-medium text-sm">Boost Factor Calculation</div>
               <div className="text-white/40 text-xs">Geometric mean of selected boost factors</div>
             </div>
-            <svg 
+            <svg
               className={`w-4 h-4 text-white/40 transition-transform ${expandedSection === 'boost' ? 'rotate-180' : ''}`}
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
               strokeWidth="2"
             >
-              <polyline points="6 9 12 15 18 9"/>
+              <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
-          
+
           {expandedSection === 'boost' && (
             <div className="px-4 pb-4 border-t border-white/10">
               <div className="space-y-3 mt-3">
@@ -1054,17 +1044,17 @@ const FormulaBreakdown: React.FC<FormulaBreakdownProps> = ({ results, inputs }) 
             <div className="text-white font-medium text-sm">STOINC Estimation Formula</div>
             <div className="text-white/40 text-xs">(boostedCredits / totalBoostedCredits) × totalFees × pNodeShare</div>
           </div>
-          <svg 
+          <svg
             className={`w-4 h-4 text-white/40 transition-transform ${expandedSection === 'stoinc' ? 'rotate-180' : ''}`}
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
             strokeWidth="2"
           >
-            <polyline points="6 9 12 15 18 9"/>
+            <polyline points="6 9 12 15 18 9" />
           </svg>
         </button>
-        
+
         {expandedSection === 'stoinc' && (
           <div className="px-4 pb-4 border-t border-white/10">
             <div className="space-y-3 mt-3">
@@ -1129,13 +1119,13 @@ export function StoincCalculatorClient() {
     // Validate inputs first
     const validationErrors = validateInputs(inputs);
     setErrors(validationErrors);
-    
+
     // Only calculate if inputs are valid
     if (!areInputsValid(validationErrors)) {
       setResults(null);
       return;
     }
-    
+
     setIsCalculating(true);
     try {
       const calculationResults = calculateStoinc(inputs);
@@ -1159,7 +1149,7 @@ export function StoincCalculatorClient() {
       {/* Header Card */}
       <div className="relative bg-black border border-white/10 p-4 sm:p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden">
         <CornerAccents color="emerald" />
-        
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="w-10 h-10 sm:w-14 sm:h-14 bg-emerald-500/20 border border-emerald-500/30 rounded-full flex items-center justify-center flex-shrink-0">
@@ -1173,7 +1163,7 @@ export function StoincCalculatorClient() {
               <p className="text-white/60 text-xs sm:text-sm mt-1">Calculate your potential earnings from running pNodes</p>
             </div>
           </div>
-          
+
           <div className="flex flex-col items-start md:items-end gap-1">
             <div className="flex items-center gap-2 text-emerald-400">
               <TrendUpIcon className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1187,7 +1177,7 @@ export function StoincCalculatorClient() {
       {/* About STOINC Section */}
       <div className="relative bg-black border border-white/10 overflow-hidden group hover:border-white/20 transition-all duration-300">
         <CornerAccents />
-        
+
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-[0.02]">
           <div className="absolute inset-0" style={{
@@ -1219,8 +1209,8 @@ export function StoincCalculatorClient() {
                   <h3 className="text-white font-medium text-sm">What is STOINC?</h3>
                 </div>
                 <p className="text-white/70 text-sm leading-relaxed">
-                  <span className="text-emerald-400 font-semibold">STOINC (Storage Income)</span> is the revenue you earn by running pNodes, 
-                  funded by fees from sedApps (storage-enabled dApps). Your earnings depend on four key factors: 
+                  <span className="text-emerald-400 font-semibold">STOINC (Storage Income)</span> is the revenue you earn by running pNodes,
+                  funded by fees from sedApps (storage-enabled dApps). Your earnings depend on four key factors:
                   number of pNodes, storage space provided, performance score, and XAND staked.
                 </p>
               </div>
@@ -1232,7 +1222,7 @@ export function StoincCalculatorClient() {
                   <h3 className="text-white font-medium text-sm">How Boost Factors Work</h3>
                 </div>
                 <p className="text-white/70 text-sm leading-relaxed">
-                  Boost factors from NFTs or early pNode purchases can significantly increase your earnings through 
+                  Boost factors from NFTs or early pNode purchases can significantly increase your earnings through
                   geometric mean calculation. The formula ensures fair distribution based on your contribution to the network.
                 </p>
               </div>
@@ -1242,12 +1232,12 @@ export function StoincCalculatorClient() {
             <div className="bg-gradient-to-br from-white/5 to-transparent border border-white/10 rounded-lg p-4 sm:p-5">
               <div className="flex items-center gap-2 mb-4">
                 <svg className="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
                 </svg>
                 <h3 className="text-white font-medium text-sm">Revenue Distribution</h3>
               </div>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* pNode Operators */}
                 <div className="relative bg-black/50 border border-emerald-500/30 rounded-lg p-4 overflow-hidden group/card hover:border-emerald-500/50 transition-colors">
@@ -1294,11 +1284,11 @@ export function StoincCalculatorClient() {
             <div className="bg-white/5 border border-white/10 rounded-lg p-4 sm:p-5">
               <div className="flex items-center gap-2 mb-4">
                 <svg className="w-4 h-4 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                 </svg>
                 <h3 className="text-white font-medium text-sm">Earning Factors</h3>
               </div>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="flex items-start gap-3 p-3 bg-black/30 border border-white/10 rounded-lg hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all group/factor">
                   <div className="w-8 h-8 bg-emerald-500/20 border border-emerald-500/30 rounded flex items-center justify-center flex-shrink-0 group-hover/factor:bg-emerald-500/30 transition-colors">
@@ -1352,7 +1342,7 @@ export function StoincCalculatorClient() {
           <StorageIcon className="w-4 h-4 text-cyan-400" />
           <span className="text-white/60 text-sm font-mono">// CALCULATOR INPUTS</span>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <NumberInput
             label="Number of pNodes"
@@ -1365,7 +1355,7 @@ export function StoincCalculatorClient() {
             step={1}
             decimals={0}
           />
-          
+
           <NumberInput
             label="Storage Space per pNode"
             value={inputs.storageSpacePerNode}
@@ -1378,7 +1368,7 @@ export function StoincCalculatorClient() {
             step={1}
             decimals={0}
           />
-          
+
           <NumberInput
             label="Performance Score"
             value={inputs.performanceScore}
@@ -1390,7 +1380,7 @@ export function StoincCalculatorClient() {
             step={0.01}
             decimals={2}
           />
-          
+
           <NumberInput
             label="XAND Stake"
             value={inputs.xandStake}
@@ -1404,7 +1394,7 @@ export function StoincCalculatorClient() {
             decimals={0}
           />
         </div>
-        
+
         {/* Input Help Text */}
         <div className="mt-6 p-4 bg-white/5 rounded-lg">
           <div className="text-white/60 text-sm font-mono mb-2">// INPUT GUIDELINES</div>
@@ -1432,7 +1422,7 @@ export function StoincCalculatorClient() {
           <TrendUpIcon className="w-4 h-4 text-emerald-400" />
           <span className="text-white/60 text-sm font-mono">// BOOST FACTORS</span>
         </div>
-        
+
         <BoostFactorSelector
           selectedFactors={inputs.boostFactors}
           onChange={(factors) => setInputs(prev => ({ ...prev, boostFactors: factors }))}
@@ -1447,7 +1437,7 @@ export function StoincCalculatorClient() {
           <DollarIcon className="w-4 h-4 text-emerald-400" />
           <span className="text-white/60 text-sm font-mono">// STOINC RESULTS</span>
         </div>
-        
+
         {results ? (
           <div className="space-y-6">
             {/* Key Results Grid */}
@@ -1459,7 +1449,7 @@ export function StoincCalculatorClient() {
                 icon={<StorageIcon className="w-4 h-4" />}
                 color="cyan"
               />
-              
+
               <ResultCard
                 title="BOOSTED CREDITS"
                 value={formatNumber(results.boostedCredits)}
@@ -1471,7 +1461,7 @@ export function StoincCalculatorClient() {
                   isPositive: true
                 } : undefined}
               />
-              
+
               <ResultCard
                 title="ESTIMATED STOINC"
                 value={`${results.estimatedStoinc.toFixed(6)} SOL`}
@@ -1490,7 +1480,7 @@ export function StoincCalculatorClient() {
                 icon={<ChartIcon className="w-4 h-4" />}
                 color="purple"
               />
-              
+
               <ResultCard
                 title="MONTHLY ESTIMATE"
                 value={`${(results.estimatedStoinc * 15).toFixed(4)} SOL`}

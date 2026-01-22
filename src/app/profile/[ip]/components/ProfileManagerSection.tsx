@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ManagerData } from './types';
@@ -39,49 +39,7 @@ function truncateAddress(address: string, start = 6, end = 4): string {
 }
 
 export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ manager }) => {
-    const [enrichedManager, setEnrichedManager] = useState<ManagerData | null | undefined>(manager);
-
-    // Fetch manager assets if we have manager_address but missing asset data
-    useEffect(() => {
-        if (!manager?.manager_address) {
-            setEnrichedManager(manager);
-            return;
-        }
-
-        // If manager already has asset data, use it
-        if (manager.nft_count !== undefined && manager.xand_balance !== undefined) {
-            setEnrichedManager(manager);
-            return;
-        }
-
-        // Otherwise fetch manager assets
-        const fetchManagerAssets = async () => {
-            try {
-                const response = await fetch(`/api/manager-assets?address=${manager.manager_address}`);
-                if (!response.ok) throw new Error('Failed to fetch manager assets');
-                const assets = await response.json();
-                
-                // Merge with existing manager data
-                setEnrichedManager({
-                    ...manager,
-                    nft_count: assets.nft_count || 0,
-                    sbt_count: assets.sbt_count || 0,
-                    xand_balance: assets.xand_balance || 0,
-                    xeno_balance: assets.xeno_balance || 0,
-                    nft_previews: assets.nft_previews || [],
-                    sbt_previews: assets.sbt_previews || [],
-                    last_updated: assets.last_updated || null,
-                });
-            } catch (err) {
-                console.error('Failed to fetch manager assets:', err);
-                setEnrichedManager(manager);
-            }
-        };
-
-        fetchManagerAssets();
-    }, [manager]);
-
-    if (!enrichedManager) {
+    if (!manager) {
         return (
             <div className="relative bg-black border border-white/10 p-4 sm:p-6 group hover:border-white/20 transition-all duration-300">
                 <CornerAccents />
@@ -98,13 +56,14 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
         );
     }
 
-    const hasAssets = enrichedManager.nft_count > 0 || enrichedManager.sbt_count > 0;
-    const showXeno = enrichedManager.xeno_balance > 0;
-
     // Get NFT/SBT images for display - limit to 6 for compact view
-    const nftImages = enrichedManager.nft_previews?.filter(nft => nft.image) || [];
-    const sbtImages = enrichedManager.sbt_previews?.filter(sbt => sbt.image) || [];
+    const nftImages = manager.nft_previews?.filter(nft => nft.image) || [];
+    const sbtImages = manager.sbt_previews?.filter(sbt => sbt.image) || [];
     const allImages = [...nftImages, ...sbtImages].slice(0, 6);
+
+    const hasAssets = (manager.nft_count || 0) > 0 || (manager.sbt_count || 0) > 0;
+    const showXeno = (manager.xeno_balance || 0) > 0;
+    const showXand = (manager.xand_balance || 0) > 0;
 
     return (
         <div className="relative bg-black border border-white/10 p-4 sm:p-6 group hover:border-white/20 transition-all duration-300">
@@ -121,15 +80,15 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
                         {/* Address with proper truncation on mobile - using CopyBtn with toast */}
                         <div className="flex items-center gap-1.5 min-w-0">
                             <code className="text-white/50 text-[10px] sm:text-xs font-mono bg-white/5 px-1.5 py-0.5 border border-white/10 truncate max-w-[140px] sm:max-w-none">
-                                <span className="hidden sm:inline">{enrichedManager.manager_address}</span>
-                                <span className="inline sm:hidden">{truncateAddress(enrichedManager.manager_address, 8, 6)}</span>
+                                <span className="hidden sm:inline">{manager.manager_address}</span>
+                                <span className="inline sm:hidden">{truncateAddress(manager.manager_address, 8, 6)}</span>
                             </code>
-                            <CopyBtn text={enrichedManager.manager_address} type="address" size="sm" />
+                            <CopyBtn text={manager.manager_address} type="address" size="sm" />
                         </div>
                     </div>
 
                     <Link
-                        href={`/manager/${enrichedManager.manager_address}`}
+                        href={`/manager/${manager.manager_address}`}
                         className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white text-[10px] sm:text-xs font-medium transition-all group/link flex-shrink-0"
                     >
                         <span>View Profile</span>
@@ -145,21 +104,21 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
                 {/* Total Nodes */}
                 <div className="relative p-2.5 sm:p-3 bg-black border border-white/10 hover:border-white/20 transition-colors">
                     <div className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-wider mb-1">Managed Nodes</div>
-                    <div className="text-lg sm:text-xl font-bold text-white font-mono">{enrichedManager.total_nodes}</div>
+                    <div className="text-lg sm:text-xl font-bold text-white font-mono">{manager.total_nodes}</div>
                 </div>
 
                 {/* NFT Count */}
                 <div className="relative p-2.5 sm:p-3 bg-black border border-white/10 hover:border-white/20 transition-colors">
                     <div className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-wider mb-1">NFTs</div>
-                    <div className="text-lg sm:text-xl font-bold text-orange-400 font-mono">{enrichedManager.nft_count}</div>
+                    <div className="text-lg sm:text-xl font-bold text-orange-400 font-mono">{manager.nft_count || 0}</div>
                 </div>
 
                 {/* XENO Balance */}
                 <div className="relative p-2.5 sm:p-3 bg-black border border-white/10 hover:border-white/20 transition-colors">
                     <div className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-wider mb-1">XENO</div>
-                    <div className="text-lg sm:text-xl font-bold font-mono text-purple-400">
-                        {enrichedManager.xeno_balance > 0
-                            ? enrichedManager.xeno_balance.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                    <div className="text-lg sm:text-xl font-bold font-mono text-cyan-400">
+                        {(manager.xeno_balance || 0) > 0
+                            ? (manager.xeno_balance || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })
                             : '0'
                         }
                     </div>
@@ -168,8 +127,8 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
                 {/* XAND Balance */}
                 <div className="relative p-2.5 sm:p-3 bg-black border border-white/10 hover:border-white/20 transition-colors">
                     <div className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-wider mb-1">XAND</div>
-                    <div className="text-lg sm:text-xl font-bold text-emerald-400 font-mono">
-                        {enrichedManager.xand_balance > 0 ? enrichedManager.xand_balance.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '0'}
+                    <div className="text-lg sm:text-xl font-bold text-purple-400 font-mono">
+                        {(manager.xand_balance || 0) > 0 ? (manager.xand_balance || 0).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '0'}
                     </div>
                 </div>
             </div>
@@ -219,16 +178,27 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
                         {/* XENO Badge */}
                         {showXeno && (
                             <span
-                                className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[8px] sm:text-[9px] font-mono"
-                                title={`Holding ${enrichedManager.xeno_balance.toLocaleString()} XENO`}
+                                className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[8px] sm:text-[9px] font-mono"
+                                title={`Holding ${(manager.xeno_balance || 0).toLocaleString()} XENO`}
                             >
-                                <span className="w-1 h-1 bg-purple-500"></span>
+                                <span className="w-1 h-1 bg-cyan-500"></span>
                                 XENO
                             </span>
                         )}
 
+                        {/* XAND Badge */}
+                        {showXand && (
+                            <span
+                                className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[8px] sm:text-[9px] font-mono"
+                                title={`Holding ${(manager.xand_balance || 0).toLocaleString()} XAND`}
+                            >
+                                <span className="w-1 h-1 bg-purple-500"></span>
+                                XAND
+                            </span>
+                        )}
+
                         {/* NFT Names - Limited display */}
-                        {enrichedManager.nft_previews?.slice(0, 3).map((nft, index) => (
+                        {manager.nft_previews?.slice(0, 3).map((nft, index) => (
                             <span
                                 key={`nft-${index}`}
                                 className="inline-flex items-center px-1.5 sm:px-2 py-0.5 bg-orange-500/10 border border-orange-500/20 text-orange-400/80 text-[8px] sm:text-[9px] font-mono cursor-help max-w-[80px] sm:max-w-[100px] truncate"
@@ -239,7 +209,7 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
                         ))}
 
                         {/* SBT Names - Limited display */}
-                        {enrichedManager.sbt_previews?.slice(0, 3).map((sbt, index) => (
+                        {manager.sbt_previews?.slice(0, 3).map((sbt, index) => (
                             <span
                                 key={`sbt-${index}`}
                                 className="inline-flex items-center px-1.5 sm:px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400/80 text-[8px] sm:text-[9px] font-mono cursor-help max-w-[80px] sm:max-w-[100px] truncate"
@@ -250,7 +220,7 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
                         ))}
 
                         {/* More counts */}
-                        {(enrichedManager.nft_count > 3 || enrichedManager.sbt_count > 3) && (
+                        {((manager.nft_count || 0) > 3 || (manager.sbt_count || 0) > 3) && (
                             <span className="inline-flex items-center px-1.5 py-0.5 text-white/30 text-[8px] sm:text-[9px] font-mono">
                                 +More
                             </span>
@@ -261,9 +231,9 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
 
             {/* Registration Info */}
             <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2 sm:gap-3 text-[8px] sm:text-[9px] text-white/30 font-mono border-t border-white/10 pt-2 sm:pt-3">
-                <span className="truncate">LABEL: <span className="text-white/50">{enrichedManager.node_label}</span></span>
+                <span className="truncate">LABEL: <span className="text-white/50">{manager.node_label}</span></span>
                 <span className="hidden sm:inline">•</span>
-                <span className="truncate">REGISTERED: <span className="text-white/50">{enrichedManager.registered_time}</span></span>
+                <span className="truncate">REGISTERED: <span className="text-white/50">{manager.registered_time}</span></span>
             </div>
         </div>
     );

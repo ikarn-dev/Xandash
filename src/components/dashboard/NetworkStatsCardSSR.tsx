@@ -312,6 +312,8 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
                 }}
                 onMouseEnter={() => setHoveredSegment(segment.type)}
                 onMouseLeave={() => setHoveredSegment(null)}
+                onTouchStart={() => setHoveredSegment(segment.type)}
+                onClick={() => setHoveredSegment(hoveredSegment === segment.type ? null : segment.type)}
               />
             );
           })}

@@ -21,9 +21,12 @@ export async function GET(request: NextRequest) {
           nft_count: 0,
           sbt_count: 0,
           xand_balance: 0,
+          xeno_balance: 0,
           last_updated: 0,
           nft_names: [],
-          sbt_names: []
+          sbt_names: [],
+          nft_previews: [],
+          sbt_previews: []
         }, { status: 200 });
       }
 

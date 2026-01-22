@@ -348,12 +348,12 @@ export const Navbar: React.FC = () => {
       )}>
         <div className="container mx-auto px-2 sm:px-4 lg:px-6">
           <div className={cn(
-            'flex items-center justify-center sm:justify-between px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl transition-all duration-300',
+            'flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl transition-all duration-300',
             'bg-black/80 backdrop-blur-xl border border-white/10',
             scrolled && 'shadow-2xl shadow-black/20'
           )}>
             {/* Logo */}
-            <Link href="/" className="flex items-center group flex-shrink-0 absolute left-4 sm:static">
+            <Link href="/" className="flex items-center group flex-shrink-0">
               <span className="text-white font-bold text-xs sm:text-sm tracking-tight group-hover:opacity-80 transition-opacity">
                 XANDASH
               </span>
@@ -393,7 +393,7 @@ export const Navbar: React.FC = () => {
             </div>
 
             {/* Right Side */}
-            <div className="flex items-center gap-1.5 sm:gap-2 absolute right-4 sm:static">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <div className="hidden sm:block">
                 <NetworkStatus />
               </div>
