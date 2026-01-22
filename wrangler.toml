@@ -1,0 +1,49 @@
+name = "xandash"
+type = "javascript"
+account_id = ""
+workers_dev = true
+route = ""
+zone_id = ""
+compatibility_date = "2026-01-22"
+
+[env.production]
+name = "xandash-prod"
+route = "example.com/*"
+zone_id = ""
+
+[build]
+command = "npm run build"
+cwd = "./"
+watch_paths = ["src/**/*.ts", "src/**/*.tsx"]
+
+[build.upload]
+format = "service-worker"
+
+[env.production.build.upload]
+format = "modules"
+
+[[build.upload.rules]]
+type = "CompiledContentType"
+globs = ["**/*.wasm"]
+fallthrough = true
+
+[[build.upload.rules]]
+type = "Text"
+globs = ["**/*.txt", "**/*.html"]
+fallthrough = true
+
+[[build.upload.rules]]
+type = "Data"
+globs = ["**/*.bin"]
+fallthrough = true
+
+[triggers.crons]
+crons = ["0 */6 * * *"]
+
+[observability]
+enabled = true
+
+# Limits (optional - Cloudflare Pages allows up to 120 seconds for Pro/Business plans)
+# Uncomment and adjust based on your plan
+# [limits]
+# cpu_ms = 120000

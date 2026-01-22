@@ -1,0 +1,41 @@
+{
+  // Cloudflare Pages configuration for Next.js
+  "name": "xandash",
+  "type": "javascript",
+  "compatibility_date": "2026-01-22",
+  "workers_dev": true,
+
+  // Build configuration
+  "build": {
+    "command": "npm run build",
+    "cwd": "./",
+    "watch_paths": ["src/**/*.ts", "src/**/*.tsx"]
+  },
+
+  // Environment-specific settings
+  "env": {
+    "production": {
+      "name": "xandash-prod",
+      "routes": [
+        {
+          "pattern": "example.com/*",
+          "zone_name": "example.com"
+        }
+      ]
+    },
+    "staging": {
+      "name": "xandash-staging",
+      "routes": [
+        {
+          "pattern": "staging.example.com/*",
+          "zone_name": "example.com"
+        }
+      ]
+    }
+  },
+
+  // Observability
+  "observability": {
+    "enabled": true
+  }
+}
