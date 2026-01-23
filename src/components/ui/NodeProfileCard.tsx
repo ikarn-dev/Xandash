@@ -42,6 +42,7 @@ interface NodeProfileCardProps {
   node: NodeData;
   onCopy?: (text: string, type: string) => void;
   className?: string;
+  onNavigateToProfile?: (ip: string) => void;
 }
 
 // Custom SVG Icons matching app theme
@@ -94,6 +95,14 @@ const PublicIcon = () => (
   <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="12" cy="12" r="10" className="text-blue-400" />
     <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" className="text-blue-300" />
+  </svg>
+);
+
+const ExternalLinkIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    <polyline points="15 3 21 3 21 9" />
+    <line x1="10" y1="14" x2="21" y2="3" />
   </svg>
 );
 
@@ -155,7 +164,8 @@ const MiniSparkline: React.FC<{ sent: number; received: number; color: string }>
 export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
   node,
   onCopy,
-  className = ""
+  className = "",
+  onNavigateToProfile
 }) => {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -211,6 +221,13 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
       return `${flagCdnUrl}/24x18/${node.location.country_code.toLowerCase()}.png`;
     }
     return null;
+  };
+
+  const handleViewProfile = () => {
+    const nodeIP = node.address?.split(':')[0];
+    if (nodeIP && onNavigateToProfile) {
+      onNavigateToProfile(nodeIP);
+    }
   };
 
   // Determine online status from last_seen_timestamp
@@ -279,6 +296,17 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
                 <PublicIcon />
                 <span>Public</span>
               </div>
+            )}
+            {onNavigateToProfile && node.address && (
+              <button
+                onClick={handleViewProfile}
+                className="flex items-center gap-1.5 px-2 py-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 hover:border-purple-500/50 transition-all duration-300 text-xs font-medium cursor-pointer"
+                title="View full profile"
+              >
+                <span className="hidden sm:inline">View Profile</span>
+                <span className="sm:hidden">View</span>
+                <ExternalLinkIcon />
+              </button>
             )}
           </div>
         </div>

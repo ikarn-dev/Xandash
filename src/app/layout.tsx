@@ -9,6 +9,8 @@ import { NodesDataProvider } from "@/libs/context/nodes-data-context";
 import { StructuredData } from "@/libs/seo";
 import { AppCaptchaGate } from "@/components/ui/AppCaptchaGate";
 import { AIAssistantLoader } from "@/components/ui/AIAssistantLoader";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // Optimize font loading - swap ensures text is visible immediately
 // Only preload the main font, defer mono font
@@ -150,13 +152,14 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no" />
 
         {/* Preconnect to critical origins - reduces connection latency */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://challenges.cloudflare.com" />
+        {/* Only preconnect to truly critical origins that are needed for initial render */}
         <link rel="preconnect" href="https://www.xandash.online" />
-        <link rel="preconnect" href="https://unpkg.com" />
-
-        {/* DNS prefetch for API endpoints - reduces DNS lookup time */}
+        
+        {/* DNS prefetch for less critical but still important origins */}
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+        <link rel="dns-prefetch" href="https://challenges.cloudflare.com" />
+        <link rel="dns-prefetch" href="https://unpkg.com" />
         <link rel="dns-prefetch" href="https://api.coingecko.com" />
         <link rel="dns-prefetch" href="https://stats.xandeum.network" />
         <link rel="dns-prefetch" href="https://flagcdn.com" />
@@ -167,20 +170,17 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://c.basemaps.cartocdn.com" />
         <link rel="dns-prefetch" href="https://d.basemaps.cartocdn.com" />
 
-        {/* Leaflet Map - async load CSS */}
-        <link
-          rel="preload"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          as="style"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossOrigin="anonymous"
-        />
+        {/* Leaflet Map - defer loading, not critical for initial render */}
         <link
           rel="stylesheet"
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossOrigin="anonymous"
+          media="print"
         />
+        <script dangerouslySetInnerHTML={{
+          __html: `document.querySelector('link[href*="leaflet"]').media='all'`
+        }} />
 
         {/* Critical CSS inline - prevents render blocking */}
         <style dangerouslySetInnerHTML={{
@@ -225,6 +225,8 @@ export default function RootLayout({
             },
           }}
         />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

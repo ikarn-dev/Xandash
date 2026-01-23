@@ -32,7 +32,7 @@ export function AppCaptchaGate({ children }: AppCaptchaGateProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Use setTimeout to avoid setState in effect
+    // Defer state updates to avoid blocking initial render
     const timer = setTimeout(() => {
       setMounted(true);
       if (typeof window !== 'undefined') {

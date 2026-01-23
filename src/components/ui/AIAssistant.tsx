@@ -167,7 +167,7 @@ export function AIAssistant() {
 
       {/* Chat Panel - Black/White theme */}
       {isOpen && (
-        <div className="fixed inset-4 sm:inset-auto sm:bottom-24 sm:right-6 z-50 sm:w-[380px] sm:h-[500px] sm:max-h-[calc(100vh-140px)] bg-black/95 border border-white/15 rounded-xl shadow-2xl shadow-black/50 flex flex-col overflow-hidden backdrop-blur-xl">
+        <div className="fixed top-20 left-4 right-4 bottom-4 sm:top-20 sm:left-auto sm:right-6 sm:bottom-auto sm:w-[380px] sm:h-[calc(100vh-120px)] sm:max-h-[600px] bg-black/95 border border-white/15 rounded-xl shadow-2xl shadow-black/50 flex flex-col overflow-hidden backdrop-blur-xl">
           {/* Header */}
           <div className="px-3 sm:px-4 py-3 border-b border-white/10 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-2 sm:gap-3">

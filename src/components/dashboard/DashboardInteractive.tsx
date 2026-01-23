@@ -300,6 +300,7 @@ export const DashboardInteractive: React.FC = () => {
                       key={`${item.pod_id}-${index}`}
                       node={item}
                       onCopy={handleCopy}
+                      onNavigateToProfile={handleNavigateToProfile}
                     />
                   );
                 })}
