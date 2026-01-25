@@ -39,7 +39,7 @@ const PieChartSkeleton: React.FC = () => {
             r={radius}
             fill="rgba(255,255,255,0.08)"
           />
-          
+
           {/* Static arc segments */}
           <circle
             cx={center}
@@ -62,7 +62,7 @@ const PieChartSkeleton: React.FC = () => {
             strokeDashoffset="-80"
             strokeLinecap="round"
           />
-          
+
           {/* Inner circle */}
           <circle
             cx={center}
@@ -70,7 +70,7 @@ const PieChartSkeleton: React.FC = () => {
             r={radius - strokeWidth}
             fill="black"
           />
-          
+
           {/* Center dot */}
           <circle
             cx={center}
@@ -80,7 +80,7 @@ const PieChartSkeleton: React.FC = () => {
           />
         </svg>
       </div>
-      
+
       {/* Legend skeleton */}
       <div className="flex items-center gap-3 mt-3">
         <div className="flex items-center gap-1">
@@ -102,74 +102,52 @@ const PieChartSkeleton: React.FC = () => {
 
 export const NetworkStatsCardSkeleton: React.FC = () => {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="h-full">
       {/* Main stats card skeleton */}
-      <div className="relative bg-black border border-white/10 p-6">
+      <div className="relative bg-black border border-white/10 p-4 sm:p-6 h-full flex flex-col">
         <CornerEdges />
-        
-        {/* Headers - desktop only */}
-        <div className="hidden lg:grid lg:grid-cols-4 gap-6 mb-4">
-          <div className="h-4 bg-white/10 rounded w-28 mx-auto"></div>
-          <div className="h-4 bg-white/10 rounded w-24 mx-auto"></div>
-          <div className="h-4 bg-white/10 rounded w-32 mx-auto"></div>
-          <div className="h-4 bg-white/10 rounded w-28 mx-auto"></div>
+
+        {/* Headers */}
+        <div className="grid grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6 mb-3 lg:mb-4">
+          <div className="h-3 bg-white/10 rounded w-20 mx-auto"></div>
+          <div className="h-3 bg-white/10 rounded w-16 mx-auto"></div>
+          <div className="h-3 bg-white/10 rounded w-14 mx-auto"></div>
+          <div className="h-3 bg-white/10 rounded w-24 mx-auto hidden lg:block"></div>
         </div>
 
-        {/* Divider line - desktop only */}
-        <div className="relative mb-6 overflow-hidden hidden lg:block">
-          <div className="w-full h-0.5 bg-white/10"></div>
+        {/* Divider line */}
+        <div className="relative mb-4 lg:mb-6 overflow-hidden">
+          <div className="w-full h-px bg-white/10"></div>
         </div>
 
-        {/* Desktop layout: 4 columns */}
-        <div className="hidden lg:grid lg:grid-cols-4 gap-6">
+        {/* Stats grid */}
+        <div className="grid grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6 flex-1">
           <div className="flex flex-col justify-center items-center text-center">
-            <div className="h-8 bg-white/10 rounded w-16 mb-1"></div>
-            <div className="h-4 bg-white/10 rounded w-8"></div>
+            <div className="h-6 sm:h-7 lg:h-8 bg-white/10 rounded w-14 sm:w-16 mb-1"></div>
+            <div className="h-3 sm:h-4 bg-white/10 rounded w-6 sm:w-8"></div>
           </div>
 
           <div className="flex flex-col justify-center items-center text-center">
-            <div className="h-8 bg-white/10 rounded w-14 mb-1"></div>
-            <div className="h-4 bg-white/10 rounded w-8"></div>
+            <div className="h-6 sm:h-7 lg:h-8 bg-white/10 rounded w-12 sm:w-14 mb-1"></div>
+            <div className="h-3 sm:h-4 bg-white/10 rounded w-6 sm:w-8"></div>
           </div>
 
           <div className="flex flex-col justify-center items-center text-center">
-            <div className="h-8 bg-white/10 rounded w-12 mb-1"></div>
-            <div className="h-4 bg-white/10 rounded w-8"></div>
+            <div className="h-6 sm:h-7 lg:h-8 bg-white/10 rounded w-10 sm:w-12 mb-1"></div>
+            <div className="h-3 sm:h-4 bg-white/10 rounded w-6 sm:w-8"></div>
           </div>
 
-          <div className="flex flex-col justify-center items-center">
+          <div className="hidden lg:flex flex-col justify-center items-center">
             <PieChartSkeleton />
           </div>
         </div>
 
-        {/* Mobile layout: 3 columns for text stats */}
-        <div className="grid grid-cols-3 gap-2 lg:hidden">
-          <div className="flex flex-col justify-center items-center text-center">
-            <div className="h-2 bg-white/10 rounded w-16 mb-1"></div>
-            <div className="h-6 bg-white/10 rounded w-12 mb-1"></div>
-            <div className="h-3 bg-white/10 rounded w-6"></div>
+        {/* Mobile pie chart */}
+        <div className="lg:hidden mt-4 pt-4 border-t border-white/10">
+          <div className="flex flex-col items-center">
+            <div className="h-3 bg-white/10 rounded w-24 mb-2"></div>
+            <PieChartSkeleton />
           </div>
-
-          <div className="flex flex-col justify-center items-center text-center">
-            <div className="h-2 bg-white/10 rounded w-14 mb-1"></div>
-            <div className="h-6 bg-white/10 rounded w-10 mb-1"></div>
-            <div className="h-3 bg-white/10 rounded w-6"></div>
-          </div>
-
-          <div className="flex flex-col justify-center items-center text-center">
-            <div className="h-2 bg-white/10 rounded w-14 mb-1"></div>
-            <div className="h-6 bg-white/10 rounded w-10 mb-1"></div>
-            <div className="h-3 bg-white/10 rounded w-6"></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile-only pie chart card skeleton */}
-      <div className="relative bg-black border border-white/10 p-4 lg:hidden">
-        <CornerEdges />
-        <div className="flex flex-col items-center">
-          <div className="h-3 bg-white/10 rounded w-28 mb-3"></div>
-          <PieChartSkeleton />
         </div>
       </div>
     </div>

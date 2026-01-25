@@ -18,18 +18,39 @@ export default function Home() {
       </React.Suspense>
 
       {/* SEO Content Section - Visible content for search engines and users */}
-      <section className="mt-8 sm:mt-12 p-4 sm:p-6 bg-white/[0.02] border border-white/10 rounded-xl">
-        <h2 className="text-lg sm:text-xl font-semibold text-white mb-4">
-          About XanDash - Your Xandeum Network Dashboard
+      <section className="relative mt-8 sm:mt-12 p-4 sm:p-6 bg-black border border-white/10 group hover:border-white/20 transition-all duration-300">
+        {/* Corner accents */}
+        <div className="absolute top-0 left-0 w-4 h-4">
+          <div className="absolute top-0 left-0 w-2 h-px bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+          <div className="absolute top-0 left-0 w-px h-2 bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+        </div>
+        <div className="absolute top-0 right-0 w-4 h-4">
+          <div className="absolute top-0 right-0 w-2 h-px bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+          <div className="absolute top-0 right-0 w-px h-2 bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+        </div>
+        <div className="absolute bottom-0 left-0 w-4 h-4">
+          <div className="absolute bottom-0 left-0 w-2 h-px bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+          <div className="absolute bottom-0 left-0 w-px h-2 bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+        </div>
+        <div className="absolute bottom-0 right-0 w-4 h-4">
+          <div className="absolute bottom-0 right-0 w-2 h-px bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+          <div className="absolute bottom-0 right-0 w-px h-2 bg-white/20 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-300"></div>
+        </div>
+
+        <h2 className="text-white/70 text-[10px] sm:text-xs font-medium tracking-wider mb-4">
+          // ABOUT XANDASH
         </h2>
-        <div className="space-y-4 text-white/70 text-sm leading-relaxed">
+        <h3 className="text-base sm:text-lg font-semibold text-white mb-4">
+          Your Xandeum Network Dashboard
+        </h3>
+        <div className="space-y-3 text-white/60 text-xs sm:text-sm leading-relaxed">
           <p>
-            <strong className="text-white">XanDash</strong> is the comprehensive dashboard for the{' '}
+            <strong className="text-white/80">XanDash</strong> is the comprehensive dashboard for the{' '}
             <a
               href="https://xandeum.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+              className="text-emerald-400 hover:text-emerald-300 transition-colors"
             >
               Xandeum Network
             </a>
@@ -52,56 +73,56 @@ export default function Home() {
         </div>
 
         {/* Internal Links - Critical for SEO */}
-        <nav className="mt-6 pt-4 border-t border-white/10" aria-label="Quick navigation">
-          <h3 className="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">
-            Explore XanDash
-          </h3>
-          <div className="flex flex-wrap gap-2 sm:gap-3">
+        <nav className="mt-5 pt-4 border-t border-white/10" aria-label="Quick navigation">
+          <h4 className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider mb-3">
+            EXPLORE XANDASH
+          </h4>
+          <div className="flex flex-wrap gap-2">
             <Link
               href="/nodes"
-              className="px-3 py-1.5 text-xs sm:text-sm bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg text-white/70 hover:text-white transition-colors"
+              className="px-2.5 py-1 text-[10px] sm:text-xs bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white transition-all duration-200"
             >
               pNodes Directory
             </Link>
             <Link
               href="/leaderboard"
-              className="px-3 py-1.5 text-xs sm:text-sm bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg text-white/70 hover:text-white transition-colors"
+              className="px-2.5 py-1 text-[10px] sm:text-xs bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white transition-all duration-200"
             >
               Leaderboard
             </Link>
             <Link
               href="/managers"
-              className="px-3 py-1.5 text-xs sm:text-sm bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg text-white/70 hover:text-white transition-colors"
+              className="px-2.5 py-1 text-[10px] sm:text-xs bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white transition-all duration-200"
             >
               Managers
             </Link>
             <Link
               href="/network"
-              className="px-3 py-1.5 text-xs sm:text-sm bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg text-white/70 hover:text-white transition-colors"
+              className="px-2.5 py-1 text-[10px] sm:text-xs bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white transition-all duration-200"
             >
               Network Stats
             </Link>
             <Link
               href="/governance"
-              className="px-3 py-1.5 text-xs sm:text-sm bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg text-white/70 hover:text-white transition-colors"
+              className="px-2.5 py-1 text-[10px] sm:text-xs bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white transition-all duration-200"
             >
               Governance
             </Link>
             <Link
               href="/xand"
-              className="px-3 py-1.5 text-xs sm:text-sm bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg text-white/70 hover:text-white transition-colors"
+              className="px-2.5 py-1 text-[10px] sm:text-xs bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white transition-all duration-200"
             >
               XAND Token
             </Link>
             <Link
               href="/docs"
-              className="px-3 py-1.5 text-xs sm:text-sm bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg text-white/70 hover:text-white transition-colors"
+              className="px-2.5 py-1 text-[10px] sm:text-xs bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white transition-all duration-200"
             >
               Documentation
             </Link>
             <Link
               href="/compare"
-              className="px-3 py-1.5 text-xs sm:text-sm bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg text-white/70 hover:text-white transition-colors"
+              className="px-2.5 py-1 text-[10px] sm:text-xs bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white transition-all duration-200"
             >
               Compare Nodes
             </Link>

@@ -184,7 +184,7 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
             ) : (
               <>
                 <div className="text-white text-xl font-bold font-mono">{versionStats.totalVersions}</div>
-                <div className="text-white/40 text-[9px]">versions</div>
+                <div className="text-white/60 text-[9px]">versions</div>
               </>
             )}
           </div>
@@ -219,7 +219,7 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
             <AnimatedValue value={versionStats.totalVersions} />
           </div>
           <div className="text-white/40 text-[10px] sm:text-xs mb-1">unique versions</div>
-          <div className="text-white/30 text-[9px] sm:text-[10px] hover:text-white/50 transition-colors cursor-pointer mt-auto">click for details</div>
+          <div className="text-white/50 text-[9px] sm:text-[10px] hover:text-white/70 transition-colors cursor-pointer mt-auto">click for details</div>
         </div>
       </div>
 

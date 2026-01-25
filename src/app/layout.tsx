@@ -13,7 +13,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // Optimize font loading - swap ensures text is visible immediately
-// Only preload the main font, defer mono font
+// Only preload the main font, defer mono font completely
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -184,9 +184,29 @@ export default function RootLayout({
           html::-webkit-scrollbar,body::-webkit-scrollbar,div::-webkit-scrollbar,main::-webkit-scrollbar,section::-webkit-scrollbar{display:none}
           .leaflet-container,.leaflet-container *{-ms-overflow-style:auto;scrollbar-width:auto}
           @media(max-width:640px){body{font-size:14px}.container{padding-left:12px;padding-right:12px}}
-          /* Skeleton loading styles for faster perceived performance */
-          .animate-pulse{animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite}
-          @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+          /* Critical above-the-fold styles for LCP optimization */
+          .bg-black{background-color:#000}
+          .text-white{color:#fff}
+          .border-white\\/10{border-color:rgba(255,255,255,0.1)}
+          .bg-white\\/5{background-color:rgba(255,255,255,0.05)}
+          .rounded-xl{border-radius:0.75rem}
+          .p-3{padding:0.75rem}
+          .p-4{padding:1rem}
+          .space-y-6>*+*{margin-top:1.5rem}
+          .flex{display:flex}
+          .grid{display:grid}
+          .h-12{height:3rem}
+          .w-full{width:100%}
+          /* Prevent layout shift for loading states */
+          .min-h-\\[300px\\]{min-height:300px}
+          .min-h-\\[400px\\]{min-height:400px}
+          .min-h-\\[500px\\]{min-height:500px}
+          @media(min-width:640px){.sm\\:min-h-\\[400px\\]{min-height:400px}}
+          @media(min-width:768px){.md\\:min-h-\\[500px\\]{min-height:500px}}
+          /* Skeleton loading styles for faster perceived performance - remove pulse animation for LCP */
+          .skeleton-static{background-color:rgba(255,255,255,0.1);border-radius:0.25rem}
+          /* Prevent layout shift during route transitions - main content minimum height */
+          .min-h-\\[calc\\(100vh-180px\\)\\]{min-height:calc(100vh - 180px)}
           /* Prevent FOUC */
           .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
         `.replace(/\s+/g, ' ').trim()

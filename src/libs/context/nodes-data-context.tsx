@@ -83,6 +83,9 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
   const lastNetworkRef = useRef(network);
   const fetchingRef = useRef(false);
   const mountedRef = useRef(true);
+  
+  // LCP Optimization: Defer initial data fetch to improve critical rendering path
+  const [initialLoadDeferred, setInitialLoadDeferred] = useState(false);
 
   // High watermark for mainnet node count - keeps track of the highest node count seen
   const mainnetHighWatermarkRef = useRef<Map<string, NodeData>>(new Map());
@@ -333,8 +336,19 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   }, [fetchData, rpcContext]);
 
+  // LCP Optimization: Defer initial load by 150ms to allow critical rendering path to complete
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialLoadDeferred(true);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Initial fetch and network change handling
   useEffect(() => {
+    // Don't fetch data until initial load is deferred (LCP optimization)
+    if (!initialLoadDeferred) return;
+    
     const networkChanged = lastNetworkRef.current !== network;
 
     if (networkChanged) {
@@ -347,7 +361,7 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
 
     fetchData(networkChanged);
-  }, [network, fetchData]);
+  }, [network, fetchData, initialLoadDeferred]);
 
   // Auto-refresh interval
   useEffect(() => {

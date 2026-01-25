@@ -81,7 +81,7 @@ export const Footer: React.FC = () => {
                 <XanDashLogo className="h-6" textClassName="text-lg" />
               </Link>
             </div>
-            <p className="text-white/50 text-sm leading-relaxed mb-4">
+            <p className="text-white/70 text-sm leading-relaxed mb-4">
               Real-time monitoring dashboard for the Xandeum network. Track nodes, analytics, and network health.
             </p>
             {/* Social Links */}
@@ -103,7 +103,7 @@ export const Footer: React.FC = () => {
 
           {/* Product Links */}
           <div>
-            <h4 className="text-white/40 text-xs font-mono uppercase tracking-wider mb-4">// Product</h4>
+            <h4 className="text-white/60 text-xs font-mono uppercase tracking-wider mb-4">// Product</h4>
             <ul className="space-y-2">
               {footerLinks.product.map((link, i) => (
                 <li key={i}>
@@ -117,7 +117,7 @@ export const Footer: React.FC = () => {
 
           {/* Utilities Links */}
           <div>
-            <h4 className="text-white/40 text-xs font-mono uppercase tracking-wider mb-4">// Utilities</h4>
+            <h4 className="text-white/60 text-xs font-mono uppercase tracking-wider mb-4">// Utilities</h4>
             <ul className="space-y-2">
               {footerLinks.utilities.map((link, i) => (
                 <li key={i}>
@@ -131,7 +131,7 @@ export const Footer: React.FC = () => {
 
           {/* Resources Links */}
           <div>
-            <h4 className="text-white/40 text-xs font-mono uppercase tracking-wider mb-4">// Resources</h4>
+            <h4 className="text-white/60 text-xs font-mono uppercase tracking-wider mb-4">// Resources</h4>
             <ul className="space-y-2">
               {footerLinks.resources.map((link, i) => (
                 <li key={i}>
@@ -159,7 +159,7 @@ export const Footer: React.FC = () => {
 
           {/* Community Links */}
           <div>
-            <h4 className="text-white/40 text-xs font-mono uppercase tracking-wider mb-4">// Community</h4>
+            <h4 className="text-white/60 text-xs font-mono uppercase tracking-wider mb-4">// Community</h4>
             <ul className="space-y-2">
               {footerLinks.community.map((link, i) => (
                 <li key={i}>
@@ -182,7 +182,7 @@ export const Footer: React.FC = () => {
 
         {/* Bottom Bar */}
         <div className="py-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-white/40 text-xs">
+          <div className="flex items-center gap-2 text-white/60 text-xs">
             <span>© {currentYear} XanDash</span>
             <span className="text-white/20">•</span>
             <span>v2.0.0</span>
@@ -192,7 +192,7 @@ export const Footer: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex items-center gap-4 text-white/40 text-xs">
+          <div className="flex items-center gap-4 text-white/60 text-xs">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
               All systems operational

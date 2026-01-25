@@ -116,15 +116,15 @@ const StoragePieChartLoading: React.FC = () => {
       <div className="flex items-center gap-3 mt-3">
         <div className="flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
-          <span className="text-white/30 text-[9px]">Used</span>
+          <span className="text-white/50 text-[9px]">Used</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
-          <span className="text-white/30 text-[9px]">Avg</span>
+          <span className="text-white/50 text-[9px]">Avg</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
-          <span className="text-white/30 text-[9px]">Free</span>
+          <span className="text-white/50 text-[9px]">Free</span>
         </div>
       </div>
     </div>
@@ -537,7 +537,7 @@ export const NetworkStatsCardSSR: React.FC = () => {
     return (
       <div className="relative bg-black border border-white/10 p-6 h-full flex items-center justify-center group hover:border-white/20 transition-all duration-300">
         <CornerEdges />
-        <div className="flex items-center space-x-2 text-white/40">
+        <div className="flex items-center space-x-2 text-white/60">
           <AlertCircle className="w-5 h-5" />
           <span>No nodes data available</span>
         </div>
@@ -550,57 +550,60 @@ export const NetworkStatsCardSSR: React.FC = () => {
   const avgPerPod = formatStorage(storageStats.avg_storage_per_pod);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="h-full">
       {/* Main stats card */}
-      <div className="relative bg-black border border-white/10 p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden">
+      <div className="relative bg-black border border-white/10 p-4 sm:p-6 group hover:border-white/20 transition-all duration-300 overflow-hidden h-full flex flex-col">
         <CornerEdges />
 
-        {/* Desktop headers */}
-        <div className="hidden lg:grid lg:grid-cols-4 gap-6 mb-4">
-          <div className="text-white/80 text-sm font-medium text-center">Storage Committed</div>
-          <div className="text-white/80 text-sm font-medium text-center">Storage Used</div>
-          <div className="text-white/80 text-sm font-medium text-center">Avg Committed per Pod</div>
-          <div className="text-white/80 text-sm font-medium text-center">Storage Distribution</div>
+        {/* Headers - visible on all screens */}
+        <div className="grid grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6 mb-3 lg:mb-4">
+          <div className="text-white/70 text-[10px] sm:text-xs font-medium text-center">Storage Committed</div>
+          <div className="text-white/70 text-[10px] sm:text-xs font-medium text-center">Storage Used</div>
+          <div className="text-white/70 text-[10px] sm:text-xs font-medium text-center">Avg per Pod</div>
+          <div className="text-white/70 text-[10px] sm:text-xs font-medium text-center hidden lg:block">Storage Distribution</div>
         </div>
 
-        {/* Desktop beam divider */}
-        <div className="relative mb-6 overflow-hidden hidden lg:block">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-          </div>
+        {/* Beam divider */}
+        <div className="relative mb-4 lg:mb-6 overflow-hidden">
+          <div className="w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
         </div>
 
-        {/* Desktop layout: 4 columns */}
-        <div className="hidden lg:grid lg:grid-cols-4 gap-6 relative">
-          <div className="absolute inset-0 grid grid-cols-4 gap-6 pointer-events-none">
+        {/* Stats grid - responsive */}
+        <div className="grid grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6 flex-1">
+          {/* Vertical dividers - desktop only */}
+          <div className="absolute inset-0 hidden lg:grid grid-cols-4 gap-6 pointer-events-none" style={{ top: '80px' }}>
             <div></div>
             <div className="relative">
-              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+              <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-white/15 to-transparent"></div>
             </div>
             <div className="relative">
-              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+              <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-white/15 to-transparent"></div>
             </div>
             <div className="relative">
-              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+              <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-white/15 to-transparent"></div>
             </div>
           </div>
 
+          {/* Storage Committed */}
           <div className="flex flex-col justify-center items-center relative z-10 text-center">
-            <div className="text-white text-3xl font-bold font-mono mb-1">{storageCommitted.value}</div>
-            <div className="text-white/60 text-sm">{storageCommitted.unit}</div>
+            <div className="text-white text-xl sm:text-2xl lg:text-3xl font-bold font-mono mb-0.5 lg:mb-1">{storageCommitted.value}</div>
+            <div className="text-white/50 text-[10px] sm:text-xs lg:text-sm">{storageCommitted.unit}</div>
           </div>
 
+          {/* Storage Used */}
           <div className="flex flex-col justify-center items-center relative z-10 text-center">
-            <div className="text-white text-3xl font-bold font-mono mb-1">{storageUsed.value}</div>
-            <div className="text-white/60 text-sm">{storageUsed.unit}</div>
+            <div className="text-white text-xl sm:text-2xl lg:text-3xl font-bold font-mono mb-0.5 lg:mb-1">{storageUsed.value}</div>
+            <div className="text-white/50 text-[10px] sm:text-xs lg:text-sm">{storageUsed.unit}</div>
           </div>
 
+          {/* Avg per Pod */}
           <div className="flex flex-col justify-center items-center relative z-10 text-center">
-            <div className="text-white text-3xl font-bold font-mono mb-1">{avgPerPod.value}</div>
-            <div className="text-white/60 text-sm">{avgPerPod.unit}</div>
+            <div className="text-white text-xl sm:text-2xl lg:text-3xl font-bold font-mono mb-0.5 lg:mb-1">{avgPerPod.value}</div>
+            <div className="text-white/50 text-[10px] sm:text-xs lg:text-sm">{avgPerPod.unit}</div>
           </div>
 
-          <div className="flex flex-col justify-center items-center relative z-10">
+          {/* Pie Chart - desktop only inline */}
+          <div className="hidden lg:flex flex-col justify-center items-center relative z-10">
             <StoragePieChart
               used={storageStats.storage_used}
               committed={storageStats.storage_committed}
@@ -611,40 +614,18 @@ export const NetworkStatsCardSSR: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile layout: 3 columns for text stats */}
-        <div className="grid grid-cols-3 gap-2 lg:hidden">
-          <div className="flex flex-col justify-center items-center text-center">
-            <div className="text-white/80 text-[10px] sm:text-xs font-medium mb-1">Storage Committed</div>
-            <div className="text-white text-lg sm:text-xl font-bold font-mono">{storageCommitted.value}</div>
-            <div className="text-white/60 text-xs">{storageCommitted.unit}</div>
+        {/* Mobile pie chart - inline at bottom */}
+        <div className="lg:hidden mt-4 pt-4 border-t border-white/10">
+          <div className="flex flex-col items-center">
+            <div className="text-white/70 text-[10px] sm:text-xs font-medium mb-2">Storage Distribution</div>
+            <StoragePieChart
+              used={storageStats.storage_used}
+              committed={storageStats.storage_committed}
+              avgPerPod={storageStats.avg_storage_per_pod}
+              isLoading={isLoading}
+              idPrefix="mobile"
+            />
           </div>
-
-          <div className="flex flex-col justify-center items-center text-center">
-            <div className="text-white/80 text-[10px] sm:text-xs font-medium mb-1">Storage Used</div>
-            <div className="text-white text-lg sm:text-xl font-bold font-mono">{storageUsed.value}</div>
-            <div className="text-white/60 text-xs">{storageUsed.unit}</div>
-          </div>
-
-          <div className="flex flex-col justify-center items-center text-center">
-            <div className="text-white/80 text-[10px] sm:text-xs font-medium mb-1">Avg per Pod</div>
-            <div className="text-white text-lg sm:text-xl font-bold font-mono">{avgPerPod.value}</div>
-            <div className="text-white/60 text-xs">{avgPerPod.unit}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile-only pie chart card */}
-      <div className="relative bg-black border border-white/10 p-4 group hover:border-white/20 transition-all duration-300 overflow-hidden lg:hidden">
-        <CornerEdges />
-        <div className="flex flex-col items-center">
-          <div className="text-white/80 text-xs font-medium mb-3">Storage Distribution</div>
-          <StoragePieChart
-            used={storageStats.storage_used}
-            committed={storageStats.storage_committed}
-            avgPerPod={storageStats.avg_storage_per_pod}
-            isLoading={isLoading}
-            idPrefix="mobile"
-          />
         </div>
       </div>
     </div>

@@ -25,26 +25,28 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
   const [L, setL] = useState<any>(null);
   const [mapReady, setMapReady] = useState(false);
 
-  // Load Leaflet JS on client side
+  // LCP Optimization: Preload Leaflet CSS and defer map initialization
   useEffect(() => {
     setIsClient(true);
     
-    const loadLeaflet = async () => {
-      // Ensure Leaflet CSS is loaded
-      if (!document.getElementById('leaflet-css')) {
-        const link = document.createElement('link');
-        link.id = 'leaflet-css';
+    // Preload Leaflet CSS immediately but defer JS loading
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-css';
+      link.rel = 'preload';
+      link.as = 'style';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.crossOrigin = '';
+      link.onload = () => {
         link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        link.crossOrigin = '';
-        document.head.appendChild(link);
-        
-        // Wait for CSS to load
-        await new Promise((resolve) => {
-          link.onload = resolve;
-          link.onerror = resolve;
-        });
-      }
+      };
+      document.head.appendChild(link);
+    }
+    
+    // Defer Leaflet JS loading to improve LCP
+    const loadLeaflet = async () => {
+      // Wait for critical rendering path to complete
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       const leaflet = await import('leaflet');
       setL(leaflet.default);

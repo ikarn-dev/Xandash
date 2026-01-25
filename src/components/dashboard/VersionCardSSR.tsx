@@ -8,8 +8,8 @@ import { AnimatedValue } from '@/components/ui/SlotNumber';
 // Custom Code Icon
 const CodeIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="16 18 22 12 16 6"/>
-    <polyline points="8 6 2 12 8 18"/>
+    <polyline points="16 18 22 12 16 6" />
+    <polyline points="8 6 2 12 8 18" />
   </svg>
 );
 
@@ -92,14 +92,14 @@ export const VersionCardSSR: React.FC = () => {
         <CornerAccents />
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h3 className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider">// VERSION</h3>
-            <div className="text-white/40">
+            <h3 className="text-white/70 text-[10px] sm:text-xs font-medium tracking-wider">// VERSION</h3>
+            <div className="text-white/60">
               <CodeIcon className="w-3 h-3 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div className="flex-1 flex flex-col justify-center items-center text-center">
             <div className="text-white text-2xl sm:text-3xl lg:text-4xl font-bold font-mono">N/A</div>
-            <div className="text-white/40 text-[10px] sm:text-xs mt-1 sm:mt-2">No nodes available</div>
+            <div className="text-white/60 text-[10px] sm:text-xs mt-1 sm:mt-2">No nodes available</div>
           </div>
         </div>
       </div>
@@ -111,7 +111,7 @@ export const VersionCardSSR: React.FC = () => {
       <CornerAccents />
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-between mb-3 sm:mb-4 lg:mb-6">
-          <h3 className="text-white/50 text-[10px] sm:text-xs font-medium tracking-wider">// POPULAR VERSION</h3>
+          <h3 className="text-white/70 text-[10px] sm:text-xs font-medium tracking-wider">// POPULAR VERSION</h3>
           <div className="text-green-400">
             <CodeIcon className="w-3 h-3 sm:w-4 sm:h-4" />
           </div>
@@ -128,13 +128,13 @@ export const VersionCardSSR: React.FC = () => {
                   <AnimatedValue value={stats.nodeCount} /> nodes
                 </span>
               </div>
-              <span className="text-white/30 text-[10px] sm:text-xs font-mono">
+              <span className="text-white/50 text-[10px] sm:text-xs font-mono">
                 (<AnimatedValue value={stats.percentage.toFixed(1)} />% of network)
               </span>
             </div>
           </div>
           <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5">
-            <div className="flex justify-between items-center text-[9px] sm:text-[10px] text-white/30">
+            <div className="flex justify-between items-center text-[9px] sm:text-[10px] text-white/50">
               <span><AnimatedValue value={stats.totalVersions} /> versions total</span>
               <span><AnimatedValue value={stats.totalNodes} /> nodes</span>
             </div>
