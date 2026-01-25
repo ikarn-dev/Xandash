@@ -6,10 +6,32 @@ export function generateRobots(): MetadataRoute.Robots {
 
   return {
     rules: [
+      // Block all crawlers by default
       {
         userAgent: '*',
+        disallow: '/',
+      },
+      // Allow only Googlebot
+      {
+        userAgent: 'Googlebot',
         allow: '/',
-        disallow: ['/api/', '/_next/'],
+        disallow: ['/api/', '/_next/', '/admin/', '/private/'],
+      },
+      {
+        userAgent: 'Googlebot-Image',
+        allow: '/',
+      },
+      {
+        userAgent: 'Googlebot-News',
+        allow: '/',
+      },
+      {
+        userAgent: 'Googlebot-Video',
+        allow: '/',
+      },
+      {
+        userAgent: 'AdsBot-Google',
+        allow: '/',
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,

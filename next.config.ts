@@ -101,6 +101,24 @@ const nextConfig: NextConfig = {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
           },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+        ],
+      },
+      {
+        // CSS files specifically - ensure they're cached and not blocking
+        source: '/_next/static/css/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+          {
+            key: 'Content-Type',
+            value: 'text/css; charset=utf-8',
+          },
         ],
       },
       {
@@ -164,8 +182,10 @@ const nextConfig: NextConfig = {
 
   // Experimental features for better performance
   experimental: {
-    // CSS optimization
+    // CSS optimization - critical for LCP
     optimizeCss: true,
+    // CSS chunking - splits CSS per route for faster loading
+    cssChunking: 'strict',
     // Optimize server components
     serverActions: {
       bodySizeLimit: '2mb',
@@ -184,6 +204,8 @@ const nextConfig: NextConfig = {
       'class-variance-authority',
       '@lottiefiles/dotlottie-react',
     ],
+    // Prefetch optimization
+    webVitalsAttribution: ['CLS', 'LCP', 'FCP', 'FID', 'TTFB'],
   },
 
   // Image optimization

@@ -83,24 +83,56 @@ export const VersionDistributionCard: React.FC<VersionDistributionCardProps> = (
   // Calculate donut chart segments with gaps and cylindrical effect
   const segments = useMemo(() => {
     if (versionData.versions.length === 0) return [];
-    
+
     const radius = 42;
+    const innerRadius = 26; // For hit target wedges
+    const outerRadius = 50; // For hit target wedges  
     const gapPercent = hoveredIndex !== null ? 4 : 1; // Larger gaps on hover
     const circumference = 2 * Math.PI * radius;
-    
+
     let cumulativePercent = 0;
-    return versionData.versions.map((item) => {
+    return versionData.versions.map((item, index) => {
       const rawPercent = item.percentage;
       const percent = Math.max(0, rawPercent - gapPercent);
       const dashArray = (percent / 100) * circumference;
       const dashOffset = -((cumulativePercent + gapPercent / 2) / 100) * circumference;
+
+      // Calculate wedge path for hit target (covers full segment area)
+      // Note: SVG already has -rotate-90 applied, so we calculate from 0 (which becomes top after rotation)
+      const startAngle = (cumulativePercent / 100) * 360;
+      const endAngle = ((cumulativePercent + rawPercent) / 100) * 360;
+      const startRad = (startAngle * Math.PI) / 180;
+      const endRad = (endAngle * Math.PI) / 180;
+
+      const x1Inner = 50 + innerRadius * Math.cos(startRad);
+      const y1Inner = 50 + innerRadius * Math.sin(startRad);
+      const x1Outer = 50 + outerRadius * Math.cos(startRad);
+      const y1Outer = 50 + outerRadius * Math.sin(startRad);
+      const x2Inner = 50 + innerRadius * Math.cos(endRad);
+      const y2Inner = 50 + innerRadius * Math.sin(endRad);
+      const x2Outer = 50 + outerRadius * Math.cos(endRad);
+      const y2Outer = 50 + outerRadius * Math.sin(endRad);
+
+      const largeArcFlag = rawPercent > 50 ? 1 : 0;
+
+      // Create wedge path: outer arc -> line to inner -> inner arc (reverse) -> line back
+      const wedgePath = `
+        M ${x1Outer} ${y1Outer}
+        A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${x2Outer} ${y2Outer}
+        L ${x2Inner} ${y2Inner}
+        A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x1Inner} ${y1Inner}
+        Z
+      `;
+
       cumulativePercent += rawPercent;
-      
+
       return {
         ...item,
+        index,
         dashArray,
         dashOffset,
         circumference,
+        wedgePath,
       };
     });
   }, [versionData.versions, hoveredIndex]);
@@ -133,7 +165,7 @@ export const VersionDistributionCard: React.FC<VersionDistributionCardProps> = (
   return (
     <div className={`relative bg-black/80 border border-white/10 p-3 group hover:border-white/20 transition-colors duration-200 flex flex-col ${className}`}>
       <CornerAccents />
-      
+
       {/* Header - Top Left */}
       <h3 className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-1">{/* VERSION DISTRIBUTION */}</h3>
 
@@ -150,11 +182,11 @@ export const VersionDistributionCard: React.FC<VersionDistributionCardProps> = (
               stroke="rgba(255,255,255,0.08)"
               strokeWidth={8}
             />
-            
+
             {/* Cylindrical shadow layer - rendered behind main segments */}
             {segments.map((segment, index) => {
               const isHovered = hoveredIndex === index;
-              
+
               return (
                 <circle
                   key={`shadow-${segment.version}`}
@@ -174,12 +206,12 @@ export const VersionDistributionCard: React.FC<VersionDistributionCardProps> = (
                 />
               );
             })}
-            
+
             {/* Glow layer - rendered behind main segments */}
             {segments.map((segment, index) => {
               const isHovered = hoveredIndex === index;
               if (!isHovered || !animated) return null;
-              
+
               return (
                 <circle
                   key={`glow-${segment.version}`}
@@ -199,12 +231,12 @@ export const VersionDistributionCard: React.FC<VersionDistributionCardProps> = (
                 />
               );
             })}
-            
+
             {/* Version segments - main layer */}
-            {segments.map((segment, index) => {
-              const isHovered = hoveredIndex === index;
-              const isDimmed = hoveredIndex !== null && hoveredIndex !== index;
-              
+            {segments.map((segment) => {
+              const isHovered = hoveredIndex === segment.index;
+              const isDimmed = hoveredIndex !== null && hoveredIndex !== segment.index;
+
               return (
                 <circle
                   key={segment.version}
@@ -217,23 +249,35 @@ export const VersionDistributionCard: React.FC<VersionDistributionCardProps> = (
                   strokeDasharray={`${animated ? segment.dashArray : 0} ${segment.circumference}`}
                   strokeDashoffset={segment.dashOffset}
                   strokeLinecap="round"
-                  className="cursor-pointer"
                   style={{
                     opacity: animated ? (isDimmed ? 0.2 : 1) : 0,
                     transition: 'opacity 0.15s ease, stroke-width 0.2s ease, stroke-dasharray 0.4s ease-out',
                     filter: isHovered ? `drop-shadow(0 0 8px ${segment.color})` : 'none',
+                    pointerEvents: 'none', // Let the hit target handle events
                   }}
-                  onMouseEnter={() => setHoveredIndex(index)}
-                  onMouseLeave={() => setHoveredIndex(null)}
                 />
               );
             })}
-            
+
+            {/* Invisible hit targets - large wedge areas for easy hovering/clicking */}
+            {segments.map((segment) => (
+              <path
+                key={`hit-${segment.version}`}
+                d={segment.wedgePath}
+                fill="rgba(0,0,0,0.001)"
+                className="cursor-pointer"
+                onMouseEnter={() => setHoveredIndex(segment.index)}
+                onMouseLeave={() => setHoveredIndex(null)}
+                onTouchStart={() => setHoveredIndex(segment.index)}
+                onClick={() => setHoveredIndex(hoveredIndex === segment.index ? null : segment.index)}
+              />
+            ))}
+
             {/* Highlight layer - rendered on top for better visibility */}
             {segments.map((segment, index) => {
               const isHovered = hoveredIndex === index;
               if (!isHovered || !animated) return null;
-              
+
               return (
                 <circle
                   key={`highlight-${segment.version}`}
@@ -253,9 +297,9 @@ export const VersionDistributionCard: React.FC<VersionDistributionCardProps> = (
               );
             })}
           </svg>
-          
-          {/* Center content */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+
+          {/* Center content - pointer-events-none so events pass through to pie chart */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
             {hoveredVersion ? (
               <>
                 <div className="text-white text-xl sm:text-2xl font-bold font-mono">
@@ -270,13 +314,13 @@ export const VersionDistributionCard: React.FC<VersionDistributionCardProps> = (
               </>
             ) : (
               <>
-                <div 
+                <div
                   className="text-white text-2xl sm:text-3xl font-bold font-mono"
                   style={{ opacity: animated ? 1 : 0, transition: 'opacity 0.3s ease' }}
                 >
                   {versionData.versions.length}
                 </div>
-                <div 
+                <div
                   className="text-white/40 text-[8px] sm:text-[9px] mt-0.5"
                   style={{ opacity: animated ? 1 : 0, transition: 'opacity 0.3s ease 0.1s' }}
                 >
@@ -293,12 +337,12 @@ export const VersionDistributionCard: React.FC<VersionDistributionCardProps> = (
         {versionData.versions.map((item, index) => {
           const isHovered = hoveredIndex === index;
           const isDimmed = hoveredIndex !== null && hoveredIndex !== index;
-          
+
           return (
             <div
               key={item.version}
               className="flex items-center gap-1.5 cursor-pointer py-0.5 px-0.5 rounded hover:bg-white/5 min-w-0"
-              style={{ 
+              style={{
                 opacity: animated ? (isDimmed ? 0.2 : 1) : 0,
                 transition: 'opacity 0.15s ease, background-color 0.15s ease',
               }}
@@ -308,15 +352,15 @@ export const VersionDistributionCard: React.FC<VersionDistributionCardProps> = (
             >
               <div
                 className="w-2 h-2 rounded-full flex-shrink-0 border border-white/20"
-                style={{ 
+                style={{
                   backgroundColor: item.color,
                   boxShadow: isHovered ? `0 0 6px ${item.color}` : 'none',
                   transition: 'box-shadow 0.15s ease',
                 }}
               />
-              <span 
+              <span
                 className="text-[7px] sm:text-[8px] font-mono truncate flex-1 min-w-0"
-                style={{ 
+                style={{
                   color: isHovered ? item.color : 'rgba(255,255,255,0.8)',
                   transition: 'color 0.15s ease',
                 }}

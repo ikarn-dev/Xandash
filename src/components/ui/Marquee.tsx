@@ -22,17 +22,16 @@ const ChevronUpIcon = ({ className = "w-3 h-3" }: { className?: string }) => (
 const STORAGE_KEY = 'xandash_marquee_hidden';
 
 export const Marquee = ({ className = '' }: MarqueeProps) => {
+  // Default to hidden to match most common state and reduce CLS
   const [isHidden, setIsHidden] = useState(true);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Use setTimeout to avoid setState in effect
-    const timer = setTimeout(() => {
-      setMounted(true);
-      const stored = localStorage.getItem(STORAGE_KEY);
-      setIsHidden(stored === 'true');
-    }, 0);
-    return () => clearTimeout(timer);
+    // Check localStorage immediately on mount
+    setMounted(true);
+    const stored = localStorage.getItem(STORAGE_KEY);
+    // Only show if explicitly NOT hidden
+    setIsHidden(stored !== 'false');
   }, []);
 
   const toggleVisibility = () => {
@@ -41,7 +40,17 @@ export const Marquee = ({ className = '' }: MarqueeProps) => {
     localStorage.setItem(STORAGE_KEY, String(newValue));
   };
 
-  if (!mounted) return null;
+  // Server-side and initial render: show minimal placeholder to avoid CLS
+  // This placeholder has the same height as the actual component
+  if (!mounted) {
+    return (
+      <div className={`relative h-[28px] bg-black/30 border-b border-white/5 ${className}`}>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-[10px] text-white/20 font-mono">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   const announcements = [
     { text: 'MAINNET + DEVNET SUPPORT', dot: true },

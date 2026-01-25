@@ -175,11 +175,53 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
     if (committed === 0) return [];
 
     const radius = 42;
+    const innerRadius = 26; // For hit target wedges
+    const outerRadius = 50; // For hit target wedges
     const gapPercent = hoveredSegment !== null ? 4 : 1;
     const circumference = 2 * Math.PI * radius;
     const minVisiblePercent = 3; // Minimum 3% to ensure visibility even for small storage like 1GB
 
-    const segmentsList = [];
+    const segmentsList: Array<{
+      type: string;
+      color: string;
+      dashArray: number;
+      dashOffset: number;
+      percentage: number;
+      circumference: number;
+      wedgePath: string;
+      startPercent: number;
+    }> = [];
+
+    let cumulativePercent = 0;
+
+    // Helper to create wedge path
+    // Note: SVG already has -rotate-90 applied, so we calculate from 0 (which becomes top after rotation)
+    const createWedgePath = (startPct: number, endPct: number) => {
+      const startAngle = (startPct / 100) * 360;
+      const endAngle = (endPct / 100) * 360;
+      const startRad = (startAngle * Math.PI) / 180;
+      const endRad = (endAngle * Math.PI) / 180;
+
+      const x1Inner = 50 + innerRadius * Math.cos(startRad);
+      const y1Inner = 50 + innerRadius * Math.sin(startRad);
+      const x1Outer = 50 + outerRadius * Math.cos(startRad);
+      const y1Outer = 50 + outerRadius * Math.sin(startRad);
+      const x2Inner = 50 + innerRadius * Math.cos(endRad);
+      const y2Inner = 50 + innerRadius * Math.sin(endRad);
+      const x2Outer = 50 + outerRadius * Math.cos(endRad);
+      const y2Outer = 50 + outerRadius * Math.sin(endRad);
+
+      const arcPercent = endPct - startPct;
+      const largeArcFlag = arcPercent > 50 ? 1 : 0;
+
+      return `
+        M ${x1Outer} ${y1Outer}
+        A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${x2Outer} ${y2Outer}
+        L ${x2Inner} ${y2Inner}
+        A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x1Inner} ${y1Inner}
+        Z
+      `;
+    };
 
     // Used segment - always show if there's any used storage, with minimum visibility
     if (used > 0) {
@@ -187,6 +229,9 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
       const percent = Math.max(minVisiblePercent, rawPercent - gapPercent);
       const dashArray = (percent / 100) * circumference;
       const dashOffset = -(gapPercent / 2 / 100) * circumference;
+      const startPercent = cumulativePercent;
+      const wedgePath = createWedgePath(startPercent, startPercent + rawPercent);
+      cumulativePercent += rawPercent;
 
       segmentsList.push({
         type: 'used',
@@ -195,6 +240,8 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
         dashOffset,
         percentage: usedPercentage,
         circumference,
+        wedgePath,
+        startPercent,
       });
     }
 
@@ -205,6 +252,8 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
       const percent = Math.max(0, availableDisplayPercent - gapPercent);
       const dashArray = (percent / 100) * circumference;
       const dashOffset = -((usedDisplayPercent + gapPercent / 2) / 100) * circumference;
+      const startPercent = cumulativePercent;
+      const wedgePath = createWedgePath(startPercent, 100);
 
       segmentsList.push({
         type: 'available',
@@ -213,11 +262,13 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
         dashOffset,
         percentage: availablePercentage,
         circumference,
+        wedgePath,
+        startPercent,
       });
     }
 
     return segmentsList;
-  }, [usedPercentage, availablePercentage, hoveredSegment, used]);
+  }, [usedPercentage, availablePercentage, hoveredSegment, used, committed]);
 
   const size = 120;
 
@@ -304,19 +355,29 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
                 strokeDasharray={`${animated ? segment.dashArray : 0} ${segment.circumference}`}
                 strokeDashoffset={segment.dashOffset}
                 strokeLinecap="round"
-                className="cursor-pointer"
                 style={{
                   opacity: animated ? (isDimmed ? 0.2 : 1) : 0,
                   transition: 'opacity 0.15s ease, stroke-width 0.2s ease, stroke-dasharray 0.4s ease-out',
                   filter: isHovered ? `drop-shadow(0 0 8px ${segment.color})` : 'none',
+                  pointerEvents: 'none', // Let the hit target handle events
                 }}
-                onMouseEnter={() => setHoveredSegment(segment.type)}
-                onMouseLeave={() => setHoveredSegment(null)}
-                onTouchStart={() => setHoveredSegment(segment.type)}
-                onClick={() => setHoveredSegment(hoveredSegment === segment.type ? null : segment.type)}
               />
             );
           })}
+
+          {/* Invisible hit targets - large wedge areas for easy hovering/clicking */}
+          {segments.map((segment) => (
+            <path
+              key={`hit-${segment.type}`}
+              d={segment.wedgePath}
+              fill="rgba(0,0,0,0.001)"
+              className="cursor-pointer"
+              onMouseEnter={() => setHoveredSegment(segment.type)}
+              onMouseLeave={() => setHoveredSegment(null)}
+              onTouchStart={() => setHoveredSegment(segment.type)}
+              onClick={() => setHoveredSegment(hoveredSegment === segment.type ? null : segment.type)}
+            />
+          ))}
 
           {/* Highlight layer - rendered on top for better visibility */}
           {segments.map((segment) => {
@@ -344,8 +405,8 @@ const StoragePieChart: React.FC<StoragePieChartProps> = ({ used, committed, avgP
           })}
         </svg>
 
-        {/* Center content - always visible with hover overlay */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-2">
+        {/* Center content - pointer-events-none so events pass through to pie chart */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-2 pointer-events-none">
           {hoveredSegment ? (
             // Hovered state - show specific segment info
             <>

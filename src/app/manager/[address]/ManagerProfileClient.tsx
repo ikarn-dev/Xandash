@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useNetwork } from '@/libs/context/network-context';
 import type { ValidatorData } from '@/libs/server';
 import { getLocationsForIPs, extractIPFromAddress } from '@/libs/services/geolocation';
 import {
@@ -35,7 +36,8 @@ interface LocationData {
 interface ManagerProfileClientProps {
     address: string;
     manager: Manager | null;
-    allValidators: ValidatorData[];
+    mainnetValidators: ValidatorData[];
+    devnetValidators: ValidatorData[];
     loading?: boolean;
     error?: string | null;
 }
@@ -43,44 +45,44 @@ interface ManagerProfileClientProps {
 export function ManagerProfileClient({
     address,
     manager,
-    allValidators,
+    mainnetValidators,
+    devnetValidators,
     loading = false,
     error = null,
 }: ManagerProfileClientProps) {
     const router = useRouter();
+    const { isMainnet, network } = useNetwork();
     const [credits, setCredits] = useState<{ [pubkey: string]: number }>({});
     const [locations, setLocations] = useState<{ [ip: string]: LocationData | null }>({});
     const [loadingLocations, setLoadingLocations] = useState(false);
 
-    // Fetch credits data on mount
+    // Select validators based on current network
+    const allValidators = useMemo(() => {
+        return isMainnet ? mainnetValidators : devnetValidators;
+    }, [isMainnet, mainnetValidators, devnetValidators]);
+
+    // Check if manager has any nodes on the current network
+    const managerHasNodesOnCurrentNetwork = useMemo(() => {
+        if (!manager) return false;
+
+        const networkPubkeys = new Set(allValidators.map(v => v.pubkey));
+        return manager.nodes.some(node => networkPubkeys.has(node.pnode_pubkey));
+    }, [manager, allValidators]);
+
+    // Fetch credits data on mount and when network changes
     useEffect(() => {
         const fetchCredits = async () => {
             try {
-                // Fetch from both networks
-                const [devnetRes, mainnetRes] = await Promise.all([
-                    fetch('/api/pod-credits?network=devnet').catch(() => null),
-                    fetch('/api/pod-credits?network=mainnet').catch(() => null),
-                ]);
+                // Fetch credits for current network only
+                const response = await fetch(`/api/pod-credits?network=${network}`).catch(() => null);
 
                 const creditsMap: { [pubkey: string]: number } = {};
 
-                if (devnetRes?.ok) {
-                    const data = await devnetRes.json();
+                if (response?.ok) {
+                    const data = await response.json();
                     if (data.pods_credits && Array.isArray(data.pods_credits)) {
                         data.pods_credits.forEach((pod: PodCredit) => {
                             creditsMap[pod.pod_id] = pod.credits;
-                        });
-                    }
-                }
-
-                if (mainnetRes?.ok) {
-                    const data = await mainnetRes.json();
-                    if (data.pods_credits && Array.isArray(data.pods_credits)) {
-                        data.pods_credits.forEach((pod: PodCredit) => {
-                            // Merge, mainnet takes precedence if duplicate
-                            if (!creditsMap[pod.pod_id]) {
-                                creditsMap[pod.pod_id] = pod.credits;
-                            }
                         });
                     }
                 }
@@ -91,15 +93,21 @@ export function ManagerProfileClient({
             }
         };
 
-        if (manager) {
+        if (manager && managerHasNodesOnCurrentNetwork) {
             fetchCredits();
+        } else {
+            // Clear credits when manager has no nodes on current network
+            setCredits({});
         }
-    }, [manager]);
+    }, [manager, network, managerHasNodesOnCurrentNetwork]);
 
     // Fetch geolocation data for node IPs
     useEffect(() => {
         const fetchLocations = async () => {
-            if (!manager || allValidators.length === 0) return;
+            if (!manager || allValidators.length === 0 || !managerHasNodesOnCurrentNetwork) {
+                setLocations({});
+                return;
+            }
 
             setLoadingLocations(true);
             try {
@@ -125,7 +133,7 @@ export function ManagerProfileClient({
         };
 
         fetchLocations();
-    }, [manager, allValidators]);
+    }, [manager, allValidators, managerHasNodesOnCurrentNetwork]);
 
     // Create pubkey → validator map for O(1) lookup
     const pubkeyToNode = useMemo(() => {
@@ -138,33 +146,35 @@ export function ManagerProfileClient({
 
     // Enrich nodes with validator data, credits, and location
     const enrichedNodes = useMemo((): EnrichedNodeData[] => {
-        if (!manager) return [];
+        if (!manager || !managerHasNodesOnCurrentNetwork) return [];
 
-        return manager.nodes.map(node => {
-            const validator = pubkeyToNode.get(node.pnode_pubkey);
-            const ip = validator?.address?.split(':')[0];
+        return manager.nodes
+            .filter(node => pubkeyToNode.has(node.pnode_pubkey)) // Only include nodes on current network
+            .map(node => {
+                const validator = pubkeyToNode.get(node.pnode_pubkey);
+                const ip = validator?.address?.split(':')[0];
 
-            // Get location data for this IP
-            const locationData = ip ? locations[ip] : null;
+                // Get location data for this IP
+                const locationData = ip ? locations[ip] : null;
 
-            // Merge credits data
-            const nodeCredits = credits[node.pnode_pubkey] || validator?.credits || 0;
-            const enrichedValidator = validator ? {
-                ...validator,
-                credits: nodeCredits,
-                // Add location data to validator
-                country: locationData?.country || validator.country,
-                country_code: locationData?.country_code || validator.country_code,
-            } : undefined;
+                // Merge credits data
+                const nodeCredits = credits[node.pnode_pubkey] || validator?.credits || 0;
+                const enrichedValidator = validator ? {
+                    ...validator,
+                    credits: nodeCredits,
+                    // Add location data to validator
+                    country: locationData?.country || validator.country,
+                    country_code: locationData?.country_code || validator.country_code,
+                } : undefined;
 
-            return {
-                ...node,
-                validator: enrichedValidator,
-                isOnline: !!validator,
-                ip,
-            };
-        });
-    }, [manager, pubkeyToNode, credits, locations]);
+                return {
+                    ...node,
+                    validator: enrichedValidator,
+                    isOnline: !!validator,
+                    ip,
+                };
+            });
+    }, [manager, pubkeyToNode, credits, locations, managerHasNodesOnCurrentNetwork]);
 
     // Calculate stats from enriched nodes
     const stats = useMemo((): ManagerStats => {
@@ -206,7 +216,7 @@ export function ManagerProfileClient({
         );
     }
 
-    // Not found state
+    // Manager not found in JSON data
     if (!manager) {
         return (
             <div className="flex flex-col items-center justify-center py-20 px-4">
@@ -215,11 +225,46 @@ export function ManagerProfileClient({
                     No manager found with address: <span className="font-mono text-white/60">{address}</span>
                 </div>
                 <button
-                    onClick={() => router.push('/nodes')}
+                    onClick={() => router.push('/managers')}
                     className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
                 >
-                    View All Nodes
+                    View All Managers
                 </button>
+            </div>
+        );
+    }
+
+    // Manager has no nodes on current network
+    if (!managerHasNodesOnCurrentNetwork) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 px-4">
+                <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-6">
+                    <svg className="w-8 h-8 text-white/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4M12 8h.01" />
+                    </svg>
+                </div>
+                <div className="text-white/60 text-xl mb-2">Manager Not Found on {isMainnet ? 'Mainnet' : 'Devnet'}</div>
+                <div className="text-white/40 text-center mb-2 max-w-md">
+                    Manager <span className="font-mono text-white/60">{address.slice(0, 8)}...{address.slice(-4)}</span> does not have any nodes on {isMainnet ? 'Mainnet' : 'Devnet'}.
+                </div>
+                <div className="text-white/30 text-sm text-center mb-6">
+                    Try switching to {isMainnet ? 'Devnet' : 'Mainnet'} to view this manager&apos;s nodes.
+                </div>
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => router.push('/managers')}
+                        className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer rounded-lg"
+                    >
+                        View All Managers
+                    </button>
+                    <button
+                        onClick={() => router.back()}
+                        className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors cursor-pointer rounded-lg border border-white/10"
+                    >
+                        Go Back
+                    </button>
+                </div>
             </div>
         );
     }

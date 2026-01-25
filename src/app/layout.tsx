@@ -34,10 +34,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "XanDash - Xandeum Dashboard | pNode Monitor & Network Analytics",
+    default: "XanDash - Xandeum pNode Dashboard & Analytics",
     template: "%s | XanDash"
   },
-  description: "XanDash is a comprehensive Xandeum dashboard for monitoring pNodes. Track node performance, uptime, storage, credits, and network statistics in real-time with AI-powered analytics.",
+  description: "XanDash: Monitor Xandeum pNodes in real-time. Track performance, uptime, storage, credits & network stats with AI-powered analytics.",
   keywords: ["xandeum dashboard", "xandash dashboard", "xandeum pnodes dashboard", "pnode dashboard", "xandeum pnode dashboard", "xandash", "xandash pnode", "xandeum pnodes", "XanDash", "Xandeum", "Xandeum network", "Xandeum network dashboard", "pNodes", "pNode monitor", "pNode tracker", "Xandeum monitor", "Xandeum analytics", "blockchain dashboard", "node tracker", "XAND token", "STOINC", "xandeum node status", "pnode stats", "xandeum mainnet", "xandeum devnet"],
   applicationName: "XanDash",
   authors: [{ name: "XanDash", url: "https://www.xandash.online" }],
@@ -154,7 +154,7 @@ export default function RootLayout({
         {/* Preconnect to critical origins - reduces connection latency */}
         {/* Only preconnect to truly critical origins that are needed for initial render */}
         <link rel="preconnect" href="https://www.xandash.online" />
-        
+
         {/* DNS prefetch for less critical but still important origins */}
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
@@ -170,30 +170,26 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://c.basemaps.cartocdn.com" />
         <link rel="dns-prefetch" href="https://d.basemaps.cartocdn.com" />
 
-        {/* Leaflet Map - defer loading, not critical for initial render */}
-        <link
-          rel="stylesheet"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossOrigin="anonymous"
-          media="print"
-        />
-        <script dangerouslySetInnerHTML={{
-          __html: `document.querySelector('link[href*="leaflet"]').media='all'`
-        }} />
+        {/* Leaflet Map - defer loading completely, not critical for initial render */}
+        {/* Loaded via dynamic import in InteractiveMap component */}
 
-        {/* Critical CSS inline - prevents render blocking */}
+        {/* Critical CSS inline - prevents render blocking and speeds LCP */}
         <style dangerouslySetInnerHTML={{
           __html: `
           *{box-sizing:border-box}
-          html,body{background:#000!important;margin:0;padding:0;min-height:100vh;font-family:system-ui,-apple-system,sans-serif}
+          html,body{background:#000!important;margin:0;padding:0;min-height:100vh;font-family:system-ui,-apple-system,sans-serif;color:#fff}
           .gradient-bg{background:radial-gradient(ellipse at center top,#2a2a2a 0%,#222 15%,#1a1a1a 35%,#111 60%,#0a0a0a 80%,#000 100%);background-attachment:fixed;min-height:100vh}
           .dark{color-scheme:dark}
           html,body,div,main,section{-ms-overflow-style:none;scrollbar-width:none}
           html::-webkit-scrollbar,body::-webkit-scrollbar,div::-webkit-scrollbar,main::-webkit-scrollbar,section::-webkit-scrollbar{display:none}
           .leaflet-container,.leaflet-container *{-ms-overflow-style:auto;scrollbar-width:auto}
           @media(max-width:640px){body{font-size:14px}.container{padding-left:12px;padding-right:12px}}
-        `.replace(/\s+/g, '')
+          /* Skeleton loading styles for faster perceived performance */
+          .animate-pulse{animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite}
+          @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+          /* Prevent FOUC */
+          .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+        `.replace(/\s+/g, ' ').trim()
         }} />
 
         <StructuredData />

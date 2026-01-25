@@ -113,17 +113,12 @@ export default async function ManagerProfilePage({ params }: PageProps) {
         });
     };
 
-    // Merge validators from both networks, create map with pubkey as key
+    // Transform validators for each network separately
     const devnetValidators = transformNodes(devnetData.nodes || []);
     const mainnetValidators = transformNodes(mainnetData.nodes || []);
 
-    const validatorMap = new Map<string, ValidatorData>();
-    mainnetValidators.forEach(v => validatorMap.set(v.pubkey, v));
-    devnetValidators.forEach(v => validatorMap.set(v.pubkey, v)); // Devnet takes precedence
-
-    const allValidators = Array.from(validatorMap.values());
-
-    if (allValidators.length === 0) {
+    // Check if both networks failed to load
+    if (devnetValidators.length === 0 && mainnetValidators.length === 0) {
         return (
             <DashboardLayout>
                 <div className="flex items-center justify-center min-h-[400px]">
@@ -139,8 +134,10 @@ export default async function ManagerProfilePage({ params }: PageProps) {
             <ManagerProfileClient
                 address={decodedAddress}
                 manager={manager}
-                allValidators={allValidators}
+                mainnetValidators={mainnetValidators}
+                devnetValidators={devnetValidators}
             />
         </DashboardLayout>
     );
 }
+

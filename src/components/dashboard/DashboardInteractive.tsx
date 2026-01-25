@@ -164,7 +164,16 @@ export const DashboardInteractive: React.FC = () => {
 
       // 2. Search Managers
       const queryLower = query.toLowerCase().trim();
+
+      // Create a Set of pubkeys for current network for O(1) lookup
+      const currentNetworkPubkeys = new Set(nodesData.map(n => n.pubkey).filter(Boolean));
+
       const managerResults = managersData.managers.filter(manager => {
+        // First check if manager has ANY nodes on the current network
+        // If not, don't include in search results
+        const hasNodesOnCurrentNetwork = manager.nodes.some(n => currentNetworkPubkeys.has(n.pnode_pubkey));
+        if (!hasNodesOnCurrentNetwork) return false;
+
         // Search by manager address
         if (manager.manager_address.toLowerCase().includes(queryLower)) return true;
         // Search by any node pubkey or IP associated with the manager
@@ -190,7 +199,7 @@ export const DashboardInteractive: React.FC = () => {
     } finally {
       setIsSearching(false);
     }
-  }, [nodesData.length]);
+  }, [nodesData]);
 
   const handleClose = useCallback(() => {
     setIsAnimating(false);

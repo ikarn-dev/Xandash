@@ -562,3 +562,52 @@ footer::-webkit-scrollbar {
 .animate-shrink-width {
   animation: shrink-width linear forwards;
 }
+
+/* Performance: Respect user's motion preferences for accessibility and battery life */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .animate-pulse,
+  .animate-spin,
+  .animate-beam,
+  .animate-beam-vertical,
+  .animate-blur-reveal,
+  .animate-blur-reveal-fast,
+  .animate-blur-reveal-subtle,
+  .animate-shrink-width {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+  }
+}
+
+/* Performance: Reduce animations on slow connections or low-power mode */
+@media (prefers-reduced-motion: no-preference) and (max-width: 640px) {
+  /* Reduce blur animations on mobile - they are GPU-intensive */
+  .animate-blur-reveal,
+  .animate-blur-reveal-fast,
+  .animate-blur-reveal-subtle {
+    filter: none !important;
+  }
+  
+  /* Faster animations on mobile */
+  .animate-blur-reveal {
+    animation-duration: 0.4s !important;
+  }
+  
+  .animate-blur-reveal-fast {
+    animation-duration: 0.3s !important;
+  }
+  
+  .animate-blur-reveal-subtle {
+    animation-duration: 0.2s !important;
+  }
+}

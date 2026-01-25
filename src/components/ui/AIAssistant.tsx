@@ -149,12 +149,13 @@ export function AIAssistant() {
   return (
     <>
       {/* Floating Button - Black/White theme */}
+      {/* On mobile: hide when open (use header minimize instead). On desktop: always show */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg shadow-black/50 cursor-pointer ${
+        className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-12 h-12 sm:w-14 sm:h-14 rounded-full items-center justify-center transition-all duration-300 shadow-lg shadow-black/50 cursor-pointer ${
           isOpen
-            ? 'bg-white/10 border border-white/30'
-            : 'bg-white hover:bg-white/90 border border-white/20'
+            ? 'hidden sm:flex bg-white/10 border border-white/30'
+            : 'flex bg-white hover:bg-white/90 border border-white/20'
         }`}
         aria-label="AI Assistant"
       >

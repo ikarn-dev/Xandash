@@ -101,7 +101,7 @@ export const DashboardSSR: React.FC = () => {
   );
 };
 
-// Skeleton for the entire dashboard - static, no animations
+// Skeleton for the entire dashboard - static, no animations for faster mobile performance
 export const DashboardSkeleton: React.FC = () => {
   return (
     <div className="space-y-6">
