@@ -51,28 +51,40 @@ interface NFTAsset {
 // RATE LIMIT PROTECTION: Global Request Queue & Throttling
 // ============================================================================
 
-// Minimum delay between Helius API requests (200ms = max 5 req/sec)
-const HELIUS_REQUEST_DELAY_MS = 200;
+// Minimum delay between Helius API requests (100ms = max 10 req/sec)
+const HELIUS_REQUEST_DELAY_MS = 100;
 
 // Track last request time for throttling
 let lastHeliusRequestTime = 0;
+// Promise chain for serializing requests
+let requestQueue: Promise<any> = Promise.resolve();
 
 // In-flight request deduplication map
 const inFlightRequests = new Map<string, Promise<ManagerAssetData | null>>();
 
 /**
  * Throttled fetch for Helius API - ensures minimum delay between requests
+ * Uses a promise queue to strictly serialize requests even when called concurrently
  */
 async function throttledHeliusFetch(url: string, options: RequestInit): Promise<Response> {
-  const now = Date.now();
-  const timeSinceLastRequest = now - lastHeliusRequestTime;
+  // Chain the new request to the end of the queue
+  const responsePromise = requestQueue.then(async () => {
+    const now = Date.now();
+    const timeSinceLastRequest = now - lastHeliusRequestTime;
 
-  if (timeSinceLastRequest < HELIUS_REQUEST_DELAY_MS) {
-    await new Promise(resolve => setTimeout(resolve, HELIUS_REQUEST_DELAY_MS - timeSinceLastRequest));
-  }
+    // Wait if we're too fast
+    if (timeSinceLastRequest < HELIUS_REQUEST_DELAY_MS) {
+      await new Promise(resolve => setTimeout(resolve, HELIUS_REQUEST_DELAY_MS - timeSinceLastRequest));
+    }
 
-  lastHeliusRequestTime = Date.now();
-  return fetch(url, options);
+    lastHeliusRequestTime = Date.now();
+    return fetch(url, options);
+  });
+
+  // Update queue pointer, handling errors so the chain doesn't break
+  requestQueue = responsePromise.catch(() => { });
+
+  return responsePromise;
 }
 
 // ============================================================================
@@ -84,7 +96,8 @@ const managerAssetsCache = new Map<string, { data: ManagerAssetData; expires: nu
 const failedRequestsCache = new Map<string, { timestamp: number }>();
 
 // Extended cache TTL to 2 hours (assets don't change frequently)
-const CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours
+// Extended cache TTL to 5 minutes to match user expectations for updates
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const FAILED_REQUEST_TTL = 5 * 60 * 1000; // 5 minutes - shorter TTL for failures to allow retries
 
 // ============================================================================
@@ -100,7 +113,7 @@ const XENO_TOKEN_MINTS = [
 ];
 
 // Keywords for identifying Xandeum-related NFTs
-const XANDEUM_NFT_KEYWORDS = ['xandeum', 'xand', 'pnode', 'manager', 'xandash'];
+const XANDEUM_NFT_KEYWORDS = ['xandeum', 'xand', 'pnode', 'xandash'];
 
 /**
  * Check if an NFT is Xandeum-related
@@ -187,172 +200,190 @@ async function fetchManagerAssets(managerAddress: string): Promise<ManagerAssetD
       const tokenPages: any[] = [];
       const nftPages: any[] = [];
 
-      // Fetch first page of tokens (throttled)
-      const tokensPage1 = await throttledHeliusFetch(
-        `https://mainnet.helius-rpc.com/?api-key=${currentApiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: 'manager-tokens-1',
-            method: 'getAssetsByOwner',
-            params: {
-              ownerAddress: managerAddress,
-              page: 1,
-              limit: 100,
-              displayOptions: {
-                showFungible: true,
-                showNativeBalance: false,
+      // Define fetchers for initial pages
+      const fetchTokensPage1 = async () => {
+        const response = await throttledHeliusFetch(
+          `https://mainnet.helius-rpc.com/?api-key=${currentApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 'manager-tokens-1',
+              method: 'getAssetsByOwner',
+              params: {
+                ownerAddress: managerAddress,
+                page: 1,
+                limit: 100,
+                displayOptions: {
+                  showFungible: true,
+                  showNativeBalance: false,
+                }
               }
-            }
-          }),
-          signal: AbortSignal.timeout(15000),
-        }
-      );
+            }),
+            signal: AbortSignal.timeout(15000),
+          }
+        );
+        if (isRateLimitError(response)) throw new Error('RATE_LIMIT');
+        return response.json();
+      };
 
-      // Check for rate limit on first request
-      if (isRateLimitError(tokensPage1)) {
-        console.log(`[Manager Assets] Rate limit hit on Helius tokens, attempting failover...`);
-        const switched = reportRateLimitHit('helius');
-        if (switched) {
-          currentApiKey = getActiveApiKey('helius');
-          retryCount++;
-          await new Promise(resolve => setTimeout(resolve, backoffMs));
-          backoffMs *= 2; // Exponential backoff
-          continue;
-        }
-        return null;
-      }
-
-      // Fetch first page of NFTs (throttled)
-      const nftsPage1 = await throttledHeliusFetch(
-        `https://mainnet.helius-rpc.com/?api-key=${currentApiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: 'manager-nfts-1',
-            method: 'getAssetsByOwner',
-            params: {
-              ownerAddress: managerAddress,
-              page: 1,
-              limit: 100,
-              displayOptions: {
-                showFungible: false,
-                showNativeBalance: false,
+      const fetchNftsPage1 = async () => {
+        const response = await throttledHeliusFetch(
+          `https://mainnet.helius-rpc.com/?api-key=${currentApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 'manager-nfts-1',
+              method: 'getAssetsByOwner',
+              params: {
+                ownerAddress: managerAddress,
+                page: 1,
+                limit: 100,
+                displayOptions: {
+                  showFungible: false,
+                  showNativeBalance: false,
+                }
               }
-            }
-          }),
-          signal: AbortSignal.timeout(15000),
-        }
-      );
+            }),
+            signal: AbortSignal.timeout(15000),
+          }
+        );
+        if (isRateLimitError(response)) throw new Error('RATE_LIMIT');
+        return response.json();
+      };
 
-      // Check for rate limit on NFT request
-      if (isRateLimitError(nftsPage1)) {
-        console.log(`[Manager Assets] Rate limit hit on Helius NFTs, attempting failover...`);
-        const switched = reportRateLimitHit('helius');
-        if (switched) {
-          currentApiKey = getActiveApiKey('helius');
-          retryCount++;
-          await new Promise(resolve => setTimeout(resolve, backoffMs));
-          backoffMs *= 2;
-          continue;
+      // Execute initial fetches in parallel (serialized by throttler)
+      let tokensData1, nftsData1;
+      try {
+        [tokensData1, nftsData1] = await Promise.all([fetchTokensPage1(), fetchNftsPage1()]);
+      } catch (err: any) {
+        if (err.message === 'RATE_LIMIT') {
+          console.log(`[Manager Assets] Rate limit hit on initial fetch for ${managerAddress}, attempting failover...`);
+          const switched = reportRateLimitHit('helius');
+          if (switched) {
+            currentApiKey = getActiveApiKey('helius');
+            retryCount++;
+            await new Promise(resolve => setTimeout(resolve, backoffMs));
+            backoffMs *= 2;
+            continue;
+          }
+          return null;
         }
-        return null;
+        throw err;
       }
 
       reportSuccess('helius');
 
-      const tokensData1 = await tokensPage1.json();
-      const nftsData1 = await nftsPage1.json();
-
       tokenPages.push(tokensData1.result?.items || []);
       nftPages.push(nftsData1.result?.items || []);
 
-      // Fetch remaining pages SEQUENTIALLY (not concurrent) to prevent rate limits
-      // Only fetch additional pages if first page was full (100 items)
+      // Fetch remaining pages
       const needMoreTokenPages = tokensData1.result?.items?.length === 100;
       const needMoreNftPages = nftsData1.result?.items?.length === 100;
 
-      // Sequential token page fetching (max 3 more pages to limit API calls)
+      // Parallelize pagination fetches if needed
+      const paginationPromises = [];
+
       if (needMoreTokenPages) {
-        for (let page = 2; page <= 4; page++) {
-          const pageResponse = await throttledHeliusFetch(
-            `https://mainnet.helius-rpc.com/?api-key=${currentApiKey}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                jsonrpc: '2.0',
-                id: `manager-tokens-${page}`,
-                method: 'getAssetsByOwner',
-                params: {
-                  ownerAddress: managerAddress,
-                  page: page,
-                  limit: 100,
-                  displayOptions: {
-                    showFungible: true,
-                    showNativeBalance: false,
+        const fetchTokenPages = async () => {
+          for (let page = 2; page <= 20; page++) { // Increased limit to 20
+            const pageResponse = await throttledHeliusFetch(
+              `https://mainnet.helius-rpc.com/?api-key=${currentApiKey}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  jsonrpc: '2.0',
+                  id: `manager-tokens-${page}`,
+                  method: 'getAssetsByOwner',
+                  params: {
+                    ownerAddress: managerAddress,
+                    page: page,
+                    limit: 100,
+                    displayOptions: {
+                      showFungible: true,
+                      showNativeBalance: false,
+                    }
                   }
-                }
-              }),
-              signal: AbortSignal.timeout(15000),
-            }
-          );
+                }),
+                signal: AbortSignal.timeout(15000),
+              }
+            );
 
-          if (isRateLimitError(pageResponse)) {
-            reportRateLimitHit('helius');
-            break; // Stop paginating on rate limit, use what we have
+            if (isRateLimitError(pageResponse)) throw new Error('RATE_LIMIT');
+
+            const pageData = await pageResponse.json();
+            const items = pageData.result?.items || [];
+            tokenPages.push(items);
+
+            if (items.length < 100) break;
           }
-
-          const pageData = await pageResponse.json();
-          const items = pageData.result?.items || [];
-          tokenPages.push(items);
-
-          // Stop if we got less than 100 items (no more pages)
-          if (items.length < 100) break;
-        }
+        };
+        paginationPromises.push(fetchTokenPages());
       }
 
-      // Sequential NFT page fetching (max 3 more pages)
       if (needMoreNftPages) {
-        for (let page = 2; page <= 4; page++) {
-          const pageResponse = await throttledHeliusFetch(
-            `https://mainnet.helius-rpc.com/?api-key=${currentApiKey}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                jsonrpc: '2.0',
-                id: `manager-nfts-${page}`,
-                method: 'getAssetsByOwner',
-                params: {
-                  ownerAddress: managerAddress,
-                  page: page,
-                  limit: 100,
-                  displayOptions: {
-                    showFungible: false,
-                    showNativeBalance: false,
+        const fetchNftPages = async () => {
+          for (let page = 2; page <= 20; page++) { // Increased limit to 20
+            const pageResponse = await throttledHeliusFetch(
+              `https://mainnet.helius-rpc.com/?api-key=${currentApiKey}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  jsonrpc: '2.0',
+                  id: `manager-nfts-${page}`,
+                  method: 'getAssetsByOwner',
+                  params: {
+                    ownerAddress: managerAddress,
+                    page: page,
+                    limit: 100,
+                    displayOptions: {
+                      showFungible: false,
+                      showNativeBalance: false,
+                    }
                   }
-                }
-              }),
-              signal: AbortSignal.timeout(15000),
-            }
-          );
+                }),
+                signal: AbortSignal.timeout(15000),
+              }
+            );
 
-          if (isRateLimitError(pageResponse)) {
-            reportRateLimitHit('helius');
-            break; // Stop paginating on rate limit, use what we have
+            if (isRateLimitError(pageResponse)) throw new Error('RATE_LIMIT');
+
+            const pageData = await pageResponse.json();
+            const items = pageData.result?.items || [];
+            nftPages.push(items);
+
+            if (items.length < 100) break;
           }
+        };
+        paginationPromises.push(fetchNftPages());
+      }
 
-          const pageData = await pageResponse.json();
-          const items = pageData.result?.items || [];
-          nftPages.push(items);
-
-          // Stop if we got less than 100 items (no more pages)
-          if (items.length < 100) break;
+      // Wait for all pagination to complete
+      if (paginationPromises.length > 0) {
+        try {
+          await Promise.all(paginationPromises);
+        } catch (err: any) {
+          if (err.message === 'RATE_LIMIT') {
+            console.log(`[Manager Assets] Rate limit hit on pagination for ${managerAddress}, attempting failover...`);
+            const switched = reportRateLimitHit('helius');
+            if (switched) {
+              currentApiKey = getActiveApiKey('helius');
+              retryCount++;
+              await new Promise(resolve => setTimeout(resolve, backoffMs));
+              backoffMs *= 2;
+              continue;
+            }
+            // If we can't switch, just use what we have so far instead of failing completely? 
+            // Logic below breaks out, but maybe we should just return partial data?
+            // For now, let's keep retry logic consistent.
+            return null;
+          }
+          throw err;
         }
       }
 
@@ -510,9 +541,8 @@ export async function getBatchManagerAssets(managerAddresses: string[]): Promise
   // Deduplicate addresses before processing
   const uniqueAddresses = Array.from(new Set(managerAddresses));
 
-  // REDUCED: Process only 2 addresses concurrently (down from 5)
-  // This is because each address can trigger 2-8 Helius API calls
-  const batchSize = 2;
+  // Process 5 addresses concurrently to improve throughput
+  const batchSize = 5;
 
   for (let i = 0; i < uniqueAddresses.length; i += batchSize) {
     const batch = uniqueAddresses.slice(i, i + batchSize);
@@ -526,10 +556,9 @@ export async function getBatchManagerAssets(managerAddresses: string[]): Promise
 
     await Promise.all(batchPromises);
 
-    // INCREASED: Larger delay between batches (500ms instead of 100ms)
-    // This gives Helius API time to recover and prevents rate limit cascades
+    // Standard delay between batches to allow queue to drain
     if (i + batchSize < uniqueAddresses.length) {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 250));
     }
   }
 
