@@ -134,9 +134,9 @@ export const VersionCardSSR: React.FC = () => {
             </div>
           </div>
           <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5">
-            <div className="flex justify-between items-center text-[9px] sm:text-[10px] text-white/70">
-              <span><AnimatedValue value={stats.totalVersions} /> versions total</span>
-              <span><AnimatedValue value={stats.totalNodes} /> nodes</span>
+            <div className="flex justify-between items-baseline text-[9px] sm:text-[10px] text-white/70">
+              <span className="text-left"><AnimatedValue value={stats.totalVersions} /> versions total</span>
+              <span className="text-right"><AnimatedValue value={stats.totalNodes} /> nodes</span>
             </div>
           </div>
         </div>
