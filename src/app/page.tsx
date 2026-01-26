@@ -47,10 +47,10 @@ export default function Home() {
           <p>
             <strong className="text-white/80">XanDash</strong> is the comprehensive dashboard for the{' '}
             <a
-              href="https://xandeum.com"
+              href="https://xandeum.network"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-emerald-400 hover:text-emerald-300 transition-colors"
+              className="text-emerald-300 underline decoration-emerald-400/50 hover:text-emerald-200 hover:decoration-emerald-300 transition-colors"
             >
               Xandeum Network
             </a>

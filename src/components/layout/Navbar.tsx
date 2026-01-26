@@ -236,7 +236,7 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
       {/* Dropdown - Fast animation */}
       {isOpen && (
         <div
-          className="absolute top-full right-0 mt-2 w-32 sm:w-36 py-1 rounded-xl overflow-hidden bg-black/95 backdrop-blur-xl border border-white/10 shadow-2xl animate-in fade-in zoom-in-95 duration-100 origin-top-right"
+          className="absolute top-full right-0 mt-2 w-32 sm:w-36 py-1 rounded-xl overflow-hidden bg-black/95 backdrop-blur-xl border border-white/10 shadow-2xl animate-blur-reveal-fast origin-top-right"
         >
           <button
             onClick={() => { setNetwork('devnet'); setIsOpen(false); }}

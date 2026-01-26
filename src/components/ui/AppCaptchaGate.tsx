@@ -95,8 +95,17 @@ export function AppCaptchaGate({ children }: AppCaptchaGateProps) {
     </div>
   );
 
-  // Verified or checking (SSR) - just render children
-  if (verificationState === 'verified' || verificationState === 'checking') {
+  // While checking verification status, show minimal black screen to prevent skeleton flash
+  if (verificationState === 'checking') {
+    return (
+      <div className="min-h-screen bg-black" aria-hidden="true">
+        {/* Minimal loading - no skeleton flash */}
+      </div>
+    );
+  }
+
+  // Verified - render children normally
+  if (verificationState === 'verified') {
     return <>{children}</>;
   }
 

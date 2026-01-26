@@ -147,7 +147,7 @@ export const VersionDistributionCard: React.FC<VersionDistributionCardProps> = (
 
   if (isLoading && nodes.length === 0) {
     return (
-      <div className={`relative bg-black/80 border border-white/10 p-3 group flex flex-col ${className}`}>
+      <div className={`relative bg-black/80 border border-white/10 p-3 group flex flex-col min-h-[320px] sm:min-h-[340px] ${className}`}>
         <CornerAccents />
         <div className="h-3 w-28 bg-white/10 rounded mb-2 animate-pulse" />
         <div className="flex-1 flex items-center justify-center">
@@ -163,7 +163,7 @@ export const VersionDistributionCard: React.FC<VersionDistributionCardProps> = (
   }
 
   return (
-    <div className={`relative bg-black/80 border border-white/10 p-3 group hover:border-white/20 transition-colors duration-200 flex flex-col ${className}`}>
+    <div className={`relative bg-black/80 border border-white/10 p-3 group hover:border-white/20 transition-colors duration-200 flex flex-col min-h-[320px] sm:min-h-[340px] ${className}`}>
       <CornerAccents />
 
       {/* Header - Top Left */}

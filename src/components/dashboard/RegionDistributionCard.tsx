@@ -77,11 +77,11 @@ export const RegionDistributionCard: React.FC<RegionDistributionCardProps> = ({ 
     if (nodes.length === 0) return { countries: [], total: 0, maxCount: 0 };
 
     const countryCounts = new Map<string, { count: number; code: string }>();
-    
+
     nodes.forEach(node => {
       let country = node.country;
       let countryCode = node.country_code;
-      
+
       // Try to get from geoData if not on node
       if (!country || !countryCode) {
         const ip = extractIPFromAddress(node.address);
@@ -91,7 +91,7 @@ export const RegionDistributionCard: React.FC<RegionDistributionCardProps> = ({ 
           countryCode = geo.country_code;
         }
       }
-      
+
       if (country && countryCode) {
         const existing = countryCounts.get(country);
         if (existing) {
@@ -127,7 +127,7 @@ export const RegionDistributionCard: React.FC<RegionDistributionCardProps> = ({ 
 
   if (isLoading && nodes.length === 0) {
     return (
-      <div className={`relative bg-black/80 border border-white/10 p-4 group hover:border-white/20 transition-all duration-300 ${className}`}>
+      <div className={`relative bg-black/80 border border-white/10 p-4 group hover:border-white/20 transition-all duration-300 min-h-[320px] sm:min-h-[340px] ${className}`}>
         <CornerAccents />
         <div className="h-4 w-32 bg-white/10 rounded mb-4" />
         <div className="space-y-3">
@@ -142,13 +142,13 @@ export const RegionDistributionCard: React.FC<RegionDistributionCardProps> = ({ 
   const uniqueCountries = regionData.countries.filter(c => c.country !== 'Unknown').length;
 
   return (
-    <div className={`relative bg-black/80 border border-white/10 p-4 group hover:border-white/20 hover:shadow-lg hover:shadow-white/5 transition-all duration-300 ${className}`}>
+    <div className={`relative bg-black/80 border border-white/10 p-4 group hover:border-white/20 hover:shadow-lg hover:shadow-white/5 transition-all duration-300 min-h-[320px] sm:min-h-[340px] ${className}`}>
       <CornerAccents />
-      
+
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider">{/* REGION DISTRIBUTION */}</h3>
-        <span 
+        <span
           className="text-white/40 text-[9px] font-mono transition-all duration-500"
           style={{ opacity: isAnimated ? 1 : 0, transform: isAnimated ? 'translateX(0)' : 'translateX(10px)' }}
         >
@@ -159,8 +159,8 @@ export const RegionDistributionCard: React.FC<RegionDistributionCardProps> = ({ 
       {/* Horizontal Bar Chart */}
       <div className="space-y-2" key={animationKey}>
         {regionData.countries.map((item, index) => (
-          <div 
-            key={item.country} 
+          <div
+            key={item.country}
             className="group/bar cursor-pointer"
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={() => setHoveredIndex(null)}
@@ -173,19 +173,19 @@ export const RegionDistributionCard: React.FC<RegionDistributionCardProps> = ({ 
           >
             <div className="flex items-center gap-2">
               {/* Flag + Country */}
-              <div 
+              <div
                 className="flex items-center gap-1.5 w-24 sm:w-32 flex-shrink-0 transition-transform duration-200"
                 style={{ transform: hoveredIndex === index ? 'scale(1.05)' : 'scale(1)' }}
               >
                 <span className="text-sm">{getFlagEmoji(item.code)}</span>
-                <span 
+                <span
                   className="text-[9px] sm:text-[10px] font-mono truncate transition-colors duration-200"
                   style={{ color: hoveredIndex === index ? COLORS[index % COLORS.length] : 'rgba(255,255,255,0.7)' }}
                 >
                   {item.country.length > 10 ? `${item.country.slice(0, 10)}..` : item.country}
                 </span>
               </div>
-              
+
               {/* Bar */}
               <div className="flex-1 relative h-5 sm:h-6 bg-white/5 rounded overflow-hidden">
                 <div
@@ -200,7 +200,7 @@ export const RegionDistributionCard: React.FC<RegionDistributionCardProps> = ({ 
                     transform: hoveredIndex === index ? 'scaleY(1.1)' : 'scaleY(1)',
                   }}
                 >
-                  <span 
+                  <span
                     className="absolute right-2 text-black/80 text-[8px] sm:text-[9px] font-bold font-mono transition-opacity duration-300"
                     style={{ opacity: isAnimated ? 1 : 0, transitionDelay: `${index * 60 + 300}ms` }}
                   >
@@ -208,11 +208,11 @@ export const RegionDistributionCard: React.FC<RegionDistributionCardProps> = ({ 
                   </span>
                 </div>
               </div>
-              
+
               {/* Percentage */}
-              <span 
+              <span
                 className="text-[8px] sm:text-[9px] font-mono w-10 text-right flex-shrink-0 transition-all duration-200"
-                style={{ 
+                style={{
                   color: hoveredIndex === index ? COLORS[index % COLORS.length] : 'rgba(255,255,255,0.4)',
                   opacity: isAnimated ? 1 : 0,
                   transitionDelay: `${index * 60 + 200}ms`,
@@ -226,7 +226,7 @@ export const RegionDistributionCard: React.FC<RegionDistributionCardProps> = ({ 
       </div>
 
       {/* Footer */}
-      <div 
+      <div
         className="mt-3 pt-2 border-t border-white/10 flex justify-between items-center transition-all duration-500"
         style={{ opacity: isAnimated ? 1 : 0, transform: isAnimated ? 'translateY(0)' : 'translateY(10px)', transitionDelay: '400ms' }}
       >

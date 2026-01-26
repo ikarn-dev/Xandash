@@ -103,7 +103,7 @@ export const ManagerBadge: React.FC<ManagerBadgeProps> = ({
       <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-[9px] sm:text-[10px] whitespace-nowrap w-[110px] justify-center">
         <span className="text-emerald-400 font-medium">Registered</span>
         <span className="text-emerald-500/40">•</span>
-        <span className="text-emerald-400/60">0 NFTs</span>
+        <span className="text-emerald-400/80">0 NFTs</span>
       </div>
     );
   }

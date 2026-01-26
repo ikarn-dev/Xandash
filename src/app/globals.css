@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "tw-animate-css";
+
 
 /* Leaflet CSS is loaded dynamically in InteractiveMap component */
 
@@ -116,13 +116,13 @@
 
 /* Custom gradient background - neutral dark theme */
 .gradient-bg {
-  background: radial-gradient(ellipse at center top, 
-    #2a2a2a 0%, 
-    #222222 15%, 
-    #1a1a1a 35%, 
-    #111111 60%, 
-    #0a0a0a 80%, 
-    #000000 100%);
+  background: radial-gradient(ellipse at center top,
+      #2a2a2a 0%,
+      #222222 15%,
+      #1a1a1a 35%,
+      #111111 60%,
+      #0a0a0a 80%,
+      #000000 100%);
   background-attachment: fixed;
   min-height: 100vh;
 }
@@ -146,6 +146,7 @@
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(100%);
   }
@@ -158,6 +159,7 @@
     filter: blur(10px);
     transform: translateY(20px);
   }
+
   100% {
     opacity: 1;
     filter: blur(0px);
@@ -171,6 +173,7 @@
     filter: blur(8px);
     transform: translateY(15px);
   }
+
   100% {
     opacity: 1;
     filter: blur(0px);
@@ -184,6 +187,7 @@
     filter: blur(5px);
     transform: translateY(10px);
   }
+
   100% {
     opacity: 1;
     filter: blur(0px);
@@ -263,16 +267,45 @@
 }
 
 /* Staggered row animations */
-.animate-blur-reveal-row-1 { animation-delay: 50ms; }
-.animate-blur-reveal-row-2 { animation-delay: 100ms; }
-.animate-blur-reveal-row-3 { animation-delay: 150ms; }
-.animate-blur-reveal-row-4 { animation-delay: 200ms; }
-.animate-blur-reveal-row-5 { animation-delay: 250ms; }
-.animate-blur-reveal-row-6 { animation-delay: 300ms; }
-.animate-blur-reveal-row-7 { animation-delay: 350ms; }
-.animate-blur-reveal-row-8 { animation-delay: 400ms; }
-.animate-blur-reveal-row-9 { animation-delay: 450ms; }
-.animate-blur-reveal-row-10 { animation-delay: 500ms; }
+.animate-blur-reveal-row-1 {
+  animation-delay: 50ms;
+}
+
+.animate-blur-reveal-row-2 {
+  animation-delay: 100ms;
+}
+
+.animate-blur-reveal-row-3 {
+  animation-delay: 150ms;
+}
+
+.animate-blur-reveal-row-4 {
+  animation-delay: 200ms;
+}
+
+.animate-blur-reveal-row-5 {
+  animation-delay: 250ms;
+}
+
+.animate-blur-reveal-row-6 {
+  animation-delay: 300ms;
+}
+
+.animate-blur-reveal-row-7 {
+  animation-delay: 350ms;
+}
+
+.animate-blur-reveal-row-8 {
+  animation-delay: 400ms;
+}
+
+.animate-blur-reveal-row-9 {
+  animation-delay: 450ms;
+}
+
+.animate-blur-reveal-row-10 {
+  animation-delay: 500ms;
+}
 
 /* Cards animation */
 .animate-blur-reveal-card {
@@ -280,9 +313,17 @@
   opacity: 0;
 }
 
-.animate-blur-reveal-card-1 { animation-delay: 100ms; }
-.animate-blur-reveal-card-2 { animation-delay: 200ms; }
-.animate-blur-reveal-card-3 { animation-delay: 300ms; }
+.animate-blur-reveal-card-1 {
+  animation-delay: 100ms;
+}
+
+.animate-blur-reveal-card-2 {
+  animation-delay: 200ms;
+}
+
+.animate-blur-reveal-card-3 {
+  animation-delay: 300ms;
+}
 
 /* Scroll-in animation for when elements come into view */
 @keyframes scroll-blur-reveal {
@@ -291,6 +332,7 @@
     filter: blur(8px);
     transform: translateY(30px);
   }
+
   100% {
     opacity: 1;
     filter: blur(0px);
@@ -307,9 +349,11 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   html {
     background-color: #000 !important;
   }
+
   body {
     @apply bg-background text-foreground;
     background-color: #000 !important;
@@ -317,22 +361,34 @@
 }
 
 /* Hide scrollbars globally while maintaining scroll functionality */
-html, body, div, main, section, article, aside, nav, header, footer {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+html,
+body,
+div,
+main,
+section,
+article,
+aside,
+nav,
+header,
+footer {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
-html::-webkit-scrollbar, 
-body::-webkit-scrollbar, 
-div::-webkit-scrollbar, 
-main::-webkit-scrollbar, 
-section::-webkit-scrollbar, 
-article::-webkit-scrollbar, 
-aside::-webkit-scrollbar, 
-nav::-webkit-scrollbar, 
-header::-webkit-scrollbar, 
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+div::-webkit-scrollbar,
+main::-webkit-scrollbar,
+section::-webkit-scrollbar,
+article::-webkit-scrollbar,
+aside::-webkit-scrollbar,
+nav::-webkit-scrollbar,
+header::-webkit-scrollbar,
 footer::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari, Opera */
+  display: none;
+  /* Chrome, Safari, Opera */
 }
 
 /* Ensure Leaflet elements are not affected by scrollbar hiding */
@@ -354,16 +410,20 @@ footer::-webkit-scrollbar {
     transform: translateX(-100%);
     opacity: 0;
   }
+
   20% {
     opacity: 0.8;
   }
+
   50% {
     opacity: 1;
     box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.4);
   }
+
   80% {
     opacity: 0.8;
   }
+
   100% {
     transform: translateX(100%);
     opacity: 0;
@@ -375,16 +435,20 @@ footer::-webkit-scrollbar {
     transform: translateY(-100%);
     opacity: 0;
   }
+
   20% {
     opacity: 0.8;
   }
+
   50% {
     opacity: 1;
     box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.4);
   }
+
   80% {
     opacity: 0.8;
   }
+
   100% {
     transform: translateY(100%);
     opacity: 0;
@@ -405,8 +469,8 @@ footer::-webkit-scrollbar {
 .leaflet-marker-icon,
 .leaflet-marker-shadow,
 .leaflet-tile-container,
-.leaflet-pane > svg,
-.leaflet-pane > canvas,
+.leaflet-pane>svg,
+.leaflet-pane>canvas,
 .leaflet-zoom-box,
 .leaflet-image-layer,
 .leaflet-layer {
@@ -522,14 +586,18 @@ footer::-webkit-scrollbar {
   will-change: transform;
   transition: transform 0.25s cubic-bezier(0, 0, 0.25, 1);
 }
+
 /* Hide scrollbars while maintaining functionality */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* Internet Explorer 10+ */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* Internet Explorer 10+ */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Safari and Chrome */
+  display: none;
+  /* Safari and Chrome */
 }
 
 /* Prevent horizontal overflow on all containers */
@@ -543,6 +611,7 @@ footer::-webkit-scrollbar {
   overflow-wrap: break-word;
   hyphens: auto;
 }
+
 /* Table row animation for responsive table */
 .animate-blur-reveal-item {
   animation: blur-reveal-subtle 0.4s ease-out forwards;
@@ -554,6 +623,7 @@ footer::-webkit-scrollbar {
   0% {
     width: 100%;
   }
+
   100% {
     width: 0%;
   }
@@ -565,6 +635,7 @@ footer::-webkit-scrollbar {
 
 /* Performance: Respect user's motion preferences for accessibility and battery life */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   ::before,
   ::after {
@@ -573,7 +644,7 @@ footer::-webkit-scrollbar {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  
+
   .animate-pulse,
   .animate-spin,
   .animate-beam,
@@ -591,22 +662,23 @@ footer::-webkit-scrollbar {
 
 /* Performance: Reduce animations on slow connections or low-power mode */
 @media (prefers-reduced-motion: no-preference) and (max-width: 640px) {
+
   /* Reduce blur animations on mobile - they are GPU-intensive */
   .animate-blur-reveal,
   .animate-blur-reveal-fast,
   .animate-blur-reveal-subtle {
     filter: none !important;
   }
-  
+
   /* Faster animations on mobile */
   .animate-blur-reveal {
     animation-duration: 0.4s !important;
   }
-  
+
   .animate-blur-reveal-fast {
     animation-duration: 0.3s !important;
   }
-  
+
   .animate-blur-reveal-subtle {
     animation-duration: 0.2s !important;
   }

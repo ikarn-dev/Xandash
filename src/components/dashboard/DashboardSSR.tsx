@@ -257,7 +257,7 @@ export const DashboardSkeleton: React.FC = () => {
 
       {/* Distribution Cards Skeleton - Match actual flexible height */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="relative bg-black/80 border border-white/10 p-3 group flex flex-col">
+        <div className="relative bg-black/80 border border-white/10 p-3 group flex flex-col min-h-[320px] sm:min-h-[340px]">
           {/* Version Distribution Card Skeleton */}
           <div className="h-3 w-28 bg-white/10 rounded mb-2"></div>
           <div className="flex-1 flex items-center justify-center">
@@ -269,7 +269,7 @@ export const DashboardSkeleton: React.FC = () => {
             ))}
           </div>
         </div>
-        <div className="relative bg-black/80 border border-white/10 p-4 group hover:border-white/20 transition-all duration-300">
+        <div className="relative bg-black/80 border border-white/10 p-4 group hover:border-white/20 transition-all duration-300 min-h-[320px] sm:min-h-[340px]">
           {/* Region Distribution Card Skeleton */}
           <div className="flex items-center justify-between mb-4">
             <div className="h-4 w-32 bg-white/10 rounded"></div>

@@ -141,7 +141,7 @@ export function ProposalsTab({ data }: { data: GovernanceData }) {
             className="flex items-center gap-2 px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded text-emerald-400 text-sm disabled:opacity-50">
             {loading ? 'Loading...' : <><span>Load More ({remaining} remaining)</span><ChevronDownIcon className="w-4 h-4" /></>}
           </button>
-        ) : proposals.length > 0 && <span className="text-emerald-400/60 text-xs">All proposals loaded</span>}
+        ) : proposals.length > 0 && <span className="text-emerald-400/80 text-xs">All proposals loaded</span>}
       </div>
     </div>
   );
