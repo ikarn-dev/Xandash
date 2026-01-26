@@ -122,31 +122,25 @@ export const VersionCardSSR: React.FC = () => {
               v<AnimatedValue value={stats.latestVersion} />
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-2 sm:mt-3">
-              <div className="flex items-center justify-center sm:justify-start gap-1.5 whitespace-nowrap">
+              <div className="flex items-center justify-center sm:justify-start gap-1.5">
                 <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-400 animate-pulse"></span>
                 <span className="text-green-400 text-xs sm:text-sm font-mono font-semibold">
                   <AnimatedValue value={stats.nodeCount} /> nodes
                 </span>
               </div>
-              <span className="text-white/70 text-[10px] sm:text-xs font-mono whitespace-nowrap">
+              <span className="text-white/50 text-[10px] sm:text-xs font-mono">
                 (<AnimatedValue value={stats.percentage.toFixed(1)} />% of network)
               </span>
             </div>
           </div>
           <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5">
-            <div className="flex justify-between items-center text-[9px] sm:text-[10px] text-white/70 gap-2">
-              <div className="flex items-center gap-1 whitespace-nowrap">
-                <AnimatedValue value={stats.totalVersions} />
-                <span>versions total</span>
-              </div>
-              <div className="flex items-center gap-1 whitespace-nowrap">
-                <AnimatedValue value={stats.totalNodes} />
-                <span>nodes</span>
-              </div>
+            <div className="flex justify-between items-center text-[9px] sm:text-[10px] text-white/50">
+              <span><AnimatedValue value={stats.totalVersions} /> versions total</span>
+              <span><AnimatedValue value={stats.totalNodes} /> nodes</span>
             </div>
           </div>
         </div>
       </div>
     </div>
   );
-};
+}
