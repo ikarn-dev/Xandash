@@ -143,4 +143,4 @@ export const VersionCardSSR: React.FC = () => {
       </div>
     </div>
   );
-}
+};
