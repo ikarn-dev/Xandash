@@ -14,15 +14,8 @@ interface CaptchaGateProps {
 // Custom Shield Icon matching app theme
 const ShieldIcon = ({ className = "w-8 h-8" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-    <path d="M9 12l2 2 4-4" strokeWidth="2"/>
-  </svg>
-);
-
-// Custom Loader Icon
-const LoaderIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <path d="M9 12l2 2 4-4" strokeWidth="2" />
   </svg>
 );
 
@@ -30,56 +23,62 @@ const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 const SESSION_KEY_PREFIX = 'xandash_captcha_';
 
 export function CaptchaGate({ children, title, description, cacheKey }: CaptchaGateProps) {
-  const [isVerified, setIsVerified] = useState(false);
+  // Use 'checking' state to show minimal black screen until we know verification status
+  const [verificationState, setVerificationState] = useState<'checking' | 'verified' | 'unverified'>('checking');
   const [error, setError] = useState<string | null>(null);
-  const [isLocalhost, setIsLocalhost] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
   // Generate session storage key based on cacheKey prop
   const sessionKey = cacheKey ? `${SESSION_KEY_PREFIX}${cacheKey}` : null;
 
   useEffect(() => {
-    // Use setTimeout to avoid setState in effect
-    const timer = setTimeout(() => {
-      setMounted(true);
-      if (typeof window !== 'undefined') {
-        const hostname = window.location.hostname;
-        if (hostname === 'localhost' || hostname === '127.0.0.1') {
-          setIsLocalhost(true);
-          setIsVerified(true);
+    // Immediate check - no setTimeout to speed up verified user experience
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+
+      // Skip on localhost
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        setVerificationState('verified');
+        return;
+      }
+
+      // Skip if no site key configured
+      if (!SITE_KEY) {
+        setVerificationState('verified');
+        return;
+      }
+
+      // Check session storage for cached verification (if cacheKey is provided)
+      if (sessionKey) {
+        const verified = sessionStorage.getItem(sessionKey);
+        if (verified === 'true') {
+          setVerificationState('verified');
           return;
         }
-        
-        // Check session storage for cached verification (if cacheKey is provided)
-        if (sessionKey) {
-          const verified = sessionStorage.getItem(sessionKey);
-          if (verified === 'true') {
-            setIsVerified(true);
-          }
-        }
       }
-    }, 0);
-    return () => clearTimeout(timer);
+
+      // Not verified - show captcha
+      setVerificationState('unverified');
+    }
   }, [sessionKey]);
 
   const handleVerify = useCallback(async (token: string) => {
     setError(null);
-    
+
     try {
       const res = await fetch('/api/verify-turnstile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
-      
+
       const data = await res.json();
-      
+
       if (data.success) {
         // Cache verification in session storage if cacheKey is provided
         if (sessionKey) {
           sessionStorage.setItem(sessionKey, 'true');
         }
-        setIsVerified(true);
+        setVerificationState('verified');
       } else {
         setError('Verification failed. Please try again.');
       }
@@ -88,19 +87,17 @@ export function CaptchaGate({ children, title, description, cacheKey }: CaptchaG
     }
   }, [sessionKey]);
 
-  if (!SITE_KEY || isLocalhost) {
-    return <>{children}</>;
-  }
-
-  if (!mounted) {
+  // While checking verification status, show minimal black screen to prevent skeleton flash
+  if (verificationState === 'checking') {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <LoaderIcon className="w-8 h-8 animate-spin text-white/40" />
+      <div className="min-h-screen bg-black" aria-hidden="true">
+        {/* Minimal loading - no skeleton flash */}
       </div>
     );
   }
 
-  if (isVerified) {
+  // Verified - render children normally
+  if (verificationState === 'verified') {
     return <>{children}</>;
   }
 
@@ -108,18 +105,18 @@ export function CaptchaGate({ children, title, description, cacheKey }: CaptchaG
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
       {/* Background grid effect */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px]" />
-      
+
       <div className="relative">
         {/* Glow effect */}
         <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-purple-500/20 rounded-lg blur-xl opacity-50" />
-        
+
         <div className="relative bg-black border border-white/10 rounded-lg p-8 max-w-md w-full">
           {/* Corner accents */}
           <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-emerald-500/50 rounded-tl" />
           <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-emerald-500/50 rounded-tr" />
           <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-emerald-500/50 rounded-bl" />
           <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-emerald-500/50 rounded-br" />
-          
+
           <div className="flex flex-col items-center text-center space-y-6">
             {/* Icon */}
             <div className="relative">
@@ -128,7 +125,7 @@ export function CaptchaGate({ children, title, description, cacheKey }: CaptchaG
                 <ShieldIcon className="w-8 h-8 text-emerald-400" />
               </div>
             </div>
-            
+
             {/* Title */}
             <div>
               <h2 className="text-xl font-bold text-white mb-2 font-mono">
