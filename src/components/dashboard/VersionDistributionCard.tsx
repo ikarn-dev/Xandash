@@ -367,7 +367,7 @@ export const VersionDistributionCard: React.FC<VersionDistributionCardProps> = (
               >
                 {formatVersion(item.version)}
               </span>
-              <span className="text-white/70 text-[6px] sm:text-[7px] font-mono flex-shrink-0">
+              <span className="text-white/80 text-[6px] sm:text-[7px] font-mono flex-shrink-0">
                 {item.percentage.toFixed(0)}%
               </span>
             </div>

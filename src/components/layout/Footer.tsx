@@ -81,7 +81,7 @@ export const Footer: React.FC = () => {
                 <XanDashLogo className="h-6" textClassName="text-lg" />
               </Link>
             </div>
-            <p className="text-white/70 text-sm leading-relaxed mb-4">
+            <p className="text-white/80 text-sm leading-relaxed mb-4">
               Real-time monitoring dashboard for the Xandeum network. Track nodes, analytics, and network health.
             </p>
             {/* Social Links */}

@@ -92,7 +92,7 @@ export const VersionCardSSR: React.FC = () => {
         <CornerAccents />
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h3 className="text-white/70 text-[10px] sm:text-xs font-medium tracking-wider">// VERSION</h3>
+            <h3 className="text-white/80 text-[10px] sm:text-xs font-medium tracking-wider">// VERSION</h3>
             <div className="text-white/60">
               <CodeIcon className="w-3 h-3 sm:w-4 sm:h-4" />
             </div>
@@ -111,7 +111,7 @@ export const VersionCardSSR: React.FC = () => {
       <CornerAccents />
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-between mb-3 sm:mb-4 lg:mb-6">
-          <h3 className="text-white/70 text-[10px] sm:text-xs font-medium tracking-wider">// POPULAR VERSION</h3>
+          <h3 className="text-white/80 text-[10px] sm:text-xs font-medium tracking-wider">// POPULAR VERSION</h3>
           <div className="text-green-400">
             <CodeIcon className="w-3 h-3 sm:w-4 sm:h-4" />
           </div>

@@ -124,8 +124,8 @@ export const GeoLocationCard: React.FC = () => {
           const locationData = await getLocationsForIPs(uniqueIPs);
           setLocations(locationData);
         }
-      } catch (err) {
-        console.error('Failed to fetch location data:', err);
+      } catch {
+        // Silent error
       } finally {
         setLocationsLoading(false);
       }

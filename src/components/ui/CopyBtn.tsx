@@ -11,9 +11,9 @@ interface CopyBtnProps {
   size?: 'sm' | 'md';
 }
 
-export const CopyBtn: React.FC<CopyBtnProps> = ({ 
-  text, 
-  onCopy, 
+export const CopyBtn: React.FC<CopyBtnProps> = ({
+  text,
+  onCopy,
   type = 'text',
   className = '',
   size = 'md'
@@ -26,15 +26,14 @@ export const CopyBtn: React.FC<CopyBtnProps> = ({
       await navigator.clipboard.writeText(text);
       setCopied(true);
       onCopy?.(text, type);
-      
+
       // Show toast notification
       const shortText = text.length > 20 ? `${text.slice(0, 10)}...${text.slice(-6)}` : text;
       toast.success(`Copied: ${shortText}`);
-      
+
       // Reset animation after 1 second
       setTimeout(() => setCopied(false), 1000);
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
+    } catch {
       toast.error('Failed to copy');
     }
   };
@@ -50,20 +49,20 @@ export const CopyBtn: React.FC<CopyBtnProps> = ({
       style={{ cursor: 'pointer' }}
     >
       {/* Copy icon */}
-      <svg 
-        className={`${iconSizeClasses} text-white/50 hover:text-white/70 transition-colors duration-200`} 
-        fill="none" 
-        stroke="currentColor" 
+      <svg
+        className={`${iconSizeClasses} text-white/50 hover:text-white/80 transition-colors duration-200`}
+        fill="none"
+        stroke="currentColor"
         viewBox="0 0 24 24"
       >
-        <path 
-          strokeLinecap="round" 
-          strokeLinejoin="round" 
-          strokeWidth={2} 
-          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" 
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
         />
       </svg>
-      
+
       {/* Success Animation Ring */}
       {copied && (
         <div className="absolute inset-0 -m-1 border-2 border-green-400 rounded-full animate-ping opacity-75"></div>

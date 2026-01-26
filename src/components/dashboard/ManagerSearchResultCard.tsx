@@ -68,14 +68,14 @@ const CopyIcon = ({ className = "w-3 h-3" }: { className?: string }) => (
 
 const ManagerLogo = ({ size = 40, className = '' }: { size?: number; className?: string }) => (
     <div
-        className={`rounded-full border-2 border-white/20 flex items-center justify-center overflow-hidden bg-black/40 ${className}`}
+        className={`relative rounded-full border-2 border-white/20 flex items-center justify-center overflow-hidden bg-black/40 ${className}`}
         style={{ width: size, height: size }}
     >
         <Image
             src={managerLogo}
             alt="Manager"
-            width={size}
-            height={size}
+            fill
+            sizes={`${size}px`}
             className="object-cover"
         />
     </div>
@@ -89,10 +89,10 @@ const StatusBadge = ({ active, total, className = '' }: { active: number; total:
     return (
         <div
             className={`px-2 py-1 rounded-full text-xs font-medium ${isFullyActive
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : isPartiallyActive
-                        ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                        : 'bg-white/10 text-white/40 border border-white/10'
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : isPartiallyActive
+                    ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                    : 'bg-white/10 text-white/40 border border-white/10'
                 } ${className}`}
         >
             {active}/{total}
@@ -135,7 +135,7 @@ const CopyButton = ({
             className={`p-1 hover:bg-white/10 transition-colors flex-shrink-0 ${className}`}
             title={`Copy ${label.toLowerCase()}`}
         >
-            <CopyIcon className={`text-white/40 hover:text-white/70 ${iconClassName}`} />
+            <CopyIcon className={`text-white/40 hover:text-white/80 ${iconClassName}`} />
         </button>
     );
 };

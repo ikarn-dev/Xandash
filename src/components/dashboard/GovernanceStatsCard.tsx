@@ -103,7 +103,7 @@ export function GovernanceStatsCard() {
         const storedTime = parseInt(stored);
         const now = Date.now();
         const timeSinceRefresh = (now - storedTime) / 1000;
-        
+
         if (timeSinceRefresh < REFRESH_COOLDOWN) {
           setLastRefresh(storedTime);
           setCooldown(Math.ceil(REFRESH_COOLDOWN - timeSinceRefresh));
@@ -125,21 +125,21 @@ export function GovernanceStatsCard() {
     if (isRefresh) {
       const now = Date.now();
       const timeSinceLastRefresh = (now - lastRefresh) / 1000;
-      
+
       if (timeSinceLastRefresh < REFRESH_COOLDOWN) {
         return; // Silently ignore if still in cooldown
       }
-      
+
       setRefreshing(true);
       setLastRefresh(now);
       setCooldown(REFRESH_COOLDOWN);
-      
+
       // Persist to localStorage
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_KEY, now.toString());
       }
     }
-    
+
     try {
       const response = await fetch('/api/governance', { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch');
@@ -151,8 +151,8 @@ export function GovernanceStatsCard() {
       });
       setTokens(data.dao?.treasury?.tokens || []);
       setHolders(data.largestHolders || []);
-    } catch (error) {
-      console.error('Failed to fetch governance stats:', error);
+    } catch {
+      // Silent error
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -175,7 +175,7 @@ export function GovernanceStatsCard() {
   return (
     <div className="relative bg-black border border-white/10 p-3 sm:p-4 md:p-6 group hover:border-white/20 transition-all">
       <CornerAccents />
-      
+
       {/* Header */}
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <div className="flex items-center gap-2">
@@ -264,7 +264,7 @@ export function GovernanceStatsCard() {
                     </span>
                   </div>
                   <div className="h-0.5 sm:h-1 bg-white/5 rounded-full overflow-hidden ml-4 sm:ml-6">
-                    <div 
+                    <div
                       className="h-full bg-gradient-to-r from-emerald-500/60 to-emerald-400/40 rounded-full"
                       style={{ width: `${percentage}%` }}
                     />
@@ -283,7 +283,7 @@ export function GovernanceStatsCardSkeleton() {
   return (
     <div className="relative bg-black border border-white/10 p-3 sm:p-4 md:p-6">
       <CornerAccents />
-      
+
       {/* Header skeleton */}
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <div className="flex items-center gap-2">

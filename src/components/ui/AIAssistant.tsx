@@ -120,12 +120,11 @@ export function AIAssistant() {
                 newMessages[newMessages.length - 1] = { role: 'assistant', content: assistantMessage };
                 return newMessages;
               });
-            } catch {}
+            } catch { }
           }
         }
       }
-    } catch (error) {
-      console.error('AI chat error:', error);
+    } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }]);
     } finally {
       setIsLoading(false);
@@ -152,11 +151,10 @@ export function AIAssistant() {
       {/* On mobile: hide when open (use header minimize instead). On desktop: always show */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-12 h-12 sm:w-14 sm:h-14 rounded-full items-center justify-center transition-all duration-300 shadow-lg shadow-black/50 cursor-pointer ${
-          isOpen
-            ? 'hidden sm:flex bg-white/10 border border-white/30'
-            : 'flex bg-white hover:bg-white/90 border border-white/20'
-        }`}
+        className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-12 h-12 sm:w-14 sm:h-14 rounded-full items-center justify-center transition-all duration-300 shadow-lg shadow-black/50 cursor-pointer ${isOpen
+          ? 'hidden sm:flex bg-white/10 border border-white/30'
+          : 'flex bg-white hover:bg-white/90 border border-white/20'
+          }`}
         aria-label="AI Assistant"
       >
         {isOpen ? (
@@ -189,7 +187,7 @@ export function AIAssistant() {
               {messages.length > 0 && (
                 <button
                   onClick={clearChat}
-                  className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white/70 transition-colors cursor-pointer"
+                  className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white/80 transition-colors cursor-pointer"
                   title="Clear chat"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -199,7 +197,7 @@ export function AIAssistant() {
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white/70 transition-colors cursor-pointer"
+                className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white/80 transition-colors cursor-pointer"
                 title="Close (Esc)"
               >
                 <MinimizeIcon className="w-4 h-4" />
@@ -208,38 +206,44 @@ export function AIAssistant() {
           </div>
 
           {/* Messages */}
-          <div 
+          <div
             className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
           >
             <style jsx>{`div::-webkit-scrollbar { display: none; }`}</style>
-            
+
             {messages.length === 0 && (
               <div className="text-center py-4 sm:py-6">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
                   <TriangleLogo className="w-5 h-5 sm:w-6 sm:h-6 text-white/60" />
                 </div>
                 <p className="text-white/40 text-sm mb-3">How can I help you today?</p>
-                
+
                 {/* Quick Templates */}
                 <div className="space-y-1.5 text-left">
                   <p className="text-[10px] text-white/30 uppercase tracking-wider px-1 mb-2">Quick queries</p>
                   {[
-                    { label: 'Network overview', icon: (
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
-                      </svg>
-                    )},
-                    { label: 'Top earning nodes', icon: (
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
-                      </svg>
-                    )},
-                    { label: 'XAND token price', icon: (
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"/><path d="M12 6v12"/><path d="M15 9.5c-.5-1-1.5-1.5-3-1.5s-2.5.5-3 1.5c-.5 1 .5 2 3 2.5s3.5 1.5 3 2.5c-.5 1-1.5 1.5-3 1.5s-2.5-.5-3-1.5"/>
-                      </svg>
-                    )},
+                    {
+                      label: 'Network overview', icon: (
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" />
+                        </svg>
+                      )
+                    },
+                    {
+                      label: 'Top earning nodes', icon: (
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                        </svg>
+                      )
+                    },
+                    {
+                      label: 'XAND token price', icon: (
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" /><path d="M12 6v12" /><path d="M15 9.5c-.5-1-1.5-1.5-3-1.5s-2.5.5-3 1.5c-.5 1 .5 2 3 2.5s3.5 1.5 3 2.5c-.5 1-1.5 1.5-3 1.5s-2.5-.5-3-1.5" />
+                        </svg>
+                      )
+                    },
                   ].map((q) => (
                     <button
                       key={q.label}
@@ -256,21 +260,27 @@ export function AIAssistant() {
                 <div className="space-y-1.5 text-left mt-3">
                   <p className="text-[10px] text-white/30 uppercase tracking-wider px-1 mb-2">Node analysis</p>
                   {[
-                    { label: 'Analyze node 173.249.54.191', icon: (
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-                      </svg>
-                    )},
-                    { label: 'Nodes in Germany', icon: (
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                      </svg>
-                    )},
-                    { label: 'Offline nodes count', icon: (
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>
-                      </svg>
-                    )},
+                    {
+                      label: 'Analyze node 173.249.54.191', icon: (
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+                        </svg>
+                      )
+                    },
+                    {
+                      label: 'Nodes in Germany', icon: (
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                        </svg>
+                      )
+                    },
+                    {
+                      label: 'Offline nodes count', icon: (
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" />
+                        </svg>
+                      )
+                    },
                   ].map((q) => (
                     <button
                       key={q.label}
@@ -287,21 +297,27 @@ export function AIAssistant() {
                 <div className="space-y-1.5 text-left mt-3">
                   <p className="text-[10px] text-white/30 uppercase tracking-wider px-1 mb-2">Advanced</p>
                   {[
-                    { label: 'Network health analysis', icon: (
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-                      </svg>
-                    )},
-                    { label: 'Storage utilization stats', icon: (
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/>
-                      </svg>
-                    )},
-                    { label: 'Version distribution', icon: (
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
-                      </svg>
-                    )},
+                    {
+                      label: 'Network health analysis', icon: (
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                        </svg>
+                      )
+                    },
+                    {
+                      label: 'Storage utilization stats', icon: (
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M3 5v14a9 3 0 0 0 18 0V5" /><path d="M3 12a9 3 0 0 0 18 0" />
+                        </svg>
+                      )
+                    },
+                    {
+                      label: 'Version distribution', icon: (
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" />
+                        </svg>
+                      )
+                    },
                   ].map((q) => (
                     <button
                       key={q.label}
@@ -319,11 +335,10 @@ export function AIAssistant() {
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[90%] sm:max-w-[85%] px-3 py-2 rounded-xl text-sm ${
-                    msg.role === 'user'
-                      ? 'bg-white/10 text-white border border-white/10'
-                      : 'bg-white/5 text-white/80 border border-white/5'
-                  }`}
+                  className={`max-w-[90%] sm:max-w-[85%] px-3 py-2 rounded-xl text-sm ${msg.role === 'user'
+                    ? 'bg-white/10 text-white border border-white/10'
+                    : 'bg-white/5 text-white/80 border border-white/5'
+                    }`}
                 >
                   <p className="whitespace-pre-wrap break-words text-[13px] sm:text-sm leading-relaxed">{msg.content}</p>
                 </div>

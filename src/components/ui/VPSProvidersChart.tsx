@@ -177,7 +177,7 @@ export const VPSProvidersChart: React.FC<VPSProvidersChartProps> = ({
                 >
                   {/* Provider name - full name, no truncation */}
                   <div
-                    className={`text-[9px] sm:text-[11px] flex-shrink-0 text-right transition-colors duration-200 ${isHovered ? 'text-white' : 'text-white/70'
+                    className={`text-[9px] sm:text-[11px] flex-shrink-0 text-right transition-colors duration-200 ${isHovered ? 'text-white' : 'text-white/80'
                       }`}
                     style={{ width: '80px', minWidth: '80px' }}
                     title={item.provider}
@@ -208,7 +208,7 @@ export const VPSProvidersChart: React.FC<VPSProvidersChartProps> = ({
                     </div>
                     {percentage <= 25 && (
                       <div className="absolute inset-y-0 flex items-center" style={{ left: `${Math.max(percentage, 8) + 2}%` }}>
-                        <span className={`text-[9px] sm:text-[10px] font-mono font-medium transition-colors duration-200 ${isHovered ? 'text-white' : 'text-white/70'
+                        <span className={`text-[9px] sm:text-[10px] font-mono font-medium transition-colors duration-200 ${isHovered ? 'text-white' : 'text-white/80'
                           }`}>
                           {item.count}
                         </span>
@@ -217,7 +217,7 @@ export const VPSProvidersChart: React.FC<VPSProvidersChartProps> = ({
                   </div>
 
                   {/* Percentage */}
-                  <div className={`w-8 sm:w-10 text-[8px] sm:text-[10px] text-right flex-shrink-0 transition-colors duration-200 ${isHovered ? 'text-white/70' : 'text-white/40'
+                  <div className={`w-8 sm:w-10 text-[8px] sm:text-[10px] text-right flex-shrink-0 transition-colors duration-200 ${isHovered ? 'text-white/80' : 'text-white/40'
                     }`}>
                     {((item.count / totalNodes) * 100).toFixed(0)}%
                   </div>

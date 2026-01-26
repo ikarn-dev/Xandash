@@ -3,6 +3,30 @@ import { getManagerAssets, getBatchManagerAssets } from '@/libs/services/manager
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+// Set max duration for serverless function (Vercel)
+export const maxDuration = 15;
+
+// Timeout wrapper to ensure we respond before browser times out
+const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T | null> => {
+  return Promise.race([
+    promise,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs))
+  ]);
+};
+
+// Default empty response for failed requests
+const createEmptyResponse = (address: string) => ({
+  manager_pubkey: address,
+  nft_count: 0,
+  sbt_count: 0,
+  xand_balance: 0,
+  xeno_balance: 0,
+  last_updated: Date.now(),
+  nft_names: [],
+  sbt_names: [],
+  nft_previews: [],
+  sbt_previews: []
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,76 +35,49 @@ export async function GET(request: NextRequest) {
     const addresses = searchParams.get('addresses');
 
     if (address) {
-      // Single manager lookup
-      const assets = await getManagerAssets(address);
+      // Single manager lookup with 8s timeout
+      const assets = await withTimeout(getManagerAssets(address), 8000);
 
-      if (!assets) {
-        return NextResponse.json({
-          error: 'Failed to fetch manager assets',
-          manager_pubkey: address,
-          nft_count: 0,
-          sbt_count: 0,
-          xand_balance: 0,
-          xeno_balance: 0,
-          last_updated: 0,
-          nft_names: [],
-          sbt_names: [],
-          nft_previews: [],
-          sbt_previews: []
-        }, { status: 200 });
-      }
-
-      return NextResponse.json(assets, {
+      return NextResponse.json(assets || createEmptyResponse(address), {
         headers: {
-          'Cache-Control': 'public, max-age=300', // Cache for 5 minutes
+          'Cache-Control': 'public, max-age=300',
         }
       });
 
     } else if (addresses) {
-      // Batch manager lookup
-      const addressList = addresses.split(',').filter(Boolean).slice(0, 20); // Max 20 addresses
+      // Batch manager lookup - limit to 10 addresses for faster response
+      const addressList = addresses.split(',').filter(Boolean).slice(0, 10);
 
       if (addressList.length === 0) {
-        return NextResponse.json({ error: 'No valid addresses provided' }, { status: 400 });
+        return NextResponse.json({ managers: {}, count: 0, cached: 0 }, { status: 200 });
       }
 
-      const assetsMap = await getBatchManagerAssets(addressList);
+      const assetsMap = await withTimeout(getBatchManagerAssets(addressList), 10000);
 
       // Convert Map to object for JSON response
       const result: { [address: string]: any } = {};
       addressList.forEach(addr => {
-        const assets = assetsMap.get(addr);
-        result[addr] = assets || {
-          manager_pubkey: addr,
-          nft_count: 0,
-          sbt_count: 0,
-          xand_balance: 0,
-          last_updated: 0,
-          nft_names: [],
-          sbt_names: []
-        };
+        const assets = assetsMap?.get(addr);
+        result[addr] = assets || createEmptyResponse(addr);
       });
 
       return NextResponse.json({
         managers: result,
         count: addressList.length,
-        cached: assetsMap.size
+        cached: assetsMap?.size || 0
       }, {
         headers: {
-          'Cache-Control': 'public, max-age=300', // Cache for 5 minutes
+          'Cache-Control': 'public, max-age=300',
         }
       });
 
     } else {
-      return NextResponse.json({ error: 'Address or addresses parameter required' }, { status: 400 });
+      return NextResponse.json({ managers: {}, count: 0, cached: 0 }, { status: 200 });
     }
 
-  } catch (error) {
-    console.error('Manager assets API error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch manager assets' },
-      { status: 500 }
-    );
+  } catch {
+    // Silent error - return empty response
+    return NextResponse.json({ managers: {}, count: 0, cached: 0 }, { status: 200 });
   }
 }
 
@@ -89,72 +86,48 @@ export async function POST(request: NextRequest) {
     let body;
     try {
       body = await request.json();
-    } catch (parseError) {
-      console.error('[Manager Assets API] Failed to parse request body:', parseError);
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    } catch {
+      return NextResponse.json({ managers: {}, count: 0, cached: 0 }, { status: 200 });
     }
 
     const { addresses } = body;
 
-    if (!addresses) {
-      console.warn('[Manager Assets API] No addresses field in request');
-      return NextResponse.json({ error: 'addresses field required', managers: {} }, { status: 200 });
-    }
-
-    if (!Array.isArray(addresses)) {
-      console.warn('[Manager Assets API] addresses is not an array:', typeof addresses);
-      return NextResponse.json({ error: 'addresses must be an array', managers: {} }, { status: 200 });
-    }
-
-    if (addresses.length === 0) {
+    if (!addresses || !Array.isArray(addresses) || addresses.length === 0) {
       return NextResponse.json({ managers: {}, count: 0, cached: 0 }, { status: 200 });
     }
 
-    // Filter out invalid addresses
-    const validAddresses = addresses.filter((addr: any) => typeof addr === 'string' && addr.length > 10);
+    // Filter and limit addresses - max 10 for faster response
+    const validAddresses = addresses
+      .filter((addr: any) => typeof addr === 'string' && addr.length > 10)
+      .slice(0, 10);
 
     if (validAddresses.length === 0) {
       return NextResponse.json({ managers: {}, count: 0, cached: 0 }, { status: 200 });
     }
 
-    if (validAddresses.length > 50) {
-      // Just truncate instead of erroring
-      validAddresses.length = 50;
-    }
-
-    const assetsMap = await getBatchManagerAssets(validAddresses);
+    // Use 10s timeout to ensure we respond before browser times out
+    const assetsMap = await withTimeout(getBatchManagerAssets(validAddresses), 10000);
 
     // Convert Map to object for JSON response
     const result: { [address: string]: any } = {};
     validAddresses.forEach((addr: string) => {
-      const assets = assetsMap.get(addr);
-      result[addr] = assets || {
-        manager_pubkey: addr,
-        nft_count: 0,
-        sbt_count: 0,
-        xand_balance: 0,
-        last_updated: Date.now(),
-        nft_names: [],
-        sbt_names: []
-      };
+      const assets = assetsMap?.get(addr);
+      result[addr] = assets || createEmptyResponse(addr);
     });
 
     return NextResponse.json({
       managers: result,
       count: validAddresses.length,
-      cached: assetsMap.size,
+      cached: assetsMap?.size || 0,
       timestamp: new Date().toISOString()
     }, {
       headers: {
-        'Cache-Control': 'public, max-age=300', // Cache for 5 minutes
+        'Cache-Control': 'public, max-age=300',
       }
     });
 
-  } catch (error) {
-    console.error('Manager assets batch API error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch manager assets' },
-      { status: 500 }
-    );
+  } catch {
+    // Silent error - return empty response instead of 500
+    return NextResponse.json({ managers: {}, count: 0, cached: 0 }, { status: 200 });
   }
 }

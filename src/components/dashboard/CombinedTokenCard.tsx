@@ -15,18 +15,18 @@ const Cell = dynamic(() => import('recharts').then(mod => mod.Cell), { ssr: fals
 
 // Custom Refresh Icon with animation support
 const RefreshIcon = ({ className = "w-4 h-4", spinning = false }: { className?: string; spinning?: boolean }) => (
-  <svg 
-    className={`${className} ${spinning ? 'animate-spin' : ''}`} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
+  <svg
+    className={`${className} ${spinning ? 'animate-spin' : ''}`}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M23 4v6h-6"/>
-    <path d="M1 20v-6h6"/>
-    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+    <path d="M23 4v6h-6" />
+    <path d="M1 20v-6h6" />
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
   </svg>
 );
 
@@ -71,11 +71,11 @@ export const CombinedTokenCard: React.FC = () => {
     try {
       const coingeckoUrl = process.env.NEXT_PUBLIC_COINGECKO_API_URL || '';
       const coingeckoKey = process.env.NEXT_PUBLIC_COINGECKO_API_KEY || '';
-      
+
       if (!coingeckoUrl) {
         throw new Error('CoinGecko API URL not configured');
       }
-      
+
       const response = await fetch(
         `${coingeckoUrl}?localization=false&tickers=true&market_data=true&community_data=true&developer_data=true&sparkline=true&include_categories_details=true&dex_pair_format=contract_address`,
         {
@@ -91,24 +91,24 @@ export const CombinedTokenCard: React.FC = () => {
 
       const data = await response.json();
       setTokenInfo(data);
-      
+
       // Extract sparkline data for chart (last 24 hours)
       if (data.market_data?.sparkline_7d?.price) {
         const sparklineData = data.market_data.sparkline_7d.price;
-        
+
         const now = Date.now();
         // Use last 24 data points for 24-hour hourly data
         const twentyFourHourData = sparklineData.slice(-24);
-        
+
         const historyPoints: PriceHistoryPoint[] = twentyFourHourData.map((price: number, index: number) => ({
           timestamp: now - (twentyFourHourData.length - index) * 60 * 60 * 1000, // Hourly intervals
           price: price
         }));
-        
+
         setPriceHistory(historyPoints);
       }
-    } catch (err) {
-      console.error('Error fetching token info:', err);
+    } catch {
+      // Silent error
     }
   };
 
@@ -127,7 +127,7 @@ export const CombinedTokenCard: React.FC = () => {
         const storedTime = parseInt(stored);
         const now = Date.now();
         const timeSinceRefresh = (now - storedTime) / 1000;
-        
+
         if (timeSinceRefresh < REFRESH_COOLDOWN) {
           setLastRefresh(storedTime);
           setCooldown(Math.ceil(REFRESH_COOLDOWN - timeSinceRefresh));
@@ -150,26 +150,26 @@ export const CombinedTokenCard: React.FC = () => {
   const handleManualRefresh = async () => {
     const now = Date.now();
     const timeSinceLastRefresh = (now - lastRefresh) / 1000;
-    
+
     if (timeSinceLastRefresh < REFRESH_COOLDOWN) {
       return; // Silently ignore if still in cooldown
     }
-    
+
     setRefreshing(true);
     setShouldAnimateChart(true); // Allow animation on manual refresh
     setLastRefresh(now);
     setCooldown(REFRESH_COOLDOWN);
-    
+
     // Persist to localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, now.toString());
     }
-    
+
     try {
       // Only fetch CoinGecko token info
       await fetchTokenInfo();
-    } catch (error) {
-      console.error('Manual refresh failed:', error);
+    } catch {
+      // Silent error
     } finally {
       setRefreshing(false);
     }
@@ -182,8 +182,8 @@ export const CombinedTokenCard: React.FC = () => {
       try {
         // Only fetch CoinGecko token info
         await fetchTokenInfo();
-      } catch (error) {
-        console.error('Initial data fetch failed:', error);
+      } catch {
+        // Silent error
       } finally {
         setLoading(false);
       }
@@ -254,17 +254,17 @@ export const CombinedTokenCard: React.FC = () => {
           }
         }
       };
-      
+
       // Initial check after mount
       const raf = requestAnimationFrame(updateDimensions);
       const timer = setTimeout(updateDimensions, 150);
-      
+
       // ResizeObserver for responsive updates
       const resizeObserver = new ResizeObserver(updateDimensions);
       if (containerRef.current) {
         resizeObserver.observe(containerRef.current);
       }
-      
+
       return () => {
         cancelAnimationFrame(raf);
         clearTimeout(timer);
@@ -287,9 +287,9 @@ export const CombinedTokenCard: React.FC = () => {
     const chartData = data.map((point, index) => ({
       timestamp: point.timestamp,
       price: point.price,
-      time: new Date(point.timestamp).toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      time: new Date(point.timestamp).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
       }),
       index: index
     }));
@@ -314,62 +314,62 @@ export const CombinedTokenCard: React.FC = () => {
     };
 
     return (
-      <div 
+      <div
         ref={containerRef}
         className="w-full h-64 lg:h-96 bg-black/10 rounded border border-white/5"
         style={{ minHeight: '256px' }}
       >
         {dimensions ? (
           <ResponsiveContainer width={dimensions.width} height={dimensions.height}>
-          <BarChart 
-            key={animationKey}
-            data={chartData} 
-            margin={{ top: 20, right: 15, left: 15, bottom: 20 }}
-            barCategoryGap="10%"
-            maxBarSize={50}
-          >
-            <defs>
-              <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity={0.95} />
-                <stop offset="30%" stopColor="#f1f5f9" stopOpacity={0.85} />
-                <stop offset="70%" stopColor="#e2e8f0" stopOpacity={0.75} />
-                <stop offset="100%" stopColor="#cbd5e1" stopOpacity={0.65} />
-              </linearGradient>
-            </defs>
-            <XAxis 
-              dataKey="time" 
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 8, fill: '#9ca3af' }}
-              interval={Math.floor(chartData.length / 6)}
-              height={35}
-            />
-            <YAxis 
-              domain={[minPrice - padding, maxPrice + padding]}
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 8, fill: '#9ca3af' }}
-              tickFormatter={(value) => `$${value.toFixed(6)}`}
-              width={80}
-              type="number"
-              scale="linear"
-            />
-            <Tooltip 
-              content={<CustomTooltip />} 
-              cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
-            />
-            <Bar 
-              dataKey="price" 
-              radius={[8, 8, 8, 8]}
-              animationDuration={800}
-              animationBegin={0}
-              fill="url(#barGradient)"
-              style={{
-                filter: 'drop-shadow(0px 0px 8px rgba(255, 255, 255, 0.2))',
-                opacity: 0.95
-              }}
-            />
-          </BarChart>
+            <BarChart
+              key={animationKey}
+              data={chartData}
+              margin={{ top: 20, right: 15, left: 15, bottom: 20 }}
+              barCategoryGap="10%"
+              maxBarSize={50}
+            >
+              <defs>
+                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#ffffff" stopOpacity={0.95} />
+                  <stop offset="30%" stopColor="#f1f5f9" stopOpacity={0.85} />
+                  <stop offset="70%" stopColor="#e2e8f0" stopOpacity={0.75} />
+                  <stop offset="100%" stopColor="#cbd5e1" stopOpacity={0.65} />
+                </linearGradient>
+              </defs>
+              <XAxis
+                dataKey="time"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 8, fill: '#9ca3af' }}
+                interval={Math.floor(chartData.length / 6)}
+                height={35}
+              />
+              <YAxis
+                domain={[minPrice - padding, maxPrice + padding]}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 8, fill: '#9ca3af' }}
+                tickFormatter={(value) => `$${value.toFixed(6)}`}
+                width={80}
+                type="number"
+                scale="linear"
+              />
+              <Tooltip
+                content={<CustomTooltip />}
+                cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+              />
+              <Bar
+                dataKey="price"
+                radius={[8, 8, 8, 8]}
+                animationDuration={800}
+                animationBegin={0}
+                fill="url(#barGradient)"
+                style={{
+                  filter: 'drop-shadow(0px 0px 8px rgba(255, 255, 255, 0.2))',
+                  opacity: 0.95
+                }}
+              />
+            </BarChart>
           </ResponsiveContainer>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -477,12 +477,11 @@ export const CombinedTokenCard: React.FC = () => {
             {cooldown > 0 && (
               <span className="text-[9px] font-mono text-white/40">{cooldown}s</span>
             )}
-            <RefreshIcon 
-              className={`w-4 h-4 transition-all duration-300 ${
-                refreshing 
-                  ? 'text-white/60' 
+            <RefreshIcon
+              className={`w-4 h-4 transition-all duration-300 ${refreshing
+                  ? 'text-white/60'
                   : 'text-white/80 group-hover:text-white group-hover:scale-110'
-              }`}
+                }`}
               spinning={refreshing}
             />
           </button>
@@ -498,9 +497,8 @@ export const CombinedTokenCard: React.FC = () => {
             <div className="text-white text-xl font-bold font-mono mb-1">
               ${currentPrice.toFixed(6)}
             </div>
-            <div className={`inline-flex items-center space-x-1 text-xs font-bold ${
-              isPositive ? 'text-green-400' : 'text-red-400'
-            }`}>
+            <div className={`inline-flex items-center space-x-1 text-xs font-bold ${isPositive ? 'text-green-400' : 'text-red-400'
+              }`}>
               {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               <span>{isPositive ? '+' : ''}{change24h.toFixed(2)}% (7d)</span>
             </div>
@@ -529,27 +527,27 @@ export const CombinedTokenCard: React.FC = () => {
               <span className="text-white/60 text-xs">Market Cap</span>
               <span className="text-white text-xs font-mono">${formatNumber(marketCap)}</span>
             </div>
-            
+
             <div className="flex justify-between items-center py-1.5 border-b border-white/10">
               <span className="text-white/60 text-xs">Fully Diluted Valuation</span>
               <span className="text-white text-xs font-mono">${formatNumber(maxSupply * currentPrice)}</span>
             </div>
-            
+
             <div className="flex justify-between items-center py-1.5 border-b border-white/10">
               <span className="text-white/60 text-xs">24 Hour Trading Vol</span>
               <span className="text-white text-xs font-mono">${formatNumber(volume24h)}</span>
             </div>
-            
+
             <div className="flex justify-between items-center py-1.5 border-b border-white/10">
               <span className="text-white/60 text-xs">Circulating Supply</span>
               <span className="text-white text-xs font-mono">{formatSupply(circulatingSupply)}</span>
             </div>
-            
+
             <div className="flex justify-between items-center py-1.5 border-b border-white/10">
               <span className="text-white/60 text-xs">Total Supply</span>
               <span className="text-white text-xs font-mono">{formatSupply(totalSupply)}</span>
             </div>
-            
+
             <div className="flex justify-between items-center py-1.5">
               <span className="text-white/60 text-xs">Max Supply</span>
               <span className="text-white text-xs font-mono">{formatSupply(maxSupply)}</span>

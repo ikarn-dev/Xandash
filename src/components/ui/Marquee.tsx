@@ -148,7 +148,7 @@ export const Marquee = ({ className = '' }: MarqueeProps) => {
                 {item.dot && (
                   <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
                 )}
-                <span className={`text-xs font-mono font-medium tracking-wider whitespace-nowrap ${item.dot ? 'text-white/70' : 'text-white/30'}`}>
+                <span className={`text-xs font-mono font-medium tracking-wider whitespace-nowrap ${item.dot ? 'text-white/80' : 'text-white/30'}`}>
                   {item.text}
                 </span>
               </div>

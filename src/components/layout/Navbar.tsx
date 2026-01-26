@@ -217,7 +217,7 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleRefresh(); } }}
           >
             <RefreshCw className={cn(
-              'text-white/40 hover:text-white/70',
+              'text-white/40 hover:text-white/80',
               compact ? 'w-2.5 h-2.5' : 'w-2.5 h-2.5 sm:w-3 sm:h-3',
               isRefreshing && 'animate-spin'
             )} />

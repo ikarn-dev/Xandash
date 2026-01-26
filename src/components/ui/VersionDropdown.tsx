@@ -119,7 +119,7 @@ export function CustomDropdown({
           'inline-flex items-center rounded-lg border px-2 py-1 text-xs font-medium transition-colors cursor-pointer whitespace-nowrap gap-1',
           showActiveState && hasSelection
             ? 'bg-white/20 text-white border-white/40'
-            : 'bg-black/30 text-white/70 border-white/20 hover:bg-white/10'
+            : 'bg-black/30 text-white/80 border-white/20 hover:bg-white/10'
         )}
       >
         <span>{displayValue}</span>
@@ -152,7 +152,7 @@ export function CustomDropdown({
                 onClick={() => handleSelect(option.value)}
                 className={cn(
                   'w-full text-left px-3 py-1.5 text-xs hover:bg-white/10 transition-colors truncate',
-                  value === option.value ? 'bg-white/20 text-white' : 'text-white/70'
+                  value === option.value ? 'bg-white/20 text-white' : 'text-white/80'
                 )}
                 title={option.label}
               >

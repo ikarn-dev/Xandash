@@ -120,8 +120,8 @@ export const DashboardNodesCard: React.FC = () => {
           const newLocations = await getLocationsForIPs(uniqueIPs);
           setLocations(prev => ({ ...prev, ...newLocations }));
         }
-      } catch (error) {
-        console.error('Failed to load geolocation data:', error);
+      } catch {
+        // Silent error
       }
     };
     loadGeolocationData();
@@ -141,8 +141,8 @@ export const DashboardNodesCard: React.FC = () => {
             setCredits(creditsMap);
           }
         }
-      } catch (error) {
-        console.error('Failed to fetch credits:', error);
+      } catch {
+        // Silent error
       }
     };
     fetchCredits();
@@ -172,8 +172,8 @@ export const DashboardNodesCard: React.FC = () => {
             setManagerAssets(new Map(Object.entries(data.managers)));
           }
         }
-      } catch (error) {
-        console.error('Failed to fetch manager assets:', error);
+      } catch {
+        // Silent error
       }
     };
     fetchAssets();
@@ -316,23 +316,23 @@ export const DashboardNodesCard: React.FC = () => {
           <table className="w-full min-w-[1280px]">
             <thead className="bg-white/5 border-b border-white/10">
               <tr>
-                <th className="w-[4%] px-2 py-3 text-center text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">
+                <th className="w-[4%] px-2 py-3 text-center text-xs font-medium text-white/80 uppercase tracking-wider whitespace-nowrap">
                   <CompareIcon className="w-3.5 h-3.5 mx-auto text-white/50" />
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Location</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Manager Assets</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">IP Address</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Pubkey</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Public</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Committed</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Used</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Usage %</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Version</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Uptime</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Last Seen</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Credits</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Status</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider whitespace-nowrap">Score</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider whitespace-nowrap">Location</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider whitespace-nowrap">Manager Assets</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider whitespace-nowrap">IP Address</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider whitespace-nowrap">Pubkey</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider whitespace-nowrap">Public</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider whitespace-nowrap">Committed</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider whitespace-nowrap">Used</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider whitespace-nowrap">Usage %</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider whitespace-nowrap">Version</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider whitespace-nowrap">Uptime</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider whitespace-nowrap">Last Seen</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider whitespace-nowrap">Credits</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider whitespace-nowrap">Score</th>
               </tr>
             </thead>
             <tbody>
@@ -417,8 +417,8 @@ export const DashboardNodesCard: React.FC = () => {
                     <td className="px-3 py-3 text-xs"><span className="text-white/80 font-mono whitespace-nowrap">{storageCommittedDisplay}</span></td>
                     <td className="px-3 py-3 text-xs"><span className="text-white/80 font-mono whitespace-nowrap">{storageUsedDisplay}</span></td>
                     <td className="px-3 py-3 text-xs"><span className="text-white/80 font-mono whitespace-nowrap">{usagePercentDisplay}%</span></td>
-                    <td className="px-3 py-3 text-xs"><span className="text-white/70 font-mono truncate block max-w-[70px]">{node.version || 'Unknown'}</span></td>
-                    <td className="px-3 py-3 text-xs"><span className="text-white/70 font-mono">{uptimeDisplay}</span></td>
+                    <td className="px-3 py-3 text-xs"><span className="text-white/80 font-mono truncate block max-w-[70px]">{node.version || 'Unknown'}</span></td>
+                    <td className="px-3 py-3 text-xs"><span className="text-white/80 font-mono">{uptimeDisplay}</span></td>
                     <td className="px-3 py-3 text-xs"><span className="text-white/60 font-mono">{lastSeenDisplay}</span></td>
                     <td className="px-3 py-3 text-xs"><span className="text-yellow-400 font-mono font-semibold">{nodeCredits !== null && nodeCredits !== undefined ? nodeCredits.toLocaleString() : '0'}</span></td>
                     <td className="px-3 py-3 text-xs">

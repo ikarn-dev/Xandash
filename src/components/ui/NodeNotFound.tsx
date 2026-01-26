@@ -14,12 +14,12 @@ interface NodeNotFoundProps {
 export function NodeNotFound({ ip, pubkey, showSwitchNetwork = true, onRetry }: NodeNotFoundProps) {
   const router = useRouter();
   const { network, setNetwork } = useNetwork();
-  
+
   const otherNetwork = network === 'mainnet' ? 'devnet' : 'mainnet';
   const identifier = ip || pubkey;
-  const truncatedId = identifier 
-    ? identifier.length > 16 
-      ? `${identifier.slice(0, 8)}...${identifier.slice(-6)}` 
+  const truncatedId = identifier
+    ? identifier.length > 16
+      ? `${identifier.slice(0, 8)}...${identifier.slice(-6)}`
       : identifier
     : null;
 
@@ -33,7 +33,7 @@ export function NodeNotFound({ ip, pubkey, showSwitchNetwork = true, onRetry }: 
       <div className="relative w-full max-w-md mb-6 rounded-lg overflow-hidden border border-white/10 bg-black">
         {/* Dark overlay to blend edges */}
         <div className="absolute inset-0 pointer-events-none z-10 shadow-[inset_0_0_30px_rgba(0,0,0,0.8)]" />
-        
+
         {/* Animation container with inverted colors */}
         <div className="relative" style={{ filter: 'invert(1) hue-rotate(180deg)', opacity: 0.9 }}>
           <DotLottieReact
@@ -46,7 +46,7 @@ export function NodeNotFound({ ip, pubkey, showSwitchNetwork = true, onRetry }: 
       </div>
 
       {/* Title */}
-      <h2 className="text-base font-mono text-white/70 tracking-widest mb-3">
+      <h2 className="text-base font-mono text-white/80 tracking-widest mb-3">
         // NODE_NOT_FOUND
       </h2>
 
@@ -93,11 +93,10 @@ export function NodeNotFound({ ip, pubkey, showSwitchNetwork = true, onRetry }: 
         {showSwitchNetwork && (
           <button
             onClick={handleSwitchNetwork}
-            className={`group flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium transition-all duration-200 ${
-              otherNetwork === 'mainnet'
+            className={`group flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium transition-all duration-200 ${otherNetwork === 'mainnet'
                 ? 'text-blue-400/70 hover:text-blue-400 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/20 hover:border-blue-500/40'
                 : 'text-green-400/70 hover:text-green-400 bg-green-500/5 hover:bg-green-500/10 border border-green-500/20 hover:border-green-500/40'
-            }`}
+              }`}
           >
             <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M16 3l4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16" />

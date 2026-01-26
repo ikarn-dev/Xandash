@@ -557,10 +557,10 @@ export const NetworkStatsCardSSR: React.FC = () => {
 
         {/* Headers - visible on all screens */}
         <div className="grid grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6 mb-3 lg:mb-4">
-          <div className="text-white/70 text-[10px] sm:text-xs font-medium text-center">Storage Committed</div>
-          <div className="text-white/70 text-[10px] sm:text-xs font-medium text-center">Storage Used</div>
-          <div className="text-white/70 text-[10px] sm:text-xs font-medium text-center">Avg per Pod</div>
-          <div className="text-white/70 text-[10px] sm:text-xs font-medium text-center hidden lg:block">Storage Distribution</div>
+          <div className="text-white/80 text-[10px] sm:text-xs font-medium text-center">Storage Committed</div>
+          <div className="text-white/80 text-[10px] sm:text-xs font-medium text-center">Storage Used</div>
+          <div className="text-white/80 text-[10px] sm:text-xs font-medium text-center">Avg per Pod</div>
+          <div className="text-white/80 text-[10px] sm:text-xs font-medium text-center hidden lg:block">Storage Distribution</div>
         </div>
 
         {/* Beam divider */}
@@ -617,7 +617,7 @@ export const NetworkStatsCardSSR: React.FC = () => {
         {/* Mobile pie chart - inline at bottom */}
         <div className="lg:hidden mt-4 pt-4 border-t border-white/10">
           <div className="flex flex-col items-center">
-            <div className="text-white/70 text-[10px] sm:text-xs font-medium mb-2">Storage Distribution</div>
+            <div className="text-white/80 text-[10px] sm:text-xs font-medium mb-2">Storage Distribution</div>
             <StoragePieChart
               used={storageStats.storage_used}
               committed={storageStats.storage_committed}
