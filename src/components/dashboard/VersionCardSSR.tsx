@@ -121,22 +121,36 @@ export const VersionCardSSR: React.FC = () => {
             <div className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold font-mono leading-none">
               v<AnimatedValue value={stats.latestVersion} />
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-2 sm:mt-3">
-              <div className="flex items-center justify-center sm:justify-start gap-1.5">
-                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-400 animate-pulse"></span>
-                <span className="text-green-400 text-xs sm:text-sm font-mono font-semibold">
-                  <AnimatedValue value={stats.nodeCount} /> nodes
+            <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 mt-2 sm:mt-3">
+              <div className="flex items-baseline justify-center sm:justify-start gap-1.5">
+                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0 mt-0.5"></span>
+                <span className="text-green-400 text-xs sm:text-sm font-mono font-semibold leading-tight">
+                  <AnimatedValue value={stats.nodeCount} />
+                </span>
+                <span className="text-white/50 text-[10px] sm:text-xs font-mono leading-tight">
+                  <AnimatedValue value={stats.percentage.toFixed(1)} />
                 </span>
               </div>
-              <span className="text-white/50 text-[10px] sm:text-xs font-mono">
-                (<AnimatedValue value={stats.percentage.toFixed(1)} />% of network)
-              </span>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 mt-1">
+              <div className="flex items-baseline justify-center sm:justify-start gap-1.5">
+                <span className="text-green-400 text-xs sm:text-sm font-mono font-semibold leading-tight">
+                  nodes
+                </span>
+                <span className="text-white/50 text-[10px] sm:text-xs font-mono leading-tight">
+                  (% of network)
+                </span>
+              </div>
             </div>
           </div>
           <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5">
-            <div className="flex justify-between items-center text-[9px] sm:text-[10px] text-white/50">
-              <span><AnimatedValue value={stats.totalVersions} /> versions total</span>
-              <span><AnimatedValue value={stats.totalNodes} /> nodes</span>
+            <div className="flex justify-between items-baseline text-[9px] sm:text-[10px] text-white/50 font-mono leading-tight">
+              <span><AnimatedValue value={stats.totalVersions} /></span>
+              <span><AnimatedValue value={stats.totalNodes} /></span>
+            </div>
+            <div className="flex justify-between items-baseline text-[9px] sm:text-[10px] text-white/50 font-mono leading-tight mt-1">
+              <span>versions total</span>
+              <span>nodes</span>
             </div>
           </div>
         </div>
