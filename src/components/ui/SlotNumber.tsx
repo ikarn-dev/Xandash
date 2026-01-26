@@ -14,71 +14,59 @@ export const AnimatedValue: React.FC<AnimatedValueProps> = ({ value, className }
   const [animationState, setAnimationState] = useState<'idle' | 'exit' | 'enter'>('idle');
   const prevValueRef = useRef(stringValue);
   const isFirstRender = useRef(true);
+  const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Skip animation on first render
     if (isFirstRender.current) {
       isFirstRender.current = false;
       prevValueRef.current = stringValue;
-      // Use setTimeout to avoid setState in effect
-      const timer = setTimeout(() => setDisplayValue(stringValue), 0);
-      return () => clearTimeout(timer);
+      setDisplayValue(stringValue);
+      return;
     }
 
     // Only animate if value actually changed
     if (prevValueRef.current !== stringValue) {
-      // Use setTimeout to avoid setState in effect
-      const timer = setTimeout(() => {
-        setAnimationState('exit');
+      // Clear any pending animation
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+      }
 
-        // After exit animation, update value and start enter animation
-        const exitTimer = setTimeout(() => {
-          setDisplayValue(stringValue);
-          setAnimationState('enter');
-          prevValueRef.current = stringValue;
-        }, 150);
+      setAnimationState('exit');
+
+      // Batch the DOM updates to avoid layout thrashing
+      animationTimeoutRef.current = setTimeout(() => {
+        setDisplayValue(stringValue);
+        setAnimationState('enter');
+        prevValueRef.current = stringValue;
 
         // Reset to idle after enter animation
-        const enterTimer = setTimeout(() => {
+        animationTimeoutRef.current = setTimeout(() => {
           setAnimationState('idle');
-        }, 300);
-
-        return () => {
-          clearTimeout(exitTimer);
-          clearTimeout(enterTimer);
-        };
-      }, 0);
-      return () => clearTimeout(timer);
+        }, 150);
+      }, 150);
     }
+
+    return () => {
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+      }
+    };
   }, [stringValue]);
 
-  // Update display value immediately if it's the same (no animation needed)
-  useEffect(() => {
-    if (animationState === 'idle' && displayValue !== stringValue) {
-      // Use setTimeout to avoid setState in effect
-      const timer = setTimeout(() => setDisplayValue(stringValue), 0);
-      return () => clearTimeout(timer);
-    }
-  }, [stringValue, animationState, displayValue]);
-
-  const getAnimationClasses = () => {
-    switch (animationState) {
-      case 'exit':
-        return 'transform -translate-y-2 opacity-0 scale-90';
-      case 'enter':
-        return 'transform translate-y-0 opacity-100 scale-100';
-      default:
-        return 'transform translate-y-0 opacity-100 scale-100';
-    }
-  };
+  // Memoize animation classes to avoid recalculation
+  const animationClasses = animationState === 'exit'
+    ? 'transform -translate-y-2 opacity-0 scale-90'
+    : 'transform translate-y-0 opacity-100 scale-100';
 
   return (
     <span
       className={cn(
-        'inline-block transition-all duration-150 ease-out',
-        getAnimationClasses(),
+        'inline-block transition-all duration-150 ease-out will-change-transform',
+        animationClasses,
         className
       )}
+      style={{ contain: 'layout style' }} // Prevent layout containment issues
     >
       {displayValue}
     </span>
@@ -107,32 +95,40 @@ const SlotDigit: React.FC<SlotDigitProps> = ({ digit, delay }) => {
     if (prevDigitRef.current !== digit) {
       setIsRolling(true);
 
-      // Roll through random digits
+      // Roll through random digits - reduced iterations and use rAF-friendly timing
       const isNumber = /\d/.test(digit);
       if (isNumber) {
         let count = 0;
-        const maxRolls = 5;
+        const maxRolls = 3; // Reduced from 5 to 3 for faster performance
+        let lastTime = 0;
+        let rafId: number;
 
-        const rollInterval = setInterval(() => {
-          setCurrentDigit(String(Math.floor(Math.random() * 10)));
-          count++;
+        const rollAnimation = (time: number) => {
+          if (time - lastTime >= 80) { // Increased from 50ms to 80ms
+            setCurrentDigit(String(Math.floor(Math.random() * 10)));
+            count++;
+            lastTime = time;
 
-          if (count >= maxRolls) {
-            clearInterval(rollInterval);
-            setCurrentDigit(digit);
-            setIsRolling(false);
-            prevDigitRef.current = digit;
+            if (count >= maxRolls) {
+              setCurrentDigit(digit);
+              setIsRolling(false);
+              prevDigitRef.current = digit;
+              return;
+            }
           }
-        }, 50);
+          rafId = requestAnimationFrame(rollAnimation);
+        };
 
-        return () => clearInterval(rollInterval);
+        rafId = requestAnimationFrame(rollAnimation);
+        return () => cancelAnimationFrame(rafId);
       } else {
         // For non-digits, just flip
-        setTimeout(() => {
+        const timer = setTimeout(() => {
           setCurrentDigit(digit);
           setIsRolling(false);
           prevDigitRef.current = digit;
         }, delay + 100);
+        return () => clearTimeout(timer);
       }
     }
   }, [digit, delay]);

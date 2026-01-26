@@ -57,11 +57,11 @@ const formatDateLabel = (date: Date, compact: boolean = false): string => {
 // Format tooltip time
 const formatTooltipTime = (timestamp: number): string => {
   const date = new Date(timestamp * 1000);
-  return date.toLocaleString([], { 
+  return date.toLocaleString([], {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
-    hour: 'numeric', 
+    hour: 'numeric',
     minute: '2-digit',
     hour12: true
   });
@@ -74,8 +74,8 @@ const getLast7Days = (): Date[] => {
   // Start from 6 days ago to today (7 days total)
   for (let i = 6; i >= 0; i--) {
     const date = new Date(Date.UTC(
-      now.getUTCFullYear(), 
-      now.getUTCMonth(), 
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
       now.getUTCDate() - i,
       0, 0, 0, 0
     ));
@@ -84,9 +84,9 @@ const getLast7Days = (): Date[] => {
   return days;
 };
 
-export function ComparisonChart({ 
-  datasets, 
-  title, 
+export function ComparisonChart({
+  datasets,
+  title,
   valueFormatter = (v) => v.toLocaleString(),
   height = 320,
   isLoading = false,
@@ -98,7 +98,7 @@ export function ComparisonChart({
   const chartRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Clear tooltip timeout on unmount
   useEffect(() => {
     return () => {
@@ -107,16 +107,29 @@ export function ComparisonChart({
       }
     };
   }, []);
-  
+
   useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.clientWidth);
-      }
+    if (!containerRef.current) return;
+
+    let rafId: number;
+    const resizeObserver = new ResizeObserver((entries) => {
+      // Batch layout reads with requestAnimationFrame
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        for (const entry of entries) {
+          const { width } = entry.contentRect;
+          if (width > 0) {
+            setContainerWidth(width);
+          }
+        }
+      });
+    });
+
+    resizeObserver.observe(containerRef.current);
+    return () => {
+      cancelAnimationFrame(rafId);
+      resizeObserver.disconnect();
     };
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
   useEffect(() => {
@@ -135,7 +148,7 @@ export function ComparisonChart({
 
   const { bars, maxValue, yTicks, totals, hasAnyData } = useMemo(() => {
     const hasAnyData = datasets.some(d => d.data && d.data.length > 0);
-    
+
     if (datasets.length === 0) {
       return { bars: [], maxValue: 100, yTicks: [0, 25, 50, 75, 100], totals: [], hasAnyData: false };
     }
@@ -143,13 +156,13 @@ export function ComparisonChart({
     const totals = datasets.map(d => ({
       label: d.label,
       color: d.color,
-      total: d.currentValue !== undefined ? d.currentValue : 
-             (d.data && d.data.length > 0 ? d.data[d.data.length - 1]?.value || 0 : 0)
+      total: d.currentValue !== undefined ? d.currentValue :
+        (d.data && d.data.length > 0 ? d.data[d.data.length - 1]?.value || 0 : 0)
     }));
 
     // Collect all data points
     const allDataPoints: { timestamp: number; datasetIndex: number; value: number; color: string; label: string }[] = [];
-    
+
     datasets.forEach((dataset, datasetIndex) => {
       if (dataset.data && dataset.data.length > 0) {
         dataset.data.forEach(point => {
@@ -169,7 +182,7 @@ export function ComparisonChart({
     const now = new Date();
     const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999);
     const sixDaysAgoUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6, 0, 0, 0, 0);
-    
+
     const minTime = Math.floor(sixDaysAgoUTC / 1000);
     const maxTime = Math.floor(todayUTC / 1000);
 
@@ -178,10 +191,10 @@ export function ComparisonChart({
     // Each bucket is exactly 24 hours
     const bucketDuration = 24 * 60 * 60; // 86400 seconds
 
-    const buckets: { 
-      timestamp: number; 
+    const buckets: {
+      timestamp: number;
       dayIndex: number;
-      values: { datasetIndex: number; value: number; color: string; label: string; count: number }[] 
+      values: { datasetIndex: number; value: number; color: string; label: string; count: number }[]
     }[] = [];
 
     for (let i = 0; i < numBuckets; i++) {
@@ -224,7 +237,7 @@ export function ComparisonChart({
     });
 
     const maxVal = rawMax > 0 ? rawMax * 1.15 : 100;
-    
+
     // Generate Y-axis ticks
     const tickCount = 5;
     const yTicks = Array.from({ length: tickCount }, (_, i) => (maxVal / (tickCount - 1)) * i);
@@ -234,16 +247,16 @@ export function ComparisonChart({
 
   const handleBarHover = (barIndex: number, e: React.MouseEvent, isTouch: boolean = false) => {
     if (!chartRef.current || bars.length === 0) return;
-    
+
     // Clear any existing timeout
     if (tooltipTimeoutRef.current) {
       clearTimeout(tooltipTimeoutRef.current);
       tooltipTimeoutRef.current = null;
     }
-    
+
     const bar = bars[barIndex];
     const rect = chartRef.current.getBoundingClientRect();
-    
+
     setHoveredBarIndex(barIndex);
     setTooltip({
       x: e.clientX - rect.left,
@@ -254,7 +267,7 @@ export function ComparisonChart({
         value: v.value
       }))
     });
-    
+
     // On mobile touch, auto-hide tooltip after 5 seconds
     if (isTouch) {
       tooltipTimeoutRef.current = setTimeout(() => {
@@ -270,7 +283,7 @@ export function ComparisonChart({
     setTooltip(null);
     setHoveredBarIndex(null);
   };
-  
+
   const handleTouchOutside = () => {
     // Clear tooltip when tapping outside
     if (tooltipTimeoutRef.current) {
@@ -283,9 +296,9 @@ export function ComparisonChart({
 
   const isMobile = containerWidth < 640;
   const chartHeight = isMobile ? 220 : height;
-  
+
   // With 7 buckets (one per day), calculate bar width
-  const barWidth = isMobile 
+  const barWidth = isMobile
     ? Math.max(8, Math.min(16, (containerWidth - 80) / (7 * datasets.length * 1.5)))
     : Math.max(12, Math.min(24, (containerWidth - 100) / (7 * datasets.length * 1.5)));
 
@@ -297,8 +310,8 @@ export function ComparisonChart({
   };
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       className="bg-[#0a0a0a] border border-white/10 overflow-hidden"
       onTouchStart={(e) => {
         // Check if touch is on a bar area - if not, dismiss tooltip
@@ -312,13 +325,13 @@ export function ComparisonChart({
       {/* Header */}
       <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-white/10">
         <h3 className="text-xs sm:text-base font-medium text-white/90 mb-2 sm:mb-3">{title}</h3>
-        
+
         <div className={`${isMobile ? 'grid grid-cols-2 gap-x-2 gap-y-1.5' : 'flex flex-row flex-wrap items-center gap-x-8 gap-y-2'}`}>
           {totals.map((item) => (
             <div key={item.label} className={`flex items-center ${isMobile ? 'gap-1.5' : 'gap-2'}`}>
-              <div 
+              <div
                 className={`${isMobile ? 'w-2 h-2' : 'w-3 h-3'} rounded-full flex-shrink-0`}
-                style={{ backgroundColor: item.color }} 
+                style={{ backgroundColor: item.color }}
               />
               <span className={`${isMobile ? 'text-[10px]' : 'text-xs sm:text-sm'} text-white/50 truncate max-w-[80px] sm:max-w-none`}>
                 {item.label}
@@ -355,7 +368,7 @@ export function ComparisonChart({
             </div>
 
             {/* Chart area */}
-            <div 
+            <div
               ref={chartRef}
               className="absolute top-0 right-2 sm:right-4 bottom-10"
               style={{ left: isMobile ? '52px' : '68px' }}
@@ -373,9 +386,9 @@ export function ComparisonChart({
                 {bars.map((bar, barIdx) => {
                   const isHovered = hoveredBarIndex === barIdx;
                   const hasBarData = bar.values.some(v => v.count > 0);
-                  
+
                   return (
-                    <div 
+                    <div
                       key={barIdx}
                       data-bar={hasBarData ? 'true' : undefined}
                       className={`flex-1 flex items-end justify-center gap-[1px] sm:gap-[2px] relative h-full ${hasBarData ? 'cursor-pointer' : ''}`}
@@ -389,11 +402,11 @@ export function ComparisonChart({
                       {isHovered && (
                         <div className="absolute inset-0 bg-white/[0.03]" />
                       )}
-                      
+
                       {bar.values.map((val, dataIdx) => {
                         const heightPercent = getBarHeight(val.value);
                         const showBar = val.count > 0 && val.value > 0;
-                        
+
                         return (
                           <div
                             key={dataIdx}
@@ -407,8 +420,8 @@ export function ComparisonChart({
                               borderRadius: '2px 2px 0 0',
                               transition: 'height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease',
                               transitionDelay: `${barIdx * 15}ms`,
-                              boxShadow: isHovered 
-                                ? `0 0 10px ${val.color}60, 0 -2px 8px ${val.color}40` 
+                              boxShadow: isHovered
+                                ? `0 0 10px ${val.color}60, 0 -2px 8px ${val.color}40`
                                 : `0 0 4px ${val.color}30`,
                               transform: isHovered ? 'scaleY(1.02)' : 'scaleY(1)',
                               transformOrigin: 'bottom',
@@ -423,9 +436,9 @@ export function ComparisonChart({
 
               {/* Tooltip */}
               {tooltip && tooltip.values.length > 0 && (
-                <div 
+                <div
                   className="absolute z-30 bg-gray-900/95 backdrop-blur-md border border-white/20 px-2 sm:px-4 py-2 sm:py-3 pointer-events-none shadow-2xl"
-                  style={{ 
+                  style={{
                     left: Math.min(Math.max(tooltip.x, isMobile ? 70 : 100), (chartRef.current?.clientWidth || 300) - (isMobile ? 70 : 100)),
                     top: isMobile ? 8 : 12,
                     transform: 'translateX(-50%)',
@@ -436,14 +449,14 @@ export function ComparisonChart({
                   <div className="text-[10px] sm:text-xs text-white/80 font-medium mb-1.5 sm:mb-2 pb-1.5 sm:pb-2 border-b border-white/10">
                     {formatTooltipTime(tooltip.timestamp)}
                   </div>
-                  
+
                   <div className="space-y-1 sm:space-y-2">
                     {tooltip.values.map((v, i) => (
                       <div key={i} className="flex items-center justify-between gap-2 sm:gap-4">
                         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                          <div 
-                            className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full flex-shrink-0" 
-                            style={{ backgroundColor: v.color }} 
+                          <div
+                            className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: v.color }}
                           />
                           <span className="text-[9px] sm:text-[11px] text-white/60 truncate max-w-[60px] sm:max-w-none">{v.label}</span>
                         </div>
@@ -457,7 +470,7 @@ export function ComparisonChart({
               )}
 
               {hoveredBarIndex !== null && (
-                <div 
+                <div
                   className="absolute top-0 bottom-0 w-px bg-white/30 pointer-events-none z-20"
                   style={{ left: `${((hoveredBarIndex + 0.5) / bars.length) * 100}%` }}
                 />
@@ -465,17 +478,17 @@ export function ComparisonChart({
             </div>
 
             {/* X-axis labels - Always show 7 days, aligned with bars */}
-            <div 
+            <div
               className="absolute bottom-0 h-10 sm:h-10"
               style={{ left: isMobile ? '48px' : '68px', right: isMobile ? '4px' : '16px' }}
             >
               <div className="relative w-full h-full flex items-start pt-2">
                 {last7Days.map((date, i) => (
-                  <div 
+                  <div
                     key={i}
                     className="flex-1 flex justify-center"
                   >
-                    <span 
+                    <span
                       className={`${isMobile ? 'text-[7px]' : 'text-[10px]'} text-white/50 font-mono whitespace-nowrap`}
                     >
                       {formatDateLabel(date, isMobile)}

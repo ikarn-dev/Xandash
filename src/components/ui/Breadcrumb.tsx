@@ -119,7 +119,7 @@ export const Breadcrumb: React.FC = () => {
       {/* Home link */}
       <Link
         href="/"
-        className="flex items-center gap-1 text-white/50 hover:text-white transition-colors flex-shrink-0"
+        className="flex items-center gap-1 text-white/70 hover:text-white transition-colors flex-shrink-0"
       >
         <HomeIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
         <span className="hidden xs:inline">Home</span>
@@ -128,18 +128,18 @@ export const Breadcrumb: React.FC = () => {
       {/* Breadcrumb items */}
       {breadcrumbItems.map((item, index) => (
         <React.Fragment key={item.path}>
-          <ChevronRightIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white/30 flex-shrink-0" />
+          <ChevronRightIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white/50 flex-shrink-0" />
           {item.isLast ? (
             <span className="text-white font-medium truncate min-w-0">{item.name}</span>
           ) : item.isClickable ? (
             <Link
               href={item.path}
-              className="text-white/50 hover:text-white transition-colors truncate min-w-0"
+              className="text-white/70 hover:text-white transition-colors truncate min-w-0"
             >
               {item.name}
             </Link>
           ) : (
-            <span className="text-white/50 truncate min-w-0">{item.name}</span>
+            <span className="text-white/70 truncate min-w-0">{item.name}</span>
           )}
         </React.Fragment>
       ))}

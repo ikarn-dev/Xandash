@@ -78,8 +78,8 @@ export const PNodeStorageCard: React.FC<PNodeStorageCardProps> = ({ className = 
           <AnimatedValue value={formatBytes(storageStats.usedStorage)} />
           <span className="text-orange-400/60 text-sm font-normal">Used</span>
         </div>
-        <div className="text-white/40 text-[10px] sm:text-xs mb-3 sm:mb-4">
-          of <AnimatedValue value={formatBytes(storageStats.totalStorage)} />
+        <div className="text-white/40 text-[10px] sm:text-xs mb-3 sm:mb-4 w-full flex items-center justify-center gap-1">
+          <span>of</span><AnimatedValue value={formatBytes(storageStats.totalStorage)} />
         </div>
 
         {/* Storage Bar Graph */}
@@ -107,7 +107,7 @@ export const PNodeStorageCard: React.FC<PNodeStorageCardProps> = ({ className = 
               );
             })}
           </svg>
-          <div className="flex justify-between items-center mt-1 sm:mt-1.5">
+          <div className="flex justify-center items-center gap-3 mt-1 sm:mt-1.5">
             <span className="text-white/40 text-[8px] sm:text-[9px]">
               {formatBytes(storageStats.totalStorage - storageStats.usedStorage)} free
             </span>

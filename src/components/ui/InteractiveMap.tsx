@@ -28,7 +28,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
   // LCP Optimization: Preload Leaflet CSS and defer map initialization
   useEffect(() => {
     setIsClient(true);
-    
+
     // Preload Leaflet CSS immediately but defer JS loading
     if (!document.getElementById('leaflet-css')) {
       const link = document.createElement('link');
@@ -42,16 +42,16 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
       };
       document.head.appendChild(link);
     }
-    
+
     // Defer Leaflet JS loading to improve LCP
     const loadLeaflet = async () => {
       // Wait for critical rendering path to complete
       await new Promise(resolve => setTimeout(resolve, 200));
-      
+
       const leaflet = await import('leaflet');
       setL(leaflet.default);
     };
-    
+
     loadLeaflet();
   }, []);
 
@@ -75,12 +75,17 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
       attributionControl: false,
     });
 
-    // Add dark tile layer
-    const mapTilesUrl = process.env.NEXT_PUBLIC_MAP_TILES_URL || 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    // Add dark tile layer - use non-retina tiles for better performance
+    const mapTilesUrl = process.env.NEXT_PUBLIC_MAP_TILES_URL || 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
     L.tileLayer(mapTilesUrl, {
       attribution: '',
       subdomains: 'abcd',
-      maxZoom: 19
+      maxZoom: 19,
+      detectRetina: false, // Disable retina to prevent loading 512x512 tiles when 256x256 is sufficient
+      tileSize: 256,
+      updateWhenIdle: true, // Only load tiles when map stops moving
+      updateWhenZooming: false, // Don't load during zoom animation
+      keepBuffer: 2 // Keep fewer tiles in memory
     }).addTo(map);
 
     mapInstanceRef.current = map;
@@ -119,12 +124,12 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
     markersRef.current.forEach(marker => {
       try {
         mapInstanceRef.current?.removeLayer(marker);
-      } catch (e) {}
+      } catch (e) { }
     });
     regionLayersRef.current.forEach(region => {
       try {
         mapInstanceRef.current?.removeLayer(region);
-      } catch (e) {}
+      } catch (e) { }
     });
     markersRef.current = [];
     regionLayersRef.current = [];
@@ -134,7 +139,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
       if (!mapInstanceRef.current || !validator.lat || !validator.lng) return;
 
       const size = Math.min(Math.max(16 + validator.count * 0.3, 20), 35);
-      
+
       // Create region highlight circle (initially hidden)
       const regionHighlight = L.circle([validator.lat, validator.lng], {
         radius: 800000,
@@ -144,7 +149,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
         weight: 0,
         opacity: 0
       });
-      
+
       const customIcon = L.divIcon({
         html: `
           <div class="validator-marker" style="
@@ -188,10 +193,10 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
           font-family: system-ui, -apple-system, sans-serif;
         ">
           <div style="font-weight: bold; margin-bottom: 4px; color: white; font-size: 13px;">
-            ${validator.city && validator.country 
-              ? `${validator.city}, ${validator.country}`
-              : `Location ${validator.id}`
-            }
+            ${validator.city && validator.country
+          ? `${validator.city}, ${validator.country}`
+          : `Location ${validator.id}`
+        }
           </div>
           <div style="margin-bottom: 2px; font-size: 12px;">
             <span style="color: white; font-weight: bold;">${validator.count}</span> 
@@ -230,7 +235,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
 
       regionHighlight.addTo(mapInstanceRef.current);
       marker.addTo(mapInstanceRef.current);
-      
+
       regionLayersRef.current.push(regionHighlight);
       markersRef.current.push(marker);
     });
@@ -249,8 +254,8 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ validators, clas
 
   return (
     <div className={`relative w-full h-full min-h-[400px] ${className}`}>
-      <div 
-        ref={mapRef} 
+      <div
+        ref={mapRef}
         className="w-full h-full rounded-lg overflow-hidden leaflet-map-container"
         style={{ minHeight: '400px', zIndex: 1 }}
       />

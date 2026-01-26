@@ -28,7 +28,7 @@ const ChartLoadingAnimation = () => (
       <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-emerald-500 animate-spin" />
       <div className="absolute inset-2 rounded-full bg-emerald-500/20 animate-pulse" />
     </div>
-    <span className="text-[10px] sm:text-xs text-white/40">Loading...</span>
+    <span className="text-[10px] sm:text-xs text-white/60">Loading...</span>
   </div>
 );
 
@@ -77,17 +77,29 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
     setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
   }, []);
 
-  // Update dimensions on resize
+  // Update dimensions on resize using ResizeObserver (avoids forced reflow)
   useEffect(() => {
-    const updateDimensions = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setDimensions({ width: rect.width, height });
-      }
+    if (!containerRef.current) return;
+
+    let rafId: number;
+    const resizeObserver = new ResizeObserver((entries) => {
+      // Use requestAnimationFrame to batch layout reads
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        for (const entry of entries) {
+          const { width: containerWidth } = entry.contentRect;
+          if (containerWidth > 0) {
+            setDimensions({ width: containerWidth, height });
+          }
+        }
+      });
+    });
+
+    resizeObserver.observe(containerRef.current);
+    return () => {
+      cancelAnimationFrame(rafId);
+      resizeObserver.disconnect();
     };
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    return () => window.removeEventListener('resize', updateDimensions);
   }, [height]);
 
   // Get path length for animation
@@ -307,7 +319,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
             {title}
           </h3>
           {subtitle && (
-            <p className="text-[10px] sm:text-xs text-white/50 truncate">{subtitle}</p>
+            <p className="text-[10px] sm:text-xs text-white/70 truncate">{subtitle}</p>
           )}
         </div>
         <div
@@ -327,7 +339,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
         {isLoading ? (
           <ChartLoadingAnimation />
         ) : data.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-white/40 text-xs sm:text-sm">
+          <div className="flex items-center justify-center h-full text-white/60 text-xs sm:text-sm">
             {emptyMessage}
           </div>
         ) : (
@@ -363,7 +375,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
                 x={40}
                 y={tick.y + 4}
                 textAnchor="end"
-                className="text-[8px] sm:text-[10px] fill-white/50 font-mono"
+                className="text-[8px] sm:text-[10px] fill-white/70 font-mono"
               >
                 {valueFormatter(tick.value)}
               </text>
@@ -410,8 +422,8 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
                       ? 5
                       : 6
                     : isMobile
-                    ? 2.5
-                    : 3
+                      ? 2.5
+                      : 3
                 }
                 fill={hoveredPoint?.index === i ? color : '#0a0a0a'}
                 stroke={color}
@@ -460,9 +472,8 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
         {/* Tooltip */}
         {hoveredPoint && showTooltip && (
           <div
-            className={`absolute z-30 bg-gray-900/95 backdrop-blur-md border border-white/20 pointer-events-none shadow-xl rounded-sm transition-opacity duration-200 ${
-              isMobile ? 'px-1.5 py-1 text-[8px]' : isTablet ? 'px-2 py-1.5 text-[9px]' : 'px-3 py-2 text-[10px]'
-            }`}
+            className={`absolute z-30 bg-gray-900/95 backdrop-blur-md border border-white/20 pointer-events-none shadow-xl rounded-sm transition-opacity duration-200 ${isMobile ? 'px-1.5 py-1 text-[8px]' : isTablet ? 'px-2 py-1.5 text-[9px]' : 'px-3 py-2 text-[10px]'
+              }`}
             style={{
               left: (() => {
                 const halfWidth = tooltipWidth / 2;
@@ -474,7 +485,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
                 const preferredTop = hoveredPoint.y - tooltipHeight - 10;
                 const minTop = 10;
                 const maxTop = dimensions.height - tooltipHeight - 10;
-                
+
                 // If tooltip would go above container, show below the point
                 if (preferredTop < minTop) {
                   return Math.min(hoveredPoint.y + 15, maxTop);
@@ -487,7 +498,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
               opacity: showTooltip ? 1 : 0
             }}
           >
-            <div className={`text-white/60 mb-0.5 truncate ${isMobile ? 'text-[7px]' : isTablet ? 'text-[8px]' : 'text-[9px]'}`}>
+            <div className={`text-white/70 mb-0.5 truncate ${isMobile ? 'text-[7px]' : isTablet ? 'text-[8px]' : 'text-[9px]'}`}>
               {formatTooltipTime(hoveredPoint.data.timestamp)}
             </div>
             <div
@@ -497,7 +508,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
               {valueFormatter(hoveredPoint.data.value)}
             </div>
             {hoveredPoint.data.label && (
-              <div className={`text-white/50 mt-0.5 truncate ${isMobile ? 'text-[7px]' : isTablet ? 'text-[8px]' : 'text-[9px]'}`}>
+              <div className={`text-white/70 mt-0.5 truncate ${isMobile ? 'text-[7px]' : isTablet ? 'text-[8px]' : 'text-[9px]'}`}>
                 {hoveredPoint.data.label}
               </div>
             )}

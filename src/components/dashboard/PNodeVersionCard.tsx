@@ -178,13 +178,13 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
                 <div className="text-white text-sm font-bold font-mono truncate max-w-[80px]" title={hoveredVersionData.version}>
                   {hoveredVersionData.version.length > 8 ? hoveredVersionData.version.substring(0, 8) + '..' : hoveredVersionData.version}
                 </div>
-                <div className="text-white/60 text-[9px]">{hoveredVersionData.count} nodes</div>
+                <div className="text-white/80 text-[9px]">{hoveredVersionData.count} nodes</div>
                 <div className="text-green-400 text-[9px]">{hoveredVersionData.percentage.toFixed(0)}%</div>
               </>
             ) : (
               <>
                 <div className="text-white text-xl font-bold font-mono">{versionStats.totalVersions}</div>
-                <div className="text-white/60 text-[9px]">versions</div>
+                <div className="text-white/80 text-[9px]">versions</div>
               </>
             )}
           </div>
@@ -198,7 +198,7 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
       <div className={`relative bg-black border border-white/10 p-6 h-full group hover:border-white/20 transition-all duration-300 overflow-hidden ${className}`}>
         <CornerAccents />
         <div className="flex flex-col h-full text-center relative z-10">
-          <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">pNode Versions</div>
+          <div className="text-white/80 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">pNode Versions</div>
           <div className="h-10 w-12 bg-white/10 rounded mb-2 mx-auto"></div>
           <div className="h-3 w-28 bg-white/10 rounded mx-auto"></div>
         </div>
@@ -214,12 +214,12 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
       >
         <CornerAccents />
         <div className="flex flex-col h-full text-center relative z-10">
-          <div className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">pNode Versions</div>
+          <div className="text-white/80 text-[10px] sm:text-xs font-medium tracking-wider mb-3 sm:mb-4 uppercase">pNode Versions</div>
           <div className="text-white text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1 sm:mb-2">
             <AnimatedValue value={versionStats.totalVersions} />
           </div>
-          <div className="text-white/40 text-[10px] sm:text-xs mb-1">unique versions</div>
-          <div className="text-white/50 text-[9px] sm:text-[10px] hover:text-white/80 transition-colors cursor-pointer mt-auto">click for details</div>
+          <div className="text-white/60 text-[10px] sm:text-xs mb-1">unique versions</div>
+          <div className="text-white/70 text-[9px] sm:text-[10px] hover:text-white/90 transition-colors cursor-pointer mt-auto">click for details</div>
         </div>
       </div>
 
@@ -236,7 +236,7 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
           >
             <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
               <h2 className="text-white text-[11px] font-bold font-mono">VERSIONS</h2>
-              <button onClick={handleCloseModal} className="text-white/40 hover:text-white p-0.5">
+              <button onClick={handleCloseModal} className="text-white/60 hover:text-white p-0.5">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -255,7 +255,7 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-green-400 font-mono text-[10px] font-semibold w-6 text-right">{version.count}</span>
-                    <span className="text-white/40 font-mono text-[9px] w-9 text-right">{version.percentage.toFixed(1)}%</span>
+                    <span className="text-white/60 font-mono text-[9px] w-9 text-right">{version.percentage.toFixed(1)}%</span>
                   </div>
                 </div>
               ))}
@@ -264,11 +264,11 @@ export const PNodeVersionCard: React.FC<PNodeVersionCardProps> = ({ className = 
             <div className="px-3 py-2 border-t border-white/10 bg-black/40">
               <div className="flex justify-between">
                 <div>
-                  <div className="text-white/40 text-[8px] uppercase">Total Nodes</div>
+                  <div className="text-white/60 text-[8px] uppercase">Total Nodes</div>
                   <div className="text-green-400 text-xs font-mono font-bold">{versionStats.totalNodes}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-white/40 text-[8px] uppercase">Latest Version</div>
+                  <div className="text-white/60 text-[8px] uppercase">Latest Version</div>
                   <div className="text-green-400 text-xs font-mono font-bold">{versionStats.latestVersion}</div>
                 </div>
               </div>

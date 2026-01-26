@@ -50,7 +50,7 @@ export const CopyBtn: React.FC<CopyBtnProps> = ({
     >
       {/* Copy icon */}
       <svg
-        className={`${iconSizeClasses} text-white/50 hover:text-white/80 transition-colors duration-200`}
+        className={`${iconSizeClasses} text-white/70 hover:text-white/90 transition-colors duration-200`}
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

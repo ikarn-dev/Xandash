@@ -345,6 +345,46 @@
   opacity: 0;
 }
 
+/* GPU-accelerated animation base class - prevents forced reflows */
+.gpu-accelerated {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Content containment for performance - prevents layout thrashing */
+.contain-layout {
+  contain: layout style;
+}
+
+.contain-paint {
+  contain: paint;
+}
+
+.contain-strict {
+  contain: strict;
+}
+
+/* Below-the-fold content optimization */
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 500px;
+}
+
+/* Reduce repaints for animated cards */
+.animated-card {
+  will-change: transform;
+  transform: translateZ(0);
+  isolation: isolate;
+}
+
+/* Optimized transition for interactive elements */
+.transition-gpu {
+  transition-property: transform, opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

@@ -61,8 +61,8 @@ export const PNodeOnlineCard: React.FC<PNodeOnlineCardProps> = ({ className = ""
         <div className="text-green-400 text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1">
           <AnimatedValue value={`${stats.onlinePercentage.toFixed(1)}%`} />
         </div>
-        <div className="text-white/40 text-[9px] sm:text-[10px] mb-3 sm:mb-4">
-          <AnimatedValue value={stats.online} /> of <AnimatedValue value={stats.total} /> nodes
+        <div className="text-white/40 text-[9px] sm:text-[10px] mb-3 sm:mb-4 w-full flex items-center justify-center gap-1">
+          <AnimatedValue value={stats.online} /><span>of</span><AnimatedValue value={stats.total} /><span>nodes</span>
         </div>
 
         {/* Online Status Bar Graph */}
@@ -85,7 +85,7 @@ export const PNodeOnlineCard: React.FC<PNodeOnlineCardProps> = ({ className = ""
               />
             ))}
           </svg>
-          <div className="flex justify-between items-center mt-1 sm:mt-1.5">
+          <div className="flex justify-center items-center gap-3 mt-1 sm:mt-1.5">
             <span className="text-white/40 text-[8px] sm:text-[9px]">{stats.offline} offline</span>
             <span className="text-green-400 text-[8px] sm:text-[9px] font-medium">{stats.online} online</span>
             <span className="text-white/40 text-[8px] sm:text-[9px]">{stats.public} public</span>

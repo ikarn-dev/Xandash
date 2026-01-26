@@ -147,9 +147,9 @@ export const RegionDistributionCard: React.FC<RegionDistributionCardProps> = ({ 
 
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-white/60 text-[10px] sm:text-xs font-medium tracking-wider">{/* REGION DISTRIBUTION */}</h3>
+        <h3 className="text-white/80 text-[10px] sm:text-xs font-medium tracking-wider">{/* REGION DISTRIBUTION */}</h3>
         <span
-          className="text-white/40 text-[9px] font-mono transition-all duration-500"
+          className="text-white/60 text-[9px] font-mono transition-all duration-500"
           style={{ opacity: isAnimated ? 1 : 0, transform: isAnimated ? 'translateX(0)' : 'translateX(10px)' }}
         >
           {uniqueCountries} countries
@@ -201,7 +201,7 @@ export const RegionDistributionCard: React.FC<RegionDistributionCardProps> = ({ 
                   }}
                 >
                   <span
-                    className="absolute right-2 text-black/80 text-[8px] sm:text-[9px] font-bold font-mono transition-opacity duration-300"
+                    className="absolute right-2 text-white text-[8px] sm:text-[9px] font-bold font-mono transition-opacity duration-300 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]"
                     style={{ opacity: isAnimated ? 1 : 0, transitionDelay: `${index * 60 + 300}ms` }}
                   >
                     {item.count}
@@ -230,8 +230,8 @@ export const RegionDistributionCard: React.FC<RegionDistributionCardProps> = ({ 
         className="mt-3 pt-2 border-t border-white/10 flex justify-between items-center transition-all duration-500"
         style={{ opacity: isAnimated ? 1 : 0, transform: isAnimated ? 'translateY(0)' : 'translateY(10px)', transitionDelay: '400ms' }}
       >
-        <span className="text-white/40 text-[8px] sm:text-[9px]">Top {regionData.countries.length} regions</span>
-        <span className="text-white/50 text-[9px] sm:text-[10px] font-mono">{regionData.total} total nodes</span>
+        <span className="text-white/60 text-[8px] sm:text-[9px]">Top {regionData.countries.length} regions</span>
+        <span className="text-white/70 text-[9px] sm:text-[10px] font-mono">{regionData.total} total nodes</span>
       </div>
     </div>
   );

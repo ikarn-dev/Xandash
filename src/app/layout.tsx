@@ -154,10 +154,11 @@ export default function RootLayout({
         {/* Preconnect to critical origins - reduces connection latency */}
         {/* Only preconnect to truly critical origins that are needed for initial render */}
         <link rel="preconnect" href="https://www.xandash.online" />
+        {/* Preconnect for fonts with crossorigin for better performance */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 
         {/* DNS prefetch for less critical but still important origins */}
-        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
         <link rel="dns-prefetch" href="https://challenges.cloudflare.com" />
         <link rel="dns-prefetch" href="https://unpkg.com" />
         <link rel="dns-prefetch" href="https://api.coingecko.com" />

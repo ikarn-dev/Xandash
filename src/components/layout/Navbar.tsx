@@ -107,7 +107,7 @@ const MobileNetworkSelector: React.FC = () => {
 
       {/* Refresh Timer */}
       <div className="flex items-center gap-1.5 pl-2 border-l border-white/10">
-        <span className="font-mono text-white/50 text-[10px] tabular-nums w-[18px] text-center">{timeLeft}s</span>
+        <span className="font-mono text-white/70 text-[10px] tabular-nums w-[18px] text-center">{timeLeft}s</span>
         <button
           onClick={handleRefresh}
           className="p-1 rounded active:bg-white/10"
@@ -206,7 +206,7 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
         {/* Timer */}
         <div className="flex items-center gap-0.5 sm:gap-1 pl-1.5 sm:pl-2 border-l border-white/10">
           <span className={cn(
-            'font-mono text-white/50 text-center tabular-nums',
+            'font-mono text-white/70 text-center tabular-nums',
             compact ? 'text-[9px] w-[16px]' : 'text-[9px] sm:text-[10px] w-[16px] sm:w-[20px]'
           )}>{timeLeft}s</span>
           <span

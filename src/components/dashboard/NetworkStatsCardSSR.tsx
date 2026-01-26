@@ -116,15 +116,15 @@ const StoragePieChartLoading: React.FC = () => {
       <div className="flex items-center gap-3 mt-3">
         <div className="flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
-          <span className="text-white/50 text-[9px]">Used</span>
+          <span className="text-white/70 text-[9px]">Used</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
-          <span className="text-white/50 text-[9px]">Avg</span>
+          <span className="text-white/70 text-[9px]">Avg</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
-          <span className="text-white/50 text-[9px]">Free</span>
+          <span className="text-white/70 text-[9px]">Free</span>
         </div>
       </div>
     </div>
@@ -587,19 +587,19 @@ export const NetworkStatsCardSSR: React.FC = () => {
           {/* Storage Committed */}
           <div className="flex flex-col justify-center items-center relative z-10 text-center">
             <div className="text-white text-xl sm:text-2xl lg:text-3xl font-bold font-mono mb-0.5 lg:mb-1">{storageCommitted.value}</div>
-            <div className="text-white/50 text-[10px] sm:text-xs lg:text-sm">{storageCommitted.unit}</div>
+            <div className="text-white/70 text-[10px] sm:text-xs lg:text-sm">{storageCommitted.unit}</div>
           </div>
 
           {/* Storage Used */}
           <div className="flex flex-col justify-center items-center relative z-10 text-center">
             <div className="text-white text-xl sm:text-2xl lg:text-3xl font-bold font-mono mb-0.5 lg:mb-1">{storageUsed.value}</div>
-            <div className="text-white/50 text-[10px] sm:text-xs lg:text-sm">{storageUsed.unit}</div>
+            <div className="text-white/70 text-[10px] sm:text-xs lg:text-sm">{storageUsed.unit}</div>
           </div>
 
           {/* Avg per Pod */}
           <div className="flex flex-col justify-center items-center relative z-10 text-center">
             <div className="text-white text-xl sm:text-2xl lg:text-3xl font-bold font-mono mb-0.5 lg:mb-1">{avgPerPod.value}</div>
-            <div className="text-white/50 text-[10px] sm:text-xs lg:text-sm">{avgPerPod.unit}</div>
+            <div className="text-white/70 text-[10px] sm:text-xs lg:text-sm">{avgPerPod.unit}</div>
           </div>
 
           {/* Pie Chart - desktop only inline */}

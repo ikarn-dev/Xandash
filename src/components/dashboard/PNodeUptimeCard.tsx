@@ -104,8 +104,8 @@ export const PNodeUptimeCard: React.FC<PNodeUptimeCardProps> = ({ className = ""
         <div className="text-blue-400 text-2xl sm:text-3xl lg:text-5xl font-bold font-mono mb-1">
           <AnimatedValue value={formatUptime(uptimeStats.averageUptime)} />
         </div>
-        <div className="text-white/40 text-[9px] sm:text-[10px] mb-3 sm:mb-4">
-          <AnimatedValue value={`${uptimeStats.uptimePercentage.toFixed(1)}%`} /> online
+        <div className="text-white/40 text-[9px] sm:text-[10px] mb-3 sm:mb-4 w-full flex items-center justify-center gap-1">
+          <AnimatedValue value={`${uptimeStats.uptimePercentage.toFixed(1)}%`} /><span>online</span>
         </div>
 
         {/* Uptime Bar Graph */}

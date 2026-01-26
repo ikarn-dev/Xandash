@@ -78,7 +78,7 @@ function StatItem({ icon, label, value, color }: { icon: React.ReactNode; label:
     <div className="flex flex-col items-center text-center">
       <div className={`mb-1 sm:mb-1.5 ${color}`}>{icon}</div>
       <p className="text-base sm:text-lg lg:text-xl font-bold text-white font-mono">{value}</p>
-      <span className="text-white/40 text-[8px] sm:text-[9px] uppercase tracking-wider">{label}</span>
+      <span className="text-white/60 text-[8px] sm:text-[9px] uppercase tracking-wider">{label}</span>
     </div>
   );
 }
@@ -189,17 +189,17 @@ export function GovernanceStatsCard() {
           <button
             onClick={() => fetchStats(true)}
             disabled={refreshing || cooldown > 0}
-            className="p-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-white/50 hover:text-white/80 transition-all disabled:opacity-50 flex items-center gap-1"
+            className="p-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-white/70 hover:text-white/90 transition-all disabled:opacity-50 flex items-center gap-1"
             title={cooldown > 0 ? `Wait ${cooldown}s` : "Refresh governance data"}
           >
             {cooldown > 0 && (
-              <span className="text-[9px] font-mono text-white/40">{cooldown}s</span>
+              <span className="text-[9px] font-mono text-white/60">{cooldown}s</span>
             )}
             <RefreshIcon spinning={refreshing} />
           </button>
           <Link
             href="/governance"
-            className="text-[10px] sm:text-xs text-white/50 hover:text-white/80 transition-colors"
+            className="text-[10px] sm:text-xs text-white/70 hover:text-white/90 transition-colors"
           >
             View All →
           </Link>
@@ -219,7 +219,7 @@ export function GovernanceStatsCard() {
 
           {/* Treasury Holdings */}
           <div className="border-t border-white/5 pt-3 sm:pt-4">
-            <div className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-wider mb-2 sm:mb-3">Treasury Holdings</div>
+            <div className="text-white/60 text-[9px] sm:text-[10px] uppercase tracking-wider mb-2 sm:mb-3">Treasury Holdings</div>
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {tokens.map((token) => (
                 <div key={token.symbol} className="text-center">
@@ -228,7 +228,7 @@ export function GovernanceStatsCard() {
                   </div>
                   <div className="flex items-center justify-center gap-1 mt-0.5">
                     <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: token.color }} />
-                    <span className="text-white/50 text-[9px] sm:text-[10px] font-medium">{token.symbol}</span>
+                    <span className="text-white/70 text-[9px] sm:text-[10px] font-medium">{token.symbol}</span>
                   </div>
                 </div>
               ))}
@@ -239,8 +239,8 @@ export function GovernanceStatsCard() {
         {/* Right Section - Top Holders */}
         <div className="border-t lg:border-t-0 lg:border-l border-white/5 pt-3 lg:pt-0 lg:pl-6">
           <div className="flex items-center justify-between mb-2 sm:mb-3">
-            <span className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-wider">Top XAND Holders</span>
-            <span className="text-[9px] sm:text-[10px] text-white/30">Top 5</span>
+            <span className="text-white/60 text-[9px] sm:text-[10px] uppercase tracking-wider">Top XAND Holders</span>
+            <span className="text-[9px] sm:text-[10px] text-white/50">Top 5</span>
           </div>
           <div className="space-y-1.5 sm:space-y-2">
             {topFive.map((holder, index) => {
@@ -249,12 +249,12 @@ export function GovernanceStatsCard() {
                 <div key={holder.address}>
                   <div className="flex items-center justify-between mb-0.5">
                     <div className="flex items-center gap-1.5 sm:gap-2">
-                      <span className="text-white/30 text-[9px] sm:text-[10px] font-mono w-3 sm:w-4">#{index + 1}</span>
+                      <span className="text-white/50 text-[9px] sm:text-[10px] font-mono w-3 sm:w-4">#{index + 1}</span>
                       <a
                         href={`https://solscan.io/account/${holder.address}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-white/60 hover:text-white text-[10px] sm:text-xs font-mono transition-colors"
+                        className="text-white/80 hover:text-white text-[10px] sm:text-xs font-mono transition-colors"
                       >
                         {truncateAddress(holder.address)}
                       </a>

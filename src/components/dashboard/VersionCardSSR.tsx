@@ -128,13 +128,13 @@ export const VersionCardSSR: React.FC = () => {
                   <AnimatedValue value={stats.nodeCount} /> nodes
                 </span>
               </div>
-              <span className="text-white/50 text-[10px] sm:text-xs font-mono">
+              <span className="text-white/70 text-[10px] sm:text-xs font-mono">
                 (<AnimatedValue value={stats.percentage.toFixed(1)} />% of network)
               </span>
             </div>
           </div>
           <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5">
-            <div className="flex justify-between items-center text-[9px] sm:text-[10px] text-white/50">
+            <div className="flex justify-between items-center text-[9px] sm:text-[10px] text-white/70">
               <span><AnimatedValue value={stats.totalVersions} /> versions total</span>
               <span><AnimatedValue value={stats.totalNodes} /> nodes</span>
             </div>

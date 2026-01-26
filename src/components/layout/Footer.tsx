@@ -92,7 +92,7 @@ export const Footer: React.FC = () => {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center text-white/50 hover:text-white transition-all"
+                  className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center text-white/70 hover:text-white transition-all"
                   aria-label={social.label}
                 >
                   <social.icon className="w-4 h-4" />
@@ -103,11 +103,11 @@ export const Footer: React.FC = () => {
 
           {/* Product Links */}
           <div>
-            <h4 className="text-white/60 text-xs font-mono uppercase tracking-wider mb-4">// Product</h4>
+            <h4 className="text-white/80 text-xs font-mono uppercase tracking-wider mb-4">// Product</h4>
             <ul className="space-y-2">
               {footerLinks.product.map((link, i) => (
                 <li key={i}>
-                  <Link href={link.href} className="text-white/60 hover:text-white text-sm transition-colors">
+                  <Link href={link.href} className="text-white/80 hover:text-white text-sm transition-colors">
                     {link.label}
                   </Link>
                 </li>
@@ -117,11 +117,11 @@ export const Footer: React.FC = () => {
 
           {/* Utilities Links */}
           <div>
-            <h4 className="text-white/60 text-xs font-mono uppercase tracking-wider mb-4">// Utilities</h4>
+            <h4 className="text-white/80 text-xs font-mono uppercase tracking-wider mb-4">// Utilities</h4>
             <ul className="space-y-2">
               {footerLinks.utilities.map((link, i) => (
                 <li key={i}>
-                  <Link href={link.href} className="text-white/60 hover:text-white text-sm transition-colors">
+                  <Link href={link.href} className="text-white/80 hover:text-white text-sm transition-colors">
                     {link.label}
                   </Link>
                 </li>
@@ -131,7 +131,7 @@ export const Footer: React.FC = () => {
 
           {/* Resources Links */}
           <div>
-            <h4 className="text-white/60 text-xs font-mono uppercase tracking-wider mb-4">// Resources</h4>
+            <h4 className="text-white/80 text-xs font-mono uppercase tracking-wider mb-4">// Resources</h4>
             <ul className="space-y-2">
               {footerLinks.resources.map((link, i) => (
                 <li key={i}>
@@ -140,7 +140,7 @@ export const Footer: React.FC = () => {
                       href={link.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-white/60 hover:text-white text-sm transition-colors inline-flex items-center gap-1"
+                      className="text-white/80 hover:text-white text-sm transition-colors inline-flex items-center gap-1"
                     >
                       {link.label}
                       <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -148,7 +148,7 @@ export const Footer: React.FC = () => {
                       </svg>
                     </a>
                   ) : (
-                    <Link href={link.href} className="text-white/60 hover:text-white text-sm transition-colors">
+                    <Link href={link.href} className="text-white/80 hover:text-white text-sm transition-colors">
                       {link.label}
                     </Link>
                   )}
@@ -159,7 +159,7 @@ export const Footer: React.FC = () => {
 
           {/* Community Links */}
           <div>
-            <h4 className="text-white/60 text-xs font-mono uppercase tracking-wider mb-4">// Community</h4>
+            <h4 className="text-white/80 text-xs font-mono uppercase tracking-wider mb-4">// Community</h4>
             <ul className="space-y-2">
               {footerLinks.community.map((link, i) => (
                 <li key={i}>
@@ -167,7 +167,7 @@ export const Footer: React.FC = () => {
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-white/60 hover:text-white text-sm transition-colors inline-flex items-center gap-1"
+                    className="text-white/80 hover:text-white text-sm transition-colors inline-flex items-center gap-1"
                   >
                     {link.label}
                     <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -182,17 +182,17 @@ export const Footer: React.FC = () => {
 
         {/* Bottom Bar */}
         <div className="py-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-white/60 text-xs">
+          <div className="flex items-center gap-2 text-white/80 text-xs">
             <span>© {currentYear} XanDash</span>
             <span className="text-white/20">•</span>
             <span>v2.0.0</span>
             <span className="text-white/20">•</span>
             <span className="flex items-center gap-1">
-              Built by <a href="https://x.com/iKK6600" target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors">Karan</a>
+              Built by <a href="https://x.com/iKK6600" target="_blank" rel="noopener noreferrer" className="text-white/80 hover:text-white transition-colors">Karan</a>
             </span>
           </div>
 
-          <div className="flex items-center gap-4 text-white/60 text-xs">
+          <div className="flex items-center gap-4 text-white/80 text-xs">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
               All systems operational

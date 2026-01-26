@@ -328,7 +328,7 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
             <div className="flex justify-center mb-1 text-cyan-400 group-hover:scale-110 transition-transform">
               <UptimeIcon />
             </div>
-            <div className="text-white/50 text-[10px]">Uptime</div>
+            <div className="text-white/70 text-[10px]">Uptime</div>
             <div className="text-white text-xs font-bold">{formatUptime(node.uptime || 0)}</div>
           </div>
 
@@ -336,7 +336,7 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
             <div className="flex justify-center mb-1 text-purple-400 group-hover:scale-110 transition-transform">
               <StorageIcon />
             </div>
-            <div className="text-white/50 text-[10px]">Storage</div>
+            <div className="text-white/70 text-[10px]">Storage</div>
             <div className="text-white text-xs font-bold">{formatBytes(node.storage_committed || 0)}</div>
           </div>
 
@@ -344,7 +344,7 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
             <div className="flex justify-center mb-1 text-green-400 group-hover:scale-110 transition-transform">
               <VersionIcon />
             </div>
-            <div className="text-white/50 text-[10px]">Version</div>
+            <div className="text-white/70 text-[10px]">Version</div>
             <div className="text-white text-xs font-bold">{node.version || 'N/A'}</div>
           </div>
 
@@ -352,7 +352,7 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
             <div className="flex justify-center mb-1 text-orange-400 group-hover:scale-110 transition-transform">
               <PortIcon />
             </div>
-            <div className="text-white/50 text-[10px]">RPC Port</div>
+            <div className="text-white/70 text-[10px]">RPC Port</div>
             <div className="text-white text-xs font-bold">{node.rpc_port || 'N/A'}</div>
           </div>
         </div>
@@ -362,7 +362,7 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
               <StorageIcon />
-              <span className="text-white/60 text-xs">Storage Usage</span>
+              <span className="text-white/80 text-xs">Storage Usage</span>
             </div>
             <span className="text-white/80 text-xs font-mono">
               {formatBytes(storageUsed)} / {formatBytes(node.storage_committed || 0)}
@@ -389,7 +389,7 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-2">
                 <NetworkIcon />
-                <span className="text-white/50 text-xs">Network Activity</span>
+                <span className="text-white/70 text-xs">Network Activity</span>
               </div>
               <MiniSparkline sent={packetsSent} received={packetsReceived} color="#3b82f6" />
             </div>
@@ -397,20 +397,20 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
               <div>
                 <div className="flex items-center justify-between text-[10px] mb-1">
                   <span className="text-green-400">↑ Sent</span>
-                  <span className="text-white/60">{formatNumber(packetsSent)}</span>
+                  <span className="text-white/80">{formatNumber(packetsSent)}</span>
                 </div>
                 <AnimatedBar value={packetsSent} max={maxPackets} color="#22c55e" delay={200} />
               </div>
               <div>
                 <div className="flex items-center justify-between text-[10px] mb-1">
                   <span className="text-blue-400">↓ Received</span>
-                  <span className="text-white/60">{formatNumber(packetsReceived)}</span>
+                  <span className="text-white/80">{formatNumber(packetsReceived)}</span>
                 </div>
                 <AnimatedBar value={packetsReceived} max={maxPackets} color="#3b82f6" delay={400} />
               </div>
             </div>
             {totalBytes > 0 && (
-              <div className="mt-2 text-center text-white/40 text-[10px]">
+              <div className="mt-2 text-center text-white/60 text-[10px]">
                 Total: {formatBytes(totalBytes)}
               </div>
             )}
@@ -421,7 +421,7 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
         <div className="space-y-2">
           <div className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2">
             <div className="flex-1 min-w-0">
-              <div className="text-white/40 text-[10px]">Address</div>
+              <div className="text-white/60 text-[10px]">Address</div>
               <div className="text-white text-xs font-mono truncate">{node.address || 'N/A'}</div>
             </div>
             {node.address && <CopyBtn text={node.address} onCopy={onCopy} type="Address" />}
@@ -429,7 +429,7 @@ export const NodeProfileCard: React.FC<NodeProfileCardProps> = ({
 
           <div className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2">
             <div className="flex-1 min-w-0">
-              <div className="text-white/40 text-[10px]">Public Key</div>
+              <div className="text-white/60 text-[10px]">Public Key</div>
               <div className="text-white text-xs font-mono truncate">
                 {node.pubkey ? `${node.pubkey.substring(0, 12)}...${node.pubkey.slice(-8)}` : 'N/A'}
               </div>
