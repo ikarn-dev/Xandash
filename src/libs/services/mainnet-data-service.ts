@@ -209,6 +209,64 @@ async function fetchCreditsData(): Promise<Map<string, number>> {
 }
 
 /**
+ * Check if an IP address is a private/internal IP (RFC 1918, loopback, etc.)
+ * These IPs cannot be geolocated by external services
+ */
+function isPrivateIP(ip: string): boolean {
+  if (!ip) return true;
+
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4 || parts.some(isNaN)) return true;
+
+  const [a, b, c] = parts;
+
+  // Loopback (127.x.x.x)
+  if (a === 127) return true;
+
+  // Private Class A (10.x.x.x)
+  if (a === 10) return true;
+
+  // Private Class B (172.16.x.x - 172.31.x.x)
+  if (a === 172 && b >= 16 && b <= 31) return true;
+
+  // Private Class C (192.168.x.x)
+  if (a === 192 && b === 168) return true;
+
+  // Link-local (169.254.x.x)
+  if (a === 169 && b === 254) return true;
+
+  // CGNAT / Shared Address Space (100.64.x.x - 100.127.x.x)
+  if (a === 100 && b >= 64 && b <= 127) return true;
+
+  // Reserved for documentation (192.0.2.x, 198.51.100.x, 203.0.113.x)
+  if (a === 192 && b === 0 && c === 2) return true;
+  if (a === 198 && b === 51 && c === 100) return true;
+  if (a === 203 && b === 0 && c === 113) return true;
+
+  // Broadcast / invalid
+  if (a === 0 || a === 255) return true;
+
+  return false;
+}
+
+/**
+ * Create a placeholder geo entry for private IPs
+ */
+function createPrivateIPGeoData(ip: string): MainnetGeoData {
+  return {
+    country: 'Private Network',
+    country_code: 'xx', // Special code for private networks
+    credits: null,
+    geo_sort: 'Private Network',
+    ip: ip,
+    name: '',
+    nfts: [],
+    provider: 'Private/Internal Network',
+    stake: 0,
+  };
+}
+
+/**
  * Fetch geo data for nodes - uses external APIs with fallback chain
  * Primary: ipwho.is (HTTPS, reliable)
  * Fallback: ip-api.com batch (HTTP, fast for multiple IPs)
@@ -224,9 +282,30 @@ async function fetchGeoData(items: Array<{ ip: string; pubkey: string }>): Promi
 
   if (uniqueIps.length === 0) return {};
 
-  // Fetch geo data from external APIs
-  const externalGeo = await fetchExternalGeoData(uniqueIps);
-  Object.assign(geoData, externalGeo);
+  // Separate private and public IPs
+  const privateIps: string[] = [];
+  const publicIps: string[] = [];
+
+  for (const ip of uniqueIps) {
+    if (isPrivateIP(ip)) {
+      privateIps.push(ip);
+      // Immediately add private IP placeholder data
+      geoData[ip] = createPrivateIPGeoData(ip);
+    } else {
+      publicIps.push(ip);
+    }
+  }
+
+  // Log for debugging
+  if (privateIps.length > 0) {
+    console.log(`[Mainnet Geo] Detected ${privateIps.length} private IPs (cannot geolocate): ${privateIps.slice(0, 5).join(', ')}${privateIps.length > 5 ? '...' : ''}`);
+  }
+
+  // Only fetch geo data for public IPs
+  if (publicIps.length > 0) {
+    const externalGeo = await fetchExternalGeoData(publicIps);
+    Object.assign(geoData, externalGeo);
+  }
 
   return geoData;
 }
@@ -462,7 +541,7 @@ export async function getMainnetData(forceRefresh: boolean = false): Promise<Mai
 
   // Enrich nodes with manager data
   const pubkeyToManagerMap = createPubkeyToManagerMap();
-  
+
   // Enrich nodes with geo data and credits
   let enrichedNodes = currentNodes || [];
   enrichedNodes = enrichNodesWithGeoAndCredits(enrichedNodes, cachedGeo || {}, creditsMap);

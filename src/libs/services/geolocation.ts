@@ -16,10 +16,74 @@ interface GeolocationCache {
 // In-memory cache for geolocation data
 const geoCache: GeolocationCache = {};
 
+/**
+ * Check if an IP address is a private/internal IP (RFC 1918, loopback, etc.)
+ * These IPs cannot be geolocated by external services
+ */
+function isPrivateIP(ip: string): boolean {
+  if (!ip) return true;
+
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4 || parts.some(isNaN)) return true;
+
+  const [a, b, c] = parts;
+
+  // Loopback (127.x.x.x)
+  if (a === 127) return true;
+
+  // Private Class A (10.x.x.x)
+  if (a === 10) return true;
+
+  // Private Class B (172.16.x.x - 172.31.x.x)
+  if (a === 172 && b >= 16 && b <= 31) return true;
+
+  // Private Class C (192.168.x.x)
+  if (a === 192 && b === 168) return true;
+
+  // Link-local (169.254.x.x)
+  if (a === 169 && b === 254) return true;
+
+  // CGNAT / Shared Address Space (100.64.x.x - 100.127.x.x)
+  if (a === 100 && b >= 64 && b <= 127) return true;
+
+  // Reserved for documentation
+  if (a === 192 && b === 0 && c === 2) return true;
+  if (a === 198 && b === 51 && c === 100) return true;
+  if (a === 203 && b === 0 && c === 113) return true;
+
+  // Broadcast / invalid
+  if (a === 0 || a === 255) return true;
+
+  return false;
+}
+
+/**
+ * Create a placeholder location entry for private IPs
+ */
+function createPrivateIPLocation(ip: string): LocationData {
+  return {
+    country: 'Private Network',
+    country_code: 'xx',
+    city: 'Local',
+    region: '',
+    provider: 'Private/Internal Network',
+    ip: ip,
+    lat: 0,
+    lon: 0,
+  };
+}
+
 export async function getLocationForIP(ip: string): Promise<LocationData | null> {
   // Check cache first
   if (geoCache[ip] !== undefined) {
     return geoCache[ip];
+  }
+
+  // Handle private IPs - they can't be geolocated
+  if (isPrivateIP(ip)) {
+    const privateLocation = createPrivateIPLocation(ip);
+    geoCache[ip] = privateLocation;
+    return privateLocation;
   }
 
   // Use ip-api.com - most reliable for server-side
