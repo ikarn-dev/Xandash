@@ -5,7 +5,7 @@
  * with automatic failover to backup keys when rate limits are hit.
  * 
  * Features:
- * - Primary and backup API keys (up to 3 backups)
+ * - Primary and backup API keys (up to 9 backups for Helius, 3 for OpenRouter)
  * - Automatic failover when rate limits are detected
  * - Automatic recovery to primary key after reset period
  * - In-memory state tracking per service
@@ -58,6 +58,11 @@ export function getHeliusKeys(): ApiKeyConfig {
         process.env.HELIUS_API_KEY_BACKUP_1 || '',
         process.env.HELIUS_API_KEY_BACKUP_2 || '',
         process.env.HELIUS_API_KEY_BACKUP_3 || '',
+        process.env.HELIUS_API_KEY_BACKUP_4 || '',
+        process.env.HELIUS_API_KEY_BACKUP_5 || '',
+        process.env.HELIUS_API_KEY_BACKUP_6 || '',
+        process.env.HELIUS_API_KEY_BACKUP_7 || '',
+        process.env.HELIUS_API_KEY_BACKUP_8 || '',
     ].filter(key => key.length > 0);
 
     return { primary, backups };
