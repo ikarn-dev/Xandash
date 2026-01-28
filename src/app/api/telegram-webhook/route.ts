@@ -682,11 +682,76 @@ Use /help to see available commands.
 /**
  * GET /api/telegram-webhook
  * 
- * Health check endpoint
+ * Health check and webhook management endpoint
+ * 
+ * Actions:
+ * - ?action=setup - Register webhook with Telegram
+ * - ?action=info - Get current webhook info
+ * - ?action=delete - Remove webhook
  */
-export async function GET() {
-    return NextResponse.json({
-        status: 'ok',
-        message: 'Telegram webhook endpoint active'
-    });
+export async function GET(request: NextRequest) {
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action');
+
+    if (!TELEGRAM_BOT_TOKEN) {
+        return NextResponse.json({
+            error: 'TELEGRAM_BOT_TOKEN not configured in environment variables'
+        }, { status: 500 });
+    }
+
+    // Construct webhook URL from request
+    const host = request.headers.get('host') || 'www.xandash.online';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const webhookUrl = `${protocol}://${host}/api/telegram-webhook`;
+
+    try {
+        if (action === 'setup') {
+            // Register webhook with Telegram
+            const response = await fetch(`${TELEGRAM_API_BASE}${TELEGRAM_BOT_TOKEN}/setWebhook`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: webhookUrl }),
+            });
+            const data = await response.json();
+
+            return NextResponse.json({
+                success: data.ok,
+                message: data.ok ? 'Webhook registered successfully' : data.description,
+                webhookUrl,
+            });
+        }
+
+        if (action === 'info') {
+            // Get current webhook info
+            const response = await fetch(`${TELEGRAM_API_BASE}${TELEGRAM_BOT_TOKEN}/getWebhookInfo`);
+            const data = await response.json();
+
+            return NextResponse.json({
+                success: data.ok,
+                webhook: data.result,
+            });
+        }
+
+        if (action === 'delete') {
+            // Delete webhook (switch to polling mode)
+            const response = await fetch(`${TELEGRAM_API_BASE}${TELEGRAM_BOT_TOKEN}/deleteWebhook`);
+            const data = await response.json();
+
+            return NextResponse.json({
+                success: data.ok,
+                message: data.ok ? 'Webhook deleted' : data.description,
+            });
+        }
+
+        // Default: health check
+        return NextResponse.json({
+            status: 'ok',
+            message: 'Telegram webhook endpoint active',
+            setup: 'Add ?action=setup to register webhook',
+            info: 'Add ?action=info to check webhook status',
+        });
+    } catch (error) {
+        console.error('Webhook management error:', error);
+        return NextResponse.json({ error: 'Failed to manage webhook' }, { status: 500 });
+    }
 }
