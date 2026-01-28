@@ -202,18 +202,32 @@ export default function NotificationsPageClient() {
     const [unbindingNode, setUnbindingNode] = useState<string | null>(null);
     const [testingNode, setTestingNode] = useState<string | null>(null);
 
-    // Fetch session
-    const fetchSession = useCallback(async () => {
+    // Track when we just logged in to prevent fetchSession from overwriting state
+    const justLoggedIn = React.useRef(false);
+
+    // Fetch session (with protection against overwriting freshly set auth state)
+    const fetchSession = useCallback(async (skipIfJustLoggedIn = false) => {
+        // Don't fetch if we just logged in (prevents race condition)
+        if (skipIfJustLoggedIn && justLoggedIn.current) {
+            return;
+        }
+
         try {
             const res = await fetch('/api/notifications/auth/session');
             const data = await res.json();
-            setSession(data);
-            if (data.authenticated && data.bindings) {
-                setNodes(data.bindings);
+
+            // Only update session if not just logged in (prevents overwrite)
+            if (!justLoggedIn.current) {
+                setSession(data);
+                if (data.authenticated && data.bindings) {
+                    setNodes(data.bindings);
+                }
             }
         } catch (error) {
             console.error('Failed to fetch session:', error);
-            toast.error('Failed to load session');
+            if (!justLoggedIn.current) {
+                toast.error('Failed to load session');
+            }
         } finally {
             setLoading(false);
         }
@@ -251,6 +265,18 @@ export default function NotificationsPageClient() {
             fetchNodes(true);
         }
     }, [session?.authenticated, session?.bindings?.length, fetchNodes]);
+
+    // Fetch full session data after login (with delay to ensure cookie is set)
+    useEffect(() => {
+        if (justLoggedIn.current && session?.authenticated) {
+            // Wait for cookie to be properly set in browser before fetching
+            const timer = setTimeout(() => {
+                justLoggedIn.current = false;
+                fetchSession();
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [session?.authenticated, fetchSession]);
 
     // Real-time updates - poll every 30 seconds when authenticated
     useEffect(() => {
@@ -337,8 +363,9 @@ export default function NotificationsPageClient() {
                     bindings: []
                 });
                 toast.success('Logged in successfully');
-                // Fetch full session data (including bindings) in background
-                fetchSession();
+                // Mark that we just logged in to prevent fetchSession from overwriting
+                justLoggedIn.current = true;
+                // Session data will be fetched by useEffect with proper delay
             } else {
                 toast.error(data.error || 'Invalid verification code');
             }

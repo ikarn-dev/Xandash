@@ -29,18 +29,53 @@ export async function POST(request: NextRequest) {
         }
 
         // Get or create user
-        await getOrCreateUser(email);
+        try {
+            await getOrCreateUser(email);
+        } catch (dbError) {
+            console.error('Database error in getOrCreateUser:', dbError);
+            return NextResponse.json(
+                { error: 'Database error. Please try again later.' },
+                { status: 500 }
+            );
+        }
 
         // Create OTP
-        const otp = await createLoginOTP(email);
+        let otp: string;
+        try {
+            otp = await createLoginOTP(email);
+        } catch (otpError) {
+            console.error('Error creating OTP:', otpError);
+            return NextResponse.json(
+                { error: 'Failed to create verification code. Please try again.' },
+                { status: 500 }
+            );
+        }
 
         // Send OTP via email
-        const emailResult = await sendOTPEmail(email, otp);
+        let emailResult;
+        try {
+            emailResult = await sendOTPEmail(email, otp);
+        } catch (emailError) {
+            console.error('Email service error:', emailError);
+            return NextResponse.json(
+                { error: 'Email service is temporarily unavailable. Please try again later.' },
+                { status: 503 }
+            );
+        }
 
         if (!emailResult.success) {
             console.error('Failed to send OTP email:', emailResult.error);
+
+            // Check if it's a configuration issue
+            if (emailResult.error?.includes('not configured')) {
+                return NextResponse.json(
+                    { error: 'Email service is not configured. Please contact support.' },
+                    { status: 503 }
+                );
+            }
+
             return NextResponse.json(
-                { error: 'Failed to send verification email. Please try again.' },
+                { error: 'Failed to send verification email. Please try again in a few moments.' },
                 { status: 500 }
             );
         }
@@ -51,9 +86,17 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('Unexpected login error:', error);
+        // Log the full error for debugging
+        if (error instanceof Error) {
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
+        }
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { error: 'An unexpected error occurred. Please try again.' },
             { status: 500 }
         );
     }
