@@ -219,23 +219,23 @@ export default function NotificationsPageClient() {
         }
     }, []);
 
-    // Fetch nodes with current status
-    const fetchNodes = useCallback(async () => {
-        setRefreshing(true);
+    // Fetch nodes with current status (with optional silent mode for auto-refresh)
+    const fetchNodes = useCallback(async (silent = false) => {
+        if (!silent) setRefreshing(true);
         try {
             const res = await fetch('/api/notifications/nodes');
             const data = await res.json();
             if (data.success) {
                 setNodes(data.nodes);
-                toast.success('Nodes refreshed');
+                if (!silent) toast.success('Nodes refreshed');
             } else {
-                toast.error(data.error || 'Failed to refresh nodes');
+                if (!silent) toast.error(data.error || 'Failed to refresh nodes');
             }
         } catch (error) {
             console.error('Failed to fetch nodes:', error);
-            toast.error('Failed to refresh nodes');
+            if (!silent) toast.error('Failed to refresh nodes');
         } finally {
-            setRefreshing(false);
+            if (!silent) setRefreshing(false);
         }
     }, []);
 
@@ -243,6 +243,14 @@ export default function NotificationsPageClient() {
     useEffect(() => {
         fetchSession();
     }, [fetchSession]);
+
+    // Fetch nodes with status after session loads (fixes initial 'unknown' status)
+    useEffect(() => {
+        if (session?.authenticated && session.bindings && session.bindings.length > 0) {
+            // Fetch real-time node status silently
+            fetchNodes(true);
+        }
+    }, [session?.authenticated, session?.bindings?.length, fetchNodes]);
 
     // Real-time updates - poll every 30 seconds when authenticated
     useEffect(() => {
@@ -318,14 +326,18 @@ export default function NotificationsPageClient() {
             if (data.success) {
                 setShowOtpInput(false);
                 setOtp('');
-                // Immediately set authenticated state to trigger UI update
+                // Use user data from verify API response directly for immediate UI update
                 setSession({
                     authenticated: true,
-                    user: { email, telegramVerified: false },
+                    user: {
+                        email: data.user?.email || email,
+                        telegramChatId: data.user?.telegramChatId,
+                        telegramVerified: data.user?.telegramVerified || false,
+                    },
                     bindings: []
                 });
                 toast.success('Logged in successfully');
-                // Fetch full session data in background
+                // Fetch full session data (including bindings) in background
                 fetchSession();
             } else {
                 toast.error(data.error || 'Invalid verification code');
@@ -695,7 +707,7 @@ export default function NotificationsPageClient() {
                                 ) : !showTelegramOtp ? (
                                     <form onSubmit={handleLinkTelegram}>
                                         <p className="text-white/60 text-xs mb-3">
-                                            Message <a href="https://t.me/XandashBot" className="text-blue-400 hover:underline" target="_blank" rel="noopener">@XandashBot</a> on Telegram and send /start to get your Chat ID.
+                                            Message <a href="https://t.me/XandashNotifications_bot" className="text-blue-400 hover:underline" target="_blank" rel="noopener">@XandashNotifications_bot</a> on Telegram and send /start to get your Chat ID.
                                         </p>
                                         <div className="flex gap-2">
                                             <input
@@ -719,7 +731,7 @@ export default function NotificationsPageClient() {
                                 ) : (
                                     <form onSubmit={handleVerifyTelegram}>
                                         <p className="text-white/60 text-xs mb-3">
-                                            Check Telegram for verification code from @XandashBot
+                                            Check Telegram for verification code from @XandashNotifications_bot
                                         </p>
                                         <div className="flex gap-2">
                                             <input
@@ -800,7 +812,7 @@ export default function NotificationsPageClient() {
                                         {nodes.map((node) => (
                                             <div
                                                 key={`${node.nodeIp}-${node.network}`}
-                                                className="flex items-center justify-between bg-black/40 border border-white/10 p-3"
+                                                className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-black/40 border border-white/10 p-3 gap-3"
                                             >
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 flex-wrap">
@@ -826,12 +838,13 @@ export default function NotificationsPageClient() {
                                                         )}
                                                     </div>
                                                 </div>
-                                                <div className="flex gap-1.5 ml-2">
+                                                <div className="flex gap-1.5 sm:ml-2 flex-shrink-0">
                                                     {!node.testUsed && (
                                                         <LoadingButton
                                                             onClick={() => handleTestNotification(node.nodeIp)}
                                                             loading={testingNode === node.nodeIp}
                                                             variant="test"
+                                                            className="flex-1 sm:flex-initial"
                                                         >
                                                             {Icons.test}
                                                             <span>Test</span>
@@ -841,6 +854,7 @@ export default function NotificationsPageClient() {
                                                         onClick={() => handleUnbindNode(node.nodeIp)}
                                                         loading={unbindingNode === node.nodeIp}
                                                         variant="danger"
+                                                        className="flex-1 sm:flex-initial"
                                                     >
                                                         {Icons.unlink}
                                                         <span>Unbind</span>
