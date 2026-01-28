@@ -74,6 +74,13 @@ XanDash is a comprehensive monitoring dashboard for the Xandeum decentralized st
 - **STOINC Calculator** - Storage incentive rewards calculator
 - **RPC Tester** - Direct JSON-RPC method testing
 
+### Notifications
+- **Node Alerts** - Real-time notifications when nodes go offline, come back online, or change status
+- **Dual Delivery** - Alerts via Email (Resend) and Telegram Bot
+- **Email OTP Auth** - Passwordless login with email verification
+- **Smart Throttling** - Only sends alerts for significant events
+- **Test Notifications** - Verify configuration before going live
+
 ---
 
 ## Tech Stack
@@ -209,6 +216,7 @@ src/
 | [SEO](documentation/SEO.md) | SEO implementation, metadata patterns, and optimization |
 | [Cron Setup](documentation/CRON_SETUP.md) | GitHub Actions cron configuration for data sync |
 | [CAPTCHA Setup](documentation/CAPTCHA_SETUP.md) | Cloudflare Turnstile integration guide |
+| [Notifications](documentation/NOTIFICATIONS.md) | Node notification system architecture and setup |
 
 ---
 
@@ -225,6 +233,9 @@ src/
 | `/api/xand-info` | GET | Get XAND token info from CoinGecko |
 | `/api/ai-chat` | POST | AI assistant chat (SSE streaming) |
 | `/api/sync-nodes` | POST | Sync all nodes to MongoDB (requires auth) |
+| `/api/notifications/auth/*` | POST | Notification system authentication (login/verify/logout) |
+| `/api/notifications/nodes` | GET/POST/DELETE | Manage node bindings for notifications |
+| `/api/notifications/telegram/bind` | POST/PUT/DELETE | Telegram account linking |
 
 ---
 

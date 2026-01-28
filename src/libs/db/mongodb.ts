@@ -55,13 +55,14 @@ export async function connectToDatabase(): Promise<Db> {
   }
 }
 
-export async function getCollection<T extends Document>(name: string): Promise<Collection<T>> {
+export async function getCollection<T extends object = object>(name: string): Promise<Collection<T>> {
   if (!name || typeof name !== 'string') {
     throw new Error('Collection name must be a non-empty string');
   }
 
   const database = await connectToDatabase();
-  return database.collection<T>(name);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return database.collection(name) as any;
 }
 
 /**
@@ -112,7 +113,7 @@ export interface NodeEventLog {
   _id?: string;
   ip: string;
   pubkey: string;
-  event_type: 'node_online' | 'node_offline' | 'node_new' | 'status_change' | 'version_change' | 'storage_change' | 'credits_change';
+  event_type: 'node_online' | 'node_offline' | 'node_new' | 'status_change' | 'version_change' | 'storage_change' | 'credits_change' | 'uptime_reset' | 'credits_zero';
   previous_value?: string | number;
   new_value?: string | number;
   previous_status?: string;
@@ -122,6 +123,40 @@ export interface NodeEventLog {
   details?: Record<string, any>;
   timestamp: number;
   created_at: Date;
+}
+
+// Notification user - stores user accounts (email is primary key)
+export interface NotificationUser {
+  _id?: string;
+  email: string;           // Primary key, unique
+  telegramChatId?: string; // Optional linked telegram
+  telegramVerified: boolean;
+  createdAt: Date;
+  lastLoginAt: Date;
+}
+
+// Node binding - links nodes to user accounts
+export interface NodeBinding {
+  _id?: string;
+  email: string;           // Foreign key to NotificationUser
+  nodeIp: string;          // Node IP address
+  network: 'devnet' | 'mainnet';
+  pubkey?: string;         // Node pubkey for reference
+  testUsed: boolean;       // One-time test notification
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// OTP token - temporary storage for verification codes
+export interface OTPToken {
+  _id?: string;
+  email: string;           // Email for auth OTP
+  purpose: 'login' | 'telegram';  // What the OTP is for
+  telegramChatId?: string; // For telegram verification
+  otpHash: string;         // Hashed OTP for security
+  attempts: number;
+  expiresAt: Date;
+  createdAt: Date;
 }
 
 // Network-aware collection names
@@ -134,4 +169,7 @@ export const getCollectionNames = (network: 'devnet' | 'mainnet' = 'devnet') => 
 export const COLLECTIONS = {
   NODE_SNAPSHOTS: 'node_snapshots',
   NODE_EVENTS: 'node_events',
+  NOTIFICATION_USERS: 'notification_users',
+  NODE_BINDINGS: 'node_bindings',
+  OTP_TOKENS: 'otp_tokens',
 };

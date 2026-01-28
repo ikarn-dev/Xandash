@@ -307,11 +307,38 @@ export const FAQContent = () => (
   </div>
 );
 
+export const NotificationsContent = () => (
+  <div className="space-y-6">
+    <SectionHeader icon={ZapIcon} label="NOTIFICATIONS" title="Notification System" />
+    <p className="text-white/70 leading-relaxed mb-4">XanDash features a robust real-time notification system designed to keep node operators informed about critical events. It supports dual-channel alerts via Email and Telegram.</p>
+    <div className="space-y-4">
+      <InfoCard title="Key Features"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem desc="Real-time alerts for Node Offline/Online status" /><ListItem desc="Notifications for Software Version changes" /><ListItem desc="Daily Credit earnings summary" /><ListItem desc="Dual-channel delivery (Email & Telegram)" /><ListItem desc="Smart throttling to prevent alert fatigue" /></ul></InfoCard>
+
+      <InfoCard title="System Workflow"><CodeBlock language="mermaid" code={`graph TD
+    User[User] -->|1. Login| Auth[Email OTP]
+    Auth --> Dashboard
+    Dashboard -->|2. Add Node| Bind[Bind IP]
+    Dashboard -->|3. Link Telegram| Tele[Telegram Bot]
+    
+    System[Cron Job (5min)] -->|Check| Nodes
+    Nodes -->|Status Change?| Dispatcher
+    Dispatcher -->|Send| Email
+    Dispatcher -->|Send| Telegram`} /></InfoCard>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <InfoCard title="Setting Up"><ul className="text-white/60 text-sm space-y-1 ml-4 list-disc"><ListItem desc="1. Navigate to the Notifications page" /><ListItem desc="2. Login with your email address" /><ListItem desc="3. Add your Node IP addresses" /><ListItem desc="4. (Optional) Link Telegram for instant mobile alerts" /></ul></InfoCard>
+        <InfoCard title="Testing"><p className="text-white/60 text-sm">You can verify your configuration by clicking the 'Test' button on any bound node. This sends a one-time test alert to your configured channels.</p></InfoCard>
+      </div>
+    </div>
+  </div>
+);
+
 export const contentMap: Record<string, React.FC> = {
   'introduction': IntroductionContent, 'overview': OverviewContent, 'quick-start': QuickStartContent,
   'analytics': AnalyticsContent, 'pnodes': PNodesContent, 'leaderboard': LeaderboardContent,
   'node-compare': NodeCompareContent, 'managers': ManagersContent, 'governance': GovernanceContent,
   'network': NetworkContent, 'xand-token': XandTokenContent, 'ai-assistant': AIAssistantContent, 'endpoints': EndpointsContent,
+  'notifications': NotificationsContent,
   'architecture': ArchitectureContent, 'tech-stack': TechStackContent, 'api-reference': ApiReferenceContent,
   'data-flow': DataFlowContent, 'algorithms': AlgorithmsContent, 'faq': FAQContent,
   'security': SecurityContent, 'performance': PerformanceContent, 'contributing': ContributingContent,

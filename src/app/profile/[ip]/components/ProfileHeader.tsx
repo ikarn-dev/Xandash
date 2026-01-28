@@ -1,6 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Bell } from 'lucide-react';
 import { CopyBtn as CopyButton } from '@/components/ui/CopyBtn';
 import { ArrowLeftIcon } from './ProfileIcons';
 import { getStatusColor, getStatusBgColor } from './utils';
@@ -44,7 +46,7 @@ export const ProfileHeader = ({ ip, node, lastUpdate, onRefresh }: ProfileHeader
     <div className="relative bg-black border border-white/10 p-3 sm:p-4 group hover:border-white/20 transition-all">
       <CornerAccents />
       <div className="flex flex-col gap-3">
-        {/* Top row with back button and refresh */}
+        {/* Top row with back button and actions */}
         <div className="flex items-center justify-between">
           <button
             onClick={() => router.back()}
@@ -52,12 +54,21 @@ export const ProfileHeader = ({ ip, node, lastUpdate, onRefresh }: ProfileHeader
           >
             <ArrowLeftIcon className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
-          <button
-            onClick={onRefresh}
-            className="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-white/10 hover:bg-white/20 text-white text-[10px] sm:text-xs flex-shrink-0 cursor-pointer transition-colors font-medium"
-          >
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/notifications?ip=${ip}`}
+              className="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 text-[10px] sm:text-xs flex-shrink-0 cursor-pointer transition-colors font-medium border border-purple-500/30 flex items-center gap-1.5"
+            >
+              <Bell className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <span className="hidden sm:inline">Notifications</span>
+            </Link>
+            <button
+              onClick={onRefresh}
+              className="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-white/10 hover:bg-white/20 text-white text-[10px] sm:text-xs flex-shrink-0 cursor-pointer transition-colors font-medium"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
 
         {/* Main content */}

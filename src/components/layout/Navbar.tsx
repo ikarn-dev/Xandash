@@ -23,6 +23,7 @@ const navItems: NavItem[] = [
   { title: 'Leaderboard', href: '/leaderboard', category: 'main' },
   { title: 'Governance', href: '/governance', category: 'main' },
   { title: 'Compare', href: '/compare', category: 'tools' },
+  { title: 'Notifications', href: '/notifications', category: 'tools' },
   { title: 'XAND', href: '/xand', category: 'tools' },
   { title: 'STOINC', href: '/stoinc', category: 'tools' },
   { title: 'Endpoints', href: '/endpoints', category: 'tools' },

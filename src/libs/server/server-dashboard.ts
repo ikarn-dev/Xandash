@@ -62,31 +62,31 @@ export async function getVersionData(): Promise<{
   version: VersionData | null;
   error?: string;
 }> {
+  // Try RPC API call
   try {
     const data = await makeRpcCall<any>('get-version');
 
-    if (!data) {
-      return {
-        version: { version: '0.7.3' },
-        error: 'API not configured or failed'
-      };
+    if (data) {
+      // Handle different response formats
+      const version = data.version || data.result?.version || data.data?.version;
+      const build = data.build || data.result?.build || data.data?.build;
+      const commit = data.commit || data.result?.commit || data.data?.commit;
+
+      if (version && version !== 'unknown') {
+        return {
+          version: { version, build, commit }
+        };
+      }
     }
-
-    // Handle different response formats
-    const version = data.version || data.result?.version || data.data?.version || '0.7.3';
-    const build = data.build || data.result?.build || data.data?.build;
-    const commit = data.commit || data.result?.commit || data.data?.commit;
-
-    return {
-      version: { version, build, commit }
-    };
   } catch (error) {
-    console.error('Server-side version fetch error:', error);
-    return {
-      version: { version: '0.7.3' },
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
+    console.error('RPC version fetch error:', error);
   }
+
+  // Default fallback - RPC unavailable
+  return {
+    version: { version: '0.7.3' },
+    error: 'RPC unavailable, using default version'
+  };
 }
 
 // Server-side function to fetch network stats data from mainnet API

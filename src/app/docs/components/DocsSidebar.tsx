@@ -39,6 +39,7 @@ export const sidebarSections: SidebarSection[] = [
       { id: 'network', title: 'Network Map', icon: GlobeIcon },
       { id: 'xand-token', title: 'XAND Token Info', icon: DatabaseIcon },
       { id: 'ai-assistant', title: 'AI Assistant', icon: CpuIcon },
+      { id: 'notifications', title: 'Notifications', icon: ZapIcon },
       { id: 'endpoints', title: 'Endpoint Testing', icon: TerminalIcon },
     ]
   },
