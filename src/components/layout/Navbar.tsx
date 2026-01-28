@@ -176,7 +176,7 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          'flex items-center gap-1.5 sm:gap-2 rounded-full',
+          'flex items-center gap-1.5 sm:gap-2 rounded-full cursor-pointer',
           'bg-white/5 border border-white/10',
           'hover:bg-white/10 hover:border-white/20 active:bg-white/15',
           compact ? 'px-2 py-1' : 'px-2 sm:px-3 py-1 sm:py-1.5',
@@ -229,20 +229,18 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
           'text-white/40',
           compact ? 'w-2.5 h-2.5' : 'w-2.5 h-2.5 sm:w-3 sm:h-3',
           isOpen && 'rotate-180'
-        )}
-          style={{ transition: 'transform 150ms ease-out' }}
-        />
+        )} />
       </button>
 
-      {/* Dropdown - Fast animation */}
+      {/* Dropdown - Instant */}
       {isOpen && (
         <div
-          className="absolute top-full right-0 mt-2 w-32 sm:w-36 py-1 rounded-xl overflow-hidden bg-black/95 backdrop-blur-xl border border-white/10 shadow-2xl animate-blur-reveal-fast origin-top-right"
+          className="absolute top-full right-0 mt-2 w-32 sm:w-36 py-1 rounded-xl overflow-hidden bg-black/95 backdrop-blur-xl border border-white/10 shadow-2xl"
         >
           <button
             onClick={() => { setNetwork('devnet'); setIsOpen(false); }}
             className={cn(
-              'w-full flex items-center gap-2 px-3 py-2 text-[11px] sm:text-xs',
+              'w-full flex items-center gap-2 px-3 py-2 text-[11px] sm:text-xs cursor-pointer',
               !isMainnet
                 ? 'bg-emerald-500/10 text-emerald-400'
                 : 'text-white/60 hover:bg-white/5 hover:text-white active:bg-white/10'
@@ -258,7 +256,7 @@ const NetworkStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
           <button
             onClick={() => { setNetwork('mainnet'); setIsOpen(false); }}
             className={cn(
-              'w-full flex items-center gap-2 px-3 py-2 text-[11px] sm:text-xs',
+              'w-full flex items-center gap-2 px-3 py-2 text-[11px] sm:text-xs cursor-pointer',
               isMainnet
                 ? 'bg-blue-500/10 text-blue-400'
                 : 'text-white/60 hover:bg-white/5 hover:text-white active:bg-white/10'
