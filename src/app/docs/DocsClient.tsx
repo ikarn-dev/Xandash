@@ -12,7 +12,7 @@ export function DocsClient() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const toggleSection = (title: string) => {
-    setExpandedSections(prev => 
+    setExpandedSections(prev =>
       prev.includes(title) ? prev.filter(s => s !== title) : [...prev, title]
     );
   };
@@ -29,14 +29,17 @@ export function DocsClient() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 max-w-6xl mx-auto">
-      <button
-        onClick={() => setMobileNavOpen(!mobileNavOpen)}
-        className="lg:hidden flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white/70 hover:text-white transition-colors"
-      >
-        <BookIcon className="w-4 h-4" />
-        <span>Documentation Menu</span>
-        <ChevronDownIcon className={`w-4 h-4 ml-auto transition-transform ${mobileNavOpen ? 'rotate-180' : ''}`} />
-      </button>
+      {/* Mobile Navigation Toggle - Only visible on mobile */}
+      <div className="lg:hidden">
+        <button
+          onClick={() => setMobileNavOpen(!mobileNavOpen)}
+          className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white/70 hover:text-white transition-colors w-full"
+        >
+          <BookIcon className="w-4 h-4" />
+          <span>Documentation Menu</span>
+          <ChevronDownIcon className={`w-4 h-4 ml-auto transition-transform ${mobileNavOpen ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
 
       <aside className={`lg:w-64 flex-shrink-0 ${mobileNavOpen ? 'block' : 'hidden lg:block'}`}>
         <DocsSidebar

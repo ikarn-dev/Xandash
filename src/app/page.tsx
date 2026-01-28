@@ -66,9 +66,9 @@ export default function Home() {
           </p>
           <p>
             Key features include real-time pNode monitoring, geographic distribution mapping,
-            XAND token price tracking, governance statistics, and detailed analytics for individual
-            node performance. The platform supports both Xandeum Devnet and Mainnet, allowing you
-            to switch between networks seamlessly.
+            XAND token price tracking, governance statistics, node notifications via Email and
+            Telegram, and detailed analytics for individual node performance. The platform supports
+            both Xandeum Devnet and Mainnet, allowing you to switch between networks seamlessly.
           </p>
         </div>
 
@@ -125,6 +125,12 @@ export default function Home() {
               className="px-2.5 py-1 text-[10px] sm:text-xs bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white transition-all duration-200"
             >
               Compare Nodes
+            </Link>
+            <Link
+              href="/notifications"
+              className="px-2.5 py-1 text-[10px] sm:text-xs bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white transition-all duration-200"
+            >
+              Notifications
             </Link>
           </div>
         </nav>

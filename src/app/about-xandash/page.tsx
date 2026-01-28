@@ -56,6 +56,13 @@ const ZapIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
   </svg>
 );
 
+const BellIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </svg>
+);
+
 const UsersIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
@@ -262,6 +269,7 @@ function AboutContent() {
     { icon: UsersIcon, title: 'Manager Profiles', desc: 'View detailed manager profiles with NFT/SBT holdings, XAND balance, managed nodes, and onchain data from Helius API.' },
     { icon: ActivityIcon, title: 'Endpoint Health', desc: 'Monitor the status and uptime of key network endpoints. Test RPC methods directly and view historical uptime graphs for Mainnet and Devnet.' },
     { icon: ChartIcon, title: 'Historical Analytics', desc: 'MongoDB-powered snapshots track node performance over time. Analyze trends, uptime patterns, and credit earnings with interactive charts.' },
+    { icon: BellIcon, title: 'Node Notifications', desc: 'Get real-time alerts when your nodes go offline, come back online, or experience status changes. Dual-channel delivery via Email and Telegram.' },
   ];
 
   const operatorBenefits = [
@@ -274,6 +282,7 @@ function AboutContent() {
     { text: 'Access detailed analytics for each of your nodes', icon: DatabaseIcon },
     { text: 'Benchmark against top performers on leaderboards', icon: TrophyIcon },
     { text: 'Monitor API endpoint connectivity and latency', icon: ActivityIcon },
+    { text: 'Receive instant alerts via Email and Telegram', icon: BellIcon },
   ];
 
   const capabilities = [
@@ -296,6 +305,7 @@ function AboutContent() {
     { text: 'NFT/SBT Tracking', icon: TrophyIcon },
     { text: 'Quick Table Compare', icon: CompareIcon },
     { text: 'Manager Wallet Integration', icon: WalletIcon },
+    { text: 'Email & Telegram Alerts', icon: BellIcon },
   ];
 
   const faqItems = [
