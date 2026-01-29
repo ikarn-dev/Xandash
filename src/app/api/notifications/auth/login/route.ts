@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOrCreateUser, createLoginOTP } from '@/libs/services/user-service';
+import { getOrCreateUser, createLoginOTP, canRequestOTP } from '@/libs/services/user-service';
 import { sendOTPEmail } from '@/libs/services/email-service';
 
 /**
@@ -28,6 +28,19 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Check rate limiting
+        const rateCheck = await canRequestOTP(email, 'login');
+        if (!rateCheck.allowed) {
+            return NextResponse.json(
+                {
+                    error: `Please wait ${rateCheck.remainingSeconds} seconds before requesting a new code`,
+                    remainingSeconds: rateCheck.remainingSeconds,
+                    rateLimited: true
+                },
+                { status: 429 }
+            );
+        }
+
         // Get or create user
         try {
             await getOrCreateUser(email);
@@ -43,7 +56,20 @@ export async function POST(request: NextRequest) {
         let otp: string;
         try {
             otp = await createLoginOTP(email);
-        } catch (otpError) {
+        } catch (otpError: any) {
+            // Handle rate limit error from createLoginOTP
+            if (otpError.message?.includes('wait')) {
+                const match = otpError.message.match(/(\d+) seconds/);
+                const seconds = match ? parseInt(match[1]) : 120;
+                return NextResponse.json(
+                    {
+                        error: otpError.message,
+                        remainingSeconds: seconds,
+                        rateLimited: true
+                    },
+                    { status: 429 }
+                );
+            }
             console.error('Error creating OTP:', otpError);
             return NextResponse.json(
                 { error: 'Failed to create verification code. Please try again.' },

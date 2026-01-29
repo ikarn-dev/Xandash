@@ -131,6 +131,8 @@ export interface NotificationUser {
   email: string;           // Primary key, unique
   telegramChatId?: string; // Optional linked telegram
   telegramVerified: boolean;
+  activeSessionId?: string; // Track active session for single-device login
+  lastSessionCreatedAt?: Date; // When the active session was created
   createdAt: Date;
   lastLoginAt: Date;
 }
@@ -154,9 +156,11 @@ export interface OTPToken {
   purpose: 'login' | 'telegram';  // What the OTP is for
   telegramChatId?: string; // For telegram verification
   otpHash: string;         // Hashed OTP for security
+  salt: string;            // Salt for OTP hashing
   attempts: number;
   expiresAt: Date;
   createdAt: Date;
+  lastRequestedAt?: Date;  // For rate limiting OTP requests
 }
 
 // Network-aware collection names

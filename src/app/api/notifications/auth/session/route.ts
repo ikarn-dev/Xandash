@@ -1,20 +1,31 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/libs/services/session-service';
 import { getUserByEmail, getUserBindings } from '@/libs/services/user-service';
+import { setCSRFToken } from '@/libs/services/csrf-service';
 
 /**
  * GET /api/notifications/auth/session
  * 
  * Get current session and user data
+ * Also generates a new CSRF token for state-changing operations
  */
 export async function GET() {
     try {
         const session = await getSession();
 
+        // Generate CSRF token for all requests (authenticated or not)
+        const csrfToken = await setCSRFToken();
+
         if (!session) {
-            return NextResponse.json({
+            const response = NextResponse.json({
                 authenticated: false,
+                csrfToken,
             });
+            // Add cache-control headers to prevent caching
+            response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            response.headers.set('Pragma', 'no-cache');
+            response.headers.set('Expires', '0');
+            return response;
         }
 
         // Get user data
@@ -23,13 +34,14 @@ export async function GET() {
         if (!user) {
             return NextResponse.json({
                 authenticated: false,
+                csrfToken,
             });
         }
 
         // Get user's bound nodes
         const bindings = await getUserBindings(session.email);
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             authenticated: true,
             user: {
                 email: user.email,
@@ -46,7 +58,15 @@ export async function GET() {
                 createdAt: b.createdAt,
             })),
             expiresAt: new Date(session.exp * 1000).toISOString(),
+            csrfToken,
         });
+        
+        // Add cache-control headers to prevent caching
+        response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        response.headers.set('Pragma', 'no-cache');
+        response.headers.set('Expires', '0');
+        
+        return response;
 
     } catch (error) {
         console.error('Session check error:', error);

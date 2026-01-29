@@ -8,6 +8,39 @@ import { getDevnetNodeByIp, DevnetNodeData } from '@/libs/services/devnet-data-s
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API_BASE = 'https://api.telegram.org/bot';
 
+/**
+ * Verify Telegram webhook signature
+ * Telegram sends a X-Telegram-Bot-Api-Secret-Token header when secret_token is set
+ * Or we can verify using the raw body and HMAC-SHA256 signature
+ */
+function verifyTelegramWebhook(request: NextRequest, rawBody: string): boolean {
+    // For now, we'll use a simple check - in production, you should set a secret_token
+    // when registering the webhook and verify it here
+    // See: https://core.telegram.org/bots/api#setwebhook
+    
+    // Get the secret token from header (if configured)
+    const secretToken = request.headers.get('X-Telegram-Bot-Api-Secret-Token');
+    
+    // If TELEGRAM_WEBHOOK_SECRET is set, verify it
+    const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+    
+    if (expectedSecret) {
+        if (!secretToken || secretToken !== expectedSecret) {
+            console.error('Telegram webhook: Invalid or missing secret token');
+            return false;
+        }
+        return true;
+    }
+    
+    // If no secret is configured, log a warning but accept the request
+    // This is for backward compatibility - you SHOULD configure TELEGRAM_WEBHOOK_SECRET
+    if (process.env.NODE_ENV === 'production') {
+        console.warn('Telegram webhook: TELEGRAM_WEBHOOK_SECRET not configured. Webhook is insecure!');
+    }
+    
+    return true;
+}
+
 // Real-time node data type
 interface LiveNodeData {
     pubkey: string;
@@ -586,7 +619,16 @@ Node <code>${nodeIp}</code> is bound but no data found from API or database.
  */
 export async function POST(request: NextRequest) {
     try {
-        const update: TelegramUpdate = await request.json();
+        // Clone the request to read the body for verification
+        const clonedRequest = request.clone();
+        const rawBody = await clonedRequest.text();
+        
+        // Verify webhook signature
+        if (!verifyTelegramWebhook(request, rawBody)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        
+        const update: TelegramUpdate = JSON.parse(rawBody);
 
         // Handle message
         if (update.message?.text) {

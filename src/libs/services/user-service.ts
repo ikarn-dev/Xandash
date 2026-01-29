@@ -3,23 +3,31 @@
  */
 
 import { getCollection, COLLECTIONS, NotificationUser, NodeBinding, OTPToken } from '@/libs/db/mongodb';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, randomInt } from 'crypto';
 
 const OTP_EXPIRY_MINUTES = 10;
 const MAX_OTP_ATTEMPTS = 5;
+const OTP_COOLDOWN_MINUTES = 2; // Cooldown between OTP requests
 
 /**
- * Generate a 6-digit OTP
+ * Generate a 6-digit OTP using cryptographically secure random
  */
 export function generateOTP(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return randomInt(100000, 999999).toString();
 }
 
 /**
- * Hash OTP for secure storage
+ * Generate a random salt for OTP hashing
  */
-export function hashOTP(otp: string): string {
-    return createHash('sha256').update(otp).digest('hex');
+export function generateSalt(): string {
+    return randomBytes(16).toString('hex');
+}
+
+/**
+ * Hash OTP with salt for secure storage
+ */
+export function hashOTP(otp: string, salt: string): string {
+    return createHash('sha256').update(otp + salt).digest('hex');
 }
 
 /**
@@ -97,22 +105,63 @@ export async function unlinkTelegram(email: string): Promise<void> {
 }
 
 /**
+ * Check if user can request a new OTP (rate limiting)
+ */
+export async function canRequestOTP(
+    email: string,
+    purpose: 'login' | 'telegram'
+): Promise<{ allowed: boolean; remainingSeconds?: number }> {
+    const collection = await getCollection<OTPToken>(COLLECTIONS.OTP_TOKENS);
+
+    const existingToken = await collection.findOne({
+        email: email.toLowerCase(),
+        purpose
+    });
+
+    if (!existingToken || !existingToken.lastRequestedAt) {
+        return { allowed: true };
+    }
+
+    const cooldownMs = OTP_COOLDOWN_MINUTES * 60 * 1000;
+    const timeSinceRequest = Date.now() - existingToken.lastRequestedAt.getTime();
+
+    if (timeSinceRequest < cooldownMs) {
+        const remainingMs = cooldownMs - timeSinceRequest;
+        return {
+            allowed: false,
+            remainingSeconds: Math.ceil(remainingMs / 1000)
+        };
+    }
+
+    return { allowed: true };
+}
+
+/**
  * Create login OTP
  */
 export async function createLoginOTP(email: string): Promise<string> {
+    // Check rate limiting
+    const rateCheck = await canRequestOTP(email, 'login');
+    if (!rateCheck.allowed) {
+        throw new Error(`Please wait ${rateCheck.remainingSeconds} seconds before requesting a new code`);
+    }
+
     const collection = await getCollection<OTPToken>(COLLECTIONS.OTP_TOKENS);
 
     // Delete any existing OTPs for this email
     await collection.deleteMany({ email: email.toLowerCase(), purpose: 'login' });
 
     const otp = generateOTP();
+    const salt = generateSalt();
     const otpToken: OTPToken = {
         email: email.toLowerCase(),
         purpose: 'login',
-        otpHash: hashOTP(otp),
+        otpHash: hashOTP(otp, salt),
+        salt, // Store salt for verification
         attempts: 0,
         expiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
         createdAt: new Date(),
+        lastRequestedAt: new Date(), // Track request time for rate limiting
     };
 
     await collection.insertOne(otpToken as any);
@@ -123,20 +172,29 @@ export async function createLoginOTP(email: string): Promise<string> {
  * Create telegram verification OTP
  */
 export async function createTelegramOTP(email: string, telegramChatId: string): Promise<string> {
+    // Check rate limiting
+    const rateCheck = await canRequestOTP(email, 'telegram');
+    if (!rateCheck.allowed) {
+        throw new Error(`Please wait ${rateCheck.remainingSeconds} seconds before requesting a new code`);
+    }
+
     const collection = await getCollection<OTPToken>(COLLECTIONS.OTP_TOKENS);
 
     // Delete any existing telegram OTPs for this email
     await collection.deleteMany({ email: email.toLowerCase(), purpose: 'telegram' });
 
     const otp = generateOTP();
+    const salt = generateSalt();
     const otpToken: OTPToken = {
         email: email.toLowerCase(),
         purpose: 'telegram',
         telegramChatId,
-        otpHash: hashOTP(otp),
+        otpHash: hashOTP(otp, salt),
+        salt, // Store salt for verification
         attempts: 0,
         expiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
         createdAt: new Date(),
+        lastRequestedAt: new Date(), // Track request time for rate limiting
     };
 
     await collection.insertOne(otpToken as any);
@@ -174,8 +232,8 @@ export async function verifyOTP(
         return { success: false, error: 'Too many failed attempts. Please request a new code.' };
     }
 
-    // Verify OTP
-    if (hashOTP(otp) !== token.otpHash) {
+    // Verify OTP using stored salt
+    if (hashOTP(otp, token.salt) !== token.otpHash) {
         await collection.updateOne(
             { _id: token._id },
             { $inc: { attempts: 1 } }

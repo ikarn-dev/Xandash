@@ -10,7 +10,7 @@ import { createSession } from '@/libs/services/session-service';
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { email, otp } = body;
+        const { email, otp, forceLogin = false } = body;
 
         // Validate inputs
         if (!email || !otp) {
@@ -33,8 +33,21 @@ export async function POST(request: NextRequest) {
         // Update last login
         await updateLastLogin(email);
 
-        // Create session
-        await createSession(email);
+        // Create session (with force login flag if provided)
+        try {
+            await createSession(email, forceLogin);
+        } catch (sessionError: any) {
+            if (sessionError.message === 'ACTIVE_SESSION_EXISTS') {
+                return NextResponse.json(
+                    {
+                        error: 'You are already logged in on another device',
+                        requiresForceLogin: true
+                    },
+                    { status: 409 }
+                );
+            }
+            throw sessionError;
+        }
 
         // Get user data
         const user = await getUserByEmail(email);
