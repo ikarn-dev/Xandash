@@ -132,8 +132,8 @@ Create a `.env.local` file:
 
 ```env
 # RPC Endpoints
-RPC_ENDPOINT_PRIMARY=http://161.97.97.41:6000/rpc
-RPC_BASE_URL=http://161.97.97.41:6000
+RPC_ENDPOINT_PRIMARY=http://<pnodeip>:6000/rpc
+RPC_BASE_URL=http://<pnodeip>:6000
 
 # CoinGecko API
 NEXT_PUBLIC_COINGECKO_API_URL=https://api.coingecko.com/api/v3/coins/xandeum
