@@ -27,7 +27,6 @@ export default function NotificationsPageClient() {
 
     // Fetch session - returns session data for immediate use
     const fetchSession = useCallback(async (silent = false): Promise<SessionData | null> => {
-        console.log('[NotificationsPage] fetchSession called, silent:', silent);
         try {
             const res = await fetch('/api/notifications/auth/session', {
                 credentials: 'include',
@@ -37,7 +36,6 @@ export default function NotificationsPageClient() {
                 },
             });
             const data = await res.json();
-            console.log('[NotificationsPage] fetchSession response:', { authenticated: data.authenticated, hasCsrfToken: !!data.csrfToken });
 
             setSession(data);
             if (data.authenticated && data.bindings) {
@@ -54,7 +52,7 @@ export default function NotificationsPageClient() {
             }
             return data;
         } catch (error) {
-            console.error('[NotificationsPage] Failed to fetch session:', error);
+            console.error('Failed to fetch session:', error);
             if (!silent) {
                 toast.error('Failed to load session');
             }
@@ -106,22 +104,18 @@ export default function NotificationsPageClient() {
 
     // Handlers
     const handleLoginSuccess = async (): Promise<boolean> => {
-        console.log('[NotificationsPage] handleLoginSuccess called');
         setAuthTransitioning(true);
         
         // Longer delay to ensure cookie is properly set in browser
-        console.log('[NotificationsPage] Waiting for cookie to be set...');
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Fetch session with retry logic
-        console.log('[NotificationsPage] Fetching session after login...');
         let sessionData = await fetchSession();
         let retries = 0;
         const maxRetries = 3;
         
         // Retry if not authenticated (cookie might not be ready yet)
         while (!sessionData?.authenticated && retries < maxRetries) {
-            console.log(`[NotificationsPage] Session not authenticated, retry ${retries + 1}/${maxRetries}...`);
             await new Promise(resolve => setTimeout(resolve, 300));
             sessionData = await fetchSession();
             retries++;
@@ -130,7 +124,6 @@ export default function NotificationsPageClient() {
         setAuthTransitioning(false);
         
         const success = !!sessionData?.authenticated;
-        console.log('[NotificationsPage] Login success:', success);
         
         // Only show toast when login is successful and dashboard will be visible
         if (success) {
@@ -143,7 +136,6 @@ export default function NotificationsPageClient() {
     };
 
     const handleLogout = async () => {
-        console.log('[NotificationsPage] handleLogout called, current csrfToken:', csrfToken ? 'exists' : 'missing');
         try {
             const res = await fetch('/api/notifications/auth/logout', {
                 method: 'POST',
@@ -157,14 +149,12 @@ export default function NotificationsPageClient() {
 
             if (res.status === 403) {
                 // CSRF token invalid - refetch session to get new token and retry
-                console.warn('[NotificationsPage] CSRF token invalid, refetching session...');
                 const sessionData = await fetchSession(true);
 
                 if (!sessionData?.csrfToken) {
                     throw new Error('Failed to get new CSRF token');
                 }
 
-                console.log('[NotificationsPage] Retrying logout with new CSRF token...');
                 // Retry logout with new token from the fetched session
                 const retryRes = await fetch('/api/notifications/auth/logout', {
                     method: 'POST',
@@ -184,19 +174,16 @@ export default function NotificationsPageClient() {
             }
 
             // Clear local state immediately
-            console.log('[NotificationsPage] Clearing local state...');
             setSession({ authenticated: false });
             setNodes([]);
             setCsrfToken('');
             
             // Force a fresh session fetch to confirm logout
-            console.log('[NotificationsPage] Fetching session to confirm logout...');
             await fetchSession(true);
             
             toast.success('Logged out successfully');
-            console.log('[NotificationsPage] Logout successful');
         } catch (error) {
-            console.error('[NotificationsPage] Logout error:', error);
+            console.error('Logout error:', error);
             toast.error('Failed to logout. Try refreshing the page.');
         }
     };

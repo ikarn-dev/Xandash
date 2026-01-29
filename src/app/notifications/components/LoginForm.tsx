@@ -91,14 +91,12 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
                 toast.error('You are already logged in on another device', { duration: 5000 });
                 setAuthLoading(false);
             } else if (data.success) {
-                console.log('[LoginForm] Login successful, calling onLoginSuccess...');
                 setShowOtpInput(false);
                 setShowForceLoginPrompt(false);
                 setOtp('');
                 // IMPORTANT: Await the callback to ensure session is refetched
                 // The parent component will show the toast when dashboard is visible
                 await onLoginSuccess();
-                console.log('[LoginForm] onLoginSuccess completed');
             } else {
                 toast.error(data.error || 'Invalid verification code');
                 setAuthLoading(false);

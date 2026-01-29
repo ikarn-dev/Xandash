@@ -13,11 +13,9 @@ import { clearCSRFToken } from '@/libs/services/csrf-service';
  * 3. The session is already validated server-side
  */
 export async function POST() {
-    console.log('[Logout API] Logout request received');
     try {
         await clearSession();
         await clearCSRFToken();
-        console.log('[Logout API] Session and CSRF token cleared successfully');
 
         // Create response with cache-busting headers
         const response = NextResponse.json({
@@ -33,7 +31,7 @@ export async function POST() {
         return response;
 
     } catch (error) {
-        console.error('[Logout API] Logout error:', error);
+        console.error('Logout error:', error);
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
