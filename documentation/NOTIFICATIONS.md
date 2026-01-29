@@ -38,55 +38,8 @@ The notification system automatically monitors node status changes and sends ale
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          NOTIFICATION SYSTEM FLOW                          │
-└─────────────────────────────────────────────────────────────────────────────┘
+<img width="1184" height="3584" alt="notification_flow" src="https://github.com/user-attachments/assets/4d38635a-fc96-4d0e-9965-f8b12eb4ea31" />
 
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   GitHub     │     │  /api/sync-  │     │    Node      │     │  Dispatch    │
-│   Actions    │────▶│    nodes     │────▶│   Service    │────▶│  Notifier    │
-│  (5 min)     │     │              │     │              │     │              │
-└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
-                                                                      │
-                                                                      ▼
-                                                 ┌─────────────────────────────┐
-                                                 │      Event Detection        │
-                                                 │  • Status change            │
-                                                 │  • Version update           │
-                                                 │  • Credits zero             │
-                                                 │  • Uptime reset             │
-                                                 └─────────────────────────────┘
-                                                                      │
-                                          ┌───────────────────────────┴───────────────────────────┐
-                                          ▼                                                       ▼
-                                   ┌──────────────┐                                       ┌──────────────┐
-                                   │    Email     │                                       │  Telegram    │
-                                   │   (Resend)   │                                       │   Bot API    │
-                                   └──────────────┘                                       └──────────────┘
-                                          │                                                       │
-                                          ▼                                                       ▼
-                                   ┌──────────────┐                                       ┌──────────────┐
-                                   │    User      │                                       │    User      │
-                                   │    Inbox     │                                       │  Telegram    │
-                                   └──────────────┘                                       └──────────────┘
-
-
-                          USER REGISTRATION & BINDING FLOW
-
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│    User      │     │  Enter Email │     │  Receive OTP │     │  Dashboard   │
-│   Visits     │────▶│  Address     │────▶│  via Email   │────▶│   Access     │
-│ /notifications    │              │     │              │     │              │
-└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
-                                                                      │
-                                          ┌───────────────────────────┴───────────────────────────┐
-                                          ▼                                                       ▼
-                                   ┌──────────────┐                                       ┌──────────────┐
-                                   │  Add Node IP │                                       │    Link      │
-                                   │  to Monitor  │                                       │  Telegram    │
-                                   └──────────────┘                                       └──────────────┘
-```
 
 ### Component Overview
 
