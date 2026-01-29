@@ -88,7 +88,7 @@ These events are logged but **not** sent as notifications:
 ### Telegram
 
 - **Optional**: Users can link their Telegram
-- **Bot**: [@XandashBot](https://t.me/XandashBot)
+- **Bot**: [@XandashNotifications_bot](https://t.me/XandashNotifications_bot)
 - **Features**: Rich formatting with emojis, inline links
 - **Commands**: `/start`, `/list`, `/status`, `/help`
 
