@@ -51,8 +51,9 @@ interface NFTAsset {
 // RATE LIMIT PROTECTION: Global Request Queue & Throttling
 // ============================================================================
 
-// Minimum delay between Helius API requests (100ms = max 10 req/sec)
-const HELIUS_REQUEST_DELAY_MS = 100;
+// Minimum delay between Helius API requests (50ms = max 20 req/sec)
+// Increased throughput for manager profile page which needs multiple concurrent fetches
+const HELIUS_REQUEST_DELAY_MS = 50;
 
 // Track last request time for throttling
 let lastHeliusRequestTime = 0;
@@ -65,8 +66,9 @@ const inFlightRequests = new Map<string, Promise<ManagerAssetData | null>>();
 /**
  * Throttled fetch for Helius API - ensures minimum delay between requests
  * Uses a promise queue to strictly serialize requests even when called concurrently
+ * Exported for use in other services that need Helius API access
  */
-async function throttledHeliusFetch(url: string, options: RequestInit): Promise<Response> {
+export async function throttledHeliusFetch(url: string, options: RequestInit): Promise<Response> {
   // Chain the new request to the end of the queue
   const responsePromise = requestQueue.then(async () => {
     const now = Date.now();
@@ -97,9 +99,9 @@ const failedRequestsCache = new Map<string, { timestamp: number }>();
 
 // Extended cache TTL to 5 minutes to match user expectations for updates
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-// CRITICAL: Keep failed request TTL short (1 minute) to allow quick retries
+// CRITICAL: Keep failed request TTL short (20 seconds) to allow quick retries
 // A long TTL here was causing users to see empty data for extended periods
-const FAILED_REQUEST_TTL = 60 * 1000; // 1 minute - short enough to allow retries but prevent hammering
+const FAILED_REQUEST_TTL = 20 * 1000; // 20 seconds - short enough to allow retries but prevent hammering
 
 // ============================================================================
 // TOKEN CONFIGURATION

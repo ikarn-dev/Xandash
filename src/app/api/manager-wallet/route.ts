@@ -5,11 +5,28 @@ import {
     reportSuccess,
     isRateLimitError
 } from '@/libs/utils/api-key-manager';
+import { throttledHeliusFetch } from '@/libs/services/manager-assets-service';
 
 const HELIUS_API_URL = 'https://mainnet.helius-rpc.com';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+// Set max duration for serverless function (Vercel) - increased for manager profile page
+export const maxDuration = 35;
+
+// ============================================================================
+// CACHING: In-memory cache for manager wallet data
+// ============================================================================
+interface CacheEntry {
+    data: WalletData;
+    expires: number;
+}
+
+const walletCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 60 * 1000; // 1 minutes cache for wallet data
+
+// In-flight request deduplication
+const inFlightRequests = new Map<string, Promise<WalletData>>();
 
 interface TokenBalance {
     mint: string;
@@ -45,15 +62,19 @@ interface WalletData {
     totalUsdValue: number;
 }
 
+/**
+ * Fetch token balances using throttled Helius API calls
+ * Uses sequential page fetching to avoid rate limits
+ */
 async function getTokenBalances(walletAddress: string): Promise<TokenBalance[]> {
     const apiKey = getActiveApiKey('helius');
     if (!apiKey) return [];
 
     try {
         const allTokens: TokenBalance[] = [];
-        
-        // Fetch first page to determine if more pages exist
-        const page1Response = await fetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
+
+        // Fetch first page using throttled fetch
+        const page1Response = await throttledHeliusFetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -84,7 +105,7 @@ async function getTokenBalances(walletAddress: string): Promise<TokenBalance[]> 
 
         const data1 = await page1Response.json();
         const items1 = data1.result?.items || [];
-        
+
         // Process first page
         items1.forEach((item: any) => {
             const tokenInfo = item.token_info || {};
@@ -113,38 +134,39 @@ async function getTokenBalances(walletAddress: string): Promise<TokenBalance[]> 
             }
         });
 
-        // If first page has 100 items, fetch remaining pages concurrently
+        // If first page has 100 items, fetch remaining pages SEQUENTIALLY to avoid rate limits
         if (items1.length === 100) {
-            const remainingPages = 9; // Max 10 pages total
-            const pageRequests: Promise<any>[] = [];
-
-            for (let page = 2; page <= remainingPages + 1; page++) {
-                pageRequests.push(
-                    fetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            jsonrpc: '2.0',
-                            id: `fungible-assets-${page}`,
-                            method: 'getAssetsByOwner',
-                            params: {
-                                ownerAddress: walletAddress,
-                                page: page,
-                                limit: 100,
-                                displayOptions: {
-                                    showFungible: true,
-                                    showNativeBalance: false,
-                                }
+            for (let page = 2; page <= 10; page++) {
+                const pageResponse = await throttledHeliusFetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: `fungible-assets-${page}`,
+                        method: 'getAssetsByOwner',
+                        params: {
+                            ownerAddress: walletAddress,
+                            page: page,
+                            limit: 100,
+                            displayOptions: {
+                                showFungible: true,
+                                showNativeBalance: false,
                             }
-                        }),
-                        signal: AbortSignal.timeout(15000),
-                    }).then(r => r.json())
-                );
-            }
+                        }
+                    }),
+                    signal: AbortSignal.timeout(15000),
+                });
 
-            const results = await Promise.all(pageRequests);
-            results.forEach(result => {
-                const items = result.result?.items || [];
+                if (isRateLimitError(pageResponse)) {
+                    reportRateLimitHit('helius');
+                    break; // Stop pagination on rate limit, return what we have
+                }
+
+                if (!pageResponse.ok) break;
+
+                const pageData = await pageResponse.json();
+                const items = pageData.result?.items || [];
+
                 items.forEach((item: any) => {
                     const tokenInfo = item.token_info || {};
                     const metadata = item.content?.metadata || {};
@@ -171,7 +193,10 @@ async function getTokenBalances(walletAddress: string): Promise<TokenBalance[]> 
                         });
                     }
                 });
-            });
+
+                // Stop if this page had fewer than 100 items
+                if (items.length < 100) break;
+            }
         }
 
         return allTokens;
@@ -182,12 +207,15 @@ async function getTokenBalances(walletAddress: string): Promise<TokenBalance[]> 
     }
 }
 
+/**
+ * Fetch SOL balance using throttled Helius API call
+ */
 async function getSolBalance(walletAddress: string): Promise<number> {
     const apiKey = getActiveApiKey('helius');
     if (!apiKey) return 0;
 
     try {
-        const response = await fetch(`${HELIUS_API_URL}/?api-key=${apiKey}`, {
+        const response = await throttledHeliusFetch(`${HELIUS_API_URL}/?api-key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -216,6 +244,10 @@ async function getSolBalance(walletAddress: string): Promise<number> {
     }
 }
 
+/**
+ * Fetch NFTs using throttled Helius API calls
+ * Uses sequential page fetching to avoid rate limits
+ */
 async function getNFTs(walletAddress: string): Promise<NFTAsset[]> {
     const apiKey = getActiveApiKey('helius');
     if (!apiKey) return [];
@@ -223,8 +255,8 @@ async function getNFTs(walletAddress: string): Promise<NFTAsset[]> {
     try {
         const allNFTs: NFTAsset[] = [];
 
-        // Fetch first page to determine if more pages exist
-        const page1Response = await fetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
+        // Fetch first page using throttled fetch
+        const page1Response = await throttledHeliusFetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -265,45 +297,49 @@ async function getNFTs(walletAddress: string): Promise<NFTAsset[]> {
 
         allNFTs.push(...nfts1);
 
-        // If first page has 100 items, fetch remaining pages concurrently
+        // If first page has 100 items, fetch remaining pages SEQUENTIALLY to avoid rate limits
         if (items1.length === 100) {
-            const remainingPages = 9; // Max 10 pages total
-            const pageRequests: Promise<any>[] = [];
-
-            for (let page = 2; page <= remainingPages + 1; page++) {
-                pageRequests.push(
-                    fetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            jsonrpc: '2.0',
-                            id: `nft-assets-${page}`,
-                            method: 'getAssetsByOwner',
-                            params: {
-                                ownerAddress: walletAddress,
-                                page: page,
-                                limit: 100,
-                                displayOptions: {
-                                    showFungible: false,
-                                    showNativeBalance: false,
-                                }
+            for (let page = 2; page <= 10; page++) {
+                const pageResponse = await throttledHeliusFetch(`https://mainnet.helius-rpc.com/?api-key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: `nft-assets-${page}`,
+                        method: 'getAssetsByOwner',
+                        params: {
+                            ownerAddress: walletAddress,
+                            page: page,
+                            limit: 100,
+                            displayOptions: {
+                                showFungible: false,
+                                showNativeBalance: false,
                             }
-                        }),
-                        signal: AbortSignal.timeout(15000),
-                    }).then(r => r.json())
-                );
-            }
+                        }
+                    }),
+                    signal: AbortSignal.timeout(15000),
+                });
 
-            const results = await Promise.all(pageRequests);
-            results.forEach(result => {
-                const items = result.result?.items || [];
+                if (isRateLimitError(pageResponse)) {
+                    reportRateLimitHit('helius');
+                    break; // Stop pagination on rate limit, return what we have
+                }
+
+                if (!pageResponse.ok) break;
+
+                const pageData = await pageResponse.json();
+                const items = pageData.result?.items || [];
+
                 const nfts = items.filter((item: any) =>
                     item.interface === 'V1_NFT' ||
                     item.interface === 'ProgrammableNFT' ||
                     item.interface === 'Custom'
                 );
                 allNFTs.push(...nfts);
-            });
+
+                // Stop if this page had fewer than 100 items
+                if (items.length < 100) break;
+            }
         }
 
         return allNFTs;
@@ -311,6 +347,68 @@ async function getNFTs(walletAddress: string): Promise<NFTAsset[]> {
         console.error('Error fetching NFTs:', error);
         return [];
     }
+}
+
+/**
+ * Core wallet data fetching with proper sequencing
+ * Fetches data in sequence: SOL balance first, then tokens, then NFTs
+ * This prevents overwhelming the Helius API with concurrent requests
+ */
+async function fetchWalletData(walletAddress: string): Promise<WalletData> {
+    // Fetch in sequence to avoid rate limits
+    // SOL balance is fast, tokens and NFTs can have pagination
+    const solBalance = await getSolBalance(walletAddress);
+    const tokens = await getTokenBalances(walletAddress);
+    const nfts = await getNFTs(walletAddress);
+
+    return {
+        solBalance,
+        tokens,
+        nfts,
+        totalUsdValue: 0, // Would need price API for accurate USD values
+    };
+}
+
+/**
+ * Get wallet data with caching and in-flight request deduplication
+ */
+async function getWalletData(walletAddress: string): Promise<WalletData> {
+    const now = Date.now();
+
+    // Check cache first
+    const cached = walletCache.get(walletAddress);
+    if (cached && cached.expires > now) {
+        return cached.data;
+    }
+
+    // Check for in-flight request (deduplication)
+    const inFlight = inFlightRequests.get(walletAddress);
+    if (inFlight) {
+        return inFlight;
+    }
+
+    // Create new request
+    const fetchPromise = (async (): Promise<WalletData> => {
+        try {
+            const data = await fetchWalletData(walletAddress);
+
+            // Cache the result
+            walletCache.set(walletAddress, {
+                data,
+                expires: Date.now() + CACHE_TTL
+            });
+
+            return data;
+        } finally {
+            // Clean up in-flight request
+            inFlightRequests.delete(walletAddress);
+        }
+    })();
+
+    // Store in-flight request
+    inFlightRequests.set(walletAddress, fetchPromise);
+
+    return fetchPromise;
 }
 
 export async function GET(request: NextRequest) {
@@ -333,19 +431,8 @@ export async function GET(request: NextRequest) {
             }, { status: 200 });
         }
 
-        // Fetch all data in parallel
-        const [solBalance, tokens, nfts] = await Promise.all([
-            getSolBalance(walletAddress),
-            getTokenBalances(walletAddress),
-            getNFTs(walletAddress),
-        ]);
-
-        const walletData: WalletData = {
-            solBalance,
-            tokens,
-            nfts,
-            totalUsdValue: 0, // Would need price API for accurate USD values
-        };
+        // Use the cached/deduplicated wallet data fetcher
+        const walletData = await getWalletData(walletAddress);
 
         const response = NextResponse.json(walletData);
         response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
