@@ -330,3 +330,41 @@ export function getHeliusRpcUrl(): string {
     }
     return `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
 }
+
+/**
+ * Get Helius RPC URL with a specific key index (for parallel requests)
+ * This allows making parallel requests using different API keys
+ */
+export function getHeliusRpcUrlByIndex(index: number): string {
+    const config = getHeliusKeys();
+    const allKeys = getAllKeys(config);
+
+    if (allKeys.length === 0) {
+        console.warn('[ApiKeyManager] No Helius API keys available');
+        return 'https://mainnet.helius-rpc.com';
+    }
+
+    // Use modulo to wrap around if index exceeds available keys
+    const keyIndex = index % allKeys.length;
+    const apiKey = allKeys[keyIndex];
+
+    return `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
+}
+
+/**
+ * Get the total number of available Helius API keys
+ */
+export function getHeliusKeyCount(): number {
+    const config = getHeliusKeys();
+    return getAllKeys(config).length;
+}
+
+/**
+ * Get all Helius RPC URLs for parallel request distribution
+ */
+export function getAllHeliusRpcUrls(): string[] {
+    const config = getHeliusKeys();
+    const allKeys = getAllKeys(config);
+
+    return allKeys.map(key => `https://mainnet.helius-rpc.com/?api-key=${key}`);
+}

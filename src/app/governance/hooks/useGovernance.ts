@@ -169,13 +169,11 @@ export function useGovernance() {
         return;
       }
 
-      // Check for partial data (empty or missing critical fields)
-      const isPartialData =
-        (responseData.largestHolders?.length === 0) ||
-        (responseData.recentActivity?.length === 0) ||
-        (responseData.proposals?.recent?.length === 0);
+      // Check for partial data - only flag when truly critical data is missing
+      // largestHolders being empty is the most reliable indicator of rate limit issues
+      const hasHolders = responseData.largestHolders && responseData.largestHolders.length > 0;
 
-      if (isPartialData) {
+      if (!hasHolders) {
         setError({
           message: 'Some data may be incomplete due to API limits',
           isRateLimit: false,

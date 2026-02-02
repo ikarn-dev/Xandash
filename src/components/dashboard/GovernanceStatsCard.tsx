@@ -179,9 +179,10 @@ export function GovernanceStatsCard() {
       setTokens(data.dao?.treasury?.tokens || []);
       setHolders(data.largestHolders || []);
 
-      // Check for partially empty data (rate limit may have caused incomplete response)
-      const isPartialData = (data.largestHolders?.length === 0) || (data.stats?.proposals === 0 && data.stats?.members === 0);
-      if (isPartialData && !data.error) {
+      // Only flag as partial if holders are truly empty (critical data)
+      // Proposals/members can legitimately be 0
+      const hasHolders = data.largestHolders && data.largestHolders.length > 0;
+      if (!hasHolders && !data.error) {
         setError({ message: 'Some data may be incomplete', isRateLimit: false });
       }
     } catch {

@@ -71,12 +71,14 @@ export function ProposalsTab({ data }: { data: GovernanceData }) {
           className={`px-3 py-1.5 rounded border text-xs ${!selectedState ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'}`}>
           All: {data.proposals.total}
         </button>
-        {Object.entries(data.proposals.byState).map(([state, count]) => (
-          <button key={state} onClick={() => setSelectedState(selectedState === state ? null : state)}
-            className={`px-3 py-1.5 rounded border text-xs ${selectedState === state ? getStateColor(state) : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'}`}>
-            {state}: {count}
-          </button>
-        ))}
+        {Object.entries(data.proposals.byState)
+          .filter(([state]) => state !== 'Completed') // Hide Completed filter
+          .map(([state, count]) => (
+            <button key={state} onClick={() => setSelectedState(selectedState === state ? null : state)}
+              className={`px-3 py-1.5 rounded border text-xs ${selectedState === state ? getStateColor(state) : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'}`}>
+              {state}: {count}
+            </button>
+          ))}
       </div>
 
       {/* Proposals List */}
