@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { CornerAccents } from '@/components/ui';
+import { ApiErrorFeedback } from '@/components/ui/ApiErrorFeedback';
 import { useGovernance } from './hooks/useGovernance';
 import { formatNumber, formatUsd, getRealmsUrl } from './utils/helpers';
 import { UsersIcon, DocumentIcon, TreasuryIcon, GovernanceIcon, RefreshIcon, ExternalLinkIcon, StatCard, TabNavigation, TabType } from './components';
@@ -14,7 +15,7 @@ const MemoizedMembersTab = React.memo(MembersTab);
 const MemoizedDAOInfoTab = React.memo(DAOInfoTab);
 
 export function GovernanceClient() {
-  const { data, loading, refreshing, cooldown, refresh } = useGovernance();
+  const { data, loading, refreshing, cooldown, error, refresh, retry } = useGovernance();
   const [activeTab, setActiveTab] = useState<TabType>('proposals');
 
   // Memoize expensive calculations
@@ -31,10 +32,40 @@ export function GovernanceClient() {
     return <LoadingSkeleton />;
   }
 
+  // Show error card if no data loaded at all
+  if (!memoizedData && error) {
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <div className="relative bg-black border border-white/10 p-3 sm:p-4 md:p-6">
+          <CornerAccents />
+          <ApiErrorFeedback
+            error={error.message}
+            isRateLimit={error.isRateLimit}
+            onRetry={retry}
+            variant="card"
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (!memoizedData) return null;
+
+  // Check if we have partial data
+  const hasPartialData = error?.isPartialData || false;
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Error Banner (shown when rate limited but have some data) */}
+      {error && error.isRateLimit && memoizedData && (
+        <ApiErrorFeedback
+          error={error.message}
+          isRateLimit={true}
+          onRetry={retry}
+          variant="banner"
+        />
+      )}
+
       {/* Header */}
       <div className="relative bg-black border border-white/10 p-3 sm:p-4 md:p-6 group hover:border-white/20 transition-all">
         <CornerAccents />
@@ -44,25 +75,36 @@ export function GovernanceClient() {
               <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/90 font-mono truncate">
                 // <span className="text-white">{memoizedData.dao.name.toUpperCase()}</span>
               </h1>
-              <div className="flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-[8px] sm:text-[10px] font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
-                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-400"></div>
-                <span>Live</span>
-              </div>
+              {hasPartialData ? (
+                <div className="flex items-center space-x-1 px-1.5 py-0.5 text-[8px] sm:text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
+                  <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  <span>Partial Data</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-[8px] sm:text-[10px] font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                  <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-400"></div>
+                  <span>Live</span>
+                </div>
+              )}
             </div>
             <p className="text-white/50 text-[10px] sm:text-xs md:text-sm mt-1 truncate">{memoizedData.dao.description}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <a 
-              href={getRealmsUrl(memoizedData.dao.address)} 
-              target="_blank" 
+            <a
+              href={getRealmsUrl(memoizedData.dao.address)}
+              target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded text-emerald-400 text-xs sm:text-sm transition-colors"
             >
               <span>Realms</span>
               <ExternalLinkIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
             </a>
-            <button 
-              onClick={refresh} 
+            <button
+              onClick={refresh}
               disabled={refreshing || cooldown > 0}
               className="flex items-center gap-1.5 p-1.5 sm:p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-white/70 transition-colors disabled:opacity-50"
               title={cooldown > 0 ? `Wait ${cooldown}s` : 'Refresh data'}
@@ -107,8 +149,8 @@ export function GovernanceClient() {
       {/* Tab Content */}
       <div className="relative bg-black border border-white/10 overflow-hidden">
         <CornerAccents />
-        <TabNavigation 
-          activeTab={activeTab} 
+        <TabNavigation
+          activeTab={activeTab}
           setActiveTab={setActiveTab}
           proposalsCount={memoizedData.proposals.total}
           membersCount={memoizedData.members.total}

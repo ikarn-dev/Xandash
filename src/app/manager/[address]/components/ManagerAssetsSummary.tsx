@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { CornerAccents } from '@/components/ui';
 
 interface ManagerAssetData {
@@ -20,58 +20,81 @@ interface ManagerAssetsSummaryProps {
   managerAddress: string;
 }
 
+interface FetchError {
+  message: string;
+  isRateLimit: boolean;
+}
+
 export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ managerAddress }) => {
   const [assets, setAssets] = useState<ManagerAssetData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FetchError | null>(null);
 
   // Track in-flight request to prevent duplicates (React StrictMode, re-renders)
   const fetchingRef = React.useRef<string | null>(null);
   const mountedRef = React.useRef(true);
 
-  useEffect(() => {
-    mountedRef.current = true;
+  const fetchAssets = useCallback(async () => {
+    // Deduplicate: skip if already fetching this address
+    if (fetchingRef.current === managerAddress) {
+      return;
+    }
 
-    const fetchAssets = async () => {
-      // Deduplicate: skip if already fetching this address
-      if (fetchingRef.current === managerAddress) {
+    fetchingRef.current = managerAddress;
+    setError(null);
+
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/manager-assets?address=${managerAddress}`);
+
+      if (!response.ok) {
+        // Check for rate limit
+        if (response.status === 429) {
+          throw new Error('RATE_LIMIT');
+        }
+        throw new Error('Failed to fetch assets');
+      }
+
+      const data = await response.json();
+
+      // Check for error in response
+      if (data.error) {
+        const isRateLimit = data.error.toLowerCase().includes('rate') || data.error.toLowerCase().includes('limit');
+        if (mountedRef.current && fetchingRef.current === managerAddress) {
+          setError({ message: data.error, isRateLimit });
+        }
         return;
       }
 
-      fetchingRef.current = managerAddress;
-
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/manager-assets?address=${managerAddress}`);
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch assets');
-        }
-
-        const data = await response.json();
-
-        // Only update state if still mounted and still fetching same address
-        if (mountedRef.current && fetchingRef.current === managerAddress) {
-          setAssets(data);
-        }
-      } catch (err) {
-        if (mountedRef.current && fetchingRef.current === managerAddress) {
-          setError(err instanceof Error ? err.message : 'Failed to load assets');
-        }
-      } finally {
-        if (mountedRef.current && fetchingRef.current === managerAddress) {
-          setLoading(false);
-          fetchingRef.current = null;
-        }
+      // Only update state if still mounted and still fetching same address
+      if (mountedRef.current && fetchingRef.current === managerAddress) {
+        setAssets(data);
       }
-    };
+    } catch (err) {
+      if (mountedRef.current && fetchingRef.current === managerAddress) {
+        const message = err instanceof Error ? err.message : 'Failed to load assets';
+        const isRateLimit = message === 'RATE_LIMIT' || message.toLowerCase().includes('rate');
+        setError({
+          message: isRateLimit ? 'Rate limit reached' : message,
+          isRateLimit
+        });
+      }
+    } finally {
+      if (mountedRef.current && fetchingRef.current === managerAddress) {
+        setLoading(false);
+        fetchingRef.current = null;
+      }
+    }
+  }, [managerAddress]);
 
+  useEffect(() => {
+    mountedRef.current = true;
     fetchAssets();
 
     return () => {
       mountedRef.current = false;
     };
-  }, [managerAddress]);
+  }, [fetchAssets]);
 
   if (loading) {
     return (
@@ -88,72 +111,98 @@ export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ mana
   }
 
   if (error || !assets) {
-    // Show cards with zero values instead of hiding completely
+    // Show cards with zero values and error message
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-        {/* XAND Balance */}
-        <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4">
-          <CornerAccents />
-          <div className="flex items-center gap-2 text-purple-400/70 text-[10px] sm:text-xs mb-2">
-            <img
-              src="/logo/XandToken.png"
-              alt="XAND"
-              className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-            <span>XAND Balance</span>
+      <div className="space-y-3">
+        {/* Error Message */}
+        {error && (
+          <div className="flex items-center justify-between gap-3 px-3 py-2 bg-amber-500/5 border border-amber-500/10">
+            <div className="flex items-center gap-2 text-amber-400/80 text-[10px] sm:text-xs">
+              <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              <span>{error.isRateLimit ? 'Rate limited - showing default values' : error.message}</span>
+            </div>
+            <button
+              onClick={() => fetchAssets()}
+              className="flex items-center gap-1 px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 text-[10px] transition-colors cursor-pointer"
+            >
+              <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
+              <span>Retry</span>
+            </button>
           </div>
-          <div className="text-lg sm:text-xl lg:text-2xl font-bold text-purple-400 font-mono">
-            0
-          </div>
-          <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
-            Xandeum Token
-          </div>
-        </div>
+        )}
 
-        {/* XENO Balance */}
-        <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4">
-          <CornerAccents />
-          <div className="flex items-center gap-2 text-cyan-400/70 text-[10px] sm:text-xs mb-2">
-            <img
-              src="/logo/XandToken.png"
-              alt="XENO"
-              className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-            <span>XENO Balance</span>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+          {/* XAND Balance */}
+          <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4">
+            <CornerAccents />
+            <div className="flex items-center gap-2 text-purple-400/70 text-[10px] sm:text-xs mb-2">
+              <img
+                src="/logo/XandToken.png"
+                alt="XAND"
+                className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              <span>XAND Balance</span>
+            </div>
+            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-purple-400/50 font-mono">
+              --
+            </div>
+            <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
+              Xandeum Token
+            </div>
           </div>
-          <div className="text-lg sm:text-xl lg:text-2xl font-bold text-cyan-400 font-mono">
-            0
-          </div>
-          <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
-            XENO Token
-          </div>
-        </div>
 
-        {/* NFT Summary */}
-        <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4 col-span-2 sm:col-span-1">
-          <CornerAccents />
-          <div className="flex items-center gap-2 text-orange-400/70 text-[10px] sm:text-xs mb-2">
-            <img
-              src="/logo/XandToken.png"
-              alt="NFTs"
-              className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-            <span>NFTs</span>
+          {/* XENO Balance */}
+          <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4">
+            <CornerAccents />
+            <div className="flex items-center gap-2 text-cyan-400/70 text-[10px] sm:text-xs mb-2">
+              <img
+                src="/logo/XandToken.png"
+                alt="XENO"
+                className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              <span>XENO Balance</span>
+            </div>
+            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-cyan-400/50 font-mono">
+              --
+            </div>
+            <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
+              XENO Token
+            </div>
           </div>
-          <div className="text-lg sm:text-xl lg:text-2xl font-bold text-orange-400 font-mono">
-            0
-          </div>
-          <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
-            Xandeum NFTs
+
+          {/* NFT Summary */}
+          <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4 col-span-2 sm:col-span-1">
+            <CornerAccents />
+            <div className="flex items-center gap-2 text-orange-400/70 text-[10px] sm:text-xs mb-2">
+              <img
+                src="/logo/XandToken.png"
+                alt="NFTs"
+                className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              <span>NFTs</span>
+            </div>
+            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-orange-400/50 font-mono">
+              --
+            </div>
+            <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
+              Xandeum NFTs
+            </div>
           </div>
         </div>
       </div>

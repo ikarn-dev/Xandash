@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { CornerAccents } from '@/components/ui';
+import { PartialDataWarning } from '@/components/ui/ApiErrorFeedback';
 import Link from 'next/link';
 
 interface GovernanceStats {
@@ -20,6 +21,11 @@ interface TreasuryToken {
 interface XandHolder {
   address: string;
   amount: number;
+}
+
+interface FetchError {
+  message: string;
+  isRateLimit: boolean;
 }
 
 const formatUsd = (value: number) => {
@@ -91,6 +97,7 @@ export function GovernanceStatsCard() {
   const [refreshing, setRefreshing] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [lastRefresh, setLastRefresh] = useState(0);
+  const [error, setError] = useState<FetchError | null>(null);
 
   const REFRESH_COOLDOWN = 30; // 30 seconds cooldown
   const STORAGE_KEY = 'governance-stats-last-refresh';
@@ -140,19 +147,45 @@ export function GovernanceStatsCard() {
       }
     }
 
+    // Clear previous error
+    setError(null);
+
     try {
       const response = await fetch('/api/governance', { cache: 'no-store' });
-      if (!response.ok) throw new Error('Failed to fetch');
+
+      if (!response.ok) {
+        // Check for rate limit
+        if (response.status === 429) {
+          setError({ message: 'Rate limit reached', isRateLimit: true });
+          return;
+        }
+        throw new Error('Failed to fetch');
+      }
+
       const data = await response.json();
+
+      // Check for error in response
+      if (data.error) {
+        const isRateLimit = data.error.toLowerCase().includes('rate') || data.error.toLowerCase().includes('limit');
+        setError({ message: data.error, isRateLimit });
+        return;
+      }
+
       setStats({
-        proposals: data.stats.proposals,
-        members: data.stats.members,
-        treasuryValueUsd: data.stats.treasuryValueUsd,
+        proposals: data.stats?.proposals || 0,
+        members: data.stats?.members || 0,
+        treasuryValueUsd: data.stats?.treasuryValueUsd || 0,
       });
       setTokens(data.dao?.treasury?.tokens || []);
       setHolders(data.largestHolders || []);
+
+      // Check for partially empty data (rate limit may have caused incomplete response)
+      const isPartialData = (data.largestHolders?.length === 0) || (data.stats?.proposals === 0 && data.stats?.members === 0);
+      if (isPartialData && !data.error) {
+        setError({ message: 'Some data may be incomplete', isRateLimit: false });
+      }
     } catch {
-      // Silent error
+      setError({ message: 'Failed to load data', isRateLimit: false });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -171,6 +204,7 @@ export function GovernanceStatsCard() {
 
   const topFive = holders.slice(0, 5);
   const maxAmount = topFive[0]?.amount || 1;
+  const hasPartialData = error && !error.isRateLimit;
 
   return (
     <div className="relative bg-black border border-white/10 p-3 sm:p-4 md:p-6 group hover:border-white/20 transition-all">
@@ -180,10 +214,21 @@ export function GovernanceStatsCard() {
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <div className="flex items-center gap-2">
           <h3 className="text-white/90 text-sm sm:text-base font-medium font-mono">// GOVERNANCE</h3>
-          <div className="flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-[8px] sm:text-[10px] font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-            <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-400"></div>
-            <span>Live</span>
-          </div>
+          {hasPartialData ? (
+            <div className="flex items-center space-x-1 px-1.5 py-0.5 text-[8px] sm:text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              <span>Partial</span>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-[8px] sm:text-[10px] font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-400"></div>
+              <span>Live</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button

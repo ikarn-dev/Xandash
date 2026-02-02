@@ -536,12 +536,10 @@ export async function getManagerAssets(managerAddress: string): Promise<ManagerA
 }
 
 /**
- * Get manager assets for multiple addresses (batch processing)
+ * Get manager assets for multiple addresses (sequential processing)
  * 
- * RATE LIMIT OPTIMIZATIONS:
- * - Reduced batch size from 5 to 2 concurrent requests
- * - Increased inter-batch delay from 100ms to 500ms
- * - Combined with in-flight deduplication, this dramatically reduces API pressure
+ * Processes addresses one at a time to avoid rate limiting.
+ * Each call to getManagerAssets uses throttled requests internally.
  */
 export async function getBatchManagerAssets(managerAddresses: string[]): Promise<Map<string, ManagerAssetData>> {
   const results = new Map<string, ManagerAssetData>();
@@ -549,24 +547,15 @@ export async function getBatchManagerAssets(managerAddresses: string[]): Promise
   // Deduplicate addresses before processing
   const uniqueAddresses = Array.from(new Set(managerAddresses));
 
-  // Process 5 addresses concurrently to improve throughput
-  const batchSize = 5;
-
-  for (let i = 0; i < uniqueAddresses.length; i += batchSize) {
-    const batch = uniqueAddresses.slice(i, i + batchSize);
-
-    const batchPromises = batch.map(async (address) => {
+  // Process addresses sequentially to avoid rate limiting
+  for (const address of uniqueAddresses) {
+    try {
       const data = await getManagerAssets(address);
       if (data) {
         results.set(address, data);
       }
-    });
-
-    await Promise.all(batchPromises);
-
-    // Standard delay between batches to allow queue to drain
-    if (i + batchSize < uniqueAddresses.length) {
-      await new Promise(resolve => setTimeout(resolve, 250));
+    } catch (error) {
+      console.error(`[Manager Assets] Error fetching assets for ${address}:`, error);
     }
   }
 

@@ -75,12 +75,19 @@ export interface GovernanceData {
   fetchedAt: number;
 }
 
+export interface GovernanceError {
+  message: string;
+  isRateLimit: boolean;
+  isPartialData: boolean;
+}
+
 export function useGovernance() {
   const [data, setData] = useState<GovernanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(0);
   const [cooldown, setCooldown] = useState(0);
+  const [error, setError] = useState<GovernanceError | null>(null);
 
   const REFRESH_COOLDOWN = 30; // 30 seconds cooldown
   const STORAGE_KEY = 'governance-last-refresh';
@@ -93,7 +100,7 @@ export function useGovernance() {
         const storedTime = parseInt(stored);
         const now = Date.now();
         const timeSinceRefresh = (now - storedTime) / 1000;
-        
+
         if (timeSinceRefresh < REFRESH_COOLDOWN) {
           setLastRefresh(storedTime);
           setCooldown(Math.ceil(REFRESH_COOLDOWN - timeSinceRefresh));
@@ -115,17 +122,17 @@ export function useGovernance() {
     if (isRefresh) {
       const now = Date.now();
       const timeSinceLastRefresh = (now - lastRefresh) / 1000;
-      
+
       if (timeSinceLastRefresh < REFRESH_COOLDOWN) {
         const remaining = Math.ceil(REFRESH_COOLDOWN - timeSinceLastRefresh);
         toast.error(`Please wait ${remaining}s before refreshing again`);
         return;
       }
-      
+
       setRefreshing(true);
       setLastRefresh(now);
       setCooldown(REFRESH_COOLDOWN);
-      
+
       // Persist to localStorage
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_KEY, now.toString());
@@ -134,13 +141,61 @@ export function useGovernance() {
       setLoading(true);
     }
 
+    // Clear previous error
+    setError(null);
+
     try {
       const response = await fetch('/api/governance', { cache: 'no-store' });
-      if (!response.ok) throw new Error('Failed to fetch');
-      setData(await response.json());
+
+      if (!response.ok) {
+        // Check for rate limit response
+        if (response.status === 429) {
+          throw new Error('RATE_LIMIT');
+        }
+        throw new Error('Failed to fetch');
+      }
+
+      const responseData = await response.json();
+
+      // Check for error in response body
+      if (responseData.error) {
+        const isRateLimit = responseData.error.includes('rate') || responseData.error.includes('limit');
+        setError({
+          message: responseData.error,
+          isRateLimit,
+          isPartialData: false,
+        });
+        toast.error(isRateLimit ? 'Rate limit reached' : 'Failed to load governance data');
+        return;
+      }
+
+      // Check for partial data (empty or missing critical fields)
+      const isPartialData =
+        (responseData.largestHolders?.length === 0) ||
+        (responseData.recentActivity?.length === 0) ||
+        (responseData.proposals?.recent?.length === 0);
+
+      if (isPartialData) {
+        setError({
+          message: 'Some data may be incomplete due to API limits',
+          isRateLimit: false,
+          isPartialData: true,
+        });
+      }
+
+      setData(responseData);
       if (isRefresh) toast.success('Governance data refreshed');
-    } catch {
-      toast.error('Failed to load governance data');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const isRateLimit = errorMessage === 'RATE_LIMIT' || errorMessage.toLowerCase().includes('rate');
+
+      setError({
+        message: isRateLimit ? 'Rate limit reached. Please try again later.' : 'Failed to load governance data',
+        isRateLimit,
+        isPartialData: false,
+      });
+
+      toast.error(isRateLimit ? 'Rate limit reached' : 'Failed to load governance data');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -149,5 +204,13 @@ export function useGovernance() {
 
   useEffect(() => { fetchData(); }, []);
 
-  return { data, loading, refreshing, cooldown, refresh: () => fetchData(true) };
+  return {
+    data,
+    loading,
+    refreshing,
+    cooldown,
+    error,
+    refresh: () => fetchData(true),
+    retry: () => fetchData(false),
+  };
 }
