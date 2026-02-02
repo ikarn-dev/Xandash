@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { WalletIcon, ExternalLinkIcon } from './ManagerProfileIcons';
 import { CornerAccents } from '@/components/ui';
 
@@ -78,23 +78,49 @@ export const ManagerWalletAssets = ({ walletAddress }: ManagerWalletAssetsProps)
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Track in-flight request to prevent duplicates (React StrictMode, re-renders)
+    const fetchingRef = useRef<string | null>(null);
+    const mountedRef = useRef(true);
+
 
     useEffect(() => {
+        mountedRef.current = true;
+
         const fetchWalletData = async () => {
+            // Deduplicate: skip if already fetching this address
+            if (fetchingRef.current === walletAddress) {
+                return;
+            }
+
+            fetchingRef.current = walletAddress;
+
             try {
                 setLoading(true);
                 const response = await fetch(`/api/manager-wallet?address=${walletAddress}`);
                 if (!response.ok) throw new Error('Failed to fetch wallet data');
                 const data = await response.json();
-                setWalletData(data);
+
+                // Only update state if still mounted and still fetching same address
+                if (mountedRef.current && fetchingRef.current === walletAddress) {
+                    setWalletData(data);
+                }
             } catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to load wallet data');
+                if (mountedRef.current && fetchingRef.current === walletAddress) {
+                    setError(err instanceof Error ? err.message : 'Failed to load wallet data');
+                }
             } finally {
-                setLoading(false);
+                if (mountedRef.current && fetchingRef.current === walletAddress) {
+                    setLoading(false);
+                    fetchingRef.current = null;
+                }
             }
         };
 
         fetchWalletData();
+
+        return () => {
+            mountedRef.current = false;
+        };
     }, [walletAddress]);
 
     if (loading) {

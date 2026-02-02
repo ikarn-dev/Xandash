@@ -20,12 +20,12 @@ interface UseManagerAssetsReturn {
   fetchManagerAssets: (managerAddresses: string[]) => Promise<void>;
 }
 
-// Request timeout in milliseconds - must be less than browser default (30s)
-const REQUEST_TIMEOUT_MS = 12000;
-// Maximum retry attempts - reduced to prevent long waits
-const MAX_RETRIES = 1;
+// Request timeout in milliseconds - aligned with server-side timeout (14s) plus buffer
+const REQUEST_TIMEOUT_MS = 16000;
+// Maximum retry attempts - allow 2 retries for transient failures
+const MAX_RETRIES = 2;
 // Base delay for exponential backoff (ms)
-const BASE_RETRY_DELAY_MS = 500;
+const BASE_RETRY_DELAY_MS = 300;
 
 /**
  * Hook to fetch and cache manager assets data
@@ -42,14 +42,15 @@ export function useManagerAssets(): UseManagerAssetsReturn {
   const fetchManagerAssets = useCallback(async (managerAddresses: string[]) => {
     if (managerAddresses.length === 0) return;
 
-    // Filter out addresses we already have recent data for (less than 5 minutes old)
+    // Filter out addresses we already have recent data for (less than 2 minutes old for faster refresh)
     const now = Date.now();
     const addressesToFetch = managerAddresses.filter(address => {
       // Skip if already fetching this address
       if (inFlightRef.current.has(address)) return false;
 
       const existing = managerAssets.get(address);
-      return !existing || (now - existing.last_updated) > 5 * 60 * 1000; // 5 minutes
+      // Reduce cache time to 2 minutes for more responsive updates
+      return !existing || (now - existing.last_updated) > 2 * 60 * 1000; // 2 minutes
     });
 
     if (addressesToFetch.length === 0) return;

@@ -7,10 +7,14 @@ export const revalidate = 0;
 export const maxDuration = 15;
 
 // Timeout wrapper to ensure we respond before browser times out
-const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T | null> => {
+// Returns the result or null if timeout - allows graceful degradation
+const withTimeout = <T>(promise: Promise<T>, timeoutMs: number, context?: string): Promise<T | null> => {
   return Promise.race([
     promise,
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs))
+    new Promise<null>((resolve) => setTimeout(() => {
+      if (context) console.warn(`[Manager Assets API] Timeout reached for ${context}`);
+      resolve(null);
+    }, timeoutMs))
   ]);
 };
 
@@ -35,8 +39,8 @@ export async function GET(request: NextRequest) {
     const addresses = searchParams.get('addresses');
 
     if (address) {
-      // Single manager lookup with 8s timeout
-      const assets = await withTimeout(getManagerAssets(address), 8000);
+      // Single manager lookup with 12s timeout (leaves headroom for 15s function limit)
+      const assets = await withTimeout(getManagerAssets(address), 12000, `single:${address.slice(0, 8)}`);
 
       return NextResponse.json(assets || createEmptyResponse(address), {
         headers: {
@@ -52,7 +56,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ managers: {}, count: 0, cached: 0 }, { status: 200 });
       }
 
-      const assetsMap = await withTimeout(getBatchManagerAssets(addressList), 10000);
+      const assetsMap = await withTimeout(getBatchManagerAssets(addressList), 14000, `batch:${addressList.length}`);
 
       // Convert Map to object for JSON response
       const result: { [address: string]: any } = {};
@@ -75,8 +79,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ managers: {}, count: 0, cached: 0 }, { status: 200 });
     }
 
-  } catch {
-    // Silent error - return empty response
+  } catch (err) {
+    // Log error for debugging but return empty response for graceful degradation
+    console.error('[Manager Assets API] GET error:', err instanceof Error ? err.message : 'Unknown error');
     return NextResponse.json({ managers: {}, count: 0, cached: 0 }, { status: 200 });
   }
 }
@@ -105,8 +110,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ managers: {}, count: 0, cached: 0 }, { status: 200 });
     }
 
-    // Use 10s timeout to ensure we respond before browser times out
-    const assetsMap = await withTimeout(getBatchManagerAssets(validAddresses), 10000);
+    // Use 14s timeout to ensure we respond before Vercel's 15s limit
+    const assetsMap = await withTimeout(getBatchManagerAssets(validAddresses), 14000, `post-batch:${validAddresses.length}`);
 
     // Convert Map to object for JSON response
     const result: { [address: string]: any } = {};
@@ -126,8 +131,9 @@ export async function POST(request: NextRequest) {
       }
     });
 
-  } catch {
-    // Silent error - return empty response instead of 500
+  } catch (err) {
+    // Log error for debugging but return empty response for graceful degradation
+    console.error('[Manager Assets API] POST error:', err instanceof Error ? err.message : 'Unknown error');
     return NextResponse.json({ managers: {}, count: 0, cached: 0 }, { status: 200 });
   }
 }

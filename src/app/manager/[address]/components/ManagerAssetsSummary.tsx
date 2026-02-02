@@ -25,26 +25,52 @@ export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ mana
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Track in-flight request to prevent duplicates (React StrictMode, re-renders)
+  const fetchingRef = React.useRef<string | null>(null);
+  const mountedRef = React.useRef(true);
+
   useEffect(() => {
+    mountedRef.current = true;
+
     const fetchAssets = async () => {
+      // Deduplicate: skip if already fetching this address
+      if (fetchingRef.current === managerAddress) {
+        return;
+      }
+
+      fetchingRef.current = managerAddress;
+
       try {
         setLoading(true);
         const response = await fetch(`/api/manager-assets?address=${managerAddress}`);
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch assets');
         }
-        
+
         const data = await response.json();
-        setAssets(data);
+
+        // Only update state if still mounted and still fetching same address
+        if (mountedRef.current && fetchingRef.current === managerAddress) {
+          setAssets(data);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load assets');
+        if (mountedRef.current && fetchingRef.current === managerAddress) {
+          setError(err instanceof Error ? err.message : 'Failed to load assets');
+        }
       } finally {
-        setLoading(false);
+        if (mountedRef.current && fetchingRef.current === managerAddress) {
+          setLoading(false);
+          fetchingRef.current = null;
+        }
       }
     };
 
     fetchAssets();
+
+    return () => {
+      mountedRef.current = false;
+    };
   }, [managerAddress]);
 
   if (loading) {

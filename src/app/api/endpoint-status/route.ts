@@ -34,7 +34,7 @@ const initializeEndpoints = () => {
     // Mainnet endpoints
     // { name: 'Mainnet RPC Direct', url: process.env.MAINNET_RPC_DIRECT_URL!, network: 'mainnet' as const }, // Temporarily disabled - Cloudflare tunnel down
     { name: 'Pod Credits Mainnet', url: process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL!, network: 'mainnet' as const },
-    { name: 'Helius RPC', url: process.env.NEXT_PUBLIC_HELIUS_RPC_URL!, network: 'mainnet' as const },
+    // { name: 'Helius RPC', url: process.env.NEXT_PUBLIC_HELIUS_RPC_URL!, network: 'mainnet' as const }, // Disabled from cron - Helius should only be called on user requests, not automated health checks
 
     // Database and Infrastructure
     { name: 'MongoDB Atlas', url: process.env.MONGODB_URI || 'mongodb://localhost:27017', network: 'devnet' as const },

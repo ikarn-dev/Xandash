@@ -95,10 +95,11 @@ async function throttledHeliusFetch(url: string, options: RequestInit): Promise<
 const managerAssetsCache = new Map<string, { data: ManagerAssetData; expires: number }>();
 const failedRequestsCache = new Map<string, { timestamp: number }>();
 
-// Extended cache TTL to 2 hours (assets don't change frequently)
 // Extended cache TTL to 5 minutes to match user expectations for updates
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const FAILED_REQUEST_TTL = 5 * 60 * 1000; // 5 minutes - shorter TTL for failures to allow retries
+// CRITICAL: Keep failed request TTL short (1 minute) to allow quick retries
+// A long TTL here was causing users to see empty data for extended periods
+const FAILED_REQUEST_TTL = 60 * 1000; // 1 minute - short enough to allow retries but prevent hammering
 
 // ============================================================================
 // TOKEN CONFIGURATION
@@ -187,13 +188,13 @@ function isSBT(nft: NFTAsset): boolean {
 async function fetchManagerAssets(managerAddress: string): Promise<ManagerAssetData | null> {
   let currentApiKey = getActiveApiKey('helius');
   if (!currentApiKey) {
-    console.warn('Helius API key not configured for manager assets');
+    console.warn('[Manager Assets] Helius API key not configured');
     return null;
   }
 
   const maxRetries = 3;
   let retryCount = 0;
-  let backoffMs = 500; // Initial backoff for rate limit retries
+  let backoffMs = 300; // Reduced initial backoff for faster recovery
 
   while (retryCount < maxRetries) {
     try {
@@ -221,7 +222,7 @@ async function fetchManagerAssets(managerAddress: string): Promise<ManagerAssetD
                 }
               }
             }),
-            signal: AbortSignal.timeout(15000),
+            signal: AbortSignal.timeout(12000), // Reduced timeout to avoid browser timeout
           }
         );
         if (isRateLimitError(response)) throw new Error('RATE_LIMIT');
@@ -248,7 +249,7 @@ async function fetchManagerAssets(managerAddress: string): Promise<ManagerAssetD
                 }
               }
             }),
-            signal: AbortSignal.timeout(15000),
+            signal: AbortSignal.timeout(12000), // Reduced timeout to avoid browser timeout
           }
         );
         if (isRateLimitError(response)) throw new Error('RATE_LIMIT');
@@ -309,7 +310,7 @@ async function fetchManagerAssets(managerAddress: string): Promise<ManagerAssetD
                     }
                   }
                 }),
-                signal: AbortSignal.timeout(15000),
+                signal: AbortSignal.timeout(10000), // Reduced for pagination
               }
             );
 
@@ -347,7 +348,7 @@ async function fetchManagerAssets(managerAddress: string): Promise<ManagerAssetD
                     }
                   }
                 }),
-                signal: AbortSignal.timeout(15000),
+                signal: AbortSignal.timeout(10000), // Reduced for pagination
               }
             );
 
@@ -482,10 +483,14 @@ export async function getManagerAssets(managerAddress: string): Promise<ManagerA
     return cached.data;
   }
 
-  // Check if we recently failed - allow retry after 5 minutes
+  // Check if we recently failed - allow retry after cooldown (1 minute)
+  // This prevents hammering the API but allows reasonable retry frequency
   const failedRequest = failedRequestsCache.get(managerAddress);
   if (failedRequest && failedRequest.timestamp + FAILED_REQUEST_TTL > now) {
-    // Still in cooldown period, return null
+    // Still in cooldown period - return cached data if we have it (even if expired), otherwise null
+    if (cached) {
+      return cached.data; // Return stale data rather than nothing
+    }
     return null;
   }
 
@@ -510,8 +515,11 @@ export async function getManagerAssets(managerAddress: string): Promise<ManagerA
         // Clear failed request cache on success
         failedRequestsCache.delete(managerAddress);
       } else {
-        // Track failed request with shorter TTL to allow retries
-        failedRequestsCache.set(managerAddress, { timestamp: Date.now() });
+        // Track failed request - but only if we don't have any cached data
+        // This allows stale data to be returned rather than nothing
+        if (!cached) {
+          failedRequestsCache.set(managerAddress, { timestamp: Date.now() });
+        }
       }
 
       return data;

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNetwork } from '@/libs/context/network-context';
 import type { ValidatorData } from '@/libs/server';
@@ -56,6 +56,11 @@ export function ManagerProfileClient({
     const [locations, setLocations] = useState<{ [ip: string]: LocationData | null }>({});
     const [loadingLocations, setLoadingLocations] = useState(false);
 
+    // Track in-flight requests to prevent duplicates
+    const creditsFetchRef = useRef<string | null>(null);
+    const locationsFetchRef = useRef<string | null>(null);
+    const mountedRef = useRef(true);
+
     // Select validators based on current network
     const allValidators = useMemo(() => {
         return isMainnet ? mainnetValidators : devnetValidators;
@@ -69,9 +74,26 @@ export function ManagerProfileClient({
         return manager.nodes.some(node => networkPubkeys.has(node.pnode_pubkey));
     }, [manager, allValidators]);
 
+    // Cleanup on unmount
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
+
     // Fetch credits data on mount and when network changes
     useEffect(() => {
+        const fetchKey = `${network}-${manager?.manager_address}`;
+
         const fetchCredits = async () => {
+            // Deduplicate: skip if already fetching
+            if (creditsFetchRef.current === fetchKey) {
+                return;
+            }
+
+            creditsFetchRef.current = fetchKey;
+
             try {
                 // Fetch credits for current network only
                 const response = await fetch(`/api/pod-credits?network=${network}`).catch(() => null);
@@ -87,9 +109,15 @@ export function ManagerProfileClient({
                     }
                 }
 
-                setCredits(creditsMap);
+                if (mountedRef.current && creditsFetchRef.current === fetchKey) {
+                    setCredits(creditsMap);
+                }
             } catch (error) {
                 console.error('Failed to fetch credits:', error);
+            } finally {
+                if (creditsFetchRef.current === fetchKey) {
+                    creditsFetchRef.current = null;
+                }
             }
         };
 
@@ -103,32 +131,44 @@ export function ManagerProfileClient({
 
     // Fetch geolocation data for node IPs
     useEffect(() => {
+        // Create a unique key for this fetch
+        const nodeIPs = manager?.nodes
+            .map(node => {
+                const validator = allValidators.find(v => v.pubkey === node.pnode_pubkey);
+                return validator?.address ? extractIPFromAddress(validator.address) : null;
+            })
+            .filter((ip): ip is string => ip !== null && ip !== undefined) || [];
+
+        const uniqueIPs = Array.from(new Set(nodeIPs));
+        const fetchKey = uniqueIPs.sort().join(',');
+
         const fetchLocations = async () => {
             if (!manager || allValidators.length === 0 || !managerHasNodesOnCurrentNetwork) {
                 setLocations({});
                 return;
             }
 
+            // Deduplicate: skip if already fetching same IPs
+            if (locationsFetchRef.current === fetchKey || uniqueIPs.length === 0) {
+                return;
+            }
+
+            locationsFetchRef.current = fetchKey;
             setLoadingLocations(true);
+
             try {
-                // Get unique IPs from validators that match manager's nodes
-                const nodeIPs = manager.nodes
-                    .map(node => {
-                        const validator = allValidators.find(v => v.pubkey === node.pnode_pubkey);
-                        return validator?.address ? extractIPFromAddress(validator.address) : null;
-                    })
-                    .filter((ip): ip is string => ip !== null && ip !== undefined);
+                const locationData = await getLocationsForIPs(uniqueIPs);
 
-                const uniqueIPs = Array.from(new Set(nodeIPs));
-
-                if (uniqueIPs.length > 0) {
-                    const locationData = await getLocationsForIPs(uniqueIPs);
+                if (mountedRef.current && locationsFetchRef.current === fetchKey) {
                     setLocations(locationData);
                 }
             } catch (error) {
                 console.error('Failed to fetch geolocation data:', error);
             } finally {
-                setLoadingLocations(false);
+                if (mountedRef.current && locationsFetchRef.current === fetchKey) {
+                    setLoadingLocations(false);
+                    locationsFetchRef.current = null;
+                }
             }
         };
 
