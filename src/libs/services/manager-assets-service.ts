@@ -99,9 +99,9 @@ const failedRequestsCache = new Map<string, { timestamp: number }>();
 
 // Extended cache TTL to 5 minutes to match user expectations for updates
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-// CRITICAL: Keep failed request TTL short (20 seconds) to allow quick retries
-// A long TTL here was causing users to see empty data for extended periods
-const FAILED_REQUEST_TTL = 20 * 1000; // 20 seconds - short enough to allow retries but prevent hammering
+// CRITICAL: Keep failed request TTL very short (5 seconds) to allow quick retries
+// This is important for node profile pages where users expect to see manager data immediately
+const FAILED_REQUEST_TTL = 5 * 1000; // 5 seconds - short enough for aggressive retries
 
 // ============================================================================
 // TOKEN CONFIGURATION
