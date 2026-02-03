@@ -13,7 +13,6 @@ import {
     ManagerStatsCards,
     ManagerNodesList,
     ManagerProfileSkeleton,
-    ManagerWalletAssets,
     ManagerAssetsSummary,
 } from './components';
 
@@ -322,9 +321,6 @@ export function ManagerProfileClient({
 
             {/* Stats Cards */}
             <ManagerStatsCards stats={stats} />
-
-            {/* Wallet Assets (SOL, Tokens, NFTs) */}
-            <ManagerWalletAssets walletAddress={manager.manager_address} />
 
             {/* Nodes List */}
             <ManagerNodesList nodes={enrichedNodes} />

@@ -193,7 +193,8 @@ export const ApiReferenceContent = () => (
       <ApiEndpoint method="GET" path="/api/xand-info" desc="Fetches XAND token data from CoinGecko API" />
       <ApiEndpoint method="POST" path="/api/rpc" desc="Proxy endpoint for Xandeum JSON-RPC calls" />
       <ApiEndpoint method="POST" path="/api/sync-nodes" desc="Syncs all nodes to MongoDB (requires auth)" />
-      <ApiEndpoint method="GET" path="/api/manager-wallet?address={addr}" desc="Fetches manager wallet assets (SOL, Tokens, NFTs)" />
+      <ApiEndpoint method="GET" path="/api/manager-assets?address={addr}" desc="Fetches manager Xandeum assets (XAND, XENO, NFTs, SBTs) - Primary endpoint" />
+      <ApiEndpoint method="GET" path="/api/manager-wallet?address={addr}" desc="[Deprecated] Fetches manager wallet assets (SOL, Tokens, NFTs)" />
       <ApiEndpoint method="GET" path="/api/nodes-trend" desc="Fetches historical node count trends" />
       <ApiEndpoint method="GET" path="/api/rpc-status" desc="Real-time RPC endpoint health status" />
       <ApiEndpoint method="POST" path="/api/ai-chat" desc="AI assistant streaming endpoint" />

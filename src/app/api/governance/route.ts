@@ -94,8 +94,36 @@ async function getAccountInfo(address: string) {
   return rpcCall('getAccountInfo', [address, { encoding: 'jsonParsed' }]);
 }
 
+/**
+ * Get token largest accounts with robust retry logic
+ * Uses multiple API keys and retries to ensure data is always fetched
+ */
 async function getTokenLargestAccounts(mint: string) {
-  return rpcCall('getTokenLargestAccounts', [mint]);
+  const maxRetries = 5;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const result = await rpcCall('getTokenLargestAccounts', [mint]);
+      if (result?.value && result.value.length > 0) {
+        return result;
+      }
+      // If result is empty, try again with a different key
+      if (attempt < maxRetries - 1) {
+        reportRateLimitHit('helius'); // Switch to next key
+        await new Promise(resolve => setTimeout(resolve, 100 * (attempt + 1)));
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < maxRetries - 1) {
+        reportRateLimitHit('helius');
+        await new Promise(resolve => setTimeout(resolve, 150 * (attempt + 1)));
+      }
+    }
+  }
+
+  console.warn('[Governance] getTokenLargestAccounts failed after retries:', lastError?.message);
+  return { value: [] };
 }
 
 async function getTokenAccountsByOwner(owner: string, mint: string) {
@@ -106,8 +134,36 @@ async function getTokenAccountsByOwner(owner: string, mint: string) {
   ]);
 }
 
+/**
+ * Get signatures for address with robust retry logic
+ * Uses multiple API keys and retries to ensure data is always fetched
+ */
 async function getSignaturesForAddress(address: string, limit = 20) {
-  return rpcCall('getSignaturesForAddress', [address, { limit }]) || [];
+  const maxRetries = 5;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const result = await rpcCall('getSignaturesForAddress', [address, { limit }]);
+      if (result && Array.isArray(result) && result.length > 0) {
+        return result;
+      }
+      // If result is empty, try again with a different key
+      if (attempt < maxRetries - 1) {
+        reportRateLimitHit('helius'); // Switch to next key
+        await new Promise(resolve => setTimeout(resolve, 100 * (attempt + 1)));
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < maxRetries - 1) {
+        reportRateLimitHit('helius');
+        await new Promise(resolve => setTimeout(resolve, 150 * (attempt + 1)));
+      }
+    }
+  }
+
+  console.warn('[Governance] getSignaturesForAddress failed after retries:', lastError?.message);
+  return [];
 }
 
 // Parse proposal data from account

@@ -261,49 +261,119 @@ export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ mana
         </div>
       </div>
 
-      {/* NFT Summary - Full width on mobile */}
+      {/* NFT Summary with Image Previews - Full width on mobile */}
       <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4 col-span-2 sm:col-span-1">
         <CornerAccents />
-        <div className="flex items-center gap-2 text-orange-400/70 text-[10px] sm:text-xs mb-2">
-          <img
-            src="/logo/XandToken.png"
-            alt="NFTs"
-            className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-cover"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
-            }}
-          />
-          <span>NFTs</span>
-        </div>
-        <div className="text-lg sm:text-xl lg:text-2xl font-bold text-orange-400 font-mono">
-          {assets.nft_count ?? 0}
-        </div>
-        <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
-          Xandeum NFTs
-        </div>
-      </div>
-
-      {/* SBT Count - Only show if has SBTs */}
-      {hasSbts && (
-        <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4">
-          <CornerAccents />
-          <div className="flex items-center gap-2 text-emerald-400/70 text-[10px] sm:text-xs mb-2">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 text-orange-400/70 text-[10px] sm:text-xs">
             <img
               src="/logo/XandToken.png"
-              alt="SBTs"
+              alt="NFTs"
               className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-cover"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';
               }}
             />
-            <span>SBTs</span>
+            <span>NFTs</span>
           </div>
-          <div className="text-lg sm:text-xl lg:text-2xl font-bold text-emerald-400 font-mono">
-            {assets.sbt_count ?? 0}
+          <div className="text-lg sm:text-xl font-bold text-orange-400 font-mono">
+            {assets.nft_count ?? 0}
           </div>
+        </div>
+
+        {/* NFT Image Previews Grid */}
+        {assets.nft_previews && assets.nft_previews.length > 0 ? (
+          <div className="grid grid-cols-5 gap-1 mt-2">
+            {assets.nft_previews.slice(0, 5).map((nft, index) => (
+              <div
+                key={index}
+                className="aspect-square bg-white/5 border border-orange-500/30 overflow-hidden relative group/nft"
+                title={nft.name}
+              >
+                {nft.image ? (
+                  <img
+                    src={nft.image}
+                    alt={nft.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white/20">
+                    <span className="text-sm">🖼️</span>
+                  </div>
+                )}
+              </div>
+            ))}
+            {/* Show more indicator if there are more than 5 NFTs */}
+            {assets.nft_count > 5 && (
+              <div className="absolute bottom-2 right-2 text-[8px] sm:text-[10px] text-orange-400/70">
+                +{assets.nft_count - 5} more
+              </div>
+            )}
+          </div>
+        ) : (
           <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
-            Soul Bound Tokens
+            Xandeum NFTs
           </div>
+        )}
+      </div>
+
+      {/* SBT Count with Image Previews - Only show if has SBTs */}
+      {hasSbts && (
+        <div className="relative group bg-black border border-white/10 hover:border-white/20 transition-all p-3 sm:p-4">
+          <CornerAccents />
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2 text-emerald-400/70 text-[10px] sm:text-xs">
+              <img
+                src="/logo/XandToken.png"
+                alt="SBTs"
+                className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              <span>SBTs</span>
+            </div>
+            <div className="text-lg sm:text-xl font-bold text-emerald-400 font-mono">
+              {assets.sbt_count ?? 0}
+            </div>
+          </div>
+
+          {/* SBT Image Previews Grid */}
+          {assets.sbt_previews && assets.sbt_previews.length > 0 ? (
+            <div className="grid grid-cols-4 gap-1 mt-2">
+              {assets.sbt_previews.slice(0, 4).map((sbt, index) => (
+                <div
+                  key={index}
+                  className="aspect-square bg-white/5 border border-emerald-500/30 overflow-hidden"
+                  title={sbt.name}
+                >
+                  {sbt.image ? (
+                    <img
+                      src={sbt.image}
+                      alt={sbt.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white/20">
+                      <span className="text-xs">🏅</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-[9px] sm:text-[10px] text-white/30 mt-1">
+              Soul Bound Tokens
+            </div>
+          )}
         </div>
       )}
     </div>

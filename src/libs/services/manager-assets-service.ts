@@ -51,9 +51,9 @@ interface NFTAsset {
 // RATE LIMIT PROTECTION: Global Request Queue & Throttling
 // ============================================================================
 
-// Minimum delay between Helius API requests (50ms = max 20 req/sec)
-// Increased throughput for manager profile page which needs multiple concurrent fetches
-const HELIUS_REQUEST_DELAY_MS = 50;
+// Minimum delay between Helius API requests (35ms = max ~28 req/sec)
+// Optimized for faster throughput while staying within rate limits
+const HELIUS_REQUEST_DELAY_MS = 35;
 
 // Track last request time for throttling
 let lastHeliusRequestTime = 0;
