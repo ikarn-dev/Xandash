@@ -257,17 +257,17 @@ export function NodesPageClientRefactored({
     }
   }, []);
 
-  // Fetch manager assets for nodes that have managers
+  // Fetch manager assets for visible key nodes that have managers
   useEffect(() => {
-    const nodesWithManagers = allValidators
+    const nodesWithManagers = validators // Only fetch for CURRENT PAGE validators
       .filter(node => node.manager_pubkey) // This filters out undefined values
-      .map(node => node.manager_pubkey!) // Now TypeScript knows these are defined, so we use !
+      .map(node => node.manager_pubkey!) // Now TypeScript knows these are defined
       .filter((address, index, arr) => arr.indexOf(address) === index); // unique addresses
 
     if (nodesWithManagers.length > 0) {
       fetchManagerAssets(nodesWithManagers);
     }
-  }, [allValidators, fetchManagerAssets]);
+  }, [validators, fetchManagerAssets]);
 
   const copyToClipboard = async (text: string, type: string = 'text') => {
     try {
@@ -383,19 +383,25 @@ export function NodesPageClientRefactored({
     );
   };
 
-  // Prefetch visible nodes on page load
+  // Prefetch visible nodes and their manager assets on page load
   useEffect(() => {
     if (validators.length > 0) {
-      setTimeout(() => {
+      // If user is searching, prefetch faster since they are likely to click a result
+      const delay = searchQuery ? 200 : 1000;
+
+      const timer = setTimeout(() => {
         validators.slice(0, 5).forEach(validator => {
           const ip = extractIPFromAddress(validator.address || '');
           if (ip) {
-            prefetchProfile(ip);
+            // Also prefetch manager assets for faster profile load
+            prefetchProfile(ip, validator.manager_pubkey);
           }
         });
-      }, 1000);
+      }, delay);
+
+      return () => clearTimeout(timer);
     }
-  }, [validators, prefetchProfile]);
+  }, [validators, prefetchProfile, searchQuery]);
 
   // Scroll animations for table rows
   const { elementRef: tableRef, shouldAnimate } = useStaggeredScrollAnimation<HTMLTableElement>(validators.length, {

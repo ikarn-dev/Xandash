@@ -70,8 +70,8 @@ export function useManagerAssets(): UseManagerAssetsReturn {
     let successfulAddresses = new Set<string>();
     let allResults = new Map<string, ManagerAssetData>();
 
-    // Process batches sequentially to avoid overwhelming the API
-    for (const batch of batches) {
+    // Helper to process a single batch with retries
+    const processBatch = async (batch: string[]) => {
       let retryCount = 0;
       let batchSuccess = false;
 
@@ -129,7 +129,7 @@ export function useManagerAssets(): UseManagerAssetsReturn {
               );
             }
           } else {
-            // Network error or other issue - log only in development
+            // Network error
             if (process.env.NODE_ENV === 'development') {
               console.warn('[Manager Assets] Fetch failed:', err instanceof Error ? err.message : 'Unknown error');
             }
@@ -137,9 +137,19 @@ export function useManagerAssets(): UseManagerAssetsReturn {
           }
         }
       }
+    };
 
-      // Small delay between batches to avoid rate limiting
-      if (batches.indexOf(batch) < batches.length - 1) {
+    // Process batches in parallel chunks to speed up loading while respecting rate limits
+    // Concurrency of 3 with batch size 5 = 15 items processed simultaneously
+    const CONCURRENCY = 3;
+    for (let i = 0; i < batches.length; i += CONCURRENCY) {
+      const chunk = batches.slice(i, i + CONCURRENCY);
+
+      // Run chunk in parallel
+      await Promise.all(chunk.map(batch => processBatch(batch)));
+
+      // Small delay between chunks if there are more to come
+      if (i + CONCURRENCY < batches.length) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
