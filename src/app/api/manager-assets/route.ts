@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
       });
 
     } else if (addresses) {
-      // Batch manager lookup - limit to 10 addresses for faster response
-      const addressList = addresses.split(',').filter(Boolean).slice(0, 10);
+      // Batch manager lookup - limit to 5 addresses for faster response
+      const addressList = addresses.split(',').filter(Boolean).slice(0, 5);
 
       if (addressList.length === 0) {
         return NextResponse.json({ managers: {}, count: 0, cached: 0 }, { status: 200 });
@@ -101,10 +101,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ managers: {}, count: 0, cached: 0 }, { status: 200 });
     }
 
-    // Filter and limit addresses - max 10 for faster response
+    // Filter and limit addresses - max 5 for faster response (each address needs multiple Helius calls)
     const validAddresses = addresses
       .filter((addr: any) => typeof addr === 'string' && addr.length > 10)
-      .slice(0, 10);
+      .slice(0, 5);
 
     if (validAddresses.length === 0) {
       return NextResponse.json({ managers: {}, count: 0, cached: 0 }, { status: 200 });

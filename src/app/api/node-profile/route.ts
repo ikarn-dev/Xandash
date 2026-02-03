@@ -3,7 +3,7 @@ import { cache } from '@/libs/cache/LocalCache';
 import { getNodeEvents, getLatestNodeSnapshot, getNodeStatsHistory, saveNodeSnapshot } from '@/libs/db/node-service';
 import { getMainnetNodeByIp } from '@/libs/services/mainnet-data-service';
 import { getDevnetNodeByIp } from '@/libs/services/devnet-data-service';
-import { getManagerAssets } from '@/libs/services/manager-assets-service';
+import { getManagerAssets, getCachedManagerAssets } from '@/libs/services/manager-assets-service';
 import managersData from '../../../../managers_data/managers_node_data.json';
 
 /**
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
     const nodeData = currentNodeData || dbSnapshot;
 
     // Look up manager for this node from managers JSON data
-    // Fetch manager assets with retry logic to ensure data is always returned
+    // Check for cached data first to avoid redundant API calls
     let managerData = null;
     const nodePubkey = nodeData?.pubkey;
 
@@ -116,27 +116,19 @@ export async function GET(request: NextRequest) {
       for (const manager of managersData.managers) {
         const nodeEntry = manager.nodes.find(node => node.pnode_pubkey === nodePubkey);
         if (nodeEntry) {
-          // Found the manager, now fetch their NFT/SBT assets with retry logic
           const managerAddress = manager.manager_address;
-          let managerAssets = null;
 
-          // Retry up to 3 times to ensure we get manager assets
-          for (let attempt = 0; attempt < 3; attempt++) {
+          // OPTIMIZATION: First check if we already have cached data
+          // This avoids redundant API calls when data was already fetched by pNodes table
+          let managerAssets = getCachedManagerAssets(managerAddress);
+
+          // Only fetch if no cached data exists
+          if (!managerAssets) {
+            // Single attempt with the built-in caching and deduplication
             try {
               managerAssets = await getManagerAssets(managerAddress);
-              if (managerAssets && (managerAssets.nft_count > 0 || managerAssets.xand_balance > 0 || managerAssets.xeno_balance > 0)) {
-                // Got valid data, break out of retry loop
-                break;
-              }
-              // If result is empty but no error, wait briefly and retry
-              if (attempt < 2) {
-                await new Promise(resolve => setTimeout(resolve, 150 * (attempt + 1)));
-              }
             } catch (err) {
-              console.error(`[NodeProfile] Failed to fetch manager assets for ${managerAddress} (attempt ${attempt + 1}):`, err);
-              if (attempt < 2) {
-                await new Promise(resolve => setTimeout(resolve, 200 * (attempt + 1)));
-              }
+              console.error(`[NodeProfile] Failed to fetch manager assets for ${managerAddress}:`, err);
             }
           }
 

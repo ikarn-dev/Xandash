@@ -591,3 +591,25 @@ export function getManagerAssetsCacheStats(): {
     inFlightCount: inFlightRequests.size
   };
 }
+
+/**
+ * Get cached manager assets without triggering a new fetch
+ * Returns cached data if available (even if expired), otherwise null
+ * This is useful for checking if data exists before making API calls
+ */
+export function getCachedManagerAssets(managerAddress: string): ManagerAssetData | null {
+  const cached = managerAssetsCache.get(managerAddress);
+  if (cached) {
+    // Return cached data even if expired - let the caller decide if it's recent enough
+    return cached.data;
+  }
+  return null;
+}
+
+/**
+ * Check if manager assets are cached and still valid (not expired)
+ */
+export function hasValidCachedManagerAssets(managerAddress: string): boolean {
+  const cached = managerAssetsCache.get(managerAddress);
+  return !!cached && cached.expires > Date.now();
+}
