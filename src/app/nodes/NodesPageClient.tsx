@@ -279,7 +279,7 @@ export function NodesPageClientRefactored({
     }
   };
 
-  const navigateToNodeProfile = (address: string, nodeId?: string) => {
+  const navigateToNodeProfile = (address: string, nodeId?: string, managerPubkey?: string) => {
     const ip = extractIPFromAddress(address);
     if (ip) {
       if (nodeId) setClickedNodeId(nodeId);
@@ -288,15 +288,17 @@ export function NodesPageClientRefactored({
         id: 'node-profile-loading'
       });
 
-      navigateToProfile(ip);
+      // Pass manager pubkey for prefetching manager assets immediately
+      navigateToProfile(ip, managerPubkey);
       setTimeout(() => setClickedNodeId(null), 2000);
     }
   };
 
-  const prefetchNodeProfile = (address: string) => {
+  const prefetchNodeProfile = (address: string, managerPubkey?: string) => {
     const ip = extractIPFromAddress(address);
     if (ip) {
-      prefetchProfile(ip);
+      // Pass manager pubkey to prefetch manager assets on hover
+      prefetchProfile(ip, managerPubkey);
     }
   };
 

@@ -1,10 +1,20 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ManagerData } from './types';
 import { CopyBtn } from '@/components/ui/CopyBtn';
+
+// Extended Manager data interface to include fetched assets
+interface ManagerAssets {
+    nft_count: number;
+    sbt_count: number;
+    xand_balance: number;
+    xeno_balance: number;
+    nft_previews: Array<{ name: string; image: string | null }>;
+    sbt_previews: Array<{ name: string; image: string | null }>;
+}
 
 interface ProfileManagerSectionProps {
     manager: ManagerData | null | undefined;
@@ -39,6 +49,60 @@ function truncateAddress(address: string, start = 6, end = 4): string {
 }
 
 export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ manager }) => {
+    // CLIENT-SIDE ASSET FETCHING - same pattern as ManagerAssetsSummary
+    const [assets, setAssets] = useState<ManagerAssets | null>(null);
+    const [loading, setLoading] = useState(true);
+    const fetchingRef = useRef<string | null>(null);
+    const mountedRef = useRef(true);
+
+    const fetchAssets = useCallback(async () => {
+        if (!manager?.manager_address) {
+            setLoading(false);
+            return;
+        }
+
+        // Skip if already fetching same address
+        if (fetchingRef.current === manager.manager_address) {
+            return;
+        }
+
+        fetchingRef.current = manager.manager_address;
+        setLoading(true);
+
+        try {
+            const response = await fetch(`/api/manager-assets?address=${manager.manager_address}`);
+
+            if (response.ok && mountedRef.current && fetchingRef.current === manager.manager_address) {
+                const data = await response.json();
+                setAssets({
+                    nft_count: data.nft_count || 0,
+                    sbt_count: data.sbt_count || 0,
+                    xand_balance: data.xand_balance || 0,
+                    xeno_balance: data.xeno_balance || 0,
+                    nft_previews: data.nft_previews || [],
+                    sbt_previews: data.sbt_previews || [],
+                });
+            }
+        } catch (err) {
+            // Silent fail - use server-side data as fallback
+            console.warn('[ProfileManagerSection] Failed to fetch assets:', err);
+        } finally {
+            if (mountedRef.current && fetchingRef.current === manager?.manager_address) {
+                setLoading(false);
+                fetchingRef.current = null;
+            }
+        }
+    }, [manager?.manager_address]);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        fetchAssets();
+
+        return () => {
+            mountedRef.current = false;
+        };
+    }, [fetchAssets]);
+
     if (!manager) {
         return (
             <div className="relative bg-black border border-white/10 p-4 sm:p-6 group hover:border-white/20 transition-all duration-300">
@@ -56,14 +120,24 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
         );
     }
 
+    // Use client-side fetched assets if available, otherwise fallback to server-side data
+    const displayAssets = assets || {
+        nft_count: manager.nft_count || 0,
+        sbt_count: manager.sbt_count || 0,
+        xand_balance: manager.xand_balance || 0,
+        xeno_balance: manager.xeno_balance || 0,
+        nft_previews: manager.nft_previews || [],
+        sbt_previews: manager.sbt_previews || [],
+    };
+
     // Get NFT/SBT images for display - limit to 6 for compact view
-    const nftImages = manager.nft_previews?.filter(nft => nft.image) || [];
-    const sbtImages = manager.sbt_previews?.filter(sbt => sbt.image) || [];
+    const nftImages = displayAssets.nft_previews?.filter(nft => nft.image) || [];
+    const sbtImages = displayAssets.sbt_previews?.filter(sbt => sbt.image) || [];
     const allImages = [...nftImages, ...sbtImages].slice(0, 6);
 
-    const hasAssets = (manager.nft_count || 0) > 0 || (manager.sbt_count || 0) > 0;
-    const showXeno = (manager.xeno_balance || 0) > 0;
-    const showXand = (manager.xand_balance || 0) > 0;
+    const hasAssets = displayAssets.nft_count > 0 || displayAssets.sbt_count > 0;
+    const showXeno = displayAssets.xeno_balance > 0;
+    const showXand = displayAssets.xand_balance > 0;
 
     return (
         <div className="relative bg-black border border-white/10 p-4 sm:p-6 group hover:border-white/20 transition-all duration-300">
@@ -110,17 +184,20 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
                 {/* NFT Count */}
                 <div className="relative p-2.5 sm:p-3 bg-black border border-white/10 hover:border-white/20 transition-colors">
                     <div className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-wider mb-1">NFTs</div>
-                    <div className="text-lg sm:text-xl font-bold text-orange-400 font-mono">{manager.nft_count || 0}</div>
+                    <div className="text-lg sm:text-xl font-bold text-orange-400 font-mono">
+                        {loading ? <span className="animate-pulse">...</span> : displayAssets.nft_count}
+                    </div>
                 </div>
 
                 {/* XENO Balance */}
                 <div className="relative p-2.5 sm:p-3 bg-black border border-white/10 hover:border-white/20 transition-colors">
                     <div className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-wider mb-1">XENO</div>
                     <div className="text-lg sm:text-xl font-bold font-mono text-cyan-400">
-                        {(manager.xeno_balance || 0) > 0
-                            ? (manager.xeno_balance || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })
-                            : '0'
-                        }
+                        {loading ? <span className="animate-pulse">...</span> : (
+                            displayAssets.xeno_balance > 0
+                                ? displayAssets.xeno_balance.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                                : '0'
+                        )}
                     </div>
                 </div>
 
@@ -128,7 +205,9 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
                 <div className="relative p-2.5 sm:p-3 bg-black border border-white/10 hover:border-white/20 transition-colors">
                     <div className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-wider mb-1">XAND</div>
                     <div className="text-lg sm:text-xl font-bold text-purple-400 font-mono">
-                        {(manager.xand_balance || 0) > 0 ? (manager.xand_balance || 0).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '0'}
+                        {loading ? <span className="animate-pulse">...</span> : (
+                            displayAssets.xand_balance > 0 ? displayAssets.xand_balance.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '0'
+                        )}
                     </div>
                 </div>
             </div>
@@ -179,7 +258,7 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
                         {showXeno && (
                             <span
                                 className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[8px] sm:text-[9px] font-mono"
-                                title={`Holding ${(manager.xeno_balance || 0).toLocaleString()} XENO`}
+                                title={`Holding ${displayAssets.xeno_balance.toLocaleString()} XENO`}
                             >
                                 <span className="w-1 h-1 bg-cyan-500"></span>
                                 XENO
@@ -190,7 +269,7 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
                         {showXand && (
                             <span
                                 className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[8px] sm:text-[9px] font-mono"
-                                title={`Holding ${(manager.xand_balance || 0).toLocaleString()} XAND`}
+                                title={`Holding ${displayAssets.xand_balance.toLocaleString()} XAND`}
                             >
                                 <span className="w-1 h-1 bg-purple-500"></span>
                                 XAND
@@ -198,7 +277,7 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
                         )}
 
                         {/* NFT Names - Limited display */}
-                        {manager.nft_previews?.slice(0, 3).map((nft, index) => (
+                        {displayAssets.nft_previews?.slice(0, 3).map((nft, index) => (
                             <span
                                 key={`nft-${index}`}
                                 className="inline-flex items-center px-1.5 sm:px-2 py-0.5 bg-orange-500/10 border border-orange-500/20 text-orange-400/80 text-[8px] sm:text-[9px] font-mono cursor-help max-w-[80px] sm:max-w-[100px] truncate"
@@ -209,7 +288,7 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
                         ))}
 
                         {/* SBT Names - Limited display */}
-                        {manager.sbt_previews?.slice(0, 3).map((sbt, index) => (
+                        {displayAssets.sbt_previews?.slice(0, 3).map((sbt, index) => (
                             <span
                                 key={`sbt-${index}`}
                                 className="inline-flex items-center px-1.5 sm:px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400/80 text-[8px] sm:text-[9px] font-mono cursor-help max-w-[80px] sm:max-w-[100px] truncate"
@@ -220,7 +299,7 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
                         ))}
 
                         {/* More counts */}
-                        {((manager.nft_count || 0) > 3 || (manager.sbt_count || 0) > 3) && (
+                        {(displayAssets.nft_count > 3 || displayAssets.sbt_count > 3) && (
                             <span className="inline-flex items-center px-1.5 py-0.5 text-white/30 text-[8px] sm:text-[9px] font-mono">
                                 +More
                             </span>

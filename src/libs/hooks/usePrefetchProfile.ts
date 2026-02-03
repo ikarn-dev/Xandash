@@ -9,10 +9,32 @@ import { ProfileCacheService } from '@/libs/services/profile-cache';
 export function usePrefetchProfile() {
   const { navigateWithFeedback } = useOptimisticNavigation();
 
-  const prefetchProfile = useCallback(async (ip: string) => {
+  // Prefetch manager assets data
+  const prefetchManagerAssets = useCallback(async (managerAddress: string) => {
+    if (!managerAddress) return;
+
+    try {
+      // Fire and forget - prefetch to prime the cache
+      fetch(`/api/manager-assets?address=${managerAddress}`, {
+        method: 'GET',
+        priority: 'low' as any,
+      }).catch(() => {
+        // Silently fail - prefetch is optional
+      });
+    } catch {
+      // Silently fail
+    }
+  }, []);
+
+  const prefetchProfile = useCallback(async (ip: string, managerAddress?: string) => {
     if (!ip) return;
 
     try {
+      // Also prefetch manager assets if provided
+      if (managerAddress) {
+        prefetchManagerAssets(managerAddress);
+      }
+
       // Check if already cached
       const cached = await ProfileCacheService.getCachedProfile(ip);
       if (cached) return; // Already cached, no need to prefetch
@@ -37,13 +59,24 @@ export function usePrefetchProfile() {
     } catch (_error) {
       // Silently fail - prefetch is optional
     }
-  }, []);
+  }, [prefetchManagerAssets]);
 
-  const navigateToProfile = useCallback((ip: string) => {
+  // Navigate to profile - also prefetch manager assets if provided
+  const navigateToProfile = useCallback((ip: string, managerAddress?: string) => {
     if (!ip) return;
-    // Just navigate - toast is handled by the caller
+
+    // Prefetch manager assets immediately when navigating (high priority)
+    if (managerAddress) {
+      fetch(`/api/manager-assets?address=${managerAddress}`, {
+        method: 'GET',
+      }).catch(() => {
+        // Silently fail
+      });
+    }
+
+    // Navigate
     navigateWithFeedback(`/profile/${encodeURIComponent(ip)}`);
   }, [navigateWithFeedback]);
 
-  return { prefetchProfile, navigateToProfile };
+  return { prefetchProfile, navigateToProfile, prefetchManagerAssets };
 }

@@ -24,8 +24,8 @@ interface ResponsiveNodesTableProps {
   dataFetchTime: number;
   clickedNodeId: string | null;
   shouldAnimate: (index: number) => boolean;
-  onNavigate: (address: string, nodeId: string) => void;
-  onPrefetch: (address: string) => void;
+  onNavigate: (address: string, nodeId: string, managerPubkey?: string) => void;
+  onPrefetch: (address: string, managerPubkey?: string) => void;
   onCopy: (text: string, type: string) => void;
   extractIP: (address: string) => string;
   formatLocation: (location: LocationData | null) => string;
@@ -199,8 +199,8 @@ export const ResponsiveNodesTable: React.FC<ResponsiveNodesTableProps> = ({
                   key={nodeId}
                   className={`border-b border-white/5 hover:bg-white/5 transition-all duration-200 cursor-pointer group ${clickedNodeId === nodeId ? 'bg-cyan-500/10' : ''
                     } ${isSelected ? 'bg-emerald-500/10' : ''}`}
-                  onClick={() => onNavigate(validator.address || '', nodeId)}
-                  onMouseEnter={() => onPrefetch(validator.address || '')}
+                  onClick={() => onNavigate(validator.address || '', nodeId, validator.manager_pubkey)}
+                  onMouseEnter={() => onPrefetch(validator.address || '', validator.manager_pubkey)}
                 >
                   {/* Compare checkbox */}
                   {onToggleCompare && (

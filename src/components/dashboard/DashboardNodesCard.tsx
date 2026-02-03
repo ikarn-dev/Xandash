@@ -179,13 +179,13 @@ export const DashboardNodesCard: React.FC = () => {
     fetchAssets();
   }, [sharedNodes]);
 
-  // Prefetch visible nodes
+  // Prefetch visible nodes and their manager assets
   useEffect(() => {
     if (nodes.length > 0 && !isLoading) {
       setTimeout(() => {
         nodes.slice(0, 5).forEach(node => {
           const ip = extractIPFromAddress(node.address || '');
-          if (ip) prefetchProfile(ip);
+          if (ip) prefetchProfile(ip, node.manager_pubkey);
         });
       }, 1000);
     }
@@ -237,12 +237,13 @@ export const DashboardNodesCard: React.FC = () => {
     return `${location.city}, ${location.country}`;
   };
 
-  const navigateToNodeProfile = (address: string, nodeId: string) => {
+  const navigateToNodeProfile = (address: string, nodeId: string, managerPubkey?: string) => {
     const ip = extractIPFromAddress(address);
     if (ip) {
       setClickedNodeId(nodeId);
       toast.loading('Loading node profile...', { id: 'node-profile-loading' });
-      navigateToProfile(ip);
+      // Pass manager pubkey for prefetching manager assets immediately
+      navigateToProfile(ip, managerPubkey);
       setTimeout(() => setClickedNodeId(null), 2000);
     }
   };
@@ -379,8 +380,8 @@ export const DashboardNodesCard: React.FC = () => {
 
                 return (
                   <tr key={nodeId} className={`border-b border-white/5 hover:bg-white/5 transition-all duration-200 cursor-pointer group ${clickedNodeId === nodeId ? 'bg-cyan-500/10 animate-pulse' : ''} ${isSelected ? 'bg-emerald-500/10' : ''}`}
-                    onClick={() => navigateToNodeProfile(node.address || '', nodeId)}
-                    onMouseEnter={() => { if (ip) prefetchProfile(ip); }}>
+                    onClick={() => navigateToNodeProfile(node.address || '', nodeId, node.manager_pubkey)}
+                    onMouseEnter={() => { if (ip) prefetchProfile(ip, node.manager_pubkey); }}>
                     <td className="px-2 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                       <button onClick={(e) => canSelect && node.pubkey && handleToggleCompare(node.pubkey, e)} disabled={!canSelect && !isSelected}
                         className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${isSelected ? 'bg-emerald-500 border-emerald-500 text-white' : canSelect ? 'border-white/30 hover:border-emerald-500/50 hover:bg-emerald-500/10' : 'border-white/10 opacity-30 cursor-not-allowed'}`}
