@@ -60,86 +60,111 @@ export function useManagerAssets(): UseManagerAssetsReturn {
     setIsLoading(true);
     setError(null);
 
-    let retryCount = 0;
-    let success = false;
+    // Process addresses in batches of 5 to match API limit
+    const BATCH_SIZE = 5;
+    const batches: string[][] = [];
+    for (let i = 0; i < addressesToFetch.length; i += BATCH_SIZE) {
+      batches.push(addressesToFetch.slice(i, i + BATCH_SIZE));
+    }
 
-    while (retryCount <= MAX_RETRIES && !success) {
-      // Create AbortController for timeout handling
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    let successfulAddresses = new Set<string>();
+    let allResults = new Map<string, ManagerAssetData>();
 
-      try {
-        const response = await fetch('/api/manager-assets', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            addresses: addressesToFetch
-          }),
-          signal: controller.signal,
-        });
+    // Process batches sequentially to avoid overwhelming the API
+    for (const batch of batches) {
+      let retryCount = 0;
+      let batchSuccess = false;
 
-        clearTimeout(timeoutId);
+      while (retryCount <= MAX_RETRIES && !batchSuccess) {
+        // Create AbortController for timeout handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-        if (response.ok) {
-          const data = await response.json();
+        try {
+          const response = await fetch('/api/manager-assets', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              addresses: batch
+            }),
+            signal: controller.signal,
+          });
 
-          if (data.managers) {
-            setManagerAssets(prev => {
-              const newMap = new Map(prev);
+          clearTimeout(timeoutId);
 
+          if (response.ok) {
+            const data = await response.json();
+
+            if (data.managers) {
               Object.entries(data.managers).forEach(([address, assets]) => {
-                newMap.set(address, assets as ManagerAssetData);
+                allResults.set(address, assets as ManagerAssetData);
+                successfulAddresses.add(address);
               });
+              batchSuccess = true;
+            }
+          } else if (response.status === 429) {
+            // Rate limited - wait longer before retry
+            retryCount++;
+            if (retryCount <= MAX_RETRIES) {
+              await new Promise(resolve =>
+                setTimeout(resolve, BASE_RETRY_DELAY_MS * Math.pow(2, retryCount))
+              );
+            }
+          } else {
+            // Other error - don't retry
+            break;
+          }
+        } catch (err) {
+          clearTimeout(timeoutId);
 
-              return newMap;
-            });
-            success = true;
+          // Handle abort/timeout silently
+          if (err instanceof Error && err.name === 'AbortError') {
+            // Timeout - try again with backoff
+            retryCount++;
+            if (retryCount <= MAX_RETRIES) {
+              await new Promise(resolve =>
+                setTimeout(resolve, BASE_RETRY_DELAY_MS * Math.pow(2, retryCount))
+              );
+            }
+          } else {
+            // Network error or other issue - log only in development
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[Manager Assets] Fetch failed:', err instanceof Error ? err.message : 'Unknown error');
+            }
+            break;
           }
-        } else if (response.status === 429) {
-          // Rate limited - wait longer before retry
-          retryCount++;
-          if (retryCount <= MAX_RETRIES) {
-            await new Promise(resolve =>
-              setTimeout(resolve, BASE_RETRY_DELAY_MS * Math.pow(2, retryCount))
-            );
-          }
-        } else {
-          // Other error - don't retry
-          break;
-        }
-      } catch (err) {
-        clearTimeout(timeoutId);
-
-        // Handle abort/timeout silently
-        if (err instanceof Error && err.name === 'AbortError') {
-          // Timeout - try again with backoff
-          retryCount++;
-          if (retryCount <= MAX_RETRIES) {
-            await new Promise(resolve =>
-              setTimeout(resolve, BASE_RETRY_DELAY_MS * Math.pow(2, retryCount))
-            );
-          }
-        } else {
-          // Network error or other issue - log only in development
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('[Manager Assets] Fetch failed:', err instanceof Error ? err.message : 'Unknown error');
-          }
-          break;
         }
       }
+
+      // Small delay between batches to avoid rate limiting
+      if (batches.indexOf(batch) < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    // Update state with all results
+    if (allResults.size > 0) {
+      setManagerAssets(prev => {
+        const newMap = new Map(prev);
+        allResults.forEach((assets, address) => {
+          newMap.set(address, assets);
+        });
+        return newMap;
+      });
     }
 
     // Clean up in-flight tracking
     addressesToFetch.forEach(addr => inFlightRef.current.delete(addr));
     setIsLoading(false);
 
-    if (!success) {
-      // Set placeholder data for failed addresses to prevent repeated requests
+    // Set placeholder data for failed addresses to prevent repeated requests
+    const failedAddresses = addressesToFetch.filter(addr => !successfulAddresses.has(addr));
+    if (failedAddresses.length > 0) {
       setManagerAssets(prev => {
         const newMap = new Map(prev);
-        addressesToFetch.forEach(address => {
+        failedAddresses.forEach(address => {
           if (!newMap.has(address)) {
             newMap.set(address, {
               manager_pubkey: address,

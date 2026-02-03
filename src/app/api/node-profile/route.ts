@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
     const nodeData = currentNodeData || dbSnapshot;
 
     // Look up manager for this node from managers JSON data
-    // Check for cached data first to avoid redundant API calls
+    // Try to get manager assets - check cache first, then fetch with retries
     let managerData = null;
     const nodePubkey = nodeData?.pubkey;
 
@@ -118,17 +118,28 @@ export async function GET(request: NextRequest) {
         if (nodeEntry) {
           const managerAddress = manager.manager_address;
 
-          // OPTIMIZATION: First check if we already have cached data
-          // This avoids redundant API calls when data was already fetched by pNodes table
+          // First check if we already have cached data (optimization)
           let managerAssets = getCachedManagerAssets(managerAddress);
 
-          // Only fetch if no cached data exists
+          // If no cached data, fetch with retry logic
           if (!managerAssets) {
-            // Single attempt with the built-in caching and deduplication
-            try {
-              managerAssets = await getManagerAssets(managerAddress);
-            } catch (err) {
-              console.error(`[NodeProfile] Failed to fetch manager assets for ${managerAddress}:`, err);
+            // Try up to 2 attempts to fetch manager assets
+            for (let attempt = 0; attempt < 2; attempt++) {
+              try {
+                managerAssets = await getManagerAssets(managerAddress);
+                if (managerAssets) {
+                  break; // Success, exit retry loop
+                }
+                // If null result but no error, wait briefly before retry
+                if (attempt < 1) {
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                }
+              } catch (err) {
+                console.error(`[NodeProfile] Failed to fetch manager assets for ${managerAddress} (attempt ${attempt + 1}):`, err);
+                if (attempt < 1) {
+                  await new Promise(resolve => setTimeout(resolve, 150));
+                }
+              }
             }
           }
 

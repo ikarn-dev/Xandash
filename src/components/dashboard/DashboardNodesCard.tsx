@@ -155,7 +155,7 @@ export const DashboardNodesCard: React.FC = () => {
       .filter(node => node.manager_pubkey)
       .map(node => node.manager_pubkey!)
       .filter((addr, i, arr) => arr.indexOf(addr) === i)
-      .slice(0, 30); // Limit to 30
+      .slice(0, 5); // Limit to 5 per batch to prevent timeouts
 
     if (managersToFetch.length === 0) return;
 
