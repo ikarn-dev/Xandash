@@ -148,7 +148,7 @@ export const DashboardNodesCard: React.FC = () => {
     fetchCredits();
   }, [nodes, network]);
 
-  // Fetch manager assets
+  // Fetch manager assets — check localStorage first
   useEffect(() => {
     if (sharedNodes.length === 0) return;
     const managersToFetch = sharedNodes
@@ -158,6 +158,29 @@ export const DashboardNodesCard: React.FC = () => {
       .slice(0, 5); // Limit to 5 per batch to prevent timeouts
 
     if (managersToFetch.length === 0) return;
+
+    // Check localStorage for cached data — skip fetch if all are fresh
+    try {
+      const raw = localStorage.getItem('xandash_manager_assets');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.data) {
+          const allFresh = managersToFetch.every(addr => {
+            const cached = parsed.data[addr];
+            return cached && (Date.now() - (cached.last_updated || 0)) < 5 * 60 * 1000;
+          });
+          if (allFresh) {
+            // Load from localStorage and skip API call
+            const cachedMap = new Map<string, any>();
+            managersToFetch.forEach(addr => {
+              if (parsed.data[addr]) cachedMap.set(addr, parsed.data[addr]);
+            });
+            setManagerAssets(cachedMap);
+            return;
+          }
+        }
+      }
+    } catch { /* continue to fetch */ }
 
     const fetchAssets = async () => {
       try {

@@ -14,6 +14,22 @@ interface ManagerAssets {
     xeno_balance: number;
     nft_previews: Array<{ name: string; image: string | null }>;
     sbt_previews: Array<{ name: string; image: string | null }>;
+    last_updated?: number;
+}
+
+const STORAGE_KEY = 'xandash_manager_assets';
+
+/** Check localStorage for cached asset data */
+function getCachedAsset(address: string): ManagerAssets | null {
+    try {
+        if (typeof window === 'undefined') return null;
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed?.data?.[address] || null;
+    } catch {
+        return null;
+    }
 }
 
 interface ProfileManagerSectionProps {
@@ -66,11 +82,31 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
             return;
         }
 
+        // Check localStorage cache first
+        const cached = getCachedAsset(manager.manager_address);
+        if (cached && cached.last_updated && (Date.now() - cached.last_updated) < 5 * 60 * 1000) {
+            setAssets(cached);
+            setLoading(false);
+            return;
+        }
+        if (cached) {
+            setAssets(cached); // Show stale data immediately
+        }
+
         fetchingRef.current = manager.manager_address;
         setLoading(true);
 
         try {
             const response = await fetch(`/api/manager-assets?address=${manager.manager_address}`);
+
+            // Check credit exhaustion — use cached data if exhausted
+            const exhausted = response.headers.get('x-credits-exhausted') === 'true';
+            if (exhausted && cached) {
+                if (mountedRef.current && fetchingRef.current === manager.manager_address) {
+                    setAssets(cached);
+                }
+                return;
+            }
 
             if (response.ok && mountedRef.current && fetchingRef.current === manager.manager_address) {
                 const data = await response.json();
@@ -81,11 +117,14 @@ export const ProfileManagerSection: React.FC<ProfileManagerSectionProps> = ({ ma
                     xeno_balance: data.xeno_balance || 0,
                     nft_previews: data.nft_previews || [],
                     sbt_previews: data.sbt_previews || [],
+                    last_updated: data.last_updated || Date.now(),
                 });
             }
         } catch (err) {
-            // Silent fail - use server-side data as fallback
-            console.warn('[ProfileManagerSection] Failed to fetch assets:', err);
+            // Silent fail — use cached or server-side data as fallback
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('[ProfileManagerSection] Failed to fetch assets:', err);
+            }
         } finally {
             if (mountedRef.current && fetchingRef.current === manager?.manager_address) {
                 setLoading(false);

@@ -11,12 +11,21 @@ interface LocationData {
   lon?: number;
 }
 
-// In-memory cache for geolocation data
-const geoCache = new Map<string, LocationData | null>();
+// In-memory cache for geolocation data with TTL tracking
+const geoCache = new Map<string, { data: LocationData | null; timestamp: number }>();
+
+// Cache TTL: successful lookups last 24 hours
+const CACHE_TTL = 24 * 60 * 60 * 1000;
+// Failed lookups: retry after 5 minutes (not permanent)
+const FAILED_CACHE_TTL = 5 * 60 * 1000;
+
+// Rate limiting: ip-api.com free tier allows 45 req/min
+// Each batch counts as 1 request. Track last request time.
+let lastBatchRequestTime = 0;
+const MIN_BATCH_INTERVAL_MS = 1500; // 1.5s between batch calls = ~40 req/min max
 
 /**
  * Check if an IP address is a private/internal IP (RFC 1918, loopback, etc.)
- * These IPs cannot be geolocated by external services
  */
 function isPrivateIP(ip: string): boolean {
   if (!ip) return true;
@@ -26,38 +35,20 @@ function isPrivateIP(ip: string): boolean {
 
   const [a, b, c] = parts;
 
-  // Loopback (127.x.x.x)
-  if (a === 127) return true;
-
-  // Private Class A (10.x.x.x)
-  if (a === 10) return true;
-
-  // Private Class B (172.16.x.x - 172.31.x.x)
-  if (a === 172 && b >= 16 && b <= 31) return true;
-
-  // Private Class C (192.168.x.x)
-  if (a === 192 && b === 168) return true;
-
-  // Link-local (169.254.x.x)
-  if (a === 169 && b === 254) return true;
-
-  // CGNAT / Shared Address Space (100.64.x.x - 100.127.x.x)
-  if (a === 100 && b >= 64 && b <= 127) return true;
-
-  // Reserved for documentation
+  if (a === 127) return true; // Loopback
+  if (a === 10) return true; // Private Class A
+  if (a === 172 && b >= 16 && b <= 31) return true; // Private Class B
+  if (a === 192 && b === 168) return true; // Private Class C
+  if (a === 169 && b === 254) return true; // Link-local
+  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
   if (a === 192 && b === 0 && c === 2) return true;
   if (a === 198 && b === 51 && c === 100) return true;
   if (a === 203 && b === 0 && c === 113) return true;
-
-  // Broadcast / invalid
-  if (a === 0 || a === 255) return true;
+  if (a === 0 || a === 255) return true; // Broadcast/invalid
 
   return false;
 }
 
-/**
- * Create a placeholder location entry for private IPs
- */
 function createPrivateIPLocation(ip: string): LocationData {
   return {
     country: 'Private Network',
@@ -72,28 +63,31 @@ function createPrivateIPLocation(ip: string): LocationData {
 }
 
 /**
- * Batch fetch using ip-api.com batch endpoint (up to 100 IPs)
- * This is the most efficient for multiple IPs
+ * Throttled batch fetch using ip-api.com (max 100 IPs per call)
+ * Enforces minimum interval between requests to stay under rate limit
  */
 async function batchFetchGeo(ips: string[]): Promise<Map<string, LocationData | null>> {
   const results = new Map<string, LocationData | null>();
-
   if (ips.length === 0) return results;
 
+  // Enforce minimum interval between batch requests
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastBatchRequestTime;
+  if (timeSinceLastRequest < MIN_BATCH_INTERVAL_MS) {
+    await new Promise(resolve => setTimeout(resolve, MIN_BATCH_INTERVAL_MS - timeSinceLastRequest));
+  }
+
   try {
-    // ip-api.com batch endpoint - POST with array of IPs
+    lastBatchRequestTime = Date.now();
     const response = await fetch('http://ip-api.com/batch?fields=status,query,country,countryCode,regionName,city,lat,lon,isp', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(ips.slice(0, 100)),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ips.slice(0, 100)), // ip-api.com batch limit is 100
       signal: AbortSignal.timeout(10000),
     });
 
     if (response.ok) {
       const data = await response.json();
-
       if (Array.isArray(data)) {
         for (const item of data) {
           if (item.status === 'success' && item.query) {
@@ -112,9 +106,13 @@ async function batchFetchGeo(ips: string[]): Promise<Map<string, LocationData | 
           }
         }
       }
+    } else if (response.status === 429) {
+      console.warn('[Geolocation] ip-api.com rate limited — backing off');
+      // Increase interval dynamically
+      lastBatchRequestTime = Date.now() + 30000; // Extra 30s cooldown
     }
   } catch {
-    // Silent fail - will use single IP fallback
+    // Silent fail
   }
 
   return results;
@@ -146,7 +144,6 @@ async function fetchGeoForIP(ip: string): Promise<LocationData | null> {
   } catch {
     // Silent fail
   }
-
   return null;
 }
 
@@ -160,45 +157,73 @@ export async function POST(request: NextRequest) {
 
     const results: { [ip: string]: LocationData | null } = {};
     const uncachedPublicIPs: string[] = [];
+    const now = Date.now();
 
     // Check cache first and handle private IPs
     for (const ip of ips) {
-      if (geoCache.has(ip)) {
-        results[ip] = geoCache.get(ip)!;
-      } else if (isPrivateIP(ip)) {
-        // Handle private IPs immediately - they can't be geolocated
+      const cached = geoCache.get(ip);
+      if (cached) {
+        // Check if cache is still valid
+        const isSuccess = cached.data !== null;
+        const ttl = isSuccess ? CACHE_TTL : FAILED_CACHE_TTL;
+        if (now - cached.timestamp < ttl) {
+          results[ip] = cached.data;
+          continue;
+        }
+        // Expired — re-fetch (but still return stale data in response if fetch fails)
+      }
+
+      if (isPrivateIP(ip)) {
         const privateLocation = createPrivateIPLocation(ip);
         results[ip] = privateLocation;
-        geoCache.set(ip, privateLocation);
+        geoCache.set(ip, { data: privateLocation, timestamp: now });
       } else {
         uncachedPublicIPs.push(ip);
       }
     }
 
     if (uncachedPublicIPs.length > 0) {
-      // Step 1: Try batch API first (most efficient)
-      const batchResults = await batchFetchGeo(uncachedPublicIPs);
+      // CHUNK large batches: ip-api.com handles max 100 per request
+      const CHUNK_SIZE = 100;
+      const chunks: string[][] = [];
+      for (let i = 0; i < uncachedPublicIPs.length; i += CHUNK_SIZE) {
+        chunks.push(uncachedPublicIPs.slice(i, i + CHUNK_SIZE));
+      }
+
       const stillMissing: string[] = [];
 
-      for (const ip of uncachedPublicIPs) {
-        if (batchResults.has(ip)) {
-          const location = batchResults.get(ip);
-          results[ip] = location ?? null;
-          geoCache.set(ip, location ?? null);
-        } else {
-          stillMissing.push(ip);
+      // Process chunks sequentially with throttling
+      for (const chunk of chunks) {
+        const batchResults = await batchFetchGeo(chunk);
+
+        for (const ip of chunk) {
+          if (batchResults.has(ip)) {
+            const location = batchResults.get(ip) ?? null;
+            results[ip] = location;
+            geoCache.set(ip, { data: location, timestamp: now });
+          } else {
+            stillMissing.push(ip);
+          }
         }
       }
 
-      // Step 2: For IPs not returned by batch, try individual fallback
+      // Fallback: for IPs not returned by batch, try individual lookup
+      // Limit concurrent fallback requests to avoid overwhelming ipwho.is
       if (stillMissing.length > 0) {
-        const fetchPromises = stillMissing.map(async (ip) => {
-          const location = await fetchGeoForIP(ip);
-          results[ip] = location;
-          geoCache.set(ip, location);
-        });
-
-        await Promise.allSettled(fetchPromises);
+        const FALLBACK_CONCURRENCY = 5;
+        for (let i = 0; i < stillMissing.length; i += FALLBACK_CONCURRENCY) {
+          const batch = stillMissing.slice(i, i + FALLBACK_CONCURRENCY);
+          const fetchPromises = batch.map(async (ip) => {
+            const location = await fetchGeoForIP(ip);
+            results[ip] = location;
+            geoCache.set(ip, { data: location, timestamp: now });
+          });
+          await Promise.allSettled(fetchPromises);
+          // Small delay between fallback batches
+          if (i + FALLBACK_CONCURRENCY < stillMissing.length) {
+            await new Promise(r => setTimeout(r, 200));
+          }
+        }
       }
     }
 

@@ -25,6 +25,21 @@ interface FetchError {
   isRateLimit: boolean;
 }
 
+const STORAGE_KEY = 'xandash_manager_assets';
+
+/** Check localStorage for cached asset data */
+function getCachedAsset(address: string): ManagerAssetData | null {
+  try {
+    if (typeof window === 'undefined') return null;
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.data?.[address] || null;
+  } catch {
+    return null;
+  }
+}
+
 export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ managerAddress }) => {
   const [assets, setAssets] = useState<ManagerAssetData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,6 +55,18 @@ export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ mana
       return;
     }
 
+    // Check localStorage cache first
+    const cached = getCachedAsset(managerAddress);
+    if (cached && (Date.now() - cached.last_updated) < 5 * 60 * 1000) {
+      setAssets(cached);
+      setLoading(false);
+      return;
+    }
+    // If we have stale cached data, show it immediately while fetching
+    if (cached) {
+      setAssets(cached);
+    }
+
     fetchingRef.current = managerAddress;
     setError(null);
 
@@ -47,8 +74,16 @@ export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ mana
       setLoading(true);
       const response = await fetch(`/api/manager-assets?address=${managerAddress}`);
 
+      // Check credit exhaustion — if exhausted and we have cached data, don't overwrite
+      const exhausted = response.headers.get('x-credits-exhausted') === 'true';
+      if (exhausted && cached) {
+        if (mountedRef.current && fetchingRef.current === managerAddress) {
+          setAssets(cached);
+        }
+        return;
+      }
+
       if (!response.ok) {
-        // Check for rate limit
         if (response.status === 429) {
           throw new Error('RATE_LIMIT');
         }
@@ -57,7 +92,6 @@ export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ mana
 
       const data = await response.json();
 
-      // Check for error in response
       if (data.error) {
         const isRateLimit = data.error.toLowerCase().includes('rate') || data.error.toLowerCase().includes('limit');
         if (mountedRef.current && fetchingRef.current === managerAddress) {
@@ -66,7 +100,6 @@ export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ mana
         return;
       }
 
-      // Only update state if still mounted and still fetching same address
       if (mountedRef.current && fetchingRef.current === managerAddress) {
         setAssets(data);
       }
@@ -74,10 +107,13 @@ export const ManagerAssetsSummary: React.FC<ManagerAssetsSummaryProps> = ({ mana
       if (mountedRef.current && fetchingRef.current === managerAddress) {
         const message = err instanceof Error ? err.message : 'Failed to load assets';
         const isRateLimit = message === 'RATE_LIMIT' || message.toLowerCase().includes('rate');
-        setError({
-          message: isRateLimit ? 'Rate limit reached' : message,
-          isRateLimit
-        });
+        // If we already have cached data, don't show error — just keep showing cached
+        if (!cached) {
+          setError({
+            message: isRateLimit ? 'Rate limit reached' : message,
+            isRateLimit
+          });
+        }
       }
     } finally {
       if (mountedRef.current && fetchingRef.current === managerAddress) {

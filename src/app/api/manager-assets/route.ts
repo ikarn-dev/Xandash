@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getManagerAssets, getBatchManagerAssets } from '@/libs/services/manager-assets-service';
+import { areCreditsExhausted } from '@/libs/utils/api-key-manager';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -42,9 +43,12 @@ export async function GET(request: NextRequest) {
       // Single manager lookup with 12s timeout (leaves headroom for 15s function limit)
       const assets = await withTimeout(getManagerAssets(address), 12000, `single:${address.slice(0, 8)}`);
 
+      const creditsExhausted = areCreditsExhausted('helius');
+
       return NextResponse.json(assets || createEmptyResponse(address), {
         headers: {
           'Cache-Control': 'public, max-age=300',
+          ...(creditsExhausted ? { 'x-credits-exhausted': 'true' } : {}),
         }
       });
 
@@ -65,13 +69,17 @@ export async function GET(request: NextRequest) {
         result[addr] = assets || createEmptyResponse(addr);
       });
 
+      const creditsExhausted = areCreditsExhausted('helius');
+
       return NextResponse.json({
         managers: result,
         count: addressList.length,
-        cached: assetsMap?.size || 0
+        cached: assetsMap?.size || 0,
+        creditsExhausted,
       }, {
         headers: {
           'Cache-Control': 'public, max-age=300',
+          ...(creditsExhausted ? { 'x-credits-exhausted': 'true' } : {}),
         }
       });
 
@@ -120,14 +128,18 @@ export async function POST(request: NextRequest) {
       result[addr] = assets || createEmptyResponse(addr);
     });
 
+    const creditsExhausted = areCreditsExhausted('helius');
+
     return NextResponse.json({
       managers: result,
       count: validAddresses.length,
       cached: assetsMap?.size || 0,
+      creditsExhausted,
       timestamp: new Date().toISOString()
     }, {
       headers: {
         'Cache-Control': 'public, max-age=300',
+        ...(creditsExhausted ? { 'x-credits-exhausted': 'true' } : {}),
       }
     });
 

@@ -24,6 +24,20 @@ export interface ApiKeyState {
     primaryDisabledAt: number;
 }
 
+// Circuit breaker state for credit exhaustion
+interface CreditExhaustionState {
+    isExhausted: boolean;
+    exhaustedAt: number;
+    lastProbeTime: number;
+    consecutiveExhaustions: number;
+}
+
+// How often to probe if credits have recovered (10 minutes)
+const CREDIT_PROBE_INTERVAL = 10 * 60 * 1000;
+
+// In-memory credit exhaustion state per service
+const creditStates: Map<string, CreditExhaustionState> = new Map();
+
 // Rate limit reset duration (in milliseconds)
 // Primary key will be re-enabled after this duration
 const PRIMARY_RESET_DURATION = 60 * 1000; // 1 minute - check if primary is available again
@@ -172,6 +186,8 @@ export function reportRateLimitHit(serviceName: 'openrouter' | 'helius'): boolea
     }
 
     console.warn(`[ApiKeyManager] All keys exhausted for ${serviceName}`);
+    // If all keys cycle back, this is likely credit exhaustion not temp rate limit
+    reportCreditExhaustion(serviceName);
     return false;
 }
 
@@ -252,6 +268,7 @@ export function isRateLimitError(response: Response | null, error?: Error | unkn
             'credits exhausted',
             'insufficient credits',
             'payment required',
+            'max usage reached',
         ];
 
         const lowerMessage = errorMessage.toLowerCase();
@@ -259,6 +276,95 @@ export function isRateLimitError(response: Response | null, error?: Error | unkn
     }
 
     return false;
+}
+
+/**
+ * Check if a rate limit error indicates credit exhaustion (not temporary)
+ * "max usage reached" = monthly/daily credits used up (all keys affected)
+ */
+export function isCreditExhaustionError(response: Response | null, errorData?: any): boolean {
+    if (response && response.status === 429) {
+        // If we have parsed error data, check the message
+        if (errorData?.error?.message) {
+            const msg = errorData.error.message.toLowerCase();
+            return msg.includes('max usage') || msg.includes('credits exhausted') || msg.includes('quota exceeded');
+        }
+    }
+    return false;
+}
+
+// ============================================================================
+// CREDIT EXHAUSTION CIRCUIT BREAKER
+// ============================================================================
+
+/**
+ * Get circuit breaker state for a service
+ */
+function getCreditState(serviceName: string): CreditExhaustionState {
+    if (!creditStates.has(serviceName)) {
+        creditStates.set(serviceName, {
+            isExhausted: false,
+            exhaustedAt: 0,
+            lastProbeTime: 0,
+            consecutiveExhaustions: 0,
+        });
+    }
+    return creditStates.get(serviceName)!;
+}
+
+/**
+ * Report that API credits are exhausted for a service
+ * This activates the circuit breaker — all API calls will be skipped
+ */
+export function reportCreditExhaustion(serviceName: 'openrouter' | 'helius'): void {
+    const state = getCreditState(serviceName);
+    state.isExhausted = true;
+    state.exhaustedAt = Date.now();
+    state.consecutiveExhaustions++;
+    console.warn(`[ApiKeyManager] Credits EXHAUSTED for ${serviceName} — circuit breaker OPEN (probe in ${CREDIT_PROBE_INTERVAL / 60000}min)`);
+}
+
+/**
+ * Check if credits are exhausted for a service (circuit breaker is open)
+ * Returns true if calls should be skipped
+ */
+export function areCreditsExhausted(serviceName: 'openrouter' | 'helius'): boolean {
+    const state = getCreditState(serviceName);
+    if (!state.isExhausted) return false;
+
+    // Check if it's time for a probe
+    const timeSinceProbe = Date.now() - state.lastProbeTime;
+    const timeSinceExhausted = Date.now() - state.exhaustedAt;
+
+    // Allow a probe every CREDIT_PROBE_INTERVAL
+    if (timeSinceExhausted >= CREDIT_PROBE_INTERVAL && timeSinceProbe >= CREDIT_PROBE_INTERVAL) {
+        return false; // Allow one request through as a probe
+    }
+
+    return true;
+}
+
+/**
+ * Mark that a probe request was sent (to avoid sending multiple probes)
+ */
+export function markProbeAttempt(serviceName: 'openrouter' | 'helius'): void {
+    const state = getCreditState(serviceName);
+    state.lastProbeTime = Date.now();
+}
+
+/**
+ * Report successful API call — resets circuit breaker if credits were exhausted
+ */
+export function reportCreditRecovery(serviceName: 'openrouter' | 'helius'): void {
+    const state = getCreditState(serviceName);
+    if (state.isExhausted) {
+        console.log(`[ApiKeyManager] Credits RECOVERED for ${serviceName} — circuit breaker CLOSED`);
+        state.isExhausted = false;
+        state.exhaustedAt = 0;
+        state.consecutiveExhaustions = 0;
+        // Also reset key rotation state
+        resetServiceState(serviceName);
+    }
 }
 
 /**

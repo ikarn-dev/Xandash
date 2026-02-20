@@ -9,9 +9,27 @@ import { ProfileCacheService } from '@/libs/services/profile-cache';
 export function usePrefetchProfile() {
   const { navigateWithFeedback } = useOptimisticNavigation();
 
-  // Prefetch manager assets data
+  // Check localStorage for existing cached manager assets
+  const hasCachedAssets = useCallback((managerAddress: string): boolean => {
+    try {
+      if (typeof window === 'undefined') return false;
+      const raw = localStorage.getItem('xandash_manager_assets');
+      if (!raw) return false;
+      const parsed = JSON.parse(raw);
+      const cached = parsed?.data?.[managerAddress];
+      if (!cached) return false;
+      // Consider fresh if less than 5 minutes old
+      return (Date.now() - (cached.last_updated || 0)) < 5 * 60 * 1000;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Prefetch manager assets data (skips if localStorage has fresh data)
   const prefetchManagerAssets = useCallback(async (managerAddress: string) => {
     if (!managerAddress) return;
+    // Skip if we already have fresh cached data
+    if (hasCachedAssets(managerAddress)) return;
 
     try {
       // Fire and forget - prefetch to prime the cache
@@ -24,7 +42,7 @@ export function usePrefetchProfile() {
     } catch {
       // Silently fail
     }
-  }, []);
+  }, [hasCachedAssets]);
 
   const prefetchProfile = useCallback(async (ip: string, managerAddress?: string) => {
     if (!ip) return;

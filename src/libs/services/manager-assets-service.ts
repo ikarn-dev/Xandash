@@ -15,7 +15,11 @@ import {
   getActiveApiKey,
   reportRateLimitHit,
   reportSuccess,
-  isRateLimitError
+  isRateLimitError,
+  areCreditsExhausted,
+  reportCreditExhaustion,
+  reportCreditRecovery,
+  markProbeAttempt,
 } from '@/libs/utils/api-key-manager';
 
 export interface NFTPreview {
@@ -188,6 +192,15 @@ function isSBT(nft: NFTAsset): boolean {
  * Uses throttled requests and sequential page fetching to prevent rate limits
  */
 async function fetchManagerAssets(managerAddress: string): Promise<ManagerAssetData | null> {
+  // CIRCUIT BREAKER: Skip all API calls when credits are exhausted
+  if (areCreditsExhausted('helius')) {
+    console.log('[Manager Assets] Helius credits exhausted — skipping API call');
+    return null;
+  }
+
+  // Mark as probe attempt if circuit breaker let us through
+  markProbeAttempt('helius');
+
   let currentApiKey = getActiveApiKey('helius');
   if (!currentApiKey) {
     console.warn('[Manager Assets] Helius API key not configured');
@@ -227,7 +240,18 @@ async function fetchManagerAssets(managerAddress: string): Promise<ManagerAssetD
             signal: AbortSignal.timeout(12000), // Reduced timeout to avoid browser timeout
           }
         );
-        if (isRateLimitError(response)) throw new Error('RATE_LIMIT');
+        if (isRateLimitError(response)) {
+          // Check if this is credit exhaustion (not temporary)
+          const clonedResp = response.clone();
+          try {
+            const errData = await clonedResp.json();
+            if (errData?.error?.message?.toLowerCase().includes('max usage')) {
+              reportCreditExhaustion('helius');
+              throw new Error('CREDIT_EXHAUSTED');
+            }
+          } catch (e) { if ((e as Error).message === 'CREDIT_EXHAUSTED') throw e; }
+          throw new Error('RATE_LIMIT');
+        }
         return response.json();
       };
 
@@ -254,7 +278,17 @@ async function fetchManagerAssets(managerAddress: string): Promise<ManagerAssetD
             signal: AbortSignal.timeout(12000), // Reduced timeout to avoid browser timeout
           }
         );
-        if (isRateLimitError(response)) throw new Error('RATE_LIMIT');
+        if (isRateLimitError(response)) {
+          const clonedResp = response.clone();
+          try {
+            const errData = await clonedResp.json();
+            if (errData?.error?.message?.toLowerCase().includes('max usage')) {
+              reportCreditExhaustion('helius');
+              throw new Error('CREDIT_EXHAUSTED');
+            }
+          } catch (e) { if ((e as Error).message === 'CREDIT_EXHAUSTED') throw e; }
+          throw new Error('RATE_LIMIT');
+        }
         return response.json();
       };
 
@@ -263,6 +297,10 @@ async function fetchManagerAssets(managerAddress: string): Promise<ManagerAssetD
       try {
         [tokensData1, nftsData1] = await Promise.all([fetchTokensPage1(), fetchNftsPage1()]);
       } catch (err: any) {
+        if (err.message === 'CREDIT_EXHAUSTED') {
+          console.log(`[Manager Assets] Credits exhausted for ${managerAddress} — circuit breaker activated`);
+          return null;
+        }
         if (err.message === 'RATE_LIMIT') {
           console.log(`[Manager Assets] Rate limit hit on initial fetch for ${managerAddress}, attempting failover...`);
           const switched = reportRateLimitHit('helius');
@@ -279,6 +317,7 @@ async function fetchManagerAssets(managerAddress: string): Promise<ManagerAssetD
       }
 
       reportSuccess('helius');
+      reportCreditRecovery('helius'); // If probe succeeded, close circuit breaker
 
       tokenPages.push(tokensData1.result?.items || []);
       nftPages.push(nftsData1.result?.items || []);
@@ -485,11 +524,17 @@ export async function getManagerAssets(managerAddress: string): Promise<ManagerA
     return cached.data;
   }
 
-  // Check if we recently failed - allow retry after cooldown (1 minute)
-  // This prevents hammering the API but allows reasonable retry frequency
+  // CIRCUIT BREAKER: If credits are exhausted, return stale cache or null immediately
+  if (areCreditsExhausted('helius')) {
+    if (cached) {
+      return cached.data; // Serve stale data gracefully
+    }
+    return null;
+  }
+
+  // Check if we recently failed - allow retry after cooldown
   const failedRequest = failedRequestsCache.get(managerAddress);
   if (failedRequest && failedRequest.timestamp + FAILED_REQUEST_TTL > now) {
-    // Still in cooldown period - return cached data if we have it (even if expired), otherwise null
     if (cached) {
       return cached.data; // Return stale data rather than nothing
     }
@@ -499,7 +544,6 @@ export async function getManagerAssets(managerAddress: string): Promise<ManagerA
   // IN-FLIGHT DEDUPLICATION: Check if this request is already being processed
   const inFlightRequest = inFlightRequests.get(managerAddress);
   if (inFlightRequest) {
-    // Wait for the existing request to complete and return its result
     return inFlightRequest;
   }
 
@@ -509,29 +553,27 @@ export async function getManagerAssets(managerAddress: string): Promise<ManagerA
       const data = await fetchManagerAssets(managerAddress);
 
       if (data) {
-        // Cache the result
         managerAssetsCache.set(managerAddress, {
           data,
           expires: Date.now() + CACHE_TTL
         });
-        // Clear failed request cache on success
         failedRequestsCache.delete(managerAddress);
       } else {
-        // Track failed request - but only if we don't have any cached data
-        // This allows stale data to be returned rather than nothing
         if (!cached) {
           failedRequestsCache.set(managerAddress, { timestamp: Date.now() });
+        }
+        // When fetch fails but we have stale data, return it
+        if (cached) {
+          return cached.data;
         }
       }
 
       return data;
     } finally {
-      // Always clean up in-flight request when done
       inFlightRequests.delete(managerAddress);
     }
   })();
 
-  // Store the in-flight promise
   inFlightRequests.set(managerAddress, fetchPromise);
 
   return fetchPromise;

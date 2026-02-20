@@ -13,8 +13,42 @@ interface GeolocationCache {
   [ip: string]: LocationData | null;
 }
 
+// localStorage persistence constants
+const GEO_STORAGE_KEY = 'xandash_geo_cache';
+const GEO_CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours
+
 // In-memory cache for geolocation data
 const geoCache: GeolocationCache = {};
+
+/** Load geo cache from localStorage on module init */
+function hydrateFromStorage(): void {
+  try {
+    if (typeof window === 'undefined') return;
+    const raw = localStorage.getItem(GEO_STORAGE_KEY);
+    if (!raw) return;
+    const parsed: { data: GeolocationCache; timestamp: number } = JSON.parse(raw);
+    // Only use if not too old
+    if (Date.now() - parsed.timestamp > GEO_CACHE_MAX_AGE) return;
+    Object.assign(geoCache, parsed.data);
+  } catch {
+    // silent
+  }
+}
+
+/** Save geo cache to localStorage */
+function persistToStorage(): void {
+  try {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(GEO_STORAGE_KEY, JSON.stringify({ data: geoCache, timestamp: Date.now() }));
+  } catch {
+    // localStorage full — silent
+  }
+}
+
+// Hydrate on module load
+if (typeof window !== 'undefined') {
+  hydrateFromStorage();
+}
 
 /**
  * Check if an IP address is a private/internal IP (RFC 1918, loopback, etc.)
@@ -157,6 +191,22 @@ export async function getLocationsForIPs(ips: string[]): Promise<{ [ip: string]:
     return {};
   }
 
+  // Filter out IPs already in client-side cache
+  const uncachedIPs = ips.filter(ip => geoCache[ip] === undefined);
+  const results: { [ip: string]: LocationData | null } = {};
+
+  // Immediately populate results from cache
+  ips.forEach(ip => {
+    if (geoCache[ip] !== undefined) {
+      results[ip] = geoCache[ip];
+    }
+  });
+
+  // If all IPs are cached, return immediately
+  if (uncachedIPs.length === 0) {
+    return results;
+  }
+
   try {
     // Use our batch API endpoint
     const response = await fetch('/api/geolocation', {
@@ -164,29 +214,31 @@ export async function getLocationsForIPs(ips: string[]): Promise<{ [ip: string]:
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ ips }),
+      body: JSON.stringify({ ips: uncachedIPs }),
     });
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
 
-    const results = await response.json();
+    const apiResults = await response.json();
 
-    // Update local cache
-    Object.entries(results).forEach(([ip, location]) => {
+    // Update local cache and results
+    Object.entries(apiResults).forEach(([ip, location]) => {
       geoCache[ip] = location as LocationData | null;
+      results[ip] = location as LocationData | null;
     });
+
+    // Persist to localStorage
+    persistToStorage();
 
     return results;
   } catch (_error) {
-
-    // Fallback: return empty results for all IPs
-    const fallbackResults: { [ip: string]: LocationData | null } = {};
-    ips.forEach(ip => {
-      fallbackResults[ip] = null;
+    // Fallback: return cached results + null for uncached
+    uncachedIPs.forEach(ip => {
+      results[ip] = null;
     });
-    return fallbackResults;
+    return results;
   }
 }
 
