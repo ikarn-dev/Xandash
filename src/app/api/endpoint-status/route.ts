@@ -32,7 +32,7 @@ const initializeEndpoints = () => {
     { name: 'IP Geolocation (ip-api.com)', url: process.env.NEXT_PUBLIC_IP_API_COM_URL!, network: 'devnet' as const },
 
     // Mainnet endpoints
-    // { name: 'Mainnet RPC Direct', url: process.env.MAINNET_RPC_DIRECT_URL!, network: 'mainnet' as const }, // Temporarily disabled - Cloudflare tunnel down
+    // { name: 'Mainnet Stats API', url: process.env.MAINNET_API_URL!, network: 'mainnet' as const },
     { name: 'Pod Credits Mainnet', url: process.env.NEXT_PUBLIC_POD_CREDITS_MAINNET_URL!, network: 'mainnet' as const },
     // { name: 'Helius RPC', url: process.env.NEXT_PUBLIC_HELIUS_RPC_URL!, network: 'mainnet' as const }, // Disabled from cron - Helius should only be called on user requests, not automated health checks
 
@@ -123,9 +123,6 @@ const checkEndpointHealth = async (endpoint: EndpointStatus): Promise<EndpointSt
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(endpoint.name.includes('Mainnet RPC') && process.env.MAINNET_RPC_API_KEY && {
-            'X-API-Key': process.env.MAINNET_RPC_API_KEY
-          })
         },
         body: JSON.stringify({
           jsonrpc: '2.0',

@@ -25,127 +25,96 @@ export interface NetworkStatsData {
 }
 
 /**
- * Make RPC call to Gossip Direct API
+ * Fetch pod data from mainnet stats API (simple GET, no API key)
  */
-async function makeRpcCall<T>(method: string): Promise<T | null> {
-  const rpcUrl = process.env.MAINNET_RPC_DIRECT_URL;
-  const apiKey = process.env.MAINNET_RPC_API_KEY;
+async function fetchPodsData(): Promise<any[] | null> {
+  const apiUrl = process.env.MAINNET_API_URL;
 
-  if (!rpcUrl || !apiKey) {
+  if (!apiUrl) {
     return null;
   }
 
   try {
-    const response = await fetch(rpcUrl, {
-      method: 'POST',
+    const response = await fetch(apiUrl, {
+      method: 'GET',
       headers: {
-        'X-API-Key': apiKey,
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: JSON.stringify({ method }),
       signal: AbortSignal.timeout(10000),
     });
 
     if (!response.ok) {
-      throw new Error(`RPC error: ${response.status}`);
+      throw new Error(`API error: ${response.status}`);
     }
 
-    return await response.json() as T;
+    const data = await response.json();
+
+    // Handle different response formats
+    if (Array.isArray(data)) return data;
+    if (data.pods && Array.isArray(data.pods)) return data.pods;
+    if (data.result?.pods && Array.isArray(data.result.pods)) return data.result.pods;
+    if (data.data?.pods && Array.isArray(data.data.pods)) return data.data.pods;
+    if (data.result && Array.isArray(data.result)) return data.result;
+    if (data.data && Array.isArray(data.data)) return data.data;
+
+    return null;
   } catch (_error) {
     return null;
   }
 }
 
-// Server-side function to fetch version data from mainnet API
+// Server-side function to fetch version data
+// Stats API doesn't serve version data — return default
 export async function getVersionData(): Promise<{
   version: VersionData | null;
   error?: string;
 }> {
-  // Try RPC API call
-  try {
-    const data = await makeRpcCall<any>('get-version');
-
-    if (data) {
-      // Handle different response formats
-      const version = data.version || data.result?.version || data.data?.version;
-      const build = data.build || data.result?.build || data.data?.build;
-      const commit = data.commit || data.result?.commit || data.data?.commit;
-
-      if (version && version !== 'unknown') {
-        return {
-          version: { version, build, commit }
-        };
-      }
-    }
-  } catch (error) {
-    console.error('RPC version fetch error:', error);
-  }
-
-  // Default fallback - RPC unavailable
   return {
     version: { version: '0.7.3' },
-    error: 'RPC unavailable, using default version'
+    error: 'Version data not available from stats API, using default'
   };
 }
 
-// Server-side function to fetch network stats data from mainnet API
+// Server-side function to fetch network stats data from pod data
 export async function getNetworkStatsData(): Promise<{
   stats: NetworkStatsData | null;
   error?: string;
 }> {
   try {
-    // Fetch both stats and pods data in parallel
-    const [statsData, podsData] = await Promise.all([
-      makeRpcCall<any>('get-stats'),
-      makeRpcCall<any>('get-pods-with-stats')
-    ]);
+    const pods = await fetchPodsData();
 
-    if (!statsData) {
+    if (!pods || pods.length === 0) {
       return {
         stats: null,
-        error: 'Stats API error'
+        error: 'No pod data available'
       };
     }
-
-    // Extract stats from response
-    const stats = statsData.stats || statsData.result?.stats || statsData.data?.stats || statsData.result || statsData.data || statsData;
 
     // Calculate storage stats from pods
     let storageCommitted = 0;
     let storageUsed = 0;
-    let totalPods = 0;
 
-    if (podsData) {
-      const pods = podsData.pods || podsData.result?.pods || podsData.data?.pods ||
-        (Array.isArray(podsData.result) ? podsData.result : []) ||
-        (Array.isArray(podsData.data) ? podsData.data : []) ||
-        (Array.isArray(podsData) ? podsData : []);
+    pods.forEach((pod: any) => {
+      storageCommitted += pod.storage_committed || 0;
+      storageUsed += pod.storage_used || 0;
+    });
 
-      if (Array.isArray(pods)) {
-        totalPods = pods.length;
-        pods.forEach((pod: any) => {
-          storageCommitted += pod.storage_committed || 0;
-          storageUsed += pod.storage_used || 0;
-        });
-      }
-    }
-
+    const totalPods = pods.length;
     const avgStoragePerPod = totalPods > 0 ? storageCommitted / totalPods : 0;
 
     const processedStats: NetworkStatsData = {
-      active_streams: stats.active_streams ?? 0,
-      cpu_percent: stats.cpu_percent ?? stats.cpu ?? 0,
-      current_index: stats.current_index ?? stats.index ?? 0,
-      file_size: stats.file_size ?? stats.fileSize ?? 0,
-      last_updated: stats.last_updated ?? stats.lastUpdated ?? Math.floor(Date.now() / 1000),
-      packets_received: stats.packets_received ?? stats.packetsReceived ?? stats.packets_recv ?? 0,
-      packets_sent: stats.packets_sent ?? stats.packetsSent ?? 0,
-      ram_total: stats.ram_total ?? stats.ramTotal ?? stats.memory_total ?? 8589934592,
-      ram_used: stats.ram_used ?? stats.ramUsed ?? stats.memory_used ?? 0,
-      total_bytes: stats.total_bytes ?? stats.totalBytes ?? stats.bytes_total ?? 0,
-      total_pages: stats.total_pages ?? stats.totalPages ?? 0,
-      uptime: stats.uptime ?? 0,
+      active_streams: 0,
+      cpu_percent: 0,
+      current_index: 0,
+      file_size: 0,
+      last_updated: Math.floor(Date.now() / 1000),
+      packets_received: 0,
+      packets_sent: 0,
+      ram_total: 8589934592,
+      ram_used: 0,
+      total_bytes: 0,
+      total_pages: 0,
+      uptime: 0,
       storage_committed: storageCommitted,
       storage_used: storageUsed,
       avg_storage_per_pod: avgStoragePerPod,

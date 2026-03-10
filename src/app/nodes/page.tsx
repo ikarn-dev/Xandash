@@ -52,19 +52,22 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function NodesPage() {
-  const { validators: allValidators, error } = await getValidatorsData();
+  // Fetch server-side data as an optimization — but don't block on errors.
+  // The client component (NodesPageClient) fetches its own data via
+  // nodes-data-context which correctly handles devnet/mainnet switching.
+  let allValidators: Awaited<ReturnType<typeof getValidatorsData>>['validators'] = [];
 
-  if (error) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-red-400">Error loading pNodes: {error}</div>
-        </div>
-      </DashboardLayout>
-    );
+  try {
+    const result = await getValidatorsData();
+    // Only use server data if we got nodes without errors
+    if (!result.error && result.validators.length > 0) {
+      allValidators = result.validators;
+    }
+  } catch {
+    // Server-side fetch failed — client component will handle data loading
   }
 
-  // Calculate initial stats on server
+  // Calculate initial stats on server (may be empty — client will update)
   const initialStats = {
     total: allValidators.length,
     online: allValidators.filter(v => v.status === 'online').length,
@@ -72,16 +75,17 @@ export default async function NodesPage() {
   };
 
   // Pre-load profile data for top nodes in the background (don't await)
-  const topNodeIps = allValidators
-    .slice(0, 10) // Top 10 nodes to avoid timeout
-    .map(v => v.address?.split(':')[0])
-    .filter(ip => ip && ip !== '127.0.0.1');
-  
-  // Fire and forget - pre-load profiles in background using server-side function
-  if (topNodeIps.length > 0) {
-    ProfileCacheService.preloadProfilesServerSide(topNodeIps, getProfileDataForCache).catch(() => {
-      // Silently handle pre-loading errors
-    });
+  if (allValidators.length > 0) {
+    const topNodeIps = allValidators
+      .slice(0, 10)
+      .map(v => v.address?.split(':')[0])
+      .filter(ip => ip && ip !== '127.0.0.1');
+
+    if (topNodeIps.length > 0) {
+      ProfileCacheService.preloadProfilesServerSide(topNodeIps, getProfileDataForCache).catch(() => {
+        // Silently handle pre-loading errors
+      });
+    }
   }
 
   return (

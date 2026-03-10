@@ -4,66 +4,51 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 /**
- * Make RPC call to Gossip Direct API
+ * Fetch pod data from mainnet stats API (simple GET, no API key)
  */
-async function makeRpcCall<T>(method: string): Promise<T | null> {
-  const rpcUrl = process.env.MAINNET_RPC_DIRECT_URL;
-  const apiKey = process.env.MAINNET_RPC_API_KEY;
-  
-  if (!rpcUrl || !apiKey) {
+async function fetchPodsData(): Promise<any[] | null> {
+  const apiUrl = process.env.MAINNET_API_URL;
+
+  if (!apiUrl) {
     return null;
   }
 
   try {
-    const response = await fetch(rpcUrl, {
-      method: 'POST',
+    const response = await fetch(apiUrl, {
+      method: 'GET',
       headers: {
-        'X-API-Key': apiKey,
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: JSON.stringify({ method }),
       cache: 'no-store',
       signal: AbortSignal.timeout(15000),
     });
 
     if (!response.ok) {
-      throw new Error(`RPC error: ${response.status}`);
+      throw new Error(`API error: ${response.status}`);
     }
 
-    return await response.json();
-  } catch (error) {
-    console.error(`[Mainnet Stats] RPC call failed (${method}):`, error);
+    const data = await response.json();
+
+    // Handle different response formats
+    if (Array.isArray(data)) return data;
+    if (data.pods && Array.isArray(data.pods)) return data.pods;
+    if (data.result?.pods && Array.isArray(data.result.pods)) return data.result.pods;
+    if (data.data?.pods && Array.isArray(data.data.pods)) return data.data.pods;
+    if (data.result && Array.isArray(data.result)) return data.result;
+    if (data.data && Array.isArray(data.data)) return data.data;
+
+    return null;
+  } catch (_error) {
     return null;
   }
 }
 
 export async function GET() {
   try {
-    // Fetch pods and stats data in parallel
-    const [podsData, statsData] = await Promise.all([
-      makeRpcCall<any>('get-pods-with-stats'),
-      makeRpcCall<any>('get-stats')
-    ]);
-    
-    if (!podsData) {
-      return NextResponse.json({ error: 'API not configured or failed' }, { status: 500 });
-    }
+    const pods = await fetchPodsData();
 
-    // Extract pods from response
-    let pods: any[] = [];
-    if (Array.isArray(podsData)) {
-      pods = podsData;
-    } else if (podsData.pods && Array.isArray(podsData.pods)) {
-      pods = podsData.pods;
-    } else if (podsData.result?.pods && Array.isArray(podsData.result.pods)) {
-      pods = podsData.result.pods;
-    } else if (podsData.data?.pods && Array.isArray(podsData.data.pods)) {
-      pods = podsData.data.pods;
-    } else if (Array.isArray(podsData.result)) {
-      pods = podsData.result;
-    } else if (Array.isArray(podsData.data)) {
-      pods = podsData.data;
+    if (!pods || pods.length === 0) {
+      return NextResponse.json({ error: 'API not configured or failed' }, { status: 500 });
     }
 
     // Calculate totals from pods
@@ -84,22 +69,6 @@ export async function GET() {
     const totalPods = pods.length;
     const avgStoragePerPod = totalPods > 0 ? storageCommitted / totalPods : 0;
 
-    // Use network-level stats if available
-    if (statsData) {
-      const stats = statsData.stats || statsData.result?.stats || statsData.data?.stats || 
-                    statsData.result || statsData.data || statsData;
-      
-      if (stats.packets_received || stats.packetsReceived) {
-        packetsReceived = stats.packets_received ?? stats.packetsReceived ?? packetsReceived;
-      }
-      if (stats.packets_sent || stats.packetsSent) {
-        packetsSent = stats.packets_sent ?? stats.packetsSent ?? packetsSent;
-      }
-      if (stats.total_bytes || stats.totalBytes) {
-        totalBytes = stats.total_bytes ?? stats.totalBytes ?? totalBytes;
-      }
-    }
-    
     return NextResponse.json({
       storage_committed: storageCommitted,
       storage_used: storageUsed,
@@ -112,8 +81,7 @@ export async function GET() {
     }, {
       headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
     });
-  } catch (error) {
-    console.error('Mainnet stats error:', error);
+  } catch (_error) {
     return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 });
   }
 }

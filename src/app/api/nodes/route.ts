@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { calculateNodeScore } from '@/libs/utils/score-utils';
+import { getNodeStatus } from '@/libs/utils/node-status';
 import { getMainnetData } from '@/libs/services/mainnet-data-service';
 import { getDevnetData } from '@/libs/services/devnet-data-service';
 import managersData from '../../../../managers_data/managers_node_data.json';
@@ -110,11 +111,7 @@ export async function GET(request: NextRequest) {
     if (allNodes.length > 0) {
       const now = Math.floor(Date.now() / 1000);
       allNodes = allNodes.map((node: any) => {
-        // Recalculate status for consistency with 1h/2h logic
-        const timeDiff = now - (node.last_seen_timestamp || now);
-        let status = 'offline';
-        if (timeDiff <= 3600) status = 'online';
-        else if (timeDiff < 7200) status = 'syncing';
+        const status = getNodeStatus(node.last_seen_timestamp || now, now);
 
         // Calculate score if missing or recalc to ensure consistency
         // Use service score if available, otherwise calculate

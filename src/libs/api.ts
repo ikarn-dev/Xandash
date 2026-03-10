@@ -5,13 +5,9 @@ const getEndpoint = () => {
     // Client-side: use the proxy endpoint
     return '/api/rpc';
   } else {
-    // Server-side: use mainnet RPC direct endpoint from env
-    return process.env.MAINNET_RPC_DIRECT_URL || '';
+    // Server-side: use mainnet stats API from env
+    return process.env.MAINNET_API_URL || '';
   }
-};
-
-const getApiKey = () => {
-  return process.env.MAINNET_RPC_API_KEY || '';
 };
 
 // JSON-RPC 2.0 response structure
@@ -95,51 +91,59 @@ export async function callRPC<T>(method: string): Promise<RPCResponse<T>> {
   try {
     const endpoint = getEndpoint();
     const isServerSide = typeof window === 'undefined';
-    
+
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      'Accept': 'application/json',
     };
-    
-    // Add API key for server-side direct calls
+
+    // Server-side: simple GET to stats API
+    // Client-side: POST to proxy endpoint
     if (isServerSide) {
-      const apiKey = getApiKey();
-      if (apiKey) {
-        headers['X-API-Key'] = apiKey;
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    }
-    
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ method }),
-    });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+      const result = await response.json();
+      const data = result.pods ?? result.result ?? result.data ?? result;
+      if (data !== undefined) {
+        return { success: true, data };
+      }
+      return { success: false, error: 'No result in response' };
+    } else {
+      // Client-side: POST through proxy
+      headers['Content-Type'] = 'application/json';
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ method }),
+      });
 
-    const result = await response.json();
-    
-    // Handle different response formats
-    if (result.error) {
-      return { 
-        success: false, 
-        error: result.error.message || result.error || 'RPC Error' 
-      };
-    }
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-    // Handle successful response - check various formats
-    const data = result.result ?? result.data ?? result;
-    if (data !== undefined) {
-      return { success: true, data };
+      const result = await response.json();
+      if (result.error) {
+        return {
+          success: false,
+          error: result.error.message || result.error || 'RPC Error'
+        };
+      }
+      const data = result.pods ?? result.result ?? result.data ?? result;
+      if (data !== undefined) {
+        return { success: true, data };
+      }
+      return { success: false, error: 'No result in response' };
     }
-
-    return { success: false, error: 'No result in response' };
   } catch (error) {
-    console.error(`RPC call failed for method ${method}:`, error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 }

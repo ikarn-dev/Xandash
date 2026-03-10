@@ -1,5 +1,6 @@
 import { getMainnetData } from '../services/mainnet-data-service';
 import { hasNodeName } from '../utils/node-names';
+import { getNodeStatus } from '../utils/node-status';
 
 export interface ValidatorData {
   pubkey: string;
@@ -65,17 +66,7 @@ export async function getValidatorsData(): Promise<{
     // Process and enrich validator data
     const now = Math.floor(Date.now() / 1000);
     const processedValidators: ValidatorData[] = allValidators.map((validator: any, index: number) => {
-      const timeDiff = now - (validator.last_seen_timestamp || now);
-
-      // Simplified status logic similar to endpoint tester
-      // Online: last seen <= 60 minutes
-      // Syncing: last seen 60-120 minutes
-      // Offline: last seen > 120 minutes
-      let status: 'online' | 'syncing' | 'offline' = 'offline';
-      if (timeDiff <= 3600) status = 'online';       // Less than or equal to 60 minutes = online
-      else if (timeDiff < 7200) status = 'syncing';  // 60-120 minutes = syncing
-      else status = 'offline';                       // More than 120 minutes = offline
-
+      const status = getNodeStatus(validator.last_seen_timestamp || now, now);
       const isOnline = status === 'online'; // For score calculation
 
       // Calculate score based on uptime, storage, and other factors

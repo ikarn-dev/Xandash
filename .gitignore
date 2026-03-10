@@ -42,3 +42,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# AI tools
+.claude
+
+# project docs & snapshots
+/best-practices
+/heap_snapshots

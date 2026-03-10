@@ -2,50 +2,41 @@ import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * RPC Proxy Route
- * Proxies RPC calls to the Gossip Direct API
- * Used by client-side code to avoid exposing API keys
+ * Proxies data requests to the mainnet stats API
+ * Used by client-side code to avoid direct external calls
  */
 
 export async function POST(request: NextRequest) {
-  let body: any;
-  
   try {
-    body = await request.json();
-    
-    const rpcUrl = process.env.MAINNET_RPC_DIRECT_URL;
-    const apiKey = process.env.MAINNET_RPC_API_KEY;
-    
-    if (!rpcUrl || !apiKey) {
-      throw new Error('RPC endpoint not configured');
+    const apiUrl = process.env.MAINNET_API_URL;
+
+    if (!apiUrl) {
+      throw new Error('Mainnet API endpoint not configured');
     }
-    
-    const response = await fetch(rpcUrl, {
-      method: 'POST',
+
+    const response = await fetch(apiUrl, {
+      method: 'GET',
       headers: {
-        'X-API-Key': apiKey,
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: JSON.stringify(body),
       signal: AbortSignal.timeout(15000),
     });
-    
+
     if (!response.ok) {
-      throw new Error(`RPC error: ${response.status}`);
+      throw new Error(`API error: ${response.status}`);
     }
-    
+
     const result = await response.json();
     return NextResponse.json(result);
-    
+
   } catch (error) {
-    console.error('RPC Proxy Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
-    
+
     return NextResponse.json(
-      { 
-        error: { 
-          code: -32603, 
-          message: `RPC Server Error: ${errorMessage}`
+      {
+        error: {
+          code: -32603,
+          message: `API Server Error: ${errorMessage}`
         }
       },
       { status: 200 }

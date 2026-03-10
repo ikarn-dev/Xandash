@@ -2,63 +2,53 @@
 import { RPCResponse } from '../api';
 
 /**
- * Make RPC call to Gossip Direct API
+ * Make API call to mainnet stats endpoint (simple GET, no API key)
  */
 async function makeRPCCall<T>(method: string): Promise<RPCResponse<T>> {
-  const rpcUrl = process.env.MAINNET_RPC_DIRECT_URL;
-  const apiKey = process.env.MAINNET_RPC_API_KEY;
-  
-  if (!rpcUrl || !apiKey) {
+  const apiUrl = process.env.MAINNET_API_URL;
+
+  if (!apiUrl) {
     return {
       success: false,
-      error: 'RPC endpoint not configured'
+      error: 'Mainnet API endpoint not configured'
     };
   }
 
   try {
-    const response = await fetch(rpcUrl, {
-      method: 'POST',
+    const response = await fetch(apiUrl, {
+      method: 'GET',
       headers: {
-        'X-API-Key': apiKey,
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: JSON.stringify({ method }),
       signal: AbortSignal.timeout(15000),
     });
 
     if (!response.ok) {
-      return { 
-        success: false, 
-        error: `RPC error: ${response.status}` 
+      return {
+        success: false,
+        error: `API error: ${response.status}`
       };
     }
 
     const result = await response.json();
-    
-    if (result.error) {
-      return { 
-        success: false, 
-        error: result.error.message || result.error || 'RPC Error' 
-      };
-    }
 
     // Handle different response formats
-    const data = result.result ?? result.data ?? result;
+    const data = result.pods ?? result.result?.pods ?? result.data?.pods ??
+      result.result ?? result.data ?? result;
     if (data !== undefined) {
       return { success: true, data };
     }
 
     return { success: false, error: 'No result in response' };
   } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 }
 
-// Direct RPC call function
+// Direct API call function
 export async function callDirectRPC<T>(method: string): Promise<RPCResponse<T>> {
   return makeRPCCall<T>(method);
 }

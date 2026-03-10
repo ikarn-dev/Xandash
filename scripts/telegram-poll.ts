@@ -54,8 +54,7 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const DB_NAME = process.env.MONGODB_DB_NAME || 'xandash';
 
 // API URLs for real-time data
-const MAINNET_RPC_URL = process.env.MAINNET_RPC_DIRECT_URL || '';
-const MAINNET_RPC_KEY = process.env.MAINNET_RPC_API_KEY || '';
+const MAINNET_API_URL = process.env.MAINNET_API_URL || '';
 const DEVNET_API_URL = process.env.DEVNET_API_URL || '';
 const MAINNET_CREDITS_URL = 'https://podcredits.xandeum.network/api/mainnet-pod-credits';
 const DEVNET_CREDITS_URL = 'https://podcredits.xandeum.network/api/pods-credits';
@@ -168,16 +167,14 @@ async function fetchNodeData(nodeIp: string, network: string): Promise<LiveNodeD
  * Fetch mainnet node from RPC API
  */
 async function fetchMainnetNode(nodeIp: string): Promise<LiveNodeData | null> {
-    if (!MAINNET_RPC_URL || !MAINNET_RPC_KEY) return null;
+    if (!MAINNET_API_URL) return null;
 
     try {
-        const response = await fetch(MAINNET_RPC_URL, {
-            method: 'POST',
+        const response = await fetch(MAINNET_API_URL, {
+            method: 'GET',
             headers: {
-                'X-API-Key': MAINNET_RPC_KEY,
-                'Content-Type': 'application/json',
+                'Accept': 'application/json',
             },
-            body: JSON.stringify({ method: 'get-pods-with-stats' }),
             signal: AbortSignal.timeout(10000),
         });
 
@@ -629,33 +626,43 @@ async function handleLatestVersionCommand(chatId: number): Promise<void> {
             }
         }
 
-        // Method 2: Fallback to RPC API if database has no version
+        // Method 2: Fallback to stats API if database has no version
         if (!version) {
-            const rpcUrl = process.env.MAINNET_RPC_DIRECT_URL;
-            const apiKey = process.env.MAINNET_RPC_API_KEY;
+            const apiUrl = process.env.MAINNET_API_URL;
 
-            if (rpcUrl && apiKey) {
+            if (apiUrl) {
                 try {
-                    const res = await fetch(rpcUrl, {
-                        method: 'POST',
+                    const res = await fetch(apiUrl, {
+                        method: 'GET',
                         headers: {
-                            'X-API-Key': apiKey,
-                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
                         },
-                        body: JSON.stringify({ method: 'get-version' }),
                         signal: AbortSignal.timeout(5000),
                     });
 
                     if (res.ok) {
                         const data = await res.json();
-                        const v = data.version || data.result?.version || data.data?.version;
-                        if (v && v !== 'unknown') {
-                            version = v;
-                            source = 'api';
+                        // Try to extract version from pod data
+                        const pods = data.pods || data.result?.pods || data.data?.pods ||
+                            (Array.isArray(data) ? data : []);
+                        if (Array.isArray(pods) && pods.length > 0) {
+                            // Get most common version from online pods
+                            const versions: Record<string, number> = {};
+                            for (const pod of pods) {
+                                const v = pod.version;
+                                if (v && v !== 'unknown') {
+                                    versions[v] = (versions[v] || 0) + 1;
+                                }
+                            }
+                            const sorted = Object.entries(versions).sort((a, b) => b[1] - a[1]);
+                            if (sorted.length > 0) {
+                                version = sorted[0][0];
+                                source = 'api';
+                            }
                         }
                     }
                 } catch {
-                    // Ignore RPC errors
+                    // Ignore API errors
                 }
             }
         }

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * Mainnet RPC Health Check API Route
+ * Mainnet API Health Check Route
  * 
- * Provides a lightweight health check for the mainnet RPC endpoint
- * without returning full node data. Tests if the RPC connection is working.
+ * Provides a lightweight health check for the mainnet stats API endpoint
+ * without returning full node data. Tests if the API connection is working.
  */
 
-// Simple in-memory cache to avoid excessive RPC calls
+// Simple in-memory cache to avoid excessive calls
 let lastHealthCheck: {
   status: 'healthy' | 'unhealthy';
   timestamp: number;
@@ -36,12 +36,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Check environment variables
-    const MAINNET_RPC_URL = process.env.MAINNET_RPC_DIRECT_URL;
-    const MAINNET_RPC_KEY = process.env.MAINNET_RPC_API_KEY;
+    const MAINNET_API_URL = process.env.MAINNET_API_URL;
 
-    if (!MAINNET_RPC_URL || !MAINNET_RPC_KEY) {
+    if (!MAINNET_API_URL) {
       const responseTime = Date.now() - startTime;
-      const error = 'Mainnet RPC temporarily disabled - Cloudflare tunnel unavailable';
+      const error = 'Mainnet API endpoint not configured';
 
       lastHealthCheck = {
         status: 'unhealthy',
@@ -59,37 +58,26 @@ export async function GET(request: NextRequest) {
       }, { status: 503 });
     }
 
-    // Try to make a simple RPC call to test connectivity
+    // Try to make a simple GET request to test connectivity
     let isHealthy = false;
     let error = '';
-    let rpcDetails = '';
 
     try {
-
-
-      const response = await fetch(MAINNET_RPC_URL, {
-        method: 'POST',
+      const response = await fetch(MAINNET_API_URL, {
+        method: 'GET',
         headers: {
-          'X-API-Key': MAINNET_RPC_KEY,
-          'Content-Type': 'application/json',
           'Accept': 'application/json',
           'User-Agent': 'XanDash-HealthCheck/1.0',
         },
-        body: JSON.stringify({ method: 'get-version' }), // Simple method to test connectivity
         signal: AbortSignal.timeout(10000),
       });
 
-      rpcDetails = `Response status: ${response.status} ${response.statusText}`;
-
-
       if (response.ok) {
-        const data = await response.json();
-
-        // Consider it healthy if we get any response (even if it's an error response)
+        // Consider it healthy if we get any successful response
         isHealthy = true;
       } else {
         isHealthy = false;
-        error = `RPC HTTP ${response.status}: ${response.statusText}`;
+        error = `API HTTP ${response.status}: ${response.statusText}`;
 
         // Try to get response body for more details
         try {
@@ -99,19 +87,18 @@ export async function GET(request: NextRequest) {
           }
         } catch { }
       }
-    } catch (rpcError) {
+    } catch (apiError) {
       isHealthy = false;
-      error = rpcError instanceof Error ? rpcError.message : 'RPC connection failed';
-      console.error(`[Mainnet Health] RPC Error:`, rpcError);
+      error = apiError instanceof Error ? apiError.message : 'API connection failed';
 
       // Add more specific error details
-      if (rpcError instanceof Error) {
-        if (rpcError.name === 'AbortError') {
-          error = 'RPC request timeout (10s)';
-        } else if (rpcError.message.includes('ENOTFOUND')) {
-          error = 'RPC server not found (DNS resolution failed)';
-        } else if (rpcError.message.includes('ECONNREFUSED')) {
-          error = 'RPC connection refused (server not responding)';
+      if (apiError instanceof Error) {
+        if (apiError.name === 'AbortError') {
+          error = 'API request timeout (10s)';
+        } else if (apiError.message.includes('ENOTFOUND')) {
+          error = 'API server not found (DNS resolution failed)';
+        } else if (apiError.message.includes('ECONNREFUSED')) {
+          error = 'API connection refused (server not responding)';
         }
       }
     }

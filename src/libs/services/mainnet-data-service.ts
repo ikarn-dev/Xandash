@@ -1,10 +1,9 @@
 /**
  * Mainnet Data Service
- * Handles fetching mainnet node data from Gossip RPC Direct API
+ * Handles fetching mainnet node data from stats.xandeum.network API
  * 
  * Data Flow:
- * - Single source: Gossip RPC Direct API (POST requests)
- * - Methods: get-pods-with-stats, get-stats, get-version
+ * - Single source: Stats API (simple GET, same format as devnet)
  * - Geo data fetched from external APIs (ipwho.is primary, ip-api.com fallback)
  * - Credits fetched from dedicated credits API
  * - MERGE strategy: Never reduce node count, only update existing + add new
@@ -15,9 +14,8 @@ import { monitoredFetch } from './rpc-status-monitor';
 import { calculateNodeScore } from '@/libs/utils/score-utils';
 import managersData from '../../../managers_data/managers_node_data.json';
 
-// Get URLs from environment variables for RPC (sensitive)
-const MAINNET_RPC_URL = process.env.MAINNET_RPC_DIRECT_URL || '';
-const MAINNET_RPC_KEY = process.env.MAINNET_RPC_API_KEY || '';
+// Get URL from environment variable — no API key needed
+const MAINNET_API_URL = process.env.MAINNET_API_URL || '';
 
 // Hardcoded credits API URL for mainnet
 const MAINNET_CREDITS_URL = 'https://podcredits.xandeum.network/api/mainnet-pod-credits';
@@ -111,68 +109,55 @@ export async function getCachedExternalData(): Promise<MainnetExternalData | nul
 }
 
 /**
- * Make RPC call to Gossip Direct API
+ * Fetch pods with stats from Stats API (simple GET, no API key)
  */
-async function makeRpcCall<T>(method: string): Promise<T | null> {
-  if (!MAINNET_RPC_URL || !MAINNET_RPC_KEY) {
+async function fetchPodsWithStats(): Promise<MainnetNodeData[] | null> {
+  if (!MAINNET_API_URL) {
     return null;
   }
 
   try {
-    const response = await monitoredFetch(MAINNET_RPC_URL, {
-      method: 'POST',
+    const response = await monitoredFetch(MAINNET_API_URL, {
+      method: 'GET',
       network: 'mainnet',
       headers: {
-        'X-API-Key': MAINNET_RPC_KEY,
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       },
-      body: JSON.stringify({ method }),
       signal: AbortSignal.timeout(30000),
     });
 
     if (!response.ok) {
-      throw new Error(`RPC error: ${response.status}`);
+      throw new Error(`Mainnet API error: ${response.status}`);
     }
 
     const data = await response.json();
-    return data;
+
+    // Handle different response formats (same as devnet)
+    let pods: MainnetNodeData[] = [];
+
+    if (Array.isArray(data)) {
+      pods = data;
+    } else if (data.pods && Array.isArray(data.pods)) {
+      pods = data.pods;
+    } else if (data.result?.pods && Array.isArray(data.result.pods)) {
+      pods = data.result.pods;
+    } else if (data.data?.pods && Array.isArray(data.data.pods)) {
+      pods = data.data.pods;
+    } else if (data.result && Array.isArray(data.result)) {
+      pods = data.result;
+    } else if (data.data && Array.isArray(data.data)) {
+      pods = data.data;
+    }
+
+    if (pods.length === 0) {
+      return null;
+    }
+
+    return pods;
   } catch (_err) {
     return null;
   }
-}
-
-/**
- * Fetch pods with stats from Gossip RPC Direct API
- */
-async function fetchPodsWithStats(): Promise<MainnetNodeData[] | null> {
-  const data = await makeRpcCall<any>('get-pods-with-stats');
-
-  if (!data) return null;
-
-  // Handle different response formats
-  let pods: MainnetNodeData[] = [];
-
-  if (Array.isArray(data)) {
-    pods = data;
-  } else if (data.pods && Array.isArray(data.pods)) {
-    pods = data.pods;
-  } else if (data.result?.pods && Array.isArray(data.result.pods)) {
-    pods = data.result.pods;
-  } else if (data.data?.pods && Array.isArray(data.data.pods)) {
-    pods = data.data.pods;
-  } else if (data.result && Array.isArray(data.result)) {
-    pods = data.result;
-  } else if (data.data && Array.isArray(data.data)) {
-    pods = data.data;
-  }
-
-  if (pods.length === 0) {
-    return null;
-  }
-
-  return pods;
 }
 
 /**

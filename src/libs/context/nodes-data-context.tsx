@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, ReactNode } from 'react';
 import { useNetwork } from './network-context';
+import { getNodeStatus } from '@/libs/utils/node-status';
 import { useRPCContext } from './rpc-context';
 
 /**
@@ -83,7 +84,7 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
   const lastNetworkRef = useRef(network);
   const fetchingRef = useRef(false);
   const mountedRef = useRef(true);
-  
+
   // LCP Optimization: Defer initial data fetch to improve critical rendering path
   const [initialLoadDeferred, setInitialLoadDeferred] = useState(false);
 
@@ -178,10 +179,7 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
 
       if (isMainnet && data.nodes) {
         fetchedNodes = data.nodes.map((node: any) => {
-          const timeDiff = serverTime - (node.last_seen_timestamp || 0);
-          let status: 'online' | 'syncing' | 'offline' = 'offline';
-          if (timeDiff <= 3600) status = 'online';
-          else if (timeDiff < 7200) status = 'syncing';
+          const status = getNodeStatus(node.last_seen_timestamp || 0, serverTime);
 
           return {
             address: node.address || '',
@@ -251,10 +249,7 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
       } else if (data.nodes) {
         // For devnet, just replace nodes normally (no high watermark)
         fetchedNodes = data.nodes.map((node: any) => {
-          const timeDiff = serverTime - (node.last_seen_timestamp || 0);
-          let status: 'online' | 'syncing' | 'offline' = 'offline';
-          if (timeDiff <= 3600) status = 'online';
-          else if (timeDiff < 7200) status = 'syncing';
+          const status = getNodeStatus(node.last_seen_timestamp || 0, serverTime);
 
           return {
             address: node.address || '',
@@ -348,7 +343,7 @@ export const NodesDataProvider: React.FC<{ children: ReactNode }> = ({ children 
   useEffect(() => {
     // Don't fetch data until initial load is deferred (LCP optimization)
     if (!initialLoadDeferred) return;
-    
+
     const networkChanged = lastNetworkRef.current !== network;
 
     if (networkChanged) {
